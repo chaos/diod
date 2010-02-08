@@ -1,0 +1,9 @@
+1. Embedded npfs library
+
+Diod embeds a version of the npfs 9P library based on a snapshot taken
+2010-01-20 16:50 from https://npfs.svn.sourceforge.net/svnroot/npfs/npfs/trunk.
+Although modified for this project, npfs remains Copyright (C) 2005 by
+Latchesar Ionkov <lucho@ionkov.net>.
+
+2. TODO
+- free fids (+users) when connection fails and they are not properly clunked

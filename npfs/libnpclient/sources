@@ -1,0 +1,23 @@
+TARGETNAME=npclient
+TARGETTYPE=LIBRARY
+
+INCLUDES=..\include\
+
+USE_MSVCRT=1
+
+SOURCES=\
+        dirread.c\
+        fid.c\
+        fsys.c\
+        mount.c\
+        netmount.c\
+        open.c\
+        pool.c\
+        read.c\
+        remove.c\
+        stat.c\
+        stat2wstat.c\
+        walk.c\
+        write.c
+
+UMTYPE=windows

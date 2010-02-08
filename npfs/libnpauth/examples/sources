@@ -1,0 +1,23 @@
+TARGETTYPE=PROGRAM
+
+OPENSSL=c:\openssl
+INCLUDES=..\..\include
+LINKLIBS=\
+        ..\..\libnpauth\$(O)\npauth.lib \
+        ..\..\libnpclient\$(O)\npclient.lib \
+        ..\..\libnpfs\$(O)\npfs.lib \
+        $(SDK_LIB_PATH)\ws2_32.lib \
+        $(OPENSSL)\lib\VC\libeay32MT.lib
+
+USE_MSVCRT=1
+
+# ----- pick one -----
+
+#TARGETNAME=9ls
+#SOURCES=9ls.c winhelp.c
+
+TARGETNAME=echofs
+SOURCES=echofs.c winhelp.c
+
+UMTYPE=console
+UMBASE=0x400000

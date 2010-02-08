@@ -1,0 +1,16 @@
+TARGETNAME=npauth
+TARGETTYPE=LIBRARY
+
+OPENSSL=c:\openssl
+INCLUDES=..\include\;$(OPENSSL)\include
+
+USE_MSVCRT=1
+
+SOURCES=\
+        help.c\
+        msgs.c\
+        p9any.c\
+        p9sk1.c\
+        srv.c
+
+UMTYPE=windows
