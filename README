@@ -1,9 +1,76 @@
-1. Embedded npfs library
+[This Document is Under Construction]
+
+1. Description
+
+Diod is an I/O forwarding server that implements a variant of the 9P protocol
+from the Plan 9 operating system.  When paired with a modified version of
+the v9fs Linux 9P client, diod allows a file system to be exported over a
+TCP/IP network in a manner similar to NFS.  
+
+The file system that is exported can itself be NFS or a parallel file system
+like Lustre or GPFS.  This can be done with  minimal loss of distributed
+semantics.  This is accomplished because the v9fs client (when used with
+appropriate mount options) has no page or directory cache - all I/O operations
+trigger a network request.  The page cache effectively moves to the server
+system, with diod appearing as a multi-threaded user application accessing
+the file system in the usual way.
+
+Sometimes this architecture is called I/O forwarding.  Diod was designed
+to implement I/O forwarding on CHAOS Linux clusters where a subset of the
+nodes in the cluster mount Lustre and NFS (the I/O nodes) and the rest (the
+compute nodes) access these file systems using I/O forwarding.  The fan-in
+of compute nodes to I/O nodes is usually around 32:1 but other ratios are
+possible.
+
+The benefits of this architecture on clusters are:  
+
+  1. System overhead on compute nodes such as asynchronous page
+     cache management and the page cache memory footprint is reduced.
+  2. Parallel file system clients are more responsive to file system
+     server-initiated activitities such as lock revocation, since
+     I/O nodes are not burdened with heavy compute loads.
+  3. Per-client state that must be maintained on file system servers is
+     reduced.
+  4. The shared I/O node page cache is potentially "hot" when multiple
+     compute nodes read the same data, e.g. when loading a shared executable.
+
+X. Security
+
+Diod listens on a configurable set of interfaces and ports.
+
+TCP wrappers can be used to limit connections (service name "diod").
+
+Diod can be configured to only accept connections from reserved (<1024) ports.
+
+Cryptographically secure authentication (e.g. using the munge cluster
+authentication framework) is TBD.
+
+X. POSIX limitations
+
+Random seeking in directories (seekdir/telldir) is not supported.
+
+X. Memory usage
+
+X. Testing
+
+IOR
+Simul
+
+X. Modified v9fs client
+
+X. Embedded npfs library
 
 Diod embeds a version of the npfs 9P library based on a snapshot taken
 2010-01-20 16:50 from https://npfs.svn.sourceforge.net/svnroot/npfs/npfs/trunk.
-Although modified for this project, npfs remains Copyright (C) 2005 by
-Latchesar Ionkov <lucho@ionkov.net>.
+Although modified for this project, npfs remains
 
-2. TODO
+  Copyright (C) 2005 by Latchesar Ionkov <lucho@ionkov.net>
+
+Modifications include:
+- added 9P2000.h ops
+- check malloc/strdup return values
+- allow debugging messages to be sent to user-defined location
+
+X. TODO
 - free fids (+users) when connection fails and they are not properly clunked
+- authentication
