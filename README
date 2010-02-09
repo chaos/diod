@@ -70,7 +70,8 @@ Modifications include:
 - added 9P2000.h ops
 - check malloc/strdup return values
 - allow debugging messages to be sent to user-defined location
+- allow Npuser->groups to be null while Npuser->ngroups > 0
 
 X. TODO
 - free fids (+users) when connection fails and they are not properly clunked
-- authentication
+- secure authentication

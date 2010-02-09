@@ -93,16 +93,16 @@ usage()
 {
     fprintf (stderr, 
 "Usage: %s [OPTIONS]\n"
-"   -f,--foreground        do not disassociate with tty\n"
+"   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
-"   -s,--sameuser          run as the user starting the daemon\n"
-"   -l,--listen IP:PORT    set interfaces to listen on (0.0.0.0 for any)\n"
-"   -w,--nwthreads INT     set number of I/O threads to spawn\n"
+"   -s,--sameuser          perform all I/O as the user starting the daemon\n"
+"   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
+"   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -c,--config-file FILE  set config file path\n"
-"   -e,--export PATH       export PATH (only one allowed)\n"
+"   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers and reserved port checks\n"
-"   -r,--readahead         enable kernel readahead\n"
-"   -R,--rootsquash        enable root squash\n"
+"   -r,--readahead         do not disable kernel readahead with fadvise\n"
+"   -R,--rootsquash        perform root I/O as 65534:65534\n"
 "Note: command line overrides config file\n",
              DAEMON_NAME);
     exit (1);

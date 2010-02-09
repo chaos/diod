@@ -189,10 +189,9 @@ diod_conf_init (void)
     diod_conf_set_sameuser (0);
     diod_conf_set_readahead (0);
     diod_conf_set_rootsquash (0);
-    diod_conf_set_reservedport (0);
-    diod_conf_set_tcpwrappers (0);
+    diod_conf_set_reservedport (1);
+    diod_conf_set_tcpwrappers (1);
     diod_conf_set_listen ("0.0.0.0:564");
-    
 }
 
 /* Tattach verifies path against configured exports.
@@ -377,6 +376,7 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (L, "nwthreads", &config.nwthreads);
         _lua_getglobal_int (L, "sameuser", &config.sameuser);
         _lua_getglobal_int (L, "reservedport", &config.reservedport);
+        _lua_getglobal_int (L, "tcpwrappers", &config.tcpwrappers);
         _lua_getglobal_int (L, "readahead", &config.readahead);
         _lua_getglobal_int (L, "rootsquash", &config.rootsquash);
         _lua_getglobal_list_of_strings (L, "listen", &config.listen);
