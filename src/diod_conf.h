@@ -45,8 +45,8 @@ void    diod_conf_set_rootsquash (int i);
 int     diod_conf_get_tcpwrappers (void);
 void    diod_conf_set_tcpwrappers (int i);
 
-int     diod_conf_get_reservedport (void);
-void    diod_conf_set_reservedport (int i);
+int     diod_conf_get_munge (void);
+void    diod_conf_set_munge (int i);
 
 List    diod_conf_get_listen (void);
 void    diod_conf_set_listen (char *s);

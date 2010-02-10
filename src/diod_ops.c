@@ -57,10 +57,6 @@
  * (euid/egid/supplementary groups) as needed with diod_switch_user ().
  */
 
-/* FIXME: seekdir/telldir - pretend these don't exist until someone calls
- * us on it.
- */
-
 /* FIXME: advisory locking
  * 
  * Flock tracks the fd (fid) like the other 9P ops so it can be handled
@@ -562,6 +558,17 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         np_uerror (EPERM);
         goto done;
     }
+#if HAVE_LIBMUNGE
+    if (diod_conf_get_munge ()) {
+        /* MUNGE cred already decoded in diod_upool.c::diod_uname2user() */
+        if (np_strncmp (uname, "MUNGE:", 6) == 0 && nfid->user->uid == 0) {
+            diod_trans_set_rootauth (nfid->conn->trans, 1);
+        } else if (!diod_trans_get_rootauth (nfid->conn->trans)) {
+            np_uerror (EPERM);
+            goto done;
+        }
+    }
+#endif
     if (!(f = _fidalloc ()))
         goto done;
     if (!(f->path = _p9strdup(aname)))

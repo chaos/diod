@@ -9,7 +9,7 @@ sbin_PROGRAMS = \
 diod_LDADD = \
 	$(top_builddir)/npfs/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 
 diod_SOURCES = \

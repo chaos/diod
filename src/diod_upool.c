@@ -37,6 +37,9 @@
  * User is destroyed when its refcount reaches 0.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -44,6 +47,10 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
+#define GPL_LICENSED 1
+#if HAVE_LIBMUNGE
+#include <munge.h>
+#endif
 
 #include "npfs.h"
 
@@ -266,6 +273,54 @@ diod_udestroy (Npuserpool *up, Npuser *u)
         free (u->aux);
 }
 
+#if HAVE_LIBMUNGE
+static Npuser *
+diod_munge2user (Npuserpool *up, char *uname, char *buf, int buflen)
+{
+    Npuser *u = NULL;
+    munge_ctx_t ctx = NULL;
+    munge_err_t err;
+    void *cstr = NULL;
+    int len;
+    struct passwd pw, *pwd;
+    uid_t uid;
+    gid_t gid;
+
+    if (!(ctx = munge_ctx_create ())) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    err = munge_decode (uname, ctx, &cstr, &len, &uid, &gid);
+    if (err != EMUNGE_SUCCESS) {
+        msg ("munge_decode: %s", munge_ctx_strerror(ctx));
+        np_uerror (EPERM);
+        goto done;
+    }
+    if ((err = getpwuid_r(uid, &pw, buf, buflen, &pwd)) != 0) {
+        np_uerror (err);
+        goto done;
+    }
+    if (!pwd) {
+        np_uerror (ESRCH);
+        goto done;
+    }
+    if (pwd->pw_gid != gid) {
+        np_uerror (EPERM);
+        goto done;
+    }
+    if (!(u = _alloc_user (up, pwd)))
+        goto done;
+
+    np_user_incref (u);
+done:        
+    if (cstr)    
+        free (cstr);
+    if (ctx)
+        munge_ctx_destroy (ctx);
+    return u;
+}
+#endif
+
 /* N.B. This (or diod_uid2user) is called when handling a 9P attach message.
  */
 static Npuser *
@@ -276,6 +331,10 @@ diod_uname2user (Npuserpool *up, char *uname)
     struct passwd pw, *pwd;
     char buf[PASSWD_BUFSIZE];
 
+#if HAVE_LIBMUNGE
+    if (strncmp (uname, "MUNGE:", 6) == 0)
+        return diod_munge2user (up, uname, buf, sizeof(buf));
+#endif
     if ((err = getpwnam_r(uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
         np_uerror (err);
         goto done;

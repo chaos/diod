@@ -54,6 +54,7 @@ X_AC_CHECK_PTHREADS
 X_AC_WRAP
 X_AC_CHECK_COND_LIB(z, compress)
 X_AC_CHECK_COND_LIB(lua, luaL_newstate)
+X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 
 ##
 # For list.c, hostlist.c, hash.c

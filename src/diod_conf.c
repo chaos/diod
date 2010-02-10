@@ -50,7 +50,7 @@ typedef struct {
     int          nwthreads;
     int          foreground;
     int          sameuser;
-    int          reservedport;
+    int          munge;
     int          tcpwrappers;
     int          readahead;
     int          rootsquash;
@@ -110,15 +110,15 @@ diod_conf_set_sameuser (int i)
 }
 
 int
-diod_conf_get_reservedport (void)
+diod_conf_get_munge (void)
 {
-    return config.reservedport;
+    return config.munge;
 }
 
 void
-diod_conf_set_reservedport (int i)
+diod_conf_set_munge (int i)
 {
-    config.reservedport = i;
+    config.munge = i;
 }
 
 int
@@ -189,7 +189,7 @@ diod_conf_init (void)
     diod_conf_set_sameuser (0);
     diod_conf_set_readahead (0);
     diod_conf_set_rootsquash (0);
-    diod_conf_set_reservedport (1);
+    diod_conf_set_munge (0);
     diod_conf_set_tcpwrappers (1);
     diod_conf_set_listen ("0.0.0.0:564");
 }
@@ -218,7 +218,11 @@ diod_conf_match_export (char *path, char *host, char *ip, int *errp)
     while ((el = list_next (itr))) {
         int len = strlen (el);
 
-        while (len > 1 && el[len - 1] == '/')
+        if (strcmp (el, "/") == 0) {
+            res = 1;
+            break;
+        }
+        while (len > 0 && el[len - 1] == '/')
             len--; 
         if (plen == len && strncmp (el, path, len) == 0) {
             res = 1;
@@ -375,7 +379,7 @@ diod_conf_init_config_file (char *path)
         
         _lua_getglobal_int (L, "nwthreads", &config.nwthreads);
         _lua_getglobal_int (L, "sameuser", &config.sameuser);
-        _lua_getglobal_int (L, "reservedport", &config.reservedport);
+        _lua_getglobal_int (L, "munge", &config.munge);
         _lua_getglobal_int (L, "tcpwrappers", &config.tcpwrappers);
         _lua_getglobal_int (L, "readahead", &config.readahead);
         _lua_getglobal_int (L, "rootsquash", &config.rootsquash);

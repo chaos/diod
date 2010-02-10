@@ -26,6 +26,8 @@ void diod_trans_destroy (Nptrans *trans);
 char *diod_trans_get_host (Nptrans *trans);
 char *diod_trans_get_ip (Nptrans *trans);
 char *diod_trans_get_svc (Nptrans *trans);
+void diod_trans_set_rootauth (Nptrans *trans, int flag);
+int diod_trans_get_rootauth (Nptrans *trans);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

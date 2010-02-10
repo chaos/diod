@@ -12,6 +12,9 @@
 /* Define to 1 if you have the `lua' library (-llua). */
 #undef HAVE_LIBLUA
 
+/* Define to 1 if you have the `munge' library (-lmunge). */
+#undef HAVE_LIBMUNGE
+
 /* Define to 1 if you have the `z' library (-lz). */
 #undef HAVE_LIBZ
 

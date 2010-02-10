@@ -43,6 +43,8 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <syslog.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 #if HAVE_TCP_WRAPPERS
 #include <tcpd.h>
 #endif
@@ -56,8 +58,6 @@
 #include "diod_trans.h"
 #include "diod_ops.h"
 
-/* FIXME: If root, cliear RLIMIT_FSIZE, RLIMIT_LOCKS, RLIMIT_NOFILE limits */
-
 extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
 int         allow_severity = LOG_INFO;
 int         deny_severity = LOG_WARNING;
@@ -65,8 +65,13 @@ int         deny_severity = LOG_WARNING;
 static void diod_setup_listen (struct pollfd **fdsp, int *nfdsp);
 static void diod_service_loop (Npsrv *srv, struct pollfd *fds, int nfds);
 static void diod_daemonize (void);
+static void diod_setrlimit (void);
 
-#define DAEMON_NAME    "diod"
+#ifndef NR_OPEN
+#define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
+#endif
+
+#define DAEMON_NAME     "diod"
 
 #define OPTIONS "fd:sl:w:c:e:arR"
 #if HAVE_GETOPT_LONG
@@ -100,7 +105,7 @@ usage()
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
-"   -a,--allowany          disable TCP wrappers and reserved port checks\n"
+"   -a,--allowany          disable TCP wrappers checks\n"
 "   -r,--readahead         do not disable kernel readahead with fadvise\n"
 "   -R,--rootsquash        perform root I/O as 65534:65534\n"
 "Note: command line overrides config file\n",
@@ -183,10 +188,8 @@ main(int argc, char **argv)
         diod_conf_set_readahead (1);
     if (Ropt)
         diod_conf_set_rootsquash (1);
-    if (aopt) {
+    if (aopt)
         diod_conf_set_tcpwrappers (0);
-        diod_conf_set_reservedport (0);
-    }
     if (dopt)
         diod_conf_set_debuglevel (dopt);
     if (lopt)
@@ -204,6 +207,9 @@ main(int argc, char **argv)
 #endif
     if (!diod_conf_get_sameuser () && geteuid () != 0)
         msg_exit ("run as root or select `sameuser' config option");
+
+    if (!diod_conf_get_sameuser ())
+        diod_setrlimit ();
         
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
@@ -221,6 +227,35 @@ main(int argc, char **argv)
     exit (0);
 }
 
+/* Remove any resource limits that might hamper us.
+ * Caller must have root effective uid.
+ */
+static void diod_setrlimit (void)
+{
+    struct rlimit r, r2;
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_FSIZE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_FSIZE");
+
+    r.rlim_cur = r.rlim_max = NR_OPEN;
+    r2.rlim_cur = r2.rlim_max = sysconf(_SC_OPEN_MAX);
+    if (setrlimit (RLIMIT_NOFILE, &r) < 0)
+        if (errno != EPERM || setrlimit (RLIMIT_NOFILE, &r2) < 0)
+            err_exit ("setrlimit RLIMIT_NOFILE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_LOCKS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_LOCKS");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_CORE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_CORE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_AS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_AS");
+}
 
 /* Given a ip:port to listen on, open sockets and expand pollfd array
  * to include new the fds.  May be called more than once, e.g. if there are
@@ -345,15 +380,6 @@ diod_accept_one (Npsrv *srv, int fd)
         }
     }
 #endif
-    if (diod_conf_get_reservedport ()) {
-        unsigned long port = strtoul (svc, NULL, 10);
-
-        if (port >= 1024) {
-            msg ("connect denied from non reserved port: %s:%s", host, svc);
-            close (fd);
-            return;
-        }
-    }
     trans = diod_trans_create (fd, host, ip, svc);
     if (!trans) {
         msg ("connect denied by diod_trans_create failure: %s:%s", host, svc);

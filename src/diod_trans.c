@@ -44,6 +44,7 @@ typedef struct {
     char            *ip;
     char            *svc;
     int              magic;
+    int              rootauth;
 } DTrans;
 
 #define DIOD_TRANS_MAGIC    0xf00fbaaa
@@ -63,6 +64,7 @@ diod_trans_create (int fd, char *host, char *ip, char *svc)
         return NULL;
     dt->magic = DIOD_TRANS_MAGIC;
     dt->fd = fd;
+    dt->rootauth = 0;
     dt->host = strdup (host);
     if (!dt->host) {
         diod_trans_destroy (dt);
@@ -156,6 +158,26 @@ diod_trans_get_svc (Nptrans *trans)
     assert (dt->magic == DIOD_TRANS_MAGIC);
 
     return dt->svc;
+}
+
+void
+diod_trans_set_rootauth (Nptrans *trans, int flag)
+{
+    DTrans *dt = trans->aux;
+
+    assert (dt->magic == DIOD_TRANS_MAGIC);
+
+    dt->rootauth = flag;
+}
+
+int
+diod_trans_get_rootauth (Nptrans *trans)
+{
+    DTrans *dt = trans->aux;
+
+    assert (dt->magic == DIOD_TRANS_MAGIC);
+
+    return dt->rootauth;
 }
 
 /*

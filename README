@@ -8,31 +8,34 @@ the v9fs Linux 9P client, diod allows a file system to be exported over a
 TCP/IP network in a manner similar to NFS.  
 
 The file system that is exported can itself be NFS or a parallel file system
-like Lustre or GPFS.  This can be done with  minimal loss of distributed
-semantics.  This is accomplished because the v9fs client (when used with
-appropriate mount options) has no page or directory cache - all I/O operations
-trigger a network request.  The page cache effectively moves to the server
-system, with diod appearing as a multi-threaded user application accessing
-the file system in the usual way.
+like Lustre or GPFS.  This can be done with minimal loss of distributed
+semantics because the v9fs client (when used with appropriate mount options)
+has no page or directory cache - all I/O operations trigger a network request.
+The page cache effectively moves to the server system, with diod appearing as
+a multi-threaded user application accessing the file system in the usual way
+through the VFS.
 
-Sometimes this architecture is called I/O forwarding.  Diod was designed
-to implement I/O forwarding on CHAOS Linux clusters where a subset of the
-nodes in the cluster mount Lustre and NFS (the I/O nodes) and the rest (the
-compute nodes) access these file systems using I/O forwarding.  The fan-in
-of compute nodes to I/O nodes is usually around 32:1 but other ratios are
-possible.
+Sometimes this type of architecture is called I/O forwarding.  Diod was
+designed to implement I/O forwarding on CHAOS Linux clusters where a subset
+of the nodes in the cluster mount Lustre and NFS (the I/O nodes) and the
+rest (the compute nodes) access these file systems using I/O forwarding.
+Diod is tested with a fan-in of about 32:1 (compute nodes to I/O nodes)
+but other ratios are possible.
 
 The benefits of this architecture on clusters are:  
 
   1. System overhead on compute nodes such as asynchronous page
      cache management and the page cache memory footprint is reduced.
+
   2. Parallel file system clients are more responsive to file system
      server-initiated activitities such as lock revocation, since
      I/O nodes are not burdened with heavy compute loads.
+
   3. Per-client state that must be maintained on file system servers is
-     reduced.
+     reduced because the client count is reduced.
+
   4. The shared I/O node page cache is potentially "hot" when multiple
-     compute nodes read the same data, e.g. when loading a shared executable.
+     compute nodes read the same data, e.g. when loading the same executable.
 
 X. Security
 
