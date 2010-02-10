@@ -205,6 +205,10 @@ main(int argc, char **argv)
     if (diod_conf_get_tcpwrappers ()) {
         msg_exit ("no TCP wrapper support, yet config enables it");
 #endif
+#if ! HAVE_LIBMUNGE
+    if (diod_conf_get_munge ()) {
+        msg_exit ("no munge support, yet config enables it");
+#endif
     if (!diod_conf_get_sameuser () && geteuid () != 0)
         msg_exit ("run as root or select `sameuser' config option");
 

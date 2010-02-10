@@ -36,6 +36,7 @@
 
 #include "npfs.h"
 #include "diod_log.h"
+#include "diod_trans.h"
 
 typedef struct {
     Nptrans         *trans;
@@ -44,7 +45,8 @@ typedef struct {
     char            *ip;
     char            *svc;
     int              magic;
-    int              rootauth;
+    int              authenticated;
+    uid_t            authuser;
 } DTrans;
 
 #define DIOD_TRANS_MAGIC    0xf00fbaaa
@@ -64,7 +66,7 @@ diod_trans_create (int fd, char *host, char *ip, char *svc)
         return NULL;
     dt->magic = DIOD_TRANS_MAGIC;
     dt->fd = fd;
-    dt->rootauth = 0;
+    dt->authenticated = 0;
     dt->host = strdup (host);
     if (!dt->host) {
         diod_trans_destroy (dt);
@@ -161,23 +163,30 @@ diod_trans_get_svc (Nptrans *trans)
 }
 
 void
-diod_trans_set_rootauth (Nptrans *trans, int flag)
+diod_trans_set_authuser (Nptrans *trans, uid_t uid)
 {
     DTrans *dt = trans->aux;
 
     assert (dt->magic == DIOD_TRANS_MAGIC);
 
-    dt->rootauth = flag;
+    dt->authuser = uid;
+    dt->authenticated = 1;
 }
 
 int
-diod_trans_get_rootauth (Nptrans *trans)
+diod_trans_get_authuser (Nptrans *trans, uid_t *uidp)
 {
     DTrans *dt = trans->aux;
+    int ret = -1;
 
     assert (dt->magic == DIOD_TRANS_MAGIC);
 
-    return dt->rootauth;
+    if (dt->authenticated) {
+        *uidp = dt->authuser;
+        ret = 0;
+    }
+
+    return ret;
 }
 
 /*

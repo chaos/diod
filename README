@@ -41,16 +41,9 @@ X. Security
 
 Diod listens on a configurable set of interfaces and ports.
 
-TCP wrappers can be used to limit connections (service name "diod").
+TCP wrappers can also be used to limit connections (service name "diod").
 
-Diod can be configured to only accept connections from reserved (<1024) ports.
-
-Cryptographically secure authentication (e.g. using the munge cluster
-authentication framework) is TBD.
-
-X. POSIX limitations
-
-Random seeking in directories (seekdir/telldir) is not supported.
+Munge.
 
 X. Memory usage
 
@@ -77,4 +70,11 @@ Modifications include:
 
 X. TODO
 - free fids (+users) when connection fails and they are not properly clunked
-- secure authentication
+- rework auth to use afid and Tauth?
+- POSIX issue: newgrp + creat = created file will have old gid?
+- flock advisory file lock
+- fcntl(lock) advisory record lock
+- one stuck fs can hang all npfs worker threads
+- per-thread euid/egid is dangerously unportable? (add tests!)
+- seekdir (offset != 0), telldir incompat with 9P
+- limit aread/awrite size (breaks atomicity, but better than malloc==NULL /oom)

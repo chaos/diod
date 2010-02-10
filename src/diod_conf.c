@@ -189,18 +189,18 @@ diod_conf_init (void)
     diod_conf_set_sameuser (0);
     diod_conf_set_readahead (0);
     diod_conf_set_rootsquash (0);
-    diod_conf_set_munge (0);
+    diod_conf_set_munge (1);
     diod_conf_set_tcpwrappers (1);
     diod_conf_set_listen ("0.0.0.0:564");
 }
 
 /* Tattach verifies path against configured exports.
  * Return 1 on ALLOWED, 0 on DENIED.  On DENIED, put errno in *errp.
- * FIXME: verify host/ip once we parse those in config file
+ * FIXME: verify host/ip/uid once we parse those in config file
  * FIXME: verify path contains no symlinks below export dir
  */
 int
-diod_conf_match_export (char *path, char *host, char *ip, int *errp)
+diod_conf_match_export (char *path, char *host, char *ip, uid_t uid, int *errp)
 {
     ListIterator itr;
     char *el;
@@ -237,8 +237,8 @@ diod_conf_match_export (char *path, char *host, char *ip, int *errp)
     if (res == 0)
         *errp = EPERM;
 done:
-    msg ("attach user %d:%d path %s host %s(%s): %s",
-         geteuid (), getegid (), path, host, ip, res ? "ALLOWED" : "DENIED");
+    msg ("attach user %d path %s host %s(%s): %s", uid, path, host, ip,
+         res ? "ALLOWED" : "DENIED");
 
     return res;
 }

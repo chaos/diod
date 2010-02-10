@@ -61,12 +61,12 @@ np_user_decref(Npuser *u)
 	if (u->upool->udestroy)
 		(*u->upool->udestroy)(u->upool, u);
 
-	if (u->groups) { /* diod_upool.c does not populate u->groups - jg */
-		for(i = 0; i < u->ngroups; i++)
-			np_group_decref(u->groups[i]);
+	for(i = 0; i < u->ngroups; i++)
+		np_group_decref(u->groups[i]);
+	if (u->dfltgroup)
 		np_group_decref(u->dfltgroup);
+	if (u->groups)
 		free(u->groups);
-	}
 
 	pthread_mutex_destroy(&u->lock);
 	free(u);

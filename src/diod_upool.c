@@ -27,14 +27,21 @@
  * Instead it creates Npuser's anew at attach time, shares them among cloned
  * fids, and deletes them when the refcount goes to zero (e.g. when root is
  * clunked at umount time).  Npgroup's are not used at all.  Instead the user's
- * primary and supplementary groups are stored in Npuser->aux as an integer
- * array suitable for passing directly to setgroups().
+ * primary and supplementary groups are stored a private struct linked to
+ * Npuser->aux in the form of an array suitable for passing directly to
+ * setgroups().
  *
  * Summary of refcount strategy:  
  * Tattach: created via diod_u*2user() with refcount 1 (see below)
  * Twalk: if cloning the fid, refcount++ 
  * Tclunk: if fid is destroyed, refcount--
  * User is destroyed when its refcount reaches 0.
+ * 
+ * Secure authentication is accomplished with munge.  All attaches are denied
+ * until an attach is received with a valid munge cred in the uname field.
+ * If that attach succedes, subsequent non-munge attaches on the same
+ * transport (set up per mount) succeed if the original attach was root or
+ * the same user.
  */
 
 #if HAVE_CONFIG_H
@@ -47,8 +54,9 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
-#define GPL_LICENSED 1
+#include <assert.h>
 #if HAVE_LIBMUNGE
+#define GPL_LICENSED 1
 #include <munge.h>
 #endif
 
@@ -81,6 +89,17 @@ static Npuserpool upool = {
     .udestroy       = diod_udestroy,
     .gdestroy       = NULL,
 };
+
+/* Private Duser struct, linked to Npuser->aux.
+ */
+#define DUSER_MAGIC 0x3455DDDF
+typedef struct {
+    int         magic;
+    int         munged;         /* user supplied a valid munge cred */
+    gid_t       gid;            /* primary gid */
+    int         nsg;            /* number of supplementary groups */
+    gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
+} Duser;
 
 Npuserpool *diod_upool = &upool;
 
@@ -117,6 +136,8 @@ _setgroups (size_t size, const gid_t *list)
     return ret;
 }
 
+/* Change user to root.
+ */
 static int
 _switch_root (void)
 {
@@ -133,6 +154,8 @@ done:
     return ret;
 }
 
+/* Change user to squash user.
+ */
 static int
 _switch_squash (void)
 {
@@ -153,27 +176,34 @@ done:
     return ret;
 }
 
+/* Change user to some other user.
+ */
 static int
 _switch_user (Npuser *u)
 {
+    Duser *d = (Duser *)u->aux;
     int ret = -1;
-    gid_t *gids = (gid_t *)u->aux;
+
+    assert (d->magic == DUSER_MAGIC);
 
     if (geteuid () == u->uid)
         return 0;
     if (_setreuid (0, 0) < 0)
         goto done;
-    if (_setgroups (u->ngroups, gids) < 0)
+    if (_setgroups (d->nsg, d->sg) < 0)
         goto done;
     if (_setregid (-1, u->uid) < 0)
         goto done;
-    if (_setreuid (-1, gids[0]) < 0)
+    if (_setreuid (-1, d->gid) < 0)
         goto done;
     ret = 0;
 done:
     return ret;
 }
 
+/* Change user/group/supplementary groups, if needed.
+ * Only users that have successfully attached will be seen here (9P invariant).
+ */
 int
 diod_switch_user (Npuser *u)
 {
@@ -191,31 +221,31 @@ diod_switch_user (Npuser *u)
     return ret;
 }
 
-/* Populate (gid_t *)u->aux with supplementary groups for user in pwd.
- * Element 0 is the primary group.
- */
-static int
-_add_supplemental_groups (Npuser *u, struct passwd *pwd)
+static Duser *
+_alloc_duser (struct passwd *pwd, int munged)
 {
     FILE *f;
     int i, err;
     struct group grp, *grpp;
     char buf[GROUP_BUFSIZE];
-    gid_t *gids = (gid_t *)u->aux;
-    int ret = -1;
+    Duser *d = NULL;
 
-    u->ngroups = 0;
-    gids[u->ngroups++] = pwd->pw_gid;
+    if (!(d = np_malloc (sizeof (*d))))
+        goto done;
+    d->magic = DUSER_MAGIC;
+    d->munged = munged;
+    d->gid = pwd->pw_gid;
+    d->nsg = 0;
     if (!(f = fopen (PATH_GROUP, "r"))) {
         np_uerror (errno);
         goto done;
     }
+    /* the primary group will be added too if in /etc/group (this is ok) */
     while ((err = fgetgrent_r (f, &grp, buf, sizeof (buf), &grpp)) == 0) {
         for (i = 0; grpp->gr_mem[i] != NULL; i++) {
             if (strcmp (grpp->gr_mem[i], pwd->pw_name) == 0) {
-                if (u->ngroups < NGROUPS_MAX) {
-                    if (pwd->pw_gid != grpp->gr_gid)
-                        gids[u->ngroups++] = grpp->gr_gid;
+                if (d->nsg < NGROUPS_MAX) {
+                    d->sg[d->nsg++] = grpp->gr_gid;
                 } else
                     msg ("user %s exceeded supplementary group max of %d",
                          pwd->pw_name, NGROUPS_MAX);
@@ -224,22 +254,23 @@ _add_supplemental_groups (Npuser *u, struct passwd *pwd)
         }
     } 
     fclose (f);
-    ret = 0;
 done:
-    return ret;
+    if (np_haserror () && d != NULL) {
+        free (d);
+        d = NULL;
+    }
+    return d;
 }
 
 static Npuser *
-_alloc_user (Npuserpool *up, struct passwd *pwd)
+_alloc_user (Npuserpool *up, struct passwd *pwd, int munged)
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
-    if (!(u->aux = (gid_t *)np_malloc (sizeof (gid_t) * (NGROUPS_MAX))))
-        goto done;
-    if (_add_supplemental_groups (u, pwd) < 0)
+    if (!(u->aux = _alloc_duser (pwd, munged)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -251,7 +282,8 @@ _alloc_user (Npuserpool *up, struct passwd *pwd)
 
     u->uname = NULL;        /* not used */
     u->dfltgroup = NULL;    /* not used */
-    u->groups = NULL;       /* not used (npfs/libnpfs/user.c must not free) */
+    u->groups = NULL;       /* not used */
+    u->ngroups = 0;         /* not used */
     u->next = NULL;         /* not used */
 done:
     if (np_haserror () && u != NULL) {
@@ -273,53 +305,47 @@ diod_udestroy (Npuserpool *up, Npuser *u)
         free (u->aux);
 }
 
-#if HAVE_LIBMUNGE
-static Npuser *
-diod_munge2user (Npuserpool *up, char *uname, char *buf, int buflen)
+int
+diod_user_has_mungecred (Npuser *u)
 {
-    Npuser *u = NULL;
-    munge_ctx_t ctx = NULL;
+    Duser *d = u->aux;
+
+    assert (d->magic == DUSER_MAGIC);
+
+    return d->munged;
+}
+
+static int
+_decode_mungecred (char *uname, uid_t *uidp)
+{
+    int ret = -1;
+#if HAVE_LIBMUNGE
+    munge_ctx_t ctx;
     munge_err_t err;
-    void *cstr = NULL;
-    int len;
-    struct passwd pw, *pwd;
     uid_t uid;
-    gid_t gid;
 
     if (!(ctx = munge_ctx_create ())) {
         np_uerror (ENOMEM);
         goto done;
     }
-    err = munge_decode (uname, ctx, &cstr, &len, &uid, &gid);
+    err = munge_decode (uname, ctx, NULL, NULL, &uid, NULL);
+    memset (uname, 0, strlen (uname));
+    /* FIXME: there is another copy in Npfcall->uname to sanitize */
+    /* FIXME: the cred will be logged if DEBUG_9P_TRACE is enabled */
+    munge_ctx_destroy (ctx);
     if (err != EMUNGE_SUCCESS) {
-        msg ("munge_decode: %s", munge_ctx_strerror(ctx));
+        msg ("munge_decode: %s", munge_strerror (err));
         np_uerror (EPERM);
         goto done;
     }
-    if ((err = getpwuid_r(uid, &pw, buf, buflen, &pwd)) != 0) {
-        np_uerror (err);
-        goto done;
-    }
-    if (!pwd) {
-        np_uerror (ESRCH);
-        goto done;
-    }
-    if (pwd->pw_gid != gid) {
-        np_uerror (EPERM);
-        goto done;
-    }
-    if (!(u = _alloc_user (up, pwd)))
-        goto done;
-
-    np_user_incref (u);
-done:        
-    if (cstr)    
-        free (cstr);
-    if (ctx)
-        munge_ctx_destroy (ctx);
-    return u;
-}
+    ret = 0;
+    *uidp = uid;
+done:
+#else
+    np_uerror (EPERM);
 #endif
+    return ret;
+}
 
 /* N.B. This (or diod_uid2user) is called when handling a 9P attach message.
  */
@@ -328,22 +354,30 @@ diod_uname2user (Npuserpool *up, char *uname)
 {
     Npuser *u = NULL; 
     int err;
-    struct passwd pw, *pwd;
+    struct passwd pw, *pwd = NULL;
     char buf[PASSWD_BUFSIZE];
+    uid_t uid;
+    int munged = 0;
 
-#if HAVE_LIBMUNGE
-    if (strncmp (uname, "MUNGE:", 6) == 0)
-        return diod_munge2user (up, uname, buf, sizeof(buf));
-#endif
-    if ((err = getpwnam_r(uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
-        np_uerror (err);
-        goto done;
+    if (diod_conf_get_munge () && strncmp (uname, "MUNGE:", 6) == 0) {
+        if (_decode_mungecred (uname, &uid) < 0)
+            goto done;
+        if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
+            np_uerror (err);
+            goto done;
+        }
+        munged = 1;
+    } else {
+        if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
+            np_uerror (err);
+            goto done;
+        }
     }
     if (!pwd) {
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd)))
+    if (!(u = _alloc_user (up, pwd, munged)))
         goto done;
     np_user_incref (u);
 done:
@@ -360,7 +394,7 @@ diod_uid2user(Npuserpool *up, u32 uid)
     struct passwd pw, *pwd;
     char buf[PASSWD_BUFSIZE];
 
-    if ((err = getpwuid_r(uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
+    if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
         np_uerror (err);
         goto done;
     }
@@ -368,7 +402,7 @@ diod_uid2user(Npuserpool *up, u32 uid)
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd)))
+    if (!(u = _alloc_user (up, pwd, 0)))
         goto done;
 done:
     np_user_incref (u);

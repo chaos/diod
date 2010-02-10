@@ -547,10 +547,9 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
     Fid *f = NULL;
     int err;
     Npqid qid;
+    uid_t auid;
 
-    if (diod_switch_user (nfid->user) < 0)
-        return 0;
-    if (nafid) {    /* no auth allowed yet */
+    if (nafid) {    /* 9P Tauth not supported */
         np_werror (Enoauth, EIO);
         goto done;
     }
@@ -558,22 +557,32 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         np_uerror (EPERM);
         goto done;
     }
-#if HAVE_LIBMUNGE
+    /* Munge authentication involves the upool and trans layers:
+     * - we ask the upool layer if the user now attaching has a munge cred
+     * - we stash the uid of the last successful munge auth in the trans layer
+     * - subsequent attaches on the same trans get to leverage the last auth
+     *   (if root, anyone can attach; if a user, that user can re-attach)
+     * By the time we get here, invalid munge creds have already been rejected.
+     */
     if (diod_conf_get_munge ()) {
-        /* MUNGE cred already decoded in diod_upool.c::diod_uname2user() */
-        if (np_strncmp (uname, "MUNGE:", 6) == 0 && nfid->user->uid == 0) {
-            diod_trans_set_rootauth (nfid->conn->trans, 1);
-        } else if (!diod_trans_get_rootauth (nfid->conn->trans)) {
-            np_uerror (EPERM);
-            goto done;
+        if (diod_user_has_mungecred (nfid->user)) {
+            diod_trans_set_authuser (nfid->conn->trans, nfid->user->uid);
+        } else {
+            if (diod_trans_get_authuser (nfid->conn->trans, &auid) < 0) {
+                np_uerror (EPERM);
+                goto done;
+            }
+            if (auid != 0 && auid != nfid->user->uid) {
+                np_uerror (EPERM);
+                goto done;
+            }
         }
     }
-#endif
     if (!(f = _fidalloc ()))
         goto done;
     if (!(f->path = _p9strdup(aname)))
         goto done;
-    if (!diod_conf_match_export (f->path, host, ip, &err)) {
+    if (!diod_conf_match_export (f->path, host, ip, nfid->user->uid, &err)) {
         np_uerror (err);
         goto done;
     }

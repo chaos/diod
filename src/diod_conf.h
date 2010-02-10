@@ -51,7 +51,8 @@ void    diod_conf_set_munge (int i);
 List    diod_conf_get_listen (void);
 void    diod_conf_set_listen (char *s);
 
-int     diod_conf_match_export (char *path, char *host, char *ip, int *errp);
+int     diod_conf_match_export (char *path, char *host, char *ip, uid_t uid,
+                                int *errp);
 void    diod_conf_validate_exports (void);
 void    diod_conf_set_export (char *path);
 
