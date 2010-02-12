@@ -43,6 +43,7 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <syslog.h>
+#include <pwd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #if HAVE_TCP_WRAPPERS
@@ -73,13 +74,13 @@ static void diod_setrlimit (void);
 
 #define DAEMON_NAME     "diod"
 
-#define OPTIONS "fd:sl:w:c:e:arR"
+#define OPTIONS "fd:u:l:w:c:e:arR"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"foreground",  no_argument,        0, 'f'},
     {"debug",       required_argument,  0, 'd'},
-    {"sameuser",    no_argument,        0, 's'},
+    {"user",        required_argument,  0, 'u'},
     {"listen",      required_argument,  0, 'l'},
     {"nwthreads",   required_argument,  0, 'w'},
     {"config-file", required_argument,  0, 'c'},
@@ -100,7 +101,7 @@ usage()
 "Usage: %s [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
-"   -s,--sameuser          perform all I/O as the user starting the daemon\n"
+"   -u,--user USERNAME     only allow USERNAME to attach\n"
 "   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -c,--config-file FILE  set config file path\n"
@@ -120,10 +121,10 @@ main(int argc, char **argv)
     int c;
     int fopt = 0;
     int dopt = 0;
-    int sopt = 0;
     int aopt = 0;
     int ropt = 0;
     int Ropt = 0;
+    char *uopt = NULL;
     char *lopt = NULL;
     char *copt = NULL;
     int wopt = 0;
@@ -143,8 +144,8 @@ main(int argc, char **argv)
             case 'd':   /* --debug MASK */
                 dopt = strtoul (optarg, NULL, 0);
                 break;
-            case 's':   /* --sameuser */
-                sopt = 1;
+            case 'u':   /* --user USERNAME */
+                uopt = optarg;
                 break;
             case 'l':   /* --listen HOST:PORT */
                 if (!strchr (optarg, ':'))
@@ -182,8 +183,8 @@ main(int argc, char **argv)
     /* command line overrides config file */
     if (fopt)
         diod_conf_set_foreground (1);
-    if (sopt)
-        diod_conf_set_sameuser (1);
+    if (uopt)
+        diod_conf_set_user (uopt);
     if (ropt)
         diod_conf_set_readahead (1);
     if (Ropt)
@@ -209,12 +210,28 @@ main(int argc, char **argv)
     if (diod_conf_get_munge ()) {
         msg_exit ("no munge support, yet config enables it");
 #endif
-    if (!diod_conf_get_sameuser () && geteuid () != 0)
-        msg_exit ("run as root or select `sameuser' config option");
-
-    if (!diod_conf_get_sameuser ())
+    if (geteuid () == 0)
         diod_setrlimit ();
-        
+    else
+        msg ("warning: could not raise resource limits");
+
+    if (diod_conf_get_user ()) {
+        struct passwd *pwd;
+        char *uname = diod_conf_get_user ();
+
+        if (!(pwd = getpwnam (uname)))
+            msg_exit ("Unknown user: %s", uname);
+        if (getegid () != pwd->pw_gid)
+            if (setregid (pwd->pw_gid, pwd->pw_gid) < 0)
+                err_exit ("cannot setregid to %d", pwd->pw_gid);
+        if (geteuid () != pwd->pw_uid)
+            if (setreuid (pwd->pw_uid, pwd->pw_uid) < 0)
+                err_exit ("cannot setreuid to %d", pwd->pw_uid);
+    } else {
+        if (geteuid () != 0)
+            msg_exit ("run as root or specify user with `--user'");
+    }
+
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
@@ -431,44 +448,14 @@ static void
 diod_daemonize (void)
 {
     char rdir[PATH_MAX];
-    char pidfile[PATH_MAX];
-    int pid;
-    FILE *f;
 
     snprintf (rdir, sizeof(rdir), "%s/run/%s", X_LOCALSTATEDIR, DAEMON_NAME);
-    snprintf (pidfile, sizeof(pidfile), "%s/%s.pid", rdir, DAEMON_NAME);
 
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
-
-    if (! diod_conf_get_sameuser ()) {
-        if ((f = fopen (pidfile, "r"))) {
-            if (fscanf (f, "%d", &pid) == 1) {
-                if (kill (pid, 0) == 0 || errno != ESRCH) {
-                    fclose (f);
-                    msg_exit ("%s already running (pid=%d)", DAEMON_NAME, pid);
-                }
-            }
-            fclose (f);
-        }
-    }
-
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();
-
-    if (! diod_conf_get_sameuser ()) {
-        umask (0022);
-        unlink (pidfile);
-        if (!(f = fopen (pidfile, "w")))
-            err_exit ("problem creating %s", pidfile);
-        fprintf (f, "%d\n", (int)getpid ());
-        if (ferror (f) || fclose (f) == EOF) {
-            err ("error updating %s", pidfile);
-            unlink (pidfile);
-            exit (1);
-        }
-    }
 }
 
 /*

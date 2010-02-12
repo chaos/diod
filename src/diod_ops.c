@@ -557,6 +557,13 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         np_uerror (EPERM);
         goto done;
     }
+    /* If run with --user, deny all other user's attempts to attach.
+     * We are already running as that uid, so getpwnam () is unnecessary.
+     */
+    if (diod_conf_get_user () != NULL && geteuid () != nfid->user->uid) {
+        np_uerror (EPERM);
+        goto done;
+    }
     /* Munge authentication involves the upool and trans layers:
      * - we ask the upool layer if the user now attaching has a munge cred
      * - we stash the uid of the last successful munge auth in the trans layer

@@ -209,7 +209,7 @@ diod_switch_user (Npuser *u)
 {
     int ret = -1;
     
-    if (diod_conf_get_sameuser())
+    if (diod_conf_get_user() == NULL)
         return 0;
     if (u->uid == 0) {
         if (diod_conf_get_rootsquash ())

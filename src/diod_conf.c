@@ -49,7 +49,7 @@ typedef struct {
     int          debuglevel;
     int          nwthreads;
     int          foreground;
-    int          sameuser;
+    char        *user;
     int          munge;
     int          tcpwrappers;
     int          readahead;
@@ -97,16 +97,20 @@ diod_conf_set_foreground (int i)
     config.foreground = i;
 }
 
-int 
-diod_conf_get_sameuser (void)
+char *
+diod_conf_get_user (void)
 {
-    return config.sameuser;
+    return config.user;
 }
 
 void
-diod_conf_set_sameuser (int i)
+diod_conf_set_user (char *uname)
 {
-    config.sameuser = i;
+    if (config.user)
+        free (config.user);
+    config.user = strdup (uname);
+    if (!config.user)
+        msg_exit ("out of memory");
 }
 
 int
@@ -182,11 +186,11 @@ diod_conf_init (void)
     config.exports = NULL;
     config.listen = NULL;
     config.path = NULL;
+    config.user = NULL;
 
     diod_conf_set_debuglevel (0);
     diod_conf_set_nwthreads (16);
     diod_conf_set_foreground (0);
-    diod_conf_set_sameuser (0);
     diod_conf_set_readahead (0);
     diod_conf_set_rootsquash (0);
     diod_conf_set_munge (1);
@@ -318,6 +322,29 @@ _lua_getglobal_int (lua_State *L, char *key, int *ip)
 }
 
 static int
+_lua_getglobal_string (lua_State *L, char *key, char **sp)
+{
+    int res = 0;
+    char *cpy;
+
+    lua_getglobal (L, key);
+    if (!lua_isnil (L, -1)) {
+        if (!lua_isstring (L, -1))
+            msg_exit ("%s: `%s' should be string", config.path, key);
+        if (sp) {
+            cpy = strdup ((char *)lua_tostring (L, -1));
+            if (!cpy)
+                msg_exit ("out of memory");
+            *sp = cpy;
+        }
+        res = 1;
+    }
+    lua_pop (L, 1);
+
+    return res;
+}
+
+static int
 _lua_getglobal_list_of_strings (lua_State *L, char *key, List *lp)
 {
     int res = 0;
@@ -378,7 +405,7 @@ diod_conf_init_config_file (char *path)
             msg_exit ("%s", lua_tostring (L, -1));
         
         _lua_getglobal_int (L, "nwthreads", &config.nwthreads);
-        _lua_getglobal_int (L, "sameuser", &config.sameuser);
+        _lua_getglobal_string (L, "user", &config.user);
         _lua_getglobal_int (L, "munge", &config.munge);
         _lua_getglobal_int (L, "tcpwrappers", &config.tcpwrappers);
         _lua_getglobal_int (L, "readahead", &config.readahead);
