@@ -18,3 +18,5 @@ install:
 	#make -C libnpclient install
 
 distclean:
+check:
+dist:

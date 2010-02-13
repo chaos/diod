@@ -33,20 +33,17 @@ void    diod_conf_set_nwthreads (int i);
 int     diod_conf_get_foreground (void);
 void    diod_conf_set_foreground (int i);
 
-char   *diod_conf_get_user (void);
-void    diod_conf_set_user (char *uname);
-
 int     diod_conf_get_readahead (void);
 void    diod_conf_set_readahead (int i);
-
-int     diod_conf_get_rootsquash (void);
-void    diod_conf_set_rootsquash (int i);
 
 int     diod_conf_get_tcpwrappers (void);
 void    diod_conf_set_tcpwrappers (int i);
 
 int     diod_conf_get_munge (void);
 void    diod_conf_set_munge (int i);
+
+int     diod_conf_get_exit_on_lastuse (void);
+void    diod_conf_set_exit_on_lastuse (int i);
 
 List    diod_conf_get_listen (void);
 void    diod_conf_set_listen (char *s);

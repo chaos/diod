@@ -1,1 +1,1 @@
-SUBDIRS = liblsd npfs src man scripts
+SUBDIRS = liblsd npfs src man scripts test

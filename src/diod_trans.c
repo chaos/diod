@@ -125,7 +125,7 @@ diod_trans_destroy (void *a)
 
     free (dt);
 
-    if (transcount == 0 && diod_conf_get_user() != NULL) {
+    if (transcount == 0 && diod_conf_get_exit_on_lastuse ()) {
         msg ("exiting on last unmount");
         exit (0);
     }

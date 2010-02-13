@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/fsuid.h>
 #include <string.h>
 #include <pwd.h>
 #include <grp.h>
@@ -103,121 +104,31 @@ typedef struct {
 
 Npuserpool *diod_upool = &upool;
 
-static int
-_setreuid (uid_t ruid, uid_t euid)
-{
-    int ret;
-
-    if ((ret = setreuid (ruid, euid)) < 0)
-        np_uerror (errno);
-
-    return ret;
-}
-
-static int
-_setregid (gid_t rgid, gid_t egid)
-{
-    int ret;
-
-    if ((ret = setregid (rgid, egid)) < 0)
-        np_uerror (errno);
-
-    return ret;
-}
-
-static int
-_setgroups (size_t size, const gid_t *list)
-{
-    int ret;
-
-    if ((ret = setgroups (size, list)) < 0)
-        np_uerror (errno);
-
-    return ret;
-}
-
-/* Change user to root.
+/* Switch to user/group, permanently.
+ * Load the user's supplementary groups.
  */
-static int
-_switch_root (void)
+int
+diod_become_user (Npuser *u)
 {
-    int ret = -1;
-
-    if (geteuid () == 0)
-        return 0;
-    if (_setreuid (0, 0) < 0)
-        goto done;
-    if (_setregid (0, 0) < 0)
-        goto done;
-    ret = 0;
-done:
-    return ret;
-}
-
-/* Change user to squash user.
- */
-static int
-_switch_squash (void)
-{
-    int ret = -1;
-
-    if (geteuid () == SQUASH_UID) 
-        return 0;
-    if (_setreuid (0, 0) < 0)
-        goto done;
-    if (_setgroups (0, NULL) < 0)
-        goto done;
-    if (_setregid (-1, SQUASH_UID) < 0)
-        goto done;
-    if (_setreuid (-1, SQUASH_GID) < 0)
-        goto done;
-    ret = 0;
-done:
-    return ret;
-}
-
-/* Change user to some other user.
- */
-static int
-_switch_user (Npuser *u)
-{
-    Duser *d = (Duser *)u->aux;
+    Duser *d = u->aux;
     int ret = -1;
 
     assert (d->magic == DUSER_MAGIC);
 
-    if (geteuid () == u->uid)
-        return 0;
-    if (_setreuid (0, 0) < 0)
+    if (setgroups (d->nsg, d->sg) < 0) {
+        np_uerror (errno);
         goto done;
-    if (_setgroups (d->nsg, d->sg) < 0)
+    }
+    if (setregid (d->gid, d->gid) < 0) {
+        np_uerror (errno);
         goto done;
-    if (_setregid (-1, u->uid) < 0)
+    }
+    if (setreuid (u->uid, u->uid) < 0) {
+        np_uerror (errno);
         goto done;
-    if (_setreuid (-1, d->gid) < 0)
-        goto done;
+    }
     ret = 0;
 done:
-    return ret;
-}
-
-/* Change user/group/supplementary groups, if needed.
- * Only users that have successfully attached will be seen here (9P invariant).
- */
-int
-diod_switch_user (Npuser *u)
-{
-    int ret = -1;
-    
-    if (diod_conf_get_user() == NULL)
-        return 0;
-    if (u->uid == 0) {
-        if (diod_conf_get_rootsquash ())
-            ret =_switch_squash ();
-        else
-            ret = _switch_root ();
-    } else
-        ret = _switch_user (u);
     return ret;
 }
 
@@ -279,8 +190,11 @@ _alloc_user (Npuserpool *up, struct passwd *pwd, int munged)
     u->refcount = 0;
     u->upool = up;
     u->uid = pwd->pw_uid;
+    if (!(u->uname = strdup (pwd->pw_name))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
 
-    u->uname = NULL;        /* not used */
     u->dfltgroup = NULL;    /* not used */
     u->groups = NULL;       /* not used */
     u->ngroups = 0;         /* not used */
@@ -289,6 +203,8 @@ done:
     if (np_haserror () && u != NULL) {
         if (u->aux)
             free (u->aux);
+        if (u->uname)
+            free (u->uname);
         free (u);
         u = NULL;
     }
@@ -303,6 +219,8 @@ diod_udestroy (Npuserpool *up, Npuser *u)
 {
     if (u->aux)
         free (u->aux);
+    if (u->uname)
+        free (u->uname);
 }
 
 int

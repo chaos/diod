@@ -22,6 +22,8 @@
  *****************************************************************************/
 
 int diod_switch_user (Npuser *u);
+int diod_become_user (Npuser *u);
 int diod_user_has_mungecred (Npuser *u);
+
 
 extern Npuserpool *diod_upool;

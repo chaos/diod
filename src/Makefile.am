@@ -4,16 +4,22 @@ AM_CPPFLAGS = \
 	-I../npfs/include -I../liblsd
 
 sbin_PROGRAMS = \
-	diod
+	diod \
+	diodctl \
+	diodmount
 
-diod_LDADD = \
+common_ldadd = \
 	$(top_builddir)/npfs/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
+diod_LDADD = \
+	$(common_ldadd)
 
-diod_SOURCES = \
-	diod.c \
+diodctl_LDADD = \
+	$(common_ldadd)
+
+common_sources = \
 	diod_log.c \
 	diod_log.h \
 	diod_conf.c \
@@ -24,3 +30,14 @@ diod_SOURCES = \
 	diod_trans.h \
 	diod_upool.c \
 	diod_upool.h 
+
+diod_SOURCES = \
+	$(common_sources) \
+	diod.c
+
+diodctl_SOURCES = \
+	$(common_sources) \
+	diod_ctl.c
+
+diodmount_SOURCES = \
+	diod_mount.c

@@ -73,5 +73,6 @@ AC_CONFIG_FILES( \
   man/diod.8 \
   scripts/Makefile \
   scripts/diod.init \
+  test/Makefile \
 )
 AC_OUTPUT

@@ -49,126 +49,52 @@ typedef struct {
     int          debuglevel;
     int          nwthreads;
     int          foreground;
-    char        *user;
     int          munge;
     int          tcpwrappers;
     int          readahead;
-    int          rootsquash;
+    int          exit_on_lastuse;
     List         listen;
     List         exports;
-    char        *path;
 } Conf;
 
-static Conf config;
+static Conf config = {
+    .debuglevel     = 0,
+    .nwthreads      = 16,
+    .foreground     = 0,
+    .munge          = 1,
+    .tcpwrappers    = 1,
+    .readahead      = 0,
+    .exit_on_lastuse= 0,
+    .listen         = NULL,     /* diod_conf_init initializes */
+    .exports        = NULL,
+};
 
-int
-diod_conf_get_debuglevel (void)
-{
-    return config.debuglevel;
-}
 
-void
-diod_conf_set_debuglevel (int i)
-{
-    config.debuglevel = i;
-}
+void diod_conf_init (void) { diod_conf_set_listen ("0.0.0.0:564"); }
 
-int
-diod_conf_get_nwthreads (void)
-{
-    return config.nwthreads;
-}
+int diod_conf_get_debuglevel (void) { return config.debuglevel; }
+void diod_conf_set_debuglevel (int i) { config.debuglevel = i; }
 
-void
-diod_conf_set_nwthreads (int i)
-{
-    config.nwthreads = i;
-}
+int diod_conf_get_nwthreads (void) { return config.nwthreads; }
+void diod_conf_set_nwthreads (int i) { config.nwthreads = i; }
 
-int 
-diod_conf_get_foreground (void)
-{
-    return config.foreground;
-}
+int diod_conf_get_foreground (void) { return config.foreground; }
+void diod_conf_set_foreground (int i) { config.foreground = i; }
 
-void
-diod_conf_set_foreground (int i)
-{
-    config.foreground = i;
-}
+int diod_conf_get_munge (void) { return config.munge; }
+void diod_conf_set_munge (int i) { config.munge = i; }
 
-char *
-diod_conf_get_user (void)
-{
-    return config.user;
-}
+int diod_conf_get_tcpwrappers (void) { return config.tcpwrappers; }
+void diod_conf_set_tcpwrappers (int i) { config.tcpwrappers = i; }
 
-void
-diod_conf_set_user (char *uname)
-{
-    if (config.user)
-        free (config.user);
-    config.user = strdup (uname);
-    if (!config.user)
-        msg_exit ("out of memory");
-}
+int diod_conf_get_readahead (void) { return config.readahead; }
+void diod_conf_set_readahead (int i) { config.readahead = i; }
 
-int
-diod_conf_get_munge (void)
-{
-    return config.munge;
-}
+int diod_conf_get_exit_on_lastuse (void) { return config.exit_on_lastuse; }
+void diod_conf_set_exit_on_lastuse (int i) { config.exit_on_lastuse = i; }
 
-void
-diod_conf_set_munge (int i)
-{
-    config.munge = i;
-}
-
-int
-diod_conf_get_tcpwrappers (void)
-{
-    return config.tcpwrappers;
-}
-
-void
-diod_conf_set_tcpwrappers (int i)
-{
-    config.tcpwrappers = i;
-}
-
-int
-diod_conf_get_readahead (void)
-{
-    return config.readahead;
-}
-
-void
-diod_conf_set_readahead (int i)
-{
-    config.readahead = i;
-}
-
-int
-diod_conf_get_rootsquash (void)
-{
-    return config.rootsquash;
-}
-
-void
-diod_conf_set_rootsquash (int i)
-{
-    config.rootsquash = i;
-}
-
-List
-diod_conf_get_listen (void)
-{
-    return config.listen;
-}
-
-void
-diod_conf_set_listen (char *s)
+List diod_conf_get_listen (void) { return config.listen; }
+void diod_conf_set_listen (char *s)
 {
     char *cpy = strdup(s);
 
@@ -178,24 +104,6 @@ diod_conf_set_listen (char *s)
         list_destroy (config.listen);
     config.listen = list_create ((ListDelF)free);
     list_append (config.listen, cpy);
-}
-
-void
-diod_conf_init (void)
-{
-    config.exports = NULL;
-    config.listen = NULL;
-    config.path = NULL;
-    config.user = NULL;
-
-    diod_conf_set_debuglevel (0);
-    diod_conf_set_nwthreads (16);
-    diod_conf_set_foreground (0);
-    diod_conf_set_readahead (0);
-    diod_conf_set_rootsquash (0);
-    diod_conf_set_munge (1);
-    diod_conf_set_tcpwrappers (1);
-    diod_conf_set_listen ("0.0.0.0:564");
 }
 
 /* Tattach verifies path against configured exports.
@@ -304,14 +212,14 @@ diod_conf_validate_exports (void)
 }
 
 static int
-_lua_getglobal_int (lua_State *L, char *key, int *ip)
+_lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
     int res = 0;
 
     lua_getglobal (L, key);
     if (!lua_isnil (L, -1)) {
         if (!lua_isnumber (L, -1))
-            msg_exit ("%s: `%s' should be number", config.path, key);
+            msg_exit ("%s: `%s' should be number", path, key);
         if (ip)
             *ip = (int)lua_tonumber (L, -1);
         res = 1;
@@ -321,8 +229,9 @@ _lua_getglobal_int (lua_State *L, char *key, int *ip)
     return res;
 }
 
+#if 0
 static int
-_lua_getglobal_string (lua_State *L, char *key, char **sp)
+_lua_getglobal_string (char *path, lua_State *L, char *key, char **sp)
 {
     int res = 0;
     char *cpy;
@@ -330,7 +239,7 @@ _lua_getglobal_string (lua_State *L, char *key, char **sp)
     lua_getglobal (L, key);
     if (!lua_isnil (L, -1)) {
         if (!lua_isstring (L, -1))
-            msg_exit ("%s: `%s' should be string", config.path, key);
+            msg_exit ("%s: `%s' should be string", path, key);
         if (sp) {
             cpy = strdup ((char *)lua_tostring (L, -1));
             if (!cpy)
@@ -343,9 +252,10 @@ _lua_getglobal_string (lua_State *L, char *key, char **sp)
 
     return res;
 }
+#endif
 
 static int
-_lua_getglobal_list_of_strings (lua_State *L, char *key, List *lp)
+_lua_getglobal_list_of_strings (char *path, lua_State *L, char *key, List *lp)
 {
     int res = 0;
     int i;
@@ -354,7 +264,7 @@ _lua_getglobal_list_of_strings (lua_State *L, char *key, List *lp)
     lua_getglobal (L, key);
     if (!lua_isnil (L, -1)) {
         if (!lua_istable(L, -1))
-            msg_exit ("%s: `%s' should be table", config.path, key);
+            msg_exit ("%s: `%s' should be table", path, key);
         l = _str_list_create();
         for (i = 1; ;i++) {
             lua_pushinteger(L, (lua_Integer)i);
@@ -362,7 +272,7 @@ _lua_getglobal_list_of_strings (lua_State *L, char *key, List *lp)
             if (lua_isnil (L, -1))
                 break;
             if (!lua_isstring (L, -1))
-                msg_exit ("%s: `%s[%d]' should be string", config.path, key, i);
+                msg_exit ("%s: `%s[%d]' should be string", path, key, i);
             _str_list_append (l, (char *)lua_tostring (L, -1));
             lua_pop (L, 1);
         }
@@ -386,14 +296,12 @@ diod_conf_init_config_file (char *path)
     lua_State *L;
     static char buf[PATH_MAX];
 
-    if (path) {
-        config.path = path;
-    } else {
+    if (!path) {
         snprintf (buf, sizeof (buf), "%s/diod.conf", X_SYSCONFDIR);
         if (access (buf, R_OK) == 0)
-            config.path = buf;  /* missing default config file is not fatal */
+            path = buf;  /* missing default config file is not fatal */
     }
-    if (config.path) {
+    if (path) {
         L = lua_open ();
         luaopen_base (L);
         luaopen_table (L);
@@ -401,17 +309,17 @@ diod_conf_init_config_file (char *path)
         luaopen_string (L);
         luaopen_math (L);
 
-        if (luaL_loadfile (L, config.path) || lua_pcall (L, 0, 0, 0))
+        if (luaL_loadfile (L, path) || lua_pcall (L, 0, 0, 0))
             msg_exit ("%s", lua_tostring (L, -1));
         
-        _lua_getglobal_int (L, "nwthreads", &config.nwthreads);
-        _lua_getglobal_string (L, "user", &config.user);
-        _lua_getglobal_int (L, "munge", &config.munge);
-        _lua_getglobal_int (L, "tcpwrappers", &config.tcpwrappers);
-        _lua_getglobal_int (L, "readahead", &config.readahead);
-        _lua_getglobal_int (L, "rootsquash", &config.rootsquash);
-        _lua_getglobal_list_of_strings (L, "listen", &config.listen);
-        _lua_getglobal_list_of_strings (L, "exports", &config.exports);
+        _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
+        _lua_getglobal_int (path, L, "munge", &config.munge);
+        _lua_getglobal_int (path, L, "tcpwrappers", &config.tcpwrappers);
+        _lua_getglobal_int (path, L, "readahead", &config.readahead);
+        _lua_getglobal_int (path, L, "exit_on_lastuse",
+                            &config.exit_on_lastuse);
+        _lua_getglobal_list_of_strings (path, L, "listen", &config.listen);
+        _lua_getglobal_list_of_strings (path, L, "exports", &config.exports);
 
         lua_close(L);
     }

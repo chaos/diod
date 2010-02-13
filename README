@@ -28,7 +28,7 @@ The benefits of this architecture on clusters are:
      cache management and the page cache memory footprint is reduced.
 
   2. Parallel file system clients are more responsive to file system
-     server-initiated activitities such as lock revocation, since
+     server-initiated activities such as lock revocation, since
      I/O nodes are not burdened with heavy compute loads.
 
   3. Per-client state that must be maintained on file system servers is

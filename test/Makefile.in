@@ -13,7 +13,6 @@
 # PARTICULAR PURPOSE.
 
 @SET_MAKE@
-
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
 VPATH = @srcdir@
@@ -37,8 +36,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-sbin_PROGRAMS = diod$(EXEEXT) diodctl$(EXEEXT) diodmount$(EXEEXT)
-subdir = src
+check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT)
+subdir = test
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
@@ -51,25 +50,12 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
-am__installdirs = "$(DESTDIR)$(sbindir)"
-sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
-PROGRAMS = $(sbin_PROGRAMS)
-am__objects_1 = diod_log.$(OBJEXT) diod_conf.$(OBJEXT) \
-	diod_ops.$(OBJEXT) diod_trans.$(OBJEXT) diod_upool.$(OBJEXT)
-am_diod_OBJECTS = $(am__objects_1) diod.$(OBJEXT)
-diod_OBJECTS = $(am_diod_OBJECTS)
-am__DEPENDENCIES_1 =
-am__DEPENDENCIES_2 = $(top_builddir)/npfs/libnpfs/libnpfs.a \
-	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-diod_DEPENDENCIES = $(am__DEPENDENCIES_2)
-am_diodctl_OBJECTS = $(am__objects_1) diod_ctl.$(OBJEXT)
-diodctl_OBJECTS = $(am_diodctl_OBJECTS)
-diodctl_DEPENDENCIES = $(am__DEPENDENCIES_2)
-am_diodmount_OBJECTS = diod_mount.$(OBJEXT)
-diodmount_OBJECTS = $(am_diodmount_OBJECTS)
-diodmount_LDADD = $(LDADD)
+am_tsetfsuid_OBJECTS = tsetfsuid.$(OBJEXT)
+tsetfsuid_OBJECTS = $(am_tsetfsuid_OBJECTS)
+tsetfsuid_DEPENDENCIES =
+am_tsetuid_OBJECTS = tsetuid.$(OBJEXT)
+tsetuid_OBJECTS = $(am_tsetuid_OBJECTS)
+tsetuid_DEPENDENCIES =
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -77,8 +63,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diod_SOURCES) $(diodctl_SOURCES) $(diodmount_SOURCES)
-DIST_SOURCES = $(diod_SOURCES) $(diodctl_SOURCES) $(diodmount_SOURCES)
+SOURCES = $(tsetfsuid_SOURCES) $(tsetuid_SOURCES)
+DIST_SOURCES = $(tsetfsuid_SOURCES) $(tsetuid_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -200,44 +186,14 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-AM_CFLAGS = @GCCWARN@
-AM_CPPFLAGS = \
-	-I../npfs/include -I../liblsd
-
-common_ldadd = \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
-	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
-
-diod_LDADD = \
-	$(common_ldadd)
-
-diodctl_LDADD = \
-	$(common_ldadd)
-
-common_sources = \
-	diod_log.c \
-	diod_log.h \
-	diod_conf.c \
-	diod_conf.h \
-	diod_ops.c \
-	diod_ops.h \
-	diod_trans.c \
-	diod_trans.h \
-	diod_upool.c \
-	diod_upool.h 
-
-diod_SOURCES = \
-	$(common_sources) \
-	diod.c
-
-diodctl_SOURCES = \
-	$(common_sources) \
-	diod_ctl.c
-
-diodmount_SOURCES = \
-	diod_mount.c
-
+TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/src/diod"
+TESTS = t00
+CLEANFILES = *.out *.diff
+AM_CFLAGS = -I$(top_srcdir)/src
+tsetuid_SOURCES = tsetuid.c
+tsetuid_LDADD = -lpthread
+tsetfsuid_SOURCES = tsetfsuid.c
+tsetfsuid_LDADD = -lpthread
 all: all-am
 
 .SUFFIXES:
@@ -251,9 +207,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  src/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  test/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  src/Makefile
+	  $(AUTOMAKE) --gnu  test/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -271,38 +227,15 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-install-sbinPROGRAMS: $(sbin_PROGRAMS)
-	@$(NORMAL_INSTALL)
-	test -z "$(sbindir)" || $(mkdir_p) "$(DESTDIR)$(sbindir)"
-	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
-	  p1=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
-	  if test -f $$p \
-	  ; then \
-	    f=`echo "$$p1" | sed 's,^.*/,,;$(transform);s/$$/$(EXEEXT)/'`; \
-	   echo " $(INSTALL_PROGRAM_ENV) $(sbinPROGRAMS_INSTALL) '$$p' '$(DESTDIR)$(sbindir)/$$f'"; \
-	   $(INSTALL_PROGRAM_ENV) $(sbinPROGRAMS_INSTALL) "$$p" "$(DESTDIR)$(sbindir)/$$f" || exit 1; \
-	  else :; fi; \
-	done
 
-uninstall-sbinPROGRAMS:
-	@$(NORMAL_UNINSTALL)
-	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
-	  f=`echo "$$p" | sed 's,^.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/'`; \
-	  echo " rm -f '$(DESTDIR)$(sbindir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(sbindir)/$$f"; \
-	done
-
-clean-sbinPROGRAMS:
-	-test -z "$(sbin_PROGRAMS)" || rm -f $(sbin_PROGRAMS)
-diod$(EXEEXT): $(diod_OBJECTS) $(diod_DEPENDENCIES) 
-	@rm -f diod$(EXEEXT)
-	$(LINK) $(diod_LDFLAGS) $(diod_OBJECTS) $(diod_LDADD) $(LIBS)
-diodctl$(EXEEXT): $(diodctl_OBJECTS) $(diodctl_DEPENDENCIES) 
-	@rm -f diodctl$(EXEEXT)
-	$(LINK) $(diodctl_LDFLAGS) $(diodctl_OBJECTS) $(diodctl_LDADD) $(LIBS)
-diodmount$(EXEEXT): $(diodmount_OBJECTS) $(diodmount_DEPENDENCIES) 
-	@rm -f diodmount$(EXEEXT)
-	$(LINK) $(diodmount_LDFLAGS) $(diodmount_OBJECTS) $(diodmount_LDADD) $(LIBS)
+clean-checkPROGRAMS:
+	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+tsetfsuid$(EXEEXT): $(tsetfsuid_OBJECTS) $(tsetfsuid_DEPENDENCIES) 
+	@rm -f tsetfsuid$(EXEEXT)
+	$(LINK) $(tsetfsuid_LDFLAGS) $(tsetfsuid_OBJECTS) $(tsetfsuid_LDADD) $(LIBS)
+tsetuid$(EXEEXT): $(tsetuid_OBJECTS) $(tsetuid_DEPENDENCIES) 
+	@rm -f tsetuid$(EXEEXT)
+	$(LINK) $(tsetuid_LDFLAGS) $(tsetuid_OBJECTS) $(tsetuid_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -310,14 +243,8 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_conf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_ctl.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_log.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_mount.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_ops.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_trans.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_upool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuid.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetuid.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -382,6 +309,79 @@ GTAGS:
 distclean-tags:
 	-rm -f TAGS ID GTAGS GRTAGS GSYMS GPATH tags
 
+check-TESTS: $(TESTS)
+	@failed=0; all=0; xfail=0; xpass=0; skip=0; \
+	srcdir=$(srcdir); export srcdir; \
+	list='$(TESTS)'; \
+	if test -n "$$list"; then \
+	  for tst in $$list; do \
+	    if test -f ./$$tst; then dir=./; \
+	    elif test -f $$tst; then dir=; \
+	    else dir="$(srcdir)/"; fi; \
+	    if $(TESTS_ENVIRONMENT) $${dir}$$tst; then \
+	      all=`expr $$all + 1`; \
+	      case " $(XFAIL_TESTS) " in \
+	      *" $$tst "*) \
+		xpass=`expr $$xpass + 1`; \
+		failed=`expr $$failed + 1`; \
+		echo "XPASS: $$tst"; \
+	      ;; \
+	      *) \
+		echo "PASS: $$tst"; \
+	      ;; \
+	      esac; \
+	    elif test $$? -ne 77; then \
+	      all=`expr $$all + 1`; \
+	      case " $(XFAIL_TESTS) " in \
+	      *" $$tst "*) \
+		xfail=`expr $$xfail + 1`; \
+		echo "XFAIL: $$tst"; \
+	      ;; \
+	      *) \
+		failed=`expr $$failed + 1`; \
+		echo "FAIL: $$tst"; \
+	      ;; \
+	      esac; \
+	    else \
+	      skip=`expr $$skip + 1`; \
+	      echo "SKIP: $$tst"; \
+	    fi; \
+	  done; \
+	  if test "$$failed" -eq 0; then \
+	    if test "$$xfail" -eq 0; then \
+	      banner="All $$all tests passed"; \
+	    else \
+	      banner="All $$all tests behaved as expected ($$xfail expected failures)"; \
+	    fi; \
+	  else \
+	    if test "$$xpass" -eq 0; then \
+	      banner="$$failed of $$all tests failed"; \
+	    else \
+	      banner="$$failed of $$all tests did not behave as expected ($$xpass unexpected passes)"; \
+	    fi; \
+	  fi; \
+	  dashes="$$banner"; \
+	  skipped=""; \
+	  if test "$$skip" -ne 0; then \
+	    skipped="($$skip tests were not run)"; \
+	    test `echo "$$skipped" | wc -c` -le `echo "$$banner" | wc -c` || \
+	      dashes="$$skipped"; \
+	  fi; \
+	  report=""; \
+	  if test "$$failed" -ne 0 && test -n "$(PACKAGE_BUGREPORT)"; then \
+	    report="Please report to $(PACKAGE_BUGREPORT)"; \
+	    test `echo "$$report" | wc -c` -le `echo "$$banner" | wc -c` || \
+	      dashes="$$report"; \
+	  fi; \
+	  dashes=`echo "$$dashes" | sed s/./=/g`; \
+	  echo "$$dashes"; \
+	  echo "$$banner"; \
+	  test -z "$$skipped" || echo "$$skipped"; \
+	  test -z "$$report" || echo "$$report"; \
+	  echo "$$dashes"; \
+	  test "$$failed" -eq 0; \
+	else :; fi
+
 distdir: $(DISTFILES)
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
@@ -410,12 +410,11 @@ distdir: $(DISTFILES)
 	  fi; \
 	done
 check-am: all-am
+	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
+	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile
 installdirs:
-	for dir in "$(DESTDIR)$(sbindir)"; do \
-	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
-	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -433,6 +432,7 @@ install-strip:
 mostlyclean-generic:
 
 clean-generic:
+	-test -z "$(CLEANFILES)" || rm -f $(CLEANFILES)
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
@@ -442,7 +442,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-sbinPROGRAMS mostlyclean-am
+clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -462,7 +462,7 @@ info-am:
 
 install-data-am:
 
-install-exec-am: install-sbinPROGRAMS
+install-exec-am:
 
 install-info: install-info-am
 
@@ -487,18 +487,18 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-info-am uninstall-sbinPROGRAMS
+uninstall-am: uninstall-info-am
 
-.PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-sbinPROGRAMS ctags distclean distclean-compile \
-	distclean-generic distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-exec install-exec-am install-info \
-	install-info-am install-man install-sbinPROGRAMS install-strip \
+.PHONY: CTAGS GTAGS all all-am check check-TESTS check-am clean \
+	clean-checkPROGRAMS clean-generic ctags distclean \
+	distclean-compile distclean-generic distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-exec install-exec-am \
+	install-info install-info-am install-man install-strip \
 	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-info-am uninstall-sbinPROGRAMS
+	uninstall-am uninstall-info-am
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

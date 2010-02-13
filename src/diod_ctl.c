@@ -21,7 +21,16 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/* diod.c - distributed I/O daemon */
+/* diod_ctl.c - super server for diod (runs as root on 9pfs port) */
+
+/* What we do:
+ * - look like a 9p file system for diod ctl called 'ctl'
+ * - file 'exports' contains list of I/O node exports
+ * - file 'server' contains server hostname:port
+ * - when an attached user reads 'server', if a diod server is already running
+ *   for that user, return host:port.  If not, spawn it and return host:port.
+ * - reap children when they quit (on last trans shutdown)
+ */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -57,7 +66,7 @@
 #include "diod_log.h"
 #include "diod_conf.h"
 #include "diod_trans.h"
-#include "diod_ops.h"
+#include "diod_upool.h"
 
 extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
 int         allow_severity = LOG_INFO;
@@ -67,13 +76,15 @@ static void diod_setup_listen (struct pollfd **fdsp, int *nfdsp);
 static void diod_service_loop (Npsrv *srv, struct pollfd *fds, int nfds);
 static void diod_daemonize (void);
 
+static void diod_ctl_register_ops (Npsrv *srv);
+
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
 #define DAEMON_NAME     "diod"
 
-#define OPTIONS "fd:l:w:c:e:armx"
+#define OPTIONS "fd:l:w:c:e:am"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -84,9 +95,7 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
     {"allowany",        no_argument,        0, 'a'},
-    {"readahead",       no_argument,        0, 'r'},
     {"no-munge-auth",   no_argument,        0, 'm'},
-    {"exit-on-lastuse", no_argument,        0, 'x'},
     {0, 0, 0, 0},
 };
 #else
@@ -105,9 +114,7 @@ usage()
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
-"   -r,--readahead         do not disable kernel readahead with fadvise\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
-"   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "Note: command line overrides config file\n",
              DAEMON_NAME);
     exit (1);
@@ -121,9 +128,7 @@ main(int argc, char **argv)
     int fopt = 0;
     int dopt = 0;
     int aopt = 0;
-    int ropt = 0;
     int mopt = 0;
-    int xopt = 0;
     char *lopt = NULL;
     char *copt = NULL;
     int wopt = 0;
@@ -162,14 +167,8 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 aopt = 1;
                 break;
-            case 'r':   /* --readahead */
-                ropt = 1;
-                break;
             case 'm':   /* --no-munge-auth */
                 mopt = 1;
-                break;
-            case 'x':   /* --exit-on-lastuse */
-                xopt = 1;
                 break;
             default:
                 usage();
@@ -184,8 +183,6 @@ main(int argc, char **argv)
     /* command line overrides config file */
     if (fopt)
         diod_conf_set_foreground (1);
-    if (ropt)
-        diod_conf_set_readahead (1);
     if (aopt)
         diod_conf_set_tcpwrappers (0);
     if (dopt)
@@ -198,8 +195,6 @@ main(int argc, char **argv)
         diod_conf_set_export (eopt);
     if (mopt)  
         diod_conf_set_munge (0);
-    if (xopt)  
-        diod_conf_set_exit_on_lastuse (1);
 
     /* sane config? */
     diod_conf_validate_exports ();
@@ -221,7 +216,7 @@ main(int argc, char **argv)
     if (!diod_conf_get_foreground ())
         diod_daemonize ();
 
-    diod_register_ops (srv);
+    diod_ctl_register_ops (srv);
     diod_service_loop (srv, fds, nfds);
     /*NOTREACHED*/
 
@@ -407,6 +402,29 @@ diod_daemonize (void)
         err_exit ("daemon");
     diod_log_to_syslog();
 }
+
+static void
+diod_ctl_register_ops (Npsrv *srv)
+{
+    srv->dotu = 1;
+    srv->msize = 65536;
+    srv->upool = diod_upool;
+/*
+    srv->attach = diod_attach;
+    srv->clone = diod_clone;
+    srv->walk = diod_walk;
+    srv->open = diod_open;
+    srv->read = diod_read;
+    srv->clunk = diod_clunk;
+    srv->stat = diod_stat;
+    srv->flush = diod_flush;
+    srv->fiddestroy = diod_fiddestroy;
+*/
+
+    srv->debuglevel = diod_conf_get_debuglevel ();
+    srv->debugprintf = msg;
+}
+
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
