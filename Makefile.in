@@ -195,7 +195,7 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-SUBDIRS = liblsd npfs src man scripts test
+SUBDIRS = liblsd npfs common diod diodctl diodmount man scripts test
 all: all-recursive
 
 .SUFFIXES:

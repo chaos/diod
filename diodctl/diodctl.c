@@ -21,7 +21,16 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/* diod.c - distributed I/O daemon */
+/* diodctl.c - super server for diod (runs as root on 9pfs port) */
+
+/* What we do:
+ * - serve /diodctl synthetic file system
+ * - file 'exports' contains list of I/O node exports
+ * - file 'server' contains server ip:port
+ * - when an attached user reads 'server', if a diod server is already running
+ *   for that user, return ip:port.  If not, spawn it and return ip:port.
+ * - reap children when they quit (on last trans shutdown)
+ */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -35,18 +44,12 @@
 #endif
 #include <errno.h>
 #include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <netdb.h>
-//#include <sys/signal.h>
+#include <sys/wait.h>
 #include <sys/param.h>
-//#include <sys/stat.h>
 #include <string.h>
-//#include <syslog.h>
-//#include <pwd.h>
-//#include <sys/time.h>
-//#include <sys/resource.h>
+#include <sys/resource.h>
 #include <poll.h>
+#include <assert.h>
 
 #include "npfs.h"
 #include "list.h"
@@ -54,12 +57,20 @@
 #include "diod_log.h"
 #include "diod_conf.h"
 #include "diod_trans.h"
-#include "diod_ops.h"
+#include "diod_upool.h"
 #include "diod_sock.h"
 
-static void diod_daemonize (void);
+#include "ops.h"
+#include "serv.h"
 
-#define OPTIONS "fd:l:w:c:e:armxF:"
+static void          _daemonize (void);
+static void          _setrlimit (void); 
+
+#ifndef NR_OPEN
+#define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
+#endif
+
+#define OPTIONS "fd:l:w:c:e:amD:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -70,10 +81,8 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
     {"allowany",        no_argument,        0, 'a'},
-    {"readahead",       no_argument,        0, 'r'},
     {"no-munge-auth",   no_argument,        0, 'm'},
-    {"exit-on-lastuse", no_argument,        0, 'x'},
-    {"listen-fds",      required_argument,  0, 'F'},
+    {"diod-path",       required_argument,  0, 'D'},
     {0, 0, 0, 0},
 };
 #else
@@ -84,7 +93,7 @@ static void
 usage()
 {
     fprintf (stderr, 
-"Usage: diod [OPTIONS]\n"
+"Usage: diodctl [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
@@ -92,10 +101,7 @@ usage()
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
-"   -r,--readahead         do not disable kernel readahead with fadvise\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
-"   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
-"   -F,--listen-fds N      listen for connections on the first N fds\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -108,14 +114,12 @@ main(int argc, char **argv)
     int fopt = 0;
     int dopt = 0;
     int aopt = 0;
-    int ropt = 0;
     int mopt = 0;
-    int xopt = 0;
-    int Fopt = 0;
     char *lopt = NULL;
     char *copt = NULL;
     int wopt = 0;
     char *eopt = NULL;
+    char *Dopt = NULL;
     struct pollfd *fds = NULL;
     int nfds = 0;
    
@@ -150,17 +154,11 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 aopt = 1;
                 break;
-            case 'r':   /* --readahead */
-                ropt = 1;
-                break;
             case 'm':   /* --no-munge-auth */
                 mopt = 1;
                 break;
-            case 'x':   /* --exit-on-lastuse */
-                xopt = 1;
-                break;
-            case 'F':   /* --listen-fds N */
-                Fopt = strtoul (optarg, NULL, 10);
+            case 'D':   /* --diod-path PATH */
+                Dopt = optarg;
                 break;
             default:
                 usage();
@@ -168,8 +166,6 @@ main(int argc, char **argv)
     }
     if (optind < argc)
         usage();
-    if (lopt && Fopt)
-        msg_exit ("--listen-fds and --listen are mutually exclusive options");
 
     /* config file overrides defaults */
     diod_conf_init_config_file (copt);
@@ -177,8 +173,6 @@ main(int argc, char **argv)
     /* command line overrides config file */
     if (fopt)
         diod_conf_set_foreground (1);
-    if (ropt)
-        diod_conf_set_readahead (1);
     if (aopt)
         diod_conf_set_tcpwrappers (0);
     if (dopt)
@@ -191,12 +185,10 @@ main(int argc, char **argv)
         diod_conf_set_export (eopt);
     if (mopt)  
         diod_conf_set_munge (0);
-    if (xopt)  
-        diod_conf_set_exit_on_lastuse (1);
+    if (Dopt)  
+        diod_conf_set_diodpath (Dopt);
 
     /* sane config? */
-    if (!diod_conf_get_listen () && Fopt == 0)
-        msg_exit ("no listen address specified");
     diod_conf_validate_exports ();
 #if ! HAVE_TCP_WRAPPERS
     if (diod_conf_get_tcpwrappers ())
@@ -207,21 +199,20 @@ main(int argc, char **argv)
         msg_exit ("no munge support, yet config enables it");
 #endif
 
+    if (geteuid () != 0)
+        msg_exit ("must run as root");
+    _setrlimit ();
+
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
-    if (Fopt) {
-        if (!diod_sock_listen_fds (&fds, &nfds, Fopt))
-            msg_exit ("failed to set up listen ports");
-    } else {
-        if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_listen ()))
-            msg_exit ("failed to set up listen ports");
-    }
-
+    if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_listen ()))
+        msg_exit ("failed to set up listen ports");
     if (!diod_conf_get_foreground ())
-        diod_daemonize ();
+        _daemonize ();
 
-    diod_register_ops (srv);
+    diodctl_serv_init (diod_conf_mkconfig ());
+    diodctl_register_ops (srv);
     diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
     /*NOTREACHED*/
 
@@ -229,7 +220,7 @@ main(int argc, char **argv)
 }
 
 static void
-diod_daemonize (void)
+_daemonize (void)
 {
     char rdir[PATH_MAX];
 
@@ -240,6 +231,36 @@ diod_daemonize (void)
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();
+}
+
+/* Remove any resource limits that might hamper our (non-root) children.
+ */
+static void 
+_setrlimit (void)
+{
+    struct rlimit r, r2;
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_FSIZE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_FSIZE");
+
+    r.rlim_cur = r.rlim_max = NR_OPEN;
+    r2.rlim_cur = r2.rlim_max = sysconf(_SC_OPEN_MAX);
+    if (setrlimit (RLIMIT_NOFILE, &r) < 0)
+        if (errno != EPERM || setrlimit (RLIMIT_NOFILE, &r2) < 0)
+            err_exit ("setrlimit RLIMIT_NOFILE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_LOCKS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_LOCKS");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_CORE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_CORE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_AS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_AS");
 }
 
 /*

@@ -5084,7 +5084,7 @@ _ACEOF
 ##
 # Epilogue
 ##
-                                                                                ac_config_files="$ac_config_files Makefile src/Makefile liblsd/Makefile man/Makefile man/diod.8 scripts/Makefile scripts/diod.init test/Makefile"
+                                                                                                              ac_config_files="$ac_config_files Makefile common/Makefile liblsd/Makefile man/Makefile man/diod.8 scripts/Makefile scripts/diod.init test/Makefile diod/Makefile diodctl/Makefile diodmount/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -5643,13 +5643,16 @@ do
   case "$ac_config_target" in
   # Handling of arguments.
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
-  "src/Makefile" ) CONFIG_FILES="$CONFIG_FILES src/Makefile" ;;
+  "common/Makefile" ) CONFIG_FILES="$CONFIG_FILES common/Makefile" ;;
   "liblsd/Makefile" ) CONFIG_FILES="$CONFIG_FILES liblsd/Makefile" ;;
   "man/Makefile" ) CONFIG_FILES="$CONFIG_FILES man/Makefile" ;;
   "man/diod.8" ) CONFIG_FILES="$CONFIG_FILES man/diod.8" ;;
   "scripts/Makefile" ) CONFIG_FILES="$CONFIG_FILES scripts/Makefile" ;;
   "scripts/diod.init" ) CONFIG_FILES="$CONFIG_FILES scripts/diod.init" ;;
   "test/Makefile" ) CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
+  "diod/Makefile" ) CONFIG_FILES="$CONFIG_FILES diod/Makefile" ;;
+  "diodctl/Makefile" ) CONFIG_FILES="$CONFIG_FILES diodctl/Makefile" ;;
+  "diodmount/Makefile" ) CONFIG_FILES="$CONFIG_FILES diodmount/Makefile" ;;
   "depfiles" ) CONFIG_COMMANDS="$CONFIG_COMMANDS depfiles" ;;
   "config/config.h" ) CONFIG_HEADERS="$CONFIG_HEADERS config/config.h" ;;
   *) { { echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5

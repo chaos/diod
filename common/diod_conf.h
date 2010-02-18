@@ -45,6 +45,9 @@ void    diod_conf_set_munge (int i);
 int     diod_conf_get_exit_on_lastuse (void);
 void    diod_conf_set_exit_on_lastuse (int i);
 
+char   *diod_conf_get_diodpath (void);
+void    diod_conf_set_diodpath (char *s);
+
 List    diod_conf_get_listen (void);
 void    diod_conf_set_listen (char *s);
 
@@ -53,6 +56,8 @@ int     diod_conf_match_export (char *path, char *host, char *ip, uid_t uid,
 void    diod_conf_validate_exports (void);
 void    diod_conf_set_export (char *path);
 char   *diod_conf_cat_exports (void);
+
+char   *diod_conf_mkconfig (void);
 
 
 /*

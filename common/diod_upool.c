@@ -106,30 +106,21 @@ Npuserpool *diod_upool = &upool;
 
 /* Switch to user/group, permanently.
  * Load the user's supplementary groups.
+ * This is called after a fork - avoid locks!
  */
-int
+void
 diod_become_user (Npuser *u)
 {
     Duser *d = u->aux;
-    int ret = -1;
 
     assert (d->magic == DUSER_MAGIC);
 
-    if (setgroups (d->nsg, d->sg) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    if (setregid (d->gid, d->gid) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    if (setreuid (u->uid, u->uid) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    ret = 0;
-done:
-    return ret;
+    if (setgroups (d->nsg, d->sg) < 0)
+        _exit (1);
+    if (setregid (d->gid, d->gid) < 0)
+        _exit (1);
+    if (setreuid (u->uid, u->uid) < 0)
+        _exit (1);
 }
 
 static Duser *

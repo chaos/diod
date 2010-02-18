@@ -74,7 +74,8 @@ AC_CONFIG_FILES( \
   scripts/Makefile \
   scripts/diod.init \
   test/Makefile \
-  diodctl/Makefile \
   diod/Makefile \
+  diodctl/Makefile \
+  diodmount/Makefile \
 )
 AC_OUTPUT

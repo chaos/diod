@@ -92,11 +92,12 @@
 #include "npfs.h"
 #include "list.h"
 
-#include "diod_ops.h"
 #include "diod_conf.h"
 #include "diod_log.h"
 #include "diod_trans.h"
 #include "diod_upool.h"
+
+#include "ops.h"
 
 typedef struct {
     char            *path;

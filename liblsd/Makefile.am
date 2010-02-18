@@ -1,6 +1,6 @@
 AM_CFLAGS = @GCCWARN@
 
-AM_CPPFLAGS = -I../src
+AM_CPPFLAGS = -I../common
 
 noinst_LIBRARIES = liblsd.a
 
