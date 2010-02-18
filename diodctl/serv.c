@@ -116,9 +116,11 @@ _alloc_server (void)
         goto done;
     }
     memset (s, 0, sizeof (*s));
-    s->av = malloc (sizeof (char) * 1);
+    if (!(s->av = malloc (sizeof (char *) * 1))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
     s->av[0] = NULL;
-    s->ac = 0;
 done:
     if (np_haserror () && s != NULL)
         _free_server (s);
@@ -236,7 +238,7 @@ _push_arg (Server *s, const char *fmt, ...)
         np_uerror (ENOMEM);
         goto done;
     }
-    if (!(s->av = realloc (s->av, sizeof (char) * (s->ac + 2)))) {
+    if (!(s->av = realloc (s->av, sizeof (char *) * (s->ac + 2)))) {
         np_uerror (ENOMEM);
         goto done;
     }

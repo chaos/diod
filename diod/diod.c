@@ -35,17 +35,8 @@
 #endif
 #include <errno.h>
 #include <sys/types.h>
-//#include <sys/socket.h>
-//#include <netinet/in.h>
-//#include <netdb.h>
-//#include <sys/signal.h>
 #include <sys/param.h>
-//#include <sys/stat.h>
 #include <string.h>
-//#include <syslog.h>
-//#include <pwd.h>
-//#include <sys/time.h>
-//#include <sys/resource.h>
 #include <poll.h>
 
 #include "npfs.h"
@@ -58,7 +49,7 @@
 
 #include "ops.h"
 
-static void diod_daemonize (void);
+static void _daemonize (void);
 
 #define OPTIONS "fd:l:w:c:e:armxF:"
 #if HAVE_GETOPT_LONG
@@ -220,7 +211,7 @@ main(int argc, char **argv)
     }
 
     if (!diod_conf_get_foreground ())
-        diod_daemonize ();
+        _daemonize ();
 
     diod_register_ops (srv);
     diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
@@ -230,7 +221,7 @@ main(int argc, char **argv)
 }
 
 static void
-diod_daemonize (void)
+_daemonize (void)
 {
     char rdir[PATH_MAX];
 

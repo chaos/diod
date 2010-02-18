@@ -102,6 +102,7 @@ usage()
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
+"   -D,--diod-path PATH    set path to diod executable\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
