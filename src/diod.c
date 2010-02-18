@@ -35,17 +35,17 @@
 #endif
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <sys/signal.h>
+//#include <sys/socket.h>
+//#include <netinet/in.h>
+//#include <netdb.h>
+//#include <sys/signal.h>
 #include <sys/param.h>
-#include <sys/stat.h>
+//#include <sys/stat.h>
 #include <string.h>
-#include <syslog.h>
-#include <pwd.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+//#include <syslog.h>
+//#include <pwd.h>
+//#include <sys/time.h>
+//#include <sys/resource.h>
 #include <poll.h>
 
 #include "npfs.h"

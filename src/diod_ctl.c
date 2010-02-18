@@ -49,20 +49,12 @@
 #endif
 #include <errno.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <sys/signal.h>
+#include <sys/wait.h>
 #include <sys/param.h>
-#include <sys/stat.h>
 #include <string.h>
-#include <syslog.h>
-#include <pwd.h>
-#include <sys/time.h>
 #include <sys/resource.h>
 #include <poll.h>
-#include <sys/types.h>
-#include <signal.h>
+#include <assert.h>
 
 #include "npfs.h"
 #include "list.h"
@@ -86,6 +78,7 @@ typedef struct {
     uid_t uid;
     char *key;
     pid_t pid;
+    pthread_t wait_thread;
 } Server;
 
 typedef struct {
@@ -262,7 +255,8 @@ _free_server (Server *s)
     if (s->key)
         free (s->key);
     if (s->pid != 0)
-        kill (s->pid, SIGTERM);
+        if (kill (s->pid, SIGTERM) < 0)
+            err ("could not send SIGTERM to pid %d", s->pid);
     free (s);
 }
 
@@ -303,9 +297,76 @@ _init_serverlist (void)
  * Suitable for cast to (ListFindF).
  */
 static int
-_match_server (Server *s, uid_t *uid)
+_match_server_byuid (Server *s, uid_t *uid)
 {
     return (s->uid == *uid);
+}
+
+static int
+_remove_server (Server *s)
+{
+    ListIterator itr;
+    int err;
+    Server *s1;
+
+    if (!(itr = list_iterator_create (serverlist->servers))) {
+        msg ("out of memory");
+        goto done;
+    }
+    if ((err = pthread_mutex_lock (&serverlist->lock))) {
+        msg ("failed to lock serverlist");
+        goto done;
+    }
+    if (!list_find (itr, (ListFindF)_match_server_byuid, &s->uid)) {
+        msg ("failed to delete server from list");
+        goto unlock_and_done;
+    }
+    s1 = list_remove (itr);
+    assert (s1 == s);
+    _free_server (s);
+unlock_and_done:
+    if ((err = pthread_mutex_unlock (&serverlist->lock))) {
+        msg ("failed to unlock serverlist");
+        goto done;
+    }
+done:
+    if (itr)
+        list_iterator_destroy (itr);
+    return 0;
+}
+
+/* Thread to wait on child process and report status.
+ */
+static void *
+_wait_pid (void *arg)
+{
+    Server *s = arg;
+    pid_t pid;
+    int status;
+
+    do {
+        pid = waitpid (s->pid, &status, 0);
+        if (pid == s->pid) {
+            if (WIFEXITED (status)) {
+                if (WEXITSTATUS (status) != 0)
+                    msg ("%s exited with %d", s->key, WEXITSTATUS (status));
+            } else if (WIFSIGNALED (status)) {
+                msg ("%s killed by signal %d", s->key, WTERMSIG (status));
+            } else if (WIFSTOPPED(status)) {
+                msg ("%s stopped by signal %d", s->key, WSTOPSIG(status));
+                continue;
+            } else if (WIFCONTINUED(status)) {
+                msg ("%s continued", s->key);
+                continue;
+            }
+        }
+    } while (pid < 0 && errno == EINTR);
+    if (pid < 0)
+        err ("wait for %s", s->key);
+    else
+        s->pid = 0; /* prevent _free_server () from sending signal */
+    _remove_server (s);
+    return NULL;
 }
 
 /* Spawn a new diod daemon running as [uid].
@@ -317,7 +378,7 @@ _new_server (Npuser *user, char *ip)
     char name[16];
     char Fopt[16];
     struct pollfd *fds = NULL;
-    int i, nfds = 0;
+    int i, nfds = 0, error;
     Server *s = NULL;
 
     if (!(s = _alloc_server ()))
@@ -350,10 +411,12 @@ _new_server (Npuser *user, char *ip)
             err_exit ("exec failed"); /* N.B. this is the child exiting */
             break;
         default: /* parent */
-            /* FIXME: spawn a thread to waitpid() on the child */
             break;
     }
-
+    if ((error = pthread_create (&s->wait_thread, NULL, _wait_pid, s))) {
+        np_uerror (error);
+        goto done; 
+    }
     if (!list_append (serverlist->servers, s)) {
         np_uerror (ENOMEM);
         goto done;
@@ -505,7 +568,7 @@ _server_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
         np_uerror (err);
         goto done;
     }
-    s = list_find_first (serverlist->servers, (ListFindF)_match_server,
+    s = list_find_first (serverlist->servers, (ListFindF)_match_server_byuid,
                          &fid->user->uid);
     if (s) {
         cpylen = strlen (s->key) - offset;
@@ -541,7 +604,7 @@ _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
     }
 
     /* FIXME: what if found server is listening on wrong ip? */
-    if (!list_find_first (serverlist->servers, (ListFindF)_match_server,
+    if (!list_find_first (serverlist->servers, (ListFindF)_match_server_byuid,
                           &fid->user->uid)) {
         _new_server (fid->user, ip);
     }
