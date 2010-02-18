@@ -285,6 +285,7 @@ diod_uname2user (Npuserpool *up, char *uname)
             goto done;
         }
         munged = 1;
+        msg ("decoded munge cred for uid %d", uid);
     } else {
         if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);

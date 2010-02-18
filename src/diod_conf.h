@@ -52,6 +52,8 @@ int     diod_conf_match_export (char *path, char *host, char *ip, uid_t uid,
                                 int *errp);
 void    diod_conf_validate_exports (void);
 void    diod_conf_set_export (char *path);
+char   *diod_conf_cat_exports (void);
+
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

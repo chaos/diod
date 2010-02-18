@@ -29,7 +29,9 @@ common_sources = \
 	diod_trans.c \
 	diod_trans.h \
 	diod_upool.c \
-	diod_upool.h 
+	diod_upool.h \
+	diod_sock.c \
+	diod_sock.h 
 
 diod_SOURCES = \
 	$(common_sources) \

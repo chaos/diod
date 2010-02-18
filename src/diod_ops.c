@@ -552,6 +552,8 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         np_uerror (EPERM);
         goto done;
     }
+    /* Reject attaches from users other than the one we're already running as.
+     */
     if (nfid->user->uid != geteuid ()) {
         np_uerror (EPERM);
         goto done;

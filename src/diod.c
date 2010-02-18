@@ -46,9 +46,6 @@
 #include <pwd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#if HAVE_TCP_WRAPPERS
-#include <tcpd.h>
-#endif
 #include <poll.h>
 
 #include "npfs.h"
@@ -58,22 +55,11 @@
 #include "diod_conf.h"
 #include "diod_trans.h"
 #include "diod_ops.h"
+#include "diod_sock.h"
 
-extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
-int         allow_severity = LOG_INFO;
-int         deny_severity = LOG_WARNING;
-
-static void diod_setup_listen (struct pollfd **fdsp, int *nfdsp);
-static void diod_service_loop (Npsrv *srv, struct pollfd *fds, int nfds);
 static void diod_daemonize (void);
 
-#ifndef NR_OPEN
-#define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
-#endif
-
-#define DAEMON_NAME     "diod"
-
-#define OPTIONS "fd:l:w:c:e:armx"
+#define OPTIONS "fd:l:w:c:e:armxF:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -87,6 +73,7 @@ static const struct option longopts[] = {
     {"readahead",       no_argument,        0, 'r'},
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"exit-on-lastuse", no_argument,        0, 'x'},
+    {"listen-fds",      required_argument,  0, 'F'},
     {0, 0, 0, 0},
 };
 #else
@@ -97,7 +84,7 @@ static void
 usage()
 {
     fprintf (stderr, 
-"Usage: %s [OPTIONS]\n"
+"Usage: diod [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
@@ -108,8 +95,8 @@ usage()
 "   -r,--readahead         do not disable kernel readahead with fadvise\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
-"Note: command line overrides config file\n",
-             DAEMON_NAME);
+"   -F,--listen-fds N      listen for connections on the first N fds\n"
+"Note: command line overrides config file\n");
     exit (1);
 }
 
@@ -124,6 +111,7 @@ main(int argc, char **argv)
     int ropt = 0;
     int mopt = 0;
     int xopt = 0;
+    int Fopt = 0;
     char *lopt = NULL;
     char *copt = NULL;
     int wopt = 0;
@@ -171,12 +159,17 @@ main(int argc, char **argv)
             case 'x':   /* --exit-on-lastuse */
                 xopt = 1;
                 break;
+            case 'F':   /* --listen-fds N */
+                Fopt = strtoul (optarg, NULL, 10);
+                break;
             default:
                 usage();
         }
     }
     if (optind < argc)
         usage();
+    if (lopt && Fopt)
+        msg_exit ("--listen-fds and --listen are mutually exclusive options");
 
     /* config file overrides defaults */
     diod_conf_init_config_file (copt);
@@ -202,6 +195,8 @@ main(int argc, char **argv)
         diod_conf_set_exit_on_lastuse (1);
 
     /* sane config? */
+    if (!diod_conf_get_listen () && Fopt == 0)
+        msg_exit ("no listen address specified");
     diod_conf_validate_exports ();
 #if ! HAVE_TCP_WRAPPERS
     if (diod_conf_get_tcpwrappers ())
@@ -215,183 +210,22 @@ main(int argc, char **argv)
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
-
-    diod_setup_listen (&fds, &nfds);
+    if (Fopt) {
+        if (!diod_sock_listen_fds (&fds, &nfds, Fopt))
+            msg_exit ("failed to set up listen ports");
+    } else {
+        if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_listen ()))
+            msg_exit ("failed to set up listen ports");
+    }
 
     if (!diod_conf_get_foreground ())
         diod_daemonize ();
 
     diod_register_ops (srv);
-    diod_service_loop (srv, fds, nfds);
+    diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
     /*NOTREACHED*/
 
     exit (0);
-}
-
-/* Given a ip:port to listen on, open sockets and expand pollfd array
- * to include new the fds.  May be called more than once, e.g. if there are
- * multiple ip:port pairs to listen on.
- * N.B. host 0.0.0.0 is ipv4 for any interface.
- */
-static void
-diod_setup_listen_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
-{
-    struct addrinfo hints, *res, *r;
-    int opt, i, error, fd, nents = 0;
-    struct pollfd *fds = *fdsp;
-    int nfds = *nfdsp;
-
-    memset (&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-
-    if ((error = getaddrinfo (host, port, &hints, &res)))
-        msg_exit ("getaddrinfo: %s:%s: %s", host, port, gai_strerror(error));
-    if (res == NULL)
-        msg_exit ("listen address has no addrinfo: %s:%s\n", host, port);
-
-    for (r = res; r != NULL; r = r->ai_next)
-        nents++;
-    if (fds)
-        fds = realloc (fds, sizeof(struct pollfd) * (nents + nfds));
-    else
-        fds = malloc (sizeof(struct pollfd) * nents);
-    if (!fds)
-            msg_exit ("out of memory");
-
-    for (r = res; r != NULL; r = r->ai_next, i++) {
-        if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
-            err_exit ("socket: %s:%s", host, port);
-        opt = 1;
-        if (setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-            err ("setsockopt: %s:%s", host, port);
-            close (fd);
-            exit (1);
-        }
-        if (bind (fd, r->ai_addr, r->ai_addrlen) < 0) {
-            err ("bind: %s:%s", host, port);
-            close (fd);
-            exit (1);
-        }
-        if (listen (fd, 5) < 0) {
-            err ("listen: %s:%s", host, port);
-            close (fd);
-            exit (1);
-        }
-        fds[nfds++].fd = fd;
-    }
-    freeaddrinfo (res);
-
-    *fdsp = fds;
-    *nfdsp = nfds;
-}
-
-/* Set up listen ports.
- */
-static void
-diod_setup_listen (struct pollfd **fdsp, int *nfdsp)
-{
-    List l = diod_conf_get_listen ();
-    ListIterator itr;
-    char *hostport, *host, *port;
-
-    itr = list_iterator_create(l);
-    while ((hostport = list_next(itr))) {
-        if ((host = strdup (hostport)) == NULL)
-            msg_exit ("out of memory");
-        port = strchr (host, ':');
-        *port++ = '\0';
-        diod_setup_listen_one (host, port, fdsp, nfdsp);
-    }
-    list_iterator_destroy(itr);
-}
-
-
-/* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
- */
-static void
-diod_accept_one (Npsrv *srv, int fd)
-{
-    struct sockaddr_storage addr;
-    socklen_t addr_size = sizeof(addr);
-    char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
-    int res;
-    Npconn *conn;
-    Nptrans *trans;
-
-    fd = accept (fd, (struct sockaddr *)&addr, &addr_size);
-    if (fd < 0) {
-        if (errno == EWOULDBLOCK || errno == ECONNABORTED || errno == EPROTO
-                                                          || errno == EINTR)
-            return; /* client died between its connect and our accept */
-        else 
-            err_exit ("accept");
-    }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            ip, sizeof(ip), svc, sizeof(svc),
-                            NI_NUMERICHOST | NI_NUMERICSERV))) {
-        msg ("getnameinfo: %s", gai_strerror(res));
-        close (fd);
-        return;
-    }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            host, sizeof(host), NULL, 0,
-                            NI_NAMEREQD))) {
-        msg ("getnameinfo: %s", gai_strerror(res));
-        close (fd);
-        return;
-    }
-#if HAVE_TCP_WRAPPERS
-    if (diod_conf_get_tcpwrappers ()) {
-        res = hosts_ctl (DAEMON_NAME, host, ip, STRING_UNKNOWN);
-        if (!res) {
-            msg ("connect denied by wrappers: %s:%s", host, svc);
-            close (fd);
-            return;
-        }
-    }
-#endif
-    trans = diod_trans_create (fd, host, ip, svc);
-    if (!trans) {
-        msg ("connect denied by diod_trans_create failure: %s:%s", host, svc);
-        close (fd);
-        return;
-    }
-                 
-    conn = np_conn_create (srv, trans);
-    if (!conn) {
-        msg ("connect denied by np_conn_create failure: %s%s", host, svc);
-        diod_trans_destroy (trans);
-        return;
-    }
-
-    msg ("accepted connection from %s on port %s", host, svc);
-}
- 
-/* Loop accepting and handling new connections.
- */
-static void
-diod_service_loop (Npsrv *srv, struct pollfd *fds, int nfds)
-{
-    int i;
-
-    while (1) {
-        for (i = 0; i < nfds; i++) {
-            fds[i].events = POLLIN;
-            fds[i].revents = 0;
-        }
-        if (poll (fds, nfds, -1) < 0) {
-            if (errno == EINTR)
-                continue; 
-            err_exit ("poll");
-        }
-        for (i = 0; i < nfds; i++) {
-            if ((fds[i].revents & POLLIN)) {
-                diod_accept_one (srv, fds[i].fd);
-            }
-        }
-    }
-    /*NOTREACHED*/
 }
 
 static void
@@ -399,7 +233,7 @@ diod_daemonize (void)
 {
     char rdir[PATH_MAX];
 
-    snprintf (rdir, sizeof(rdir), "%s/run/%s", X_LOCALSTATEDIR, DAEMON_NAME);
+    snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
 
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);

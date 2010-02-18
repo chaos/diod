@@ -96,18 +96,22 @@ void diod_conf_set_exit_on_lastuse (int i) { config.exit_on_lastuse = i; }
 List diod_conf_get_listen (void) { return config.listen; }
 void diod_conf_set_listen (char *s)
 {
-    char *cpy = strdup(s);
+    char *cpy;
 
-    if (!cpy)
-        msg_exit ("out of memory");
-    if (config.listen)
+    if (config.listen) {
         list_destroy (config.listen);
-    config.listen = list_create ((ListDelF)free);
-    list_append (config.listen, cpy);
+        config.listen = NULL;
+    }
+    if (s) {
+        if (!(cpy = strdup (s)))
+            msg_exit ("out of memory");
+        config.listen = list_create ((ListDelF)free);
+        list_append (config.listen, cpy);
+    }
 }
 
 /* Tattach verifies path against configured exports.
- * Return 1 on ALLOWED, 0 on DENIED.  On DENIED, put errno in *errp.
+ * Return 1 on ALLOWED, 0 on DENIED.  On DENjIED, put errno in *errp.
  * FIXME: verify host/ip/uid once we parse those in config file
  * FIXME: verify path contains no symlinks below export dir
  */
@@ -153,6 +157,31 @@ done:
          res ? "ALLOWED" : "DENIED");
 
     return res;
+}
+
+char *
+diod_conf_cat_exports (void)
+{
+    ListIterator itr = NULL;
+    char *ret = NULL;
+    int len = 0, elen;
+    char *el;
+
+    if ((itr = list_iterator_create (config.exports)) == NULL)
+        goto done;        
+    while ((el = list_next (itr))) {
+        elen = strlen (el) + 1;
+        ret = ret ? realloc (ret, len + elen + 1) : malloc (elen + 1);
+        if (ret == NULL)
+            goto done;
+        snprintf (ret + len, elen + 1, "%s\n", el);
+        len += elen;
+    }
+    ret[len] = '\0';
+done:
+    if (itr)
+        list_iterator_destroy (itr);
+    return ret;
 }
 
 static void

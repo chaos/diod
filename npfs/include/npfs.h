@@ -738,6 +738,7 @@ Npfile *npfile_find(Npfile *, char *);
 int npfile_checkperm(Npfile *file, Npuser *user, int perm);
 void npfile_init_srv(Npsrv *, Npfile *);
 
+Npfilefid* npfile_fidalloc(Npfile *file, Npfid *fid); /* added jg */
 void npfile_fiddestroy(Npfid *fid);
 Npfcall *npfile_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
 int npfile_clone(Npfid *fid, Npfid *newfid);

@@ -238,7 +238,7 @@ check_perm(u32 fperm, Npuser *fuid, Npgroup *fgid, Npuser *user, u32 perm)
 	if (fuid==user && ((fperm>>6)&7) & perm)
 		return 1;
 
-	if (((fperm>>3)&7) & perm)
+	if ((((fperm>>3)&7) & perm) && user->upool->ismember != NULL)
 		if(user->upool->ismember(user->upool, user, fgid))
 			return 1;
 
@@ -260,11 +260,11 @@ file2wstat(Npfile *file, Npwstat *wstat)
 	wstat->length = file->length;
 	wstat->name = file->name;
 	wstat->uid = file->uid->uname;
-	wstat->gid = file->gid->gname;
+	wstat->gid = file->gid ? file->gid->gname : ""; /* FIXME jg */
 	wstat->muid = file->muid->uname;
 	wstat->extension = file->extension;
 	wstat->n_uid = file->uid->uid;
-	wstat->n_gid = file->gid->gid;
+	wstat->n_gid = file->gid ? file->gid->gid : wstat->n_uid; /* FIXME jg */
 	wstat->n_muid = file->muid->uid;
 }
 
@@ -307,7 +307,7 @@ npfile_modified(Npfile *f, Npuser *u)
 	f->qid.version++;
 }
 
-static Npfilefid*
+Npfilefid*
 npfile_fidalloc(Npfile *file, Npfid *fid) {
 	Npfilefid *f;
 
@@ -822,10 +822,12 @@ npfile_wstat(Npfid *fid, Npstat *stat)
 		goto done;
 	}
 
+#if 0	/* we have already checked for write permission so allow this */
 	if (stat->mtime!=(u32)~0 && file->uid!=fid->user) {
 		np_werror(Eperm, EPERM);
 		goto done;
 	}
+#endif
 
 	if (file->mode & Dmdir) {
 		dops = file->ops;

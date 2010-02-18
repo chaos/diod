@@ -55,7 +55,8 @@ am__installdirs = "$(DESTDIR)$(sbindir)"
 sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(sbin_PROGRAMS)
 am__objects_1 = diod_log.$(OBJEXT) diod_conf.$(OBJEXT) \
-	diod_ops.$(OBJEXT) diod_trans.$(OBJEXT) diod_upool.$(OBJEXT)
+	diod_ops.$(OBJEXT) diod_trans.$(OBJEXT) diod_upool.$(OBJEXT) \
+	diod_sock.$(OBJEXT)
 am_diod_OBJECTS = $(am__objects_1) diod.$(OBJEXT)
 diod_OBJECTS = $(am_diod_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -225,7 +226,9 @@ common_sources = \
 	diod_trans.c \
 	diod_trans.h \
 	diod_upool.c \
-	diod_upool.h 
+	diod_upool.h \
+	diod_sock.c \
+	diod_sock.h 
 
 diod_SOURCES = \
 	$(common_sources) \
@@ -316,6 +319,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_mount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_ops.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_sock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_trans.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_upool.Po@am__quote@
 

@@ -24,12 +24,17 @@
 /* diod_ctl.c - super server for diod (runs as root on 9pfs port) */
 
 /* What we do:
- * - look like a 9p file system for diod ctl called 'ctl'
+ * - serve /diodctl synthetic file system
  * - file 'exports' contains list of I/O node exports
- * - file 'server' contains server hostname:port
- * - when an attached user reads 'server', if a diod server is already running
- *   for that user, return host:port.  If not, spawn it and return host:port.
+ * - file 'port' contains server port number
+ * - when an attached user reads 'port', if a diod server is already running
+ *   for that user, return port.  If not, spawn it and return port.
  * - reap children when they quit (on last trans shutdown)
+ */
+
+/* FIXME: s->key is a misnomer, the uid is the key.  Also, we should
+ * embed a slurm jobid in the munge payload and use that plus the uid as a key
+ * so that children can poop out per job usage stats that we save for later.
  */
 
 #if HAVE_CONFIG_H
@@ -55,10 +60,9 @@
 #include <pwd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#if HAVE_TCP_WRAPPERS
-#include <tcpd.h>
-#endif
 #include <poll.h>
+#include <sys/types.h>
+#include <signal.h>
 
 #include "npfs.h"
 #include "list.h"
@@ -67,22 +71,35 @@
 #include "diod_conf.h"
 #include "diod_trans.h"
 #include "diod_upool.h"
+#include "diod_sock.h"
 
-extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
-int         allow_severity = LOG_INFO;
-int         deny_severity = LOG_WARNING;
+static void          _daemonize (void);
+static void          _register_ops (Npsrv *srv);
+static Npfile       *_ctl_root_create (void);
+static Npfcall      *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname,
+                                  Npstr *aname);
+static Npfcall      *_ctl_version (Npconn *conn, u32 msize, Npstr *version);
+static void          _init_serverlist (void);
+static void          _setrlimit (void); 
 
-static void diod_setup_listen (struct pollfd **fdsp, int *nfdsp);
-static void diod_service_loop (Npsrv *srv, struct pollfd *fds, int nfds);
-static void diod_daemonize (void);
+typedef struct {
+    uid_t uid;
+    char *key;
+    pid_t pid;
+} Server;
 
-static void diod_ctl_register_ops (Npsrv *srv);
+typedef struct {
+    List servers; /* list of (Server *) */
+    pthread_mutex_t lock;
+} Serverlist;
+
+static Serverlist *serverlist = NULL;
 
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
-
-#define DAEMON_NAME     "diod"
+#define BASE_PORT       1942    /* arbitrary non-privileged port */
+#define MAX_PORT        (BASE_PORT + 1024)
 
 #define OPTIONS "fd:l:w:c:e:am"
 #if HAVE_GETOPT_LONG
@@ -106,7 +123,7 @@ static void
 usage()
 {
     fprintf (stderr, 
-"Usage: %s [OPTIONS]\n"
+"Usage: diodctl [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
@@ -115,8 +132,7 @@ usage()
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
-"Note: command line overrides config file\n",
-             DAEMON_NAME);
+"Note: command line overrides config file\n");
     exit (1);
 }
 
@@ -207,194 +223,420 @@ main(int argc, char **argv)
         msg_exit ("no munge support, yet config enables it");
 #endif
 
+    if (geteuid () != 0)
+        msg_exit ("must run as root");
+    _setrlimit ();
+
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
-
-    diod_setup_listen (&fds, &nfds);
-
+    if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_listen ()))
+        msg_exit ("failed to set up listen ports");
     if (!diod_conf_get_foreground ())
-        diod_daemonize ();
+        _daemonize ();
 
-    diod_ctl_register_ops (srv);
-    diod_service_loop (srv, fds, nfds);
+    _init_serverlist ();
+    _register_ops (srv);
+    diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
     /*NOTREACHED*/
 
     exit (0);
 }
 
-/* Given a ip:port to listen on, open sockets and expand pollfd array
- * to include new the fds.  May be called more than once, e.g. if there are
- * multiple ip:port pairs to listen on.
- * N.B. host 0.0.0.0 is ipv4 for any interface.
+static void
+_register_ops (Npsrv *srv)
+{
+    npfile_init_srv (srv, _ctl_root_create ());
+    srv->debuglevel = diod_conf_get_debuglevel ();
+    srv->debugprintf = msg;
+    srv->upool = diod_upool;
+    srv->version = _ctl_version;
+    srv->attach = _ctl_attach;
+}
+
+/* Free server struct.  Suitable for cast to (ListDelF).
  */
 static void
-diod_setup_listen_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
+_free_server (Server *s)
 {
-    struct addrinfo hints, *res, *r;
-    int opt, i, error, fd, nents = 0;
-    struct pollfd *fds = *fdsp;
-    int nfds = *nfdsp;
+    if (s->key)
+        free (s->key);
+    if (s->pid != 0)
+        kill (s->pid, SIGTERM);
+    free (s);
+}
 
-    memset (&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
+/* Allocate server struct.
+ */
+static Server *
+_alloc_server (void)
+{
+    Server *s = NULL;
 
-    if ((error = getaddrinfo (host, port, &hints, &res)))
-        msg_exit ("getaddrinfo: %s:%s: %s", host, port, gai_strerror(error));
-    if (res == NULL)
-        msg_exit ("listen address has no addrinfo: %s:%s\n", host, port);
+    if (!(s = malloc (sizeof (Server)))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    memset (s, 0, sizeof (*s));
+done:
+    if (np_haserror () && s != NULL)
+        _free_server (s);
+    return s;
+}
 
-    for (r = res; r != NULL; r = r->ai_next)
-        nents++;
+/* Initialize the global list of servers.
+ */
+static void
+_init_serverlist (void)
+{
+    int err;
+
+    if (!(serverlist = malloc (sizeof (Serverlist))))
+        msg_exit ("out of memory");
+    if (!(serverlist->servers = list_create ((ListDelF)_free_server)))
+        msg_exit ("out of memory");
+    if ((err = pthread_mutex_init (&serverlist->lock, NULL)))
+        msg_exit ("pthread_mutex_init: %s", strerror (err));
+}
+
+/* Return nonzero if s is server for uid.
+ * Suitable for cast to (ListFindF).
+ */
+static int
+_match_server (Server *s, uid_t *uid)
+{
+    return (s->uid == *uid);
+}
+
+/* Spawn a new diod daemon running as [uid].
+ * We are holding serverlist->lock.
+ */
+static void
+_new_server (Npuser *user, char *ip)
+{
+    char name[16];
+    char Fopt[16];
+    struct pollfd *fds = NULL;
+    int i, nfds = 0;
+    Server *s = NULL;
+
+    if (!(s = _alloc_server ()))
+        goto done;
+    s->uid = user->uid;
+    if (!diod_sock_setup_alloc (ip, &fds, &nfds, &s->key)) {
+        msg ("failed to allocate port for user %d on %s", user->uid, ip);
+        np_uerror (EIO);
+        goto done;
+    }
+    snprintf (Fopt, sizeof(Fopt), "-F%d", nfds);
+    snprintf (name, sizeof(name), "diod-%d", user->uid); 
+
+    switch (s->pid = fork ()) {
+        case -1:
+            np_uerror (errno);
+            break;
+        case 0: /* child */
+            msg ("starting diod for uid %d", user->uid);
+            diod_become_user (user);
+            for (i = 0; i < nfds; i++) {
+                (void)close (i);
+                dup2 (fds[i].fd, i);
+                close (fds[i].fd);
+            }
+            /* FIXME */
+            execl ("./diod", name,
+                   "-c../etc/diod.conf",
+                   "-f", "-x", Fopt, NULL);
+            err_exit ("exec failed"); /* N.B. this is the child exiting */
+            break;
+        default: /* parent */
+            /* FIXME: spawn a thread to waitpid() on the child */
+            break;
+    }
+
+    if (!list_append (serverlist->servers, s)) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+done:
+    for (i = 0; i < nfds; i++)
+        close (fds[i].fd);
     if (fds)
-        fds = realloc (fds, sizeof(struct pollfd) * (nents + nfds));
-    else
-        fds = malloc (sizeof(struct pollfd) * nents);
-    if (!fds)
-            msg_exit ("out of memory");
-
-    for (r = res; r != NULL; r = r->ai_next, i++) {
-        if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
-            err_exit ("socket: %s:%s", host, port);
-        opt = 1;
-        if (setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-            err ("setsockopt: %s:%s", host, port);
-            close (fd);
-            exit (1);
-        }
-        if (bind (fd, r->ai_addr, r->ai_addrlen) < 0) {
-            err ("bind: %s:%s", host, port);
-            close (fd);
-            exit (1);
-        }
-        if (listen (fd, 5) < 0) {
-            err ("listen: %s:%s", host, port);
-            close (fd);
-            exit (1);
-        }
-        fds[nfds++].fd = fd;
-    }
-    freeaddrinfo (res);
-
-    *fdsp = fds;
-    *nfdsp = nfds;
+        free (fds);
+    if (np_haserror () && s != NULL)
+        _free_server (s);
 }
 
-/* Set up listen ports.
+/* Tversion - negotiate 9P protocol version (9P2000.u or bust).
  */
-static void
-diod_setup_listen (struct pollfd **fdsp, int *nfdsp)
+static Npfcall*
+_ctl_version (Npconn *conn, u32 msize, Npstr *version)
 {
-    List l = diod_conf_get_listen ();
-    ListIterator itr;
-    char *hostport, *host, *port;
+    Npfcall *ret = NULL;
 
-    itr = list_iterator_create(l);
-    while ((hostport = list_next(itr))) {
-        if ((host = strdup (hostport)) == NULL)
-            msg_exit ("out of memory");
-        port = strchr (host, ':');
-        *port++ = '\0';
-        diod_setup_listen_one (host, port, fdsp, nfdsp);
+    if (np_strcmp (version, "9P2000.h") && np_strcmp (version, "9P2000.u")) {
+        np_werror ("unsupported 9P version", EIO);
+        goto done;
     }
-    list_iterator_destroy(itr);
+    if (msize < IOHDRSZ + 1) {
+        np_werror ("msize too small", EIO);
+        goto done;
+    }
+    if (msize > conn->srv->msize)
+        msize = conn->srv->msize;
+
+    np_conn_reset (conn, msize, 1); /* 1 activates 'dotu' */
+    if (!(ret = np_create_rversion (msize, "9P2000.u"))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+done:
+    return ret;
 }
 
-
-/* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
+/* Tattach - announce a new user, and associate her fid with the root dir.
  */
-static void
-diod_accept_one (Npsrv *srv, int fd)
+static Npfcall*
+_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
 {
-    struct sockaddr_storage addr;
-    socklen_t addr_size = sizeof(addr);
-    char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
-    int res;
-    Npconn *conn;
-    Nptrans *trans;
+    Npfile *root = (Npfile *)fid->conn->srv->treeaux;
+    Npfcall *ret = NULL;
+    Npfilefid *f;
+    uid_t auid;
 
-    fd = accept (fd, (struct sockaddr *)&addr, &addr_size);
-    if (fd < 0) {
-        if (errno == EWOULDBLOCK || errno == ECONNABORTED || errno == EPROTO
-                                                          || errno == EINTR)
-            return; /* client died between its connect and our accept */
-        else 
-            err_exit ("accept");
+    if (nafid) {    /* 9P Tauth not supported */
+        np_werror (Enoauth, EIO);
+        goto done;
     }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            ip, sizeof(ip), svc, sizeof(svc),
-                            NI_NUMERICHOST | NI_NUMERICSERV))) {
-        msg ("getnameinfo: %s", gai_strerror(res));
-        close (fd);
-        return;
+    if (np_strcmp (aname, "/diodctl") != 0) {
+        np_uerror (EPERM);
+        goto done;
     }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            host, sizeof(host), NULL, 0,
-                            NI_NAMEREQD))) {
-        msg ("getnameinfo: %s", gai_strerror(res));
-        close (fd);
-        return;
-    }
-#if HAVE_TCP_WRAPPERS
-    if (diod_conf_get_tcpwrappers ()) {
-        res = hosts_ctl (DAEMON_NAME, host, ip, STRING_UNKNOWN);
-        if (!res) {
-            msg ("connect denied by wrappers: %s:%s", host, svc);
-            close (fd);
-            return;
-        }
-    }
-#endif
-    trans = diod_trans_create (fd, host, ip, svc);
-    if (!trans) {
-        msg ("connect denied by diod_trans_create failure: %s:%s", host, svc);
-        close (fd);
-        return;
-    }
-                 
-    conn = np_conn_create (srv, trans);
-    if (!conn) {
-        msg ("connect denied by np_conn_create failure: %s%s", host, svc);
-        diod_trans_destroy (trans);
-        return;
-    }
-
-    msg ("accepted connection from %s on port %s", host, svc);
-}
- 
-/* Loop accepting and handling new connections.
- */
-static void
-diod_service_loop (Npsrv *srv, struct pollfd *fds, int nfds)
-{
-    int i;
-
-    while (1) {
-        for (i = 0; i < nfds; i++) {
-            fds[i].events = POLLIN;
-            fds[i].revents = 0;
-        }
-        if (poll (fds, nfds, -1) < 0) {
-            if (errno == EINTR)
-                continue; 
-            err_exit ("poll");
-        }
-        for (i = 0; i < nfds; i++) {
-            if ((fds[i].revents & POLLIN)) {
-                diod_accept_one (srv, fds[i].fd);
+    /* Munge authentication involves the upool and trans layers:
+     * - we ask the upool layer if the user now attaching has a munge cred
+     * - we stash the uid of the last successful munge auth in the trans layer
+     * - subsequent attaches on the same trans get to leverage the last auth
+     * By the time we get here, invalid munge creds have already been rejected.
+     */
+    if (diod_conf_get_munge ()) {
+        if (diod_user_has_mungecred (fid->user)) {
+            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
+        } else {
+            if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
+                np_uerror (EPERM);
+                goto done;
+            }
+            if (auid != 0 && auid != fid->user->uid) {
+                np_uerror (EPERM);
+                goto done;
             }
         }
     }
-    /*NOTREACHED*/
+    if (!npfile_checkperm (root, fid->user, 4)) {
+        np_uerror (EPERM);
+        goto done;
+    }
+    if (!(f = npfile_fidalloc (root, fid))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    if (!(ret = np_create_rattach (&root->qid))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    fid->aux = f;
+    np_fid_incref (fid);
+
+done:
+    if (np_haserror ())
+        npfile_fiddestroy (fid); /* frees fid->aux as Npfilefid* if not NULL */
+    return ret;
+}
+
+/* Callback for root dir.
+ */
+static Npfile *
+_root_first (Npfile *dir)
+{
+    if (dir->dirfirst)
+        npfile_incref(dir->dirfirst);
+
+    return dir->dirfirst;
+}
+
+/* Callback for root dir.
+ */
+static Npfile *
+_root_next (Npfile *dir, Npfile *prevchild)
+{
+    if (prevchild->next)
+        npfile_incref (prevchild->next);
+
+    return prevchild->next;
+}
+
+/* Handle a read from the 'exports' file.
+ */
+static int
+_exports_read (Npfilefid *f, u64 offset, u32 count, u8 *data, Npreq *req)
+{
+    char *buf = f->file->aux;
+    int cpylen = strlen (buf) - offset;
+
+    if (cpylen > count)
+        cpylen = count;
+    if (cpylen < 0)
+        cpylen = 0;
+        memcpy (data, buf + offset, cpylen);
+    return cpylen;
+}
+
+/* Handle a read from the 'server' file.
+ */
+static int
+_server_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
+{
+    Npfid *fid = file->fid;
+    int cpylen = 0;
+    Server *s;
+    int err;
+
+    if ((err = pthread_mutex_lock (&serverlist->lock))) {
+        np_uerror (err);
+        goto done;
+    }
+    s = list_find_first (serverlist->servers, (ListFindF)_match_server,
+                         &fid->user->uid);
+    if (s) {
+        cpylen = strlen (s->key) - offset;
+        if (cpylen > count)
+            cpylen = count;
+        if (cpylen < 0)
+            cpylen = 0;
+        memcpy (data, s->key + offset, cpylen);
+    } else
+        np_uerror (ESRCH);
+    if ((err = pthread_mutex_unlock (&serverlist->lock))) {
+        np_uerror (err);
+        goto done;
+    }
+done:
+    return cpylen;
+}
+
+/* Handle a write to the 'ctl' file.
+ * Content of the write is ignored since we only have one action.
+ */
+static int
+_ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
+{
+    Npfid *fid = file->fid;
+    char *ip = diod_trans_get_ip (fid->conn->trans);
+    int cpylen = 0;
+    int err;
+
+    if ((err = pthread_mutex_lock (&serverlist->lock))) {
+        np_uerror (err);
+        goto done;
+    }
+
+    /* FIXME: what if found server is listening on wrong ip? */
+    if (!list_find_first (serverlist->servers, (ListFindF)_match_server,
+                          &fid->user->uid)) {
+        _new_server (fid->user, ip);
+    }
+
+    if ((err = pthread_mutex_unlock (&serverlist->lock))) {
+        np_uerror (err);
+        goto done;
+    }
+done:
+    if (!np_haserror ())
+        cpylen = count;
+    return cpylen;
+}
+
+/* A no-op (no error) wstat.
+ */
+static int
+_noop_wstat (Npfile* file, Npstat* stat)
+{
+    return 1; /* 0 = fail */
+}
+
+static Npdirops root_ops = {
+        .first = _root_first,
+        .next =  _root_next,
+};
+static Npfileops exports_ops = {
+        .read  = _exports_read,
+};
+static Npfileops server_ops = {
+        .read  = _server_read,
+};
+static Npfileops ctl_ops = {
+        .write = _ctl_write,
+        .wstat = _noop_wstat, /* required: mtime is set before a write */
+};
+
+/* Create the file system representation for /diodctl.
+ */
+static Npfile *
+_ctl_root_create (void)
+{
+    Npfile *root, *exports, *server, *ctl;
+    Npuser *user;
+    char *tmpstr;
+
+    if (!(user = diod_upool->uid2user (diod_upool, 0)))
+        msg_exit ("out of memory");
+
+    if (!(tmpstr = strdup ("")))
+        msg_exit ("out of memory");
+    if (!(root = npfile_alloc (NULL, tmpstr, 0555|Dmdir, 0, &root_ops, NULL)))
+        msg_exit ("out of memory");
+    root->parent = root;
+    npfile_incref(root);
+    root->atime = time(NULL);
+    root->mtime = root->atime;
+    root->uid = user;
+    root->gid = NULL;
+    root->muid = user;
+
+    if (!(tmpstr = strdup ("exports")))
+        msg_exit ("out of memory");
+    if (!(exports = npfile_alloc(root, tmpstr, 0444, 1, &exports_ops, NULL)))
+        msg_exit ("out of memory");
+    npfile_incref(exports);
+    if (!(exports->aux = diod_conf_cat_exports ()))
+        msg_exit ("out of memory");
+
+    if (!(tmpstr = strdup ("server")))
+        msg_exit ("out of memory");
+    if (!(server = npfile_alloc(root, tmpstr, 0444, 1, &server_ops, NULL)))
+        msg_exit ("out of memory");
+    npfile_incref(server);
+
+    if (!(tmpstr = strdup ("ctl")))
+        msg_exit ("out of memory");
+    if (!(ctl = npfile_alloc(root, tmpstr, 0666, 1, &ctl_ops, NULL)))
+        msg_exit ("out of memory");
+    npfile_incref(ctl);
+
+    root->dirfirst = exports;
+    exports->next = server;
+    server->next = ctl;
+    root->dirlast = ctl;
+
+    return root;
 }
 
 static void
-diod_daemonize (void)
+_daemonize (void)
 {
     char rdir[PATH_MAX];
 
-    snprintf (rdir, sizeof(rdir), "%s/run/%s", X_LOCALSTATEDIR, DAEMON_NAME);
+    snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
 
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
@@ -403,28 +645,35 @@ diod_daemonize (void)
     diod_log_to_syslog();
 }
 
-static void
-diod_ctl_register_ops (Npsrv *srv)
+/* Remove any resource limits that might hamper our (non-root) children.
+ */
+static void 
+_setrlimit (void)
 {
-    srv->dotu = 1;
-    srv->msize = 65536;
-    srv->upool = diod_upool;
-/*
-    srv->attach = diod_attach;
-    srv->clone = diod_clone;
-    srv->walk = diod_walk;
-    srv->open = diod_open;
-    srv->read = diod_read;
-    srv->clunk = diod_clunk;
-    srv->stat = diod_stat;
-    srv->flush = diod_flush;
-    srv->fiddestroy = diod_fiddestroy;
-*/
+    struct rlimit r, r2;
 
-    srv->debuglevel = diod_conf_get_debuglevel ();
-    srv->debugprintf = msg;
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_FSIZE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_FSIZE");
+
+    r.rlim_cur = r.rlim_max = NR_OPEN;
+    r2.rlim_cur = r2.rlim_max = sysconf(_SC_OPEN_MAX);
+    if (setrlimit (RLIMIT_NOFILE, &r) < 0)
+        if (errno != EPERM || setrlimit (RLIMIT_NOFILE, &r2) < 0)
+            err_exit ("setrlimit RLIMIT_NOFILE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_LOCKS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_LOCKS");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_CORE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_CORE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;    
+    if (setrlimit (RLIMIT_AS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_AS");
 }
-
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
