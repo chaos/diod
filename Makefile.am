@@ -1,1 +1,1 @@
-SUBDIRS = liblsd npfs src man scripts test
+SUBDIRS = liblsd npfs common diod diodctl man scripts test

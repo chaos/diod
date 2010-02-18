@@ -67,12 +67,14 @@ AC_DEFINE(WITH_LSD_NOMEM_ERROR_FUNC, 1, [Define lsd_fatal_error])
 ##
 AC_CONFIG_FILES( \
   Makefile \
-  src/Makefile \
+  common/Makefile \
   liblsd/Makefile \
   man/Makefile \
   man/diod.8 \
   scripts/Makefile \
   scripts/diod.init \
   test/Makefile \
+  diodctl/Makefile \
+  diod/Makefile \
 )
 AC_OUTPUT
