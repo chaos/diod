@@ -23,11 +23,6 @@
 
 /* ops.c - file ops for diodctl */
 
-/* FIXME: s->key is a misnomer, the uid is the key.  Also, we should
- * embed a slurm jobid in the munge payload and use that plus the uid as a key
- * so that children can poop out per job usage stats that we save for later.
- */
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
