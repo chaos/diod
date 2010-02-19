@@ -218,7 +218,7 @@ target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/src/diod"
-TESTS = t00 t01 t02
+TESTS = t00 t01 t02 t03
 CLEANFILES = *.out *.diff
 AM_CPPFLAGS = \
         -I../npfs/include -I../liblsd -I../common

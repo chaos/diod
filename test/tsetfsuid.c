@@ -98,6 +98,8 @@ int main(int argc, char *argv[])
 
     diod_log_init (argv[0]);
 
+    assert (geteuid () == 0);
+
     assert (check_fsid ("task0", 0, 0));
 
     _create (&t1, proc1, NULL);

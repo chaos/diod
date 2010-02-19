@@ -65,6 +65,7 @@ static void *proc1 (void *a)
     wait_state (S2);
     show_groups ("task1");
 
+    printf ("task1: setgroups %d\n", TEST_GID2);
     _setgroups (1, g);
     show_groups ("task1");
     change_state (S3);
@@ -94,6 +95,8 @@ int main(int argc, char *argv[])
     pthread_t t1, t2;
 
     diod_log_init (argv[0]);
+
+    assert (geteuid () == 0);
 
     printf ("task0: setgroups (NULL)\n");
     _setgroups (0, NULL);

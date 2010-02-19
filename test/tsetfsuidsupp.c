@@ -82,6 +82,8 @@ int main(int argc, char *argv[])
 
     diod_log_init (argv[0]);
 
+    assert (geteuid () == 0);
+
     /* clear supplemental groups */
     _setgroups (0, NULL);
     printf ("supplemental groups cleared\n");

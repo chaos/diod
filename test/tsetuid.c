@@ -1,6 +1,8 @@
-/* tsetuid.c - check that pthreads can independently setreuid */
+/* tsetuid.c - check that pthreads CANNOT independently setreuid */
 
-/* No they cannnot on modern Linux threads implementations.
+/* This was an assumption made in the old npfs code, no longer true
+ * post-linuxthreads.  It's here as a demonstration of that fact,
+ * and in case anything changes in this ware we might want to flag it.
  */
 
 #include <unistd.h>
@@ -17,6 +19,8 @@
 #include "test.h"
 
 #define TEST_UID 100
+#define TEST_UID2 101
+#define TEST_UID3 102
 
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
@@ -44,27 +48,37 @@ wait_state (state_t s)
 
 static void *proc1 (void *a)
 {
-    assert (geteuid () == 0);
+    printf ("task1: geteuid %d\n", geteuid ());
     change_state (S1);
+
     wait_state (S2);
-    assert (geteuid () == 0);
-    _setreuid (-1, TEST_UID);
-    assert (geteuid () == TEST_UID);
+    printf ("task1: geteuid %d\n", geteuid ());
+    printf ("task1: seteuid %d\n", TEST_UID2);
+    _setreuid (0, 0);
+    _setreuid (-1, TEST_UID2);
+    printf ("task1: geteuid %d\n", geteuid ());
     change_state (S3);
+
     wait_state (S4);
-    assert (geteuid () == TEST_UID);
+    printf ("task1: geteuid %d\n", geteuid ());
 }
 
 static void *proc2 (void *a)
 {
-    assert (geteuid () == 0);
     wait_state (S1);
-    _setreuid (-1, TEST_UID);
-    assert (geteuid () == TEST_UID);
-    change_state (S2);
-    wait_state (S3);
+    printf ("task2: geteuid %d\n", geteuid ());
+    printf ("task2: seteuid %d\n", TEST_UID);
     _setreuid (0, 0);
-    assert (geteuid () == 0);
+    _setreuid (-1, TEST_UID);
+    printf ("task2: geteuid %d\n", geteuid ());
+    change_state (S2);
+
+    wait_state (S3);
+    printf ("task2: geteuid %d\n", geteuid ());
+    printf ("task2: seteuid %d\n", TEST_UID3);
+    _setreuid (0, 0);
+    _setreuid (-1, TEST_UID3);
+    printf ("task2: geteuid %d\n", geteuid ());
     change_state (S4);
 }
 
@@ -76,13 +90,15 @@ int main(int argc, char *argv[])
 
     assert (geteuid () == 0);
 
+    printf ("task0: geteuid %d\n", geteuid ());
+
     _create (&t1, proc1, NULL);
     _create (&t2, proc2, NULL);
 
     _join (t2, NULL);
     _join (t1, NULL);
 
-    assert (geteuid () == 0);
+    printf ("task0: geteuid %d\n", geteuid ());
     
     exit (0);
 }
