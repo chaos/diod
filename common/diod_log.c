@@ -58,17 +58,20 @@ void diod_log_to_syslog (void)
     dest = DEST_SYSLOG;
 }
 
-static void _verr (const char *fmt, va_list ap)
+static void _verr (int errnum, const char *fmt, va_list ap)
 {
     char buf[256];
+    char errbuf[64];
+
+    strerror_r (errnum, errbuf, sizeof (errbuf));
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {
         case DEST_STDERR:
-            fprintf (stderr, "%s: %s: %s\n", prog, buf, strerror (errno));
+            fprintf (stderr, "%s: %s: %s\n", prog, buf, errbuf);
             break;
         case DEST_SYSLOG:
-            syslog (LOG_ERR, "%s: %s", buf, strerror (errno));
+            syslog (LOG_ERR, "%s: %s", buf, errbuf);
             break;
     }
 }
@@ -88,28 +91,52 @@ static void _vlog (const char *fmt, va_list ap)
     }
 }
 
-/* Log message and stderr string, then exit.
+/* Log message and errno string, then exit.
  */
 void err_exit (const char *fmt, ...)
 {
     va_list ap;
 
     va_start (ap, fmt);
-    _verr (fmt, ap);
+    _verr (errno, fmt, ap);
     va_end (ap);
     exit (1);
 }
 
-/* Log message and stderr string.
+/* Log message and errno string.
  */
 void err (const char *fmt, ...)
 {
     va_list ap;
 
     va_start (ap, fmt);
-    _verr (fmt, ap);
+    _verr (errno, fmt, ap);
     va_end (ap);
 }
+
+/* Log message and errnum string, then exit.
+ */
+void errn_exit (int errnum, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start (ap, fmt);
+    _verr (errnum, fmt, ap);
+    va_end (ap);
+    exit (1);
+}
+
+/* Log message and errnum string.
+ */
+void errn (int errnum, const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start (ap, fmt);
+    _verr (errnum, fmt, ap);
+    va_end (ap);
+}
+
 
 /* Log message, then exit.
  */

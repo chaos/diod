@@ -2,7 +2,13 @@
 
 /* Usage: diodmount device dir
  * This program runs setuid root, but sets up the mount to be used (only)
- * by the real userid.
+ * by the real uid.  Access by other users including root will be rejected.
+ *
+ * N.B. For a brief moment we mount the /diodctl control file system on the
+ * mount point to obtain the port number for a server running as the real uid.
+ *
+ * FIXME: error handling needs some work.  We need to unmount /diodctl
+ * if we fail before the other file system gets mounted.
  */
 
 #if HAVE_CONFIG_H

@@ -27,6 +27,8 @@ void diod_log_to_syslog (void);
 
 void err_exit (const char *fmt, ...);
 void err (const char *fmt, ...);
+void errn_exit (int errnum, const char *fmt, ...);
+void errn (int errnum, const char *fmt, ...);
 void msg_exit (const char *fmt, ...);
 void msg (const char *fmt, ...);
 

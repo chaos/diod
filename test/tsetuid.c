@@ -1,9 +1,8 @@
 /* tsetuid.c - check that pthreads can independently setreuid */
 
-/* N.B. This old linuxthreads behavior is not POSIX.
- * The assumption does not hold on modern Linux systems (e.g. RHEL5).
+/* No they cannnot on modern Linux threads implementations.
  */
- 
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <pthread.h>
@@ -12,6 +11,10 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/stat.h>
+
+#include "diod_log.h"
+#include "test.h"
 
 #define TEST_UID 100
 
@@ -21,40 +24,22 @@ static state_t         state = S0;
 static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 
-static void _errx (char *msg, int err)
-{
-    fprintf (stderr, "%s%s%s\n", msg,
-        (err > 0) ? ": " : "",
-        (err > 0) ? strerror (err) : "");
-    exit (1);
-}   
-
 static void
 change_state (state_t s)
 {
-    int err;
-
-    if ((err = pthread_mutex_lock (&state_lock)))
-        _errx ("pthread_mutex_lock", err);
+    _lock (&state_lock);
     state = s;
-    if ((err = pthread_cond_signal (&state_cond)))
-        _errx ("pthread_cond_signal", err);
-    if ((err = pthread_mutex_unlock (&state_lock)))
-        _errx ("pthread_mutex_unlock", err);
+    _condsig (&state_cond);
+    _unlock (&state_lock);
 }
 
 static void
 wait_state (state_t s)
 {
-    int err;
-
-    if ((err = pthread_mutex_lock (&state_lock)))
-        _errx ("pthread_mutex_lock", err);
+    _lock (&state_lock);
     while ((state != s))
-        if ((err = pthread_cond_wait(&state_cond, &state_lock)))
-            _errx ("pthread_cond_wait", err);
-    if ((err = pthread_mutex_unlock (&state_lock)))
-        _errx ("pthread_mutex_unlock", err);
+        _condwait (&state_cond, &state_lock);
+    _unlock (&state_lock);
 }
 
 static void *proc1 (void *a)
@@ -63,8 +48,7 @@ static void *proc1 (void *a)
     change_state (S1);
     wait_state (S2);
     assert (geteuid () == 0);
-    if (setreuid (-1, TEST_UID) < 0)
-        _errx ("setreuid", errno);
+    _setreuid (-1, TEST_UID);
     assert (geteuid () == TEST_UID);
     change_state (S3);
     wait_state (S4);
@@ -75,13 +59,11 @@ static void *proc2 (void *a)
 {
     assert (geteuid () == 0);
     wait_state (S1);
-    if (setreuid (-1, TEST_UID) < 0)
-        _errx ("setreuid", errno);
+    _setreuid (-1, TEST_UID);
     assert (geteuid () == TEST_UID);
     change_state (S2);
     wait_state (S3);
-    if (setreuid (0, 0) < 0)
-        _errx ("setreuid", errno);
+    _setreuid (0, 0);
     assert (geteuid () == 0);
     change_state (S4);
 }
@@ -89,19 +71,16 @@ static void *proc2 (void *a)
 int main(int argc, char *argv[])
 {
     pthread_t t1, t2;
-    int err;
+
+    diod_log_init (argv[0]);
 
     assert (geteuid () == 0);
 
-    if ((err = pthread_create (&t1, NULL, proc1, NULL)))
-        _errx ("pthread_create", err);
-    if ((err = pthread_create (&t2, NULL, proc2, NULL)))
-        _errx ("pthread_create", err);
+    _create (&t1, proc1, NULL);
+    _create (&t2, proc2, NULL);
 
-    if ((err = pthread_join (t2, NULL)))
-        _errx ("pthread_join", err);
-    if ((err = pthread_join (t1, NULL)))
-        _errx ("pthread_join", err);
+    _join (t2, NULL);
+    _join (t1, NULL);
 
     assert (geteuid () == 0);
     

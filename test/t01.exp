@@ -1,0 +1,13 @@
+supplemental groups cleared
+file created 0:101 mode 0440
+fsid changed to 100:100
+file is NOT readable
+fsid changed to 100:101
+file is readable
+fsid changed to 100:100
+file is NOT readable
+101 added to supplemental groups
+file is readable
+supplemental groups cleared
+file is NOT readable
+test complete

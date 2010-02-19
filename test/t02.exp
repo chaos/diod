@@ -1,0 +1,10 @@
+task0: setgroups (NULL)
+task0: getgroups 
+task1: getgroups 
+task2: getgroups 
+task2: setgroups 100
+task2: getgroups 100 
+task1: getgroups 
+task1: getgroups 101 
+task2: getgroups 100 
+task0: getgroups 
