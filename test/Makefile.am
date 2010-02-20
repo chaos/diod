@@ -1,8 +1,8 @@
-check_PROGRAMS = tsetuid tsetfsuid tsetfsuidsupp tsuppgrp
+check_PROGRAMS = tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/diod"
-TESTS = t00 t01 t02 t03
+TESTS = t00 t01 t02 t03 t04
 
 CLEANFILES = *.out *.diff
 
@@ -22,3 +22,4 @@ tsetuid_SOURCES = tsetuid.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
+tfcntl_SOURCES = tsetfsuidsupp.c $(common_sources)

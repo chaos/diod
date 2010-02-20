@@ -37,9 +37,9 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
-	tsetfsuidsupp$(EXEEXT) tsuppgrp$(EXEEXT)
+	tsetfsuidsupp$(EXEEXT) tsuppgrp$(EXEEXT) tfcntl$(EXEEXT)
 subdir = test
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
+DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -52,10 +52,18 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 am__objects_1 =
+am_tfcntl_OBJECTS = tsetfsuidsupp.$(OBJEXT) $(am__objects_1)
+tfcntl_OBJECTS = $(am_tfcntl_OBJECTS)
+tfcntl_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+tfcntl_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
+	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetfsuid_OBJECTS = tsetfsuid.$(OBJEXT) $(am__objects_1)
 tsetfsuid_OBJECTS = $(am_tsetfsuid_OBJECTS)
 tsetfsuid_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 tsetfsuid_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
 	$(top_builddir)/npfs/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -92,10 +100,12 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
-	$(tsetuid_SOURCES) $(tsuppgrp_SOURCES)
-DIST_SOURCES = $(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
-	$(tsetuid_SOURCES) $(tsuppgrp_SOURCES)
+SOURCES = $(tfcntl_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
+	$(tsuppgrp_SOURCES)
+DIST_SOURCES = $(tfcntl_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
+	$(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -218,7 +228,7 @@ target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/src/diod"
-TESTS = t00 t01 t02 t03
+TESTS = t00 t01 t02 t03 t04
 CLEANFILES = *.out *.diff
 AM_CPPFLAGS = \
         -I../npfs/include -I../liblsd -I../common
@@ -235,6 +245,7 @@ tsetuid_SOURCES = tsetuid.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
+tfcntl_SOURCES = tsetfsuidsupp.c $(common_sources)
 all: all-am
 
 .SUFFIXES:
@@ -271,6 +282,9 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+tfcntl$(EXEEXT): $(tfcntl_OBJECTS) $(tfcntl_DEPENDENCIES) 
+	@rm -f tfcntl$(EXEEXT)
+	$(LINK) $(tfcntl_LDFLAGS) $(tfcntl_OBJECTS) $(tfcntl_LDADD) $(LIBS)
 tsetfsuid$(EXEEXT): $(tsetfsuid_OBJECTS) $(tsetfsuid_DEPENDENCIES) 
 	@rm -f tsetfsuid$(EXEEXT)
 	$(LINK) $(tsetfsuid_LDFLAGS) $(tsetfsuid_OBJECTS) $(tsetfsuid_LDADD) $(LIBS)
