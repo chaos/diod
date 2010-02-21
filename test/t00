@@ -2,5 +2,5 @@
 
 TEST=$(basename $0)
 test $(id -u) == 0 || exit 77 #skip if not root
-./tsetfsuid 2>&1 >$TEST.out
+./tsetfsuid >$TEST.out 2>&1
 diff $TEST.exp $TEST.out >$TEST.diff

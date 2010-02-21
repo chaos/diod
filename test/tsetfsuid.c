@@ -24,7 +24,7 @@ static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 
 static int
-check_fsid (char *msg, uid_t uid, gid_t gid)
+check_fsid (char *s, uid_t uid, gid_t gid)
 {
     int fd;
     char path[] = "/tmp/testfsuid.XXXXXX";
@@ -35,15 +35,15 @@ check_fsid (char *msg, uid_t uid, gid_t gid)
     _fstat (fd, &sb);
     _unlink (path);
 
-    printf ("%s: %d:%d\n", msg, sb.st_uid, sb.st_gid);
+    msg ("%s: %d:%d", s, sb.st_uid, sb.st_gid);
 
     return (sb.st_uid == uid  && sb.st_gid == gid);
 }
 
 static void
-change_fsid (char *msg, uid_t uid, gid_t gid)
+change_fsid (char *s, uid_t uid, gid_t gid)
 {
-    printf ("%s: changing to %d:%d\n", msg, uid, gid);
+    msg ("%s: changing to %d:%d", s, uid, gid);
     setfsuid (uid);
     setfsgid (gid);
 }

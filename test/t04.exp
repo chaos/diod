@@ -1,0 +1,6 @@
+tfcntl: proc0: locking bytes 0-64
+tfcntl: proc0: locking bytes 32-64
+tfcntl: proc1: locking bytes 0-64
+tfcntl: proc2: locking bytes 32-64
+tfcntl: proc0(child): locking bytes 32-64
+tfcntl: proc0(child): : Resource temporarily unavailable

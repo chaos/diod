@@ -15,7 +15,6 @@ t03 - Demonstrate that pthreads cannot independently seteuid/setegid.
       This was the original npfs strategy for handing I/O of multiple
       users in a single work crew.
 
-t04 - Demonstrate that fcntl locking works with multiple pthreads as
-      though they were separate processes.
-      N.B. may have to get thread id instead of pid on client side when
-      shipping locking requests.
+t04 - Demonstrate that fcntl locking does not treat threads like individual
+      procesess, e.g. locks are shared among threads.  This means diod cannot
+      use a thread pool to manage fcntl locks on behalf of remote processes.

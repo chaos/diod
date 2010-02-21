@@ -1,13 +1,13 @@
-task0: geteuid 0
-task1: geteuid 0
-task2: geteuid 0
-task2: seteuid 100
-task2: geteuid 100
-task1: geteuid 100
-task1: seteuid 101
-task1: geteuid 101
-task2: geteuid 101
-task2: seteuid 102
-task2: geteuid 102
-task1: geteuid 102
-task0: geteuid 102
+tsetuid: task0: geteuid 0
+tsetuid: task1: geteuid 0
+tsetuid: task2: geteuid 0
+tsetuid: task2: seteuid 100
+tsetuid: task2: geteuid 100
+tsetuid: task1: geteuid 100
+tsetuid: task1: seteuid 101
+tsetuid: task1: geteuid 101
+tsetuid: task2: geteuid 101
+tsetuid: task2: seteuid 102
+tsetuid: task2: geteuid 102
+tsetuid: task1: geteuid 102
+tsetuid: task0: geteuid 102

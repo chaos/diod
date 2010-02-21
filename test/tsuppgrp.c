@@ -24,7 +24,7 @@ static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 
 static int
-show_groups (char *msg)
+show_groups (char *s)
 {
     gid_t g[32];
     int n, i;
@@ -34,7 +34,7 @@ show_groups (char *msg)
     n = _getgroups (1, g);
     for (i = 0; i < n; i++)
         snprintf (buf+strlen(buf), sizeof(buf)-strlen(buf), "%d ", g[i]);
-    printf ("%s: %s\n", msg, buf);
+    msg ("%s: %s", s, buf);
 }
 
 static void
@@ -65,7 +65,7 @@ static void *proc1 (void *a)
     wait_state (S2);
     show_groups ("task1");
 
-    printf ("task1: setgroups %d\n", TEST_GID2);
+    msg ("task1: setgroups %d", TEST_GID2);
     _setgroups (1, g);
     show_groups ("task1");
     change_state (S3);
@@ -80,7 +80,7 @@ static void *proc2 (void *a)
     wait_state (S1);
     show_groups ("task2");
 
-    printf ("task2: setgroups %d\n", TEST_GID);
+    msg ("task2: setgroups %d", TEST_GID);
     _setgroups (1, g);
     show_groups ("task2");
     change_state (S2);
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 
     assert (geteuid () == 0);
 
-    printf ("task0: setgroups (NULL)\n");
+    msg ("task0: setgroups (NULL)");
     _setgroups (0, NULL);
     show_groups ("task0");
 

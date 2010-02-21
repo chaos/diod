@@ -116,6 +116,8 @@ main (int argc, char *argv[])
     exit (0);
 }
 
+/* Poke at the diodctl file system to get a diod port allocated.
+ */
 static void
 _get_server (char *dir, char **portp)
 {
@@ -164,6 +166,8 @@ _get_server (char *dir, char **portp)
     *portp = port;
 }
 
+/* Create a munge credential for the real user id.
+ */
 static void
 _create_mungecred (char **credp)
 {
@@ -191,6 +195,9 @@ _create_mungecred (char **credp)
     *credp = mungecred;
 }
 
+/* Given a "device" in host:aname format, parse out the host (converting
+ * to ip address for in-kernel v9fs), and the aname.
+ */
 static void
 _parse_device (char *device, char **anamep, char **ipp)
 {
@@ -211,7 +218,7 @@ _parse_device (char *device, char **anamep, char **ipp)
         err_exit ("getaddrinfo: %s: %s", host, gai_strerror(error));
     if (res == NULL)
         err_exit ("%s has no address info", host);
-    /* FIXME: we take the first entry in the res aray */
+    /* FIXME: we take the first entry in the res array */
     if (getnameinfo (res->ai_addr, res->ai_addrlen, ip, sizeof(ip),
                      NULL, 0, NI_NUMERICHOST) < 0)
         err_exit ("%s has no address", host);

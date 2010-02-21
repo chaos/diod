@@ -48,37 +48,37 @@ wait_state (state_t s)
 
 static void *proc1 (void *a)
 {
-    printf ("task1: geteuid %d\n", geteuid ());
+    msg ("task1: geteuid %d", geteuid ());
     change_state (S1);
 
     wait_state (S2);
-    printf ("task1: geteuid %d\n", geteuid ());
-    printf ("task1: seteuid %d\n", TEST_UID2);
+    msg ("task1: geteuid %d", geteuid ());
+    msg ("task1: seteuid %d", TEST_UID2);
     _setreuid (0, 0);
     _setreuid (-1, TEST_UID2);
-    printf ("task1: geteuid %d\n", geteuid ());
+    msg ("task1: geteuid %d", geteuid ());
     change_state (S3);
 
     wait_state (S4);
-    printf ("task1: geteuid %d\n", geteuid ());
+    msg ("task1: geteuid %d", geteuid ());
 }
 
 static void *proc2 (void *a)
 {
     wait_state (S1);
-    printf ("task2: geteuid %d\n", geteuid ());
-    printf ("task2: seteuid %d\n", TEST_UID);
+    msg ("task2: geteuid %d", geteuid ());
+    msg ("task2: seteuid %d", TEST_UID);
     _setreuid (0, 0);
     _setreuid (-1, TEST_UID);
-    printf ("task2: geteuid %d\n", geteuid ());
+    msg ("task2: geteuid %d", geteuid ());
     change_state (S2);
 
     wait_state (S3);
-    printf ("task2: geteuid %d\n", geteuid ());
-    printf ("task2: seteuid %d\n", TEST_UID3);
+    msg ("task2: geteuid %d", geteuid ());
+    msg ("task2: seteuid %d", TEST_UID3);
     _setreuid (0, 0);
     _setreuid (-1, TEST_UID3);
-    printf ("task2: geteuid %d\n", geteuid ());
+    msg ("task2: geteuid %d", geteuid ());
     change_state (S4);
 }
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 
     assert (geteuid () == 0);
 
-    printf ("task0: geteuid %d\n", geteuid ());
+    msg ("task0: geteuid %d", geteuid ());
 
     _create (&t1, proc1, NULL);
     _create (&t2, proc2, NULL);
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
     _join (t2, NULL);
     _join (t1, NULL);
 
-    printf ("task0: geteuid %d\n", geteuid ());
+    msg ("task0: geteuid %d", geteuid ());
     
     exit (0);
 }

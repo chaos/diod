@@ -43,7 +43,7 @@ create_file (uid_t uid, gid_t gid, mode_t mode)
     _fchown (fd, 0, TEST_SGID);
     _fchmod (fd, 0040);
 
-    printf ("file created %d:%d mode 0%o\n", uid, gid, mode);
+    msg ("file created %d:%d mode 0%o", uid, gid, mode);
 
     return path;
 }
@@ -57,11 +57,11 @@ read_file (char *path)
     int fd;
 
     if ((fd = open (path, O_RDONLY)) < 0) {
-        printf ("file is NOT readable\n");
+        msg ("file is NOT readable");
         return 0;
     }
     close (fd);
-    printf ("file is readable\n");
+    msg ("file is readable");
     return 1;
 }
 
@@ -72,7 +72,7 @@ change_fsid (uid_t uid, gid_t gid)
     setfsgid (gid);
     if (!check_fsid (uid, gid))
         msg_exit ("setfsuid/setfsgid failed");
-    printf ("fsid changed to %d:%d\n", uid, gid);
+    msg ("fsid changed to %d:%d", uid, gid);
 }
 
 int main(int argc, char *argv[])
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
 
     /* clear supplemental groups */
     _setgroups (0, NULL);
-    printf ("supplemental groups cleared\n");
+    msg ("supplemental groups cleared");
 
     assert (geteuid () == 0);
     path = create_file (0, TEST_SGID, 0440);
@@ -102,15 +102,15 @@ int main(int argc, char *argv[])
 
     /* set TEST_SGID in supplemental groups */
     _setgroups (1, gids);
-    printf ("%d added to supplemental groups\n", gids[0]);
+    msg ("%d added to supplemental groups", gids[0]);
     assert (read_file (path));
 
     /* clear supplemental groups */
     _setgroups (0, NULL);
-    printf ("supplemental groups cleared\n");
+    msg ("supplemental groups cleared");
     assert (!read_file (path));
 
-    printf ("test complete\n");
+    msg ("test complete");
     unlink (path);
     exit (0);
 }

@@ -1,13 +1,13 @@
-supplemental groups cleared
-file created 0:101 mode 0440
-fsid changed to 100:100
-file is NOT readable
-fsid changed to 100:101
-file is readable
-fsid changed to 100:100
-file is NOT readable
-101 added to supplemental groups
-file is readable
-supplemental groups cleared
-file is NOT readable
-test complete
+tsetfsuidsupp: supplemental groups cleared
+tsetfsuidsupp: file created 0:101 mode 0440
+tsetfsuidsupp: fsid changed to 100:100
+tsetfsuidsupp: file is NOT readable
+tsetfsuidsupp: fsid changed to 100:101
+tsetfsuidsupp: file is readable
+tsetfsuidsupp: fsid changed to 100:100
+tsetfsuidsupp: file is NOT readable
+tsetfsuidsupp: 101 added to supplemental groups
+tsetfsuidsupp: file is readable
+tsetfsuidsupp: supplemental groups cleared
+tsetfsuidsupp: file is NOT readable
+tsetfsuidsupp: test complete
