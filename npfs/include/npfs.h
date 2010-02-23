@@ -130,7 +130,7 @@ enum {
 	Rlock,
 	Tflock          = 136,
 	Rflock,
-	Trename         = 148,
+	Trename         = 138,
 	Rrename,
 
 	Rlast

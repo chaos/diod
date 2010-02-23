@@ -45,11 +45,17 @@ void    diod_conf_set_munge (int i);
 int     diod_conf_get_exit_on_lastuse (void);
 void    diod_conf_set_exit_on_lastuse (int i);
 
+int     diod_conf_get_runasuid (uid_t *uidp);
+void    diod_conf_set_runasuid (uid_t uid);
+
 char   *diod_conf_get_diodpath (void);
 void    diod_conf_set_diodpath (char *s);
 
-List    diod_conf_get_listen (void);
-void    diod_conf_set_listen (char *s);
+List    diod_conf_get_diodlisten (void);
+void    diod_conf_set_diodlisten (char *s);
+
+List    diod_conf_get_diodctllisten (void);
+void    diod_conf_set_diodctllisten (char *s);
 
 int     diod_conf_match_export (char *path, char *host, char *ip, uid_t uid,
                                 int *errp);

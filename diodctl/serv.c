@@ -223,8 +223,12 @@ _wait_pid (void *arg)
     return NULL;
 }
 
+/* Append an argument to s->ac/s->av, expanding as needed.
+ * Initial empty, NULL terminated s->ac/s->av is allocated in _alloc_server ().
+ * s->av and any non-NULL args are freed in _free_server ().
+ */
 static int
-_push_arg (Server *s, const char *fmt, ...)
+_append_arg (Server *s, const char *fmt, ...)
 {
     va_list ap;
     char *arg;
@@ -262,15 +266,17 @@ _build_server_args (Server *s)
 
     assert (path_config != NULL);
 
-    if (_push_arg (s, "diod-%d", s->uid) < 0)
+    if (_append_arg (s, "diod-%d", s->uid) < 0)
         goto done;
-    if (_push_arg (s, "-c%s", path_config) < 0)
+    if (_append_arg (s, "-c%s", path_config) < 0)
         goto done;
-    if (_push_arg (s, "-x") < 0)
+    if (_append_arg (s, "-x") < 0)
         goto done;
-    if (_push_arg (s, "-f") < 0)
+    if (_append_arg (s, "-f") < 0)
         goto done;
-    if (_push_arg (s, "-F%d", s->nfds) < 0)
+    if (_append_arg (s, "-u%d", s->uid) < 0)
+        goto done;
+    if (_append_arg (s, "-F%d", s->nfds) < 0)
         goto done;
     ret = 1;
 done:
@@ -325,7 +331,6 @@ _new_server (Npuser *user, char *ip)
             np_uerror (errno);
             break;
         case 0: /* child */
-            diod_become_user (user); /* no locks taken here (in our code!) */
             _exec_server (s);
             /*NOTREACHED*/
         default: /* parent */

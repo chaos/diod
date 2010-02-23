@@ -54,8 +54,11 @@ typedef struct {
     int          tcpwrappers;
     int          readahead;
     int          exit_on_lastuse;
+    uid_t        runasuid;
+    int          runasuid_valid;
     char        *diodpath;
-    List         listen;
+    List         diodlisten;
+    List         diodctllisten;
     List         exports;
 } Conf;
 
@@ -67,15 +70,18 @@ static Conf config = {
     .tcpwrappers    = 1,
     .readahead      = 0,
     .exit_on_lastuse= 0,
-    .diodpath       = NULL,     /* diod_conf_init initializes */
-    .listen         = NULL,     /* diod_conf_init initializes */
+    .runasuid_valid = 0,
+    .diodpath       = NULL, /* diod_conf_init initializes */
+    .diodlisten     = NULL, /* diod_conf_init initializes */
+    .diodctllisten  = NULL, /* diod_conf_init initializes */
     .exports        = NULL,
 };
 
 
 void diod_conf_init (void)
 {
-    diod_conf_set_listen ("0.0.0.0:564");
+    diod_conf_set_diodctllisten ("0.0.0.0:10005");
+    diod_conf_set_diodlisten ("0.0.0.0:10006");
     diod_conf_set_diodpath (X_SBINDIR "/diod");
 }
 
@@ -100,6 +106,19 @@ void diod_conf_set_readahead (int i) { config.readahead = i; }
 int diod_conf_get_exit_on_lastuse (void) { return config.exit_on_lastuse; }
 void diod_conf_set_exit_on_lastuse (int i) { config.exit_on_lastuse = i; }
 
+int
+diod_conf_get_runasuid (uid_t *uidp)
+{
+    if (config.runasuid_valid)
+        *uidp = config.runasuid;
+    return config.runasuid_valid;
+}
+void diod_conf_set_runasuid (uid_t uid)
+{
+    config.runasuid_valid = 1;
+    config.runasuid = uid;
+}
+
 char *diod_conf_get_diodpath (void) { return config.diodpath; }
 void diod_conf_set_diodpath (char *s)
 {
@@ -107,20 +126,37 @@ void diod_conf_set_diodpath (char *s)
         msg_exit ("out of memory");
 }
 
-List diod_conf_get_listen (void) { return config.listen; }
-void diod_conf_set_listen (char *s)
+List diod_conf_get_diodlisten (void) { return config.diodlisten; }
+void diod_conf_set_diodlisten (char *s)
 {
     char *cpy;
 
-    if (config.listen) {
-        list_destroy (config.listen);
-        config.listen = NULL;
+    if (config.diodlisten) {
+        list_destroy (config.diodlisten);
+        config.diodlisten = NULL;
     }
     if (s) {
         if (!(cpy = strdup (s)))
             msg_exit ("out of memory");
-        config.listen = list_create ((ListDelF)free);
-        list_append (config.listen, cpy);
+        config.diodlisten = list_create ((ListDelF)free);
+        list_append (config.diodlisten, cpy);
+    }
+}
+
+List diod_conf_get_diodctllisten (void) { return config.diodctllisten; }
+void diod_conf_set_diodctllisten (char *s)
+{
+    char *cpy;
+
+    if (config.diodctllisten) {
+        list_destroy (config.diodctllisten);
+        config.diodctllisten = NULL;
+    }
+    if (s) {
+        if (!(cpy = strdup (s)))
+            msg_exit ("out of memory");
+        config.diodctllisten = list_create ((ListDelF)free);
+        list_append (config.diodctllisten, cpy);
     }
 }
 
@@ -185,7 +221,8 @@ diod_conf_mkconfig (void)
     _vfprintf (path, f, "readahead = %d\n", config.readahead);
     _vfprintf (path, f, "exit_on_lastuse = %d\n", config.exit_on_lastuse);
     _vfprintf (path, f, "diodpath = \"%s\"\n", config.diodpath);
-    _write_list_of_strings (path, f, "listen", config.listen);
+    _write_list_of_strings (path, f, "diodlisten", config.diodlisten);
+    _write_list_of_strings (path, f, "diodctllisten", config.diodctllisten);
     _write_list_of_strings (path, f, "exports", config.exports);
 
     if (fclose (f) != 0)
@@ -434,7 +471,10 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (path, L, "exit_on_lastuse",
                             &config.exit_on_lastuse);
         _lua_getglobal_string (path, L, "diodpath", &config.diodpath);
-        _lua_getglobal_list_of_strings (path, L, "listen", &config.listen);
+        _lua_getglobal_list_of_strings (path, L, "diodctllisten",
+                            &config.diodctllisten);
+        _lua_getglobal_list_of_strings (path, L, "diodlisten",
+                            &config.diodlisten);
         _lua_getglobal_list_of_strings (path, L, "exports", &config.exports);
 
         lua_close(L);

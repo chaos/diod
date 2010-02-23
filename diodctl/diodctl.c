@@ -179,7 +179,7 @@ main(int argc, char **argv)
     if (dopt)
         diod_conf_set_debuglevel (dopt);
     if (lopt)
-        diod_conf_set_listen (lopt);
+        diod_conf_set_diodctllisten (lopt);
     if (wopt)
         diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
     if (eopt)  
@@ -207,11 +207,12 @@ main(int argc, char **argv)
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
-    if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_listen ()))
+    if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_diodctllisten ()))
         msg_exit ("failed to set up listen ports");
     if (!diod_conf_get_foreground ())
         _daemonize ();
 
+    /* FIXME: temp file created by diod_conf_mkconfig () needs cleanup */
     diodctl_serv_init (diod_conf_mkconfig ());
     diodctl_register_ops (srv);
     diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());

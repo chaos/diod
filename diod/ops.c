@@ -52,22 +52,6 @@
  * value, except in special cases noted below (diod_walk).
  */
 
-/* FIXME: advisory locking
- * 
- * Flock tracks the fd (fid) like the other 9P ops so it can be handled
- * via the npfs thread pool model, except for the fact that it can block
- * indefinitely, thus it is posslble to deadlock npfs by getting all of its
- * threads stuck in flock.  flock could be implemented by spawning another
- * thread from the npfs worker thread and returning NULL with no error.
- * The flock thread would send the R-message and exit.  Complication: Tflush.
- *
- * fcntl (F_GETLK|F_SETLK|F_SETLKW) on the other hand requires its own
- * thread pool so that requests from <ip>:<pid> are handled by the same 
- * unique <pid> on the server.  These could be dispatched from an npfs
- * work crew thread as discussed above except they cannot exit as long as
- * any locks are held.  Same Tflush complication applies.
- */
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -535,15 +519,15 @@ done:
 /* Tattach - announce a new user, and associate her fid with the root dir.
  */
 Npfcall*
-diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
+diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
 {
-    char *host = diod_trans_get_host (nfid->conn->trans);
-    char *ip = diod_trans_get_ip (nfid->conn->trans);
+    char *host = diod_trans_get_host (fid->conn->trans);
+    char *ip = diod_trans_get_ip (fid->conn->trans);
     Npfcall* ret = NULL;
     Fid *f = NULL;
     int err;
     Npqid qid;
-    uid_t auid;
+    uid_t auid, runasuid;
 
     if (nafid) {    /* 9P Tauth not supported */
         np_werror (Enoauth, EIO);
@@ -553,9 +537,9 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         np_uerror (EPERM);
         goto done;
     }
-    /* Reject attaches from users other than the one we're already running as.
+    /* If running as a particular user, reject attaches from other users.
      */
-    if (nfid->user->uid != geteuid ()) {
+    if (diod_conf_get_runasuid (&runasuid) && fid->user->uid != runasuid) {
         np_uerror (EPERM);
         goto done;
     }
@@ -566,14 +550,14 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
      * By the time we get here, invalid munge creds have already been rejected.
      */
     if (diod_conf_get_munge ()) {
-        if (diod_user_has_mungecred (nfid->user)) {
-            diod_trans_set_authuser (nfid->conn->trans, nfid->user->uid);
+        if (diod_user_has_mungecred (fid->user)) {
+            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
         } else {
-            if (diod_trans_get_authuser (nfid->conn->trans, &auid) < 0) {
+            if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);
                 goto done;
             }
-            if (auid != nfid->user->uid) {
+            if (auid != 0 && auid != fid->user->uid) {
                 np_uerror (EPERM);
                 goto done;
             }
@@ -583,7 +567,7 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         goto done;
     if (!(f->path = _p9strdup(aname)))
         goto done;
-    if (!diod_conf_match_export (f->path, host, ip, nfid->user->uid, &err)) {
+    if (!diod_conf_match_export (f->path, host, ip, fid->user->uid, &err)) {
         np_uerror (err);
         goto done;
     }
@@ -594,8 +578,8 @@ diod_attach (Npfid *nfid, Npfid *nafid, Npstr *uname, Npstr *aname)
         np_uerror (ENOMEM);
         goto done;
     }
-    nfid->aux = f;
-    np_fid_incref (nfid);
+    fid->aux = f;
+    np_fid_incref (fid);
 
 done:
     if (np_haserror ()) {
@@ -645,6 +629,8 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
     char *path = NULL;
     int ret = 0;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (_fidstat (f) < 0)
         goto done;
     n = strlen (f->path);
@@ -690,6 +676,8 @@ diod_open (Npfid *fid, u8 mode)
     Npfcall *res = NULL;
     Npqid qid;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (_fidstat (f) < 0)
         goto done;
 
@@ -858,11 +846,13 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     char *npath = NULL;
     Npqid qid;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (_fidstat (f) < 0)
-        goto out;
+        goto done;
     n = strlen (f->path);
     if (!(npath = _malloc (n + name->len + 2)))
-        goto out;
+        goto done;
     memmove (npath, f->path, n);
     npath[n] = '/';
     memmove (npath + n + 1, name->str, name->len);
@@ -871,38 +861,38 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     if (perm & Dmdir) {
         if (mkdir (npath, perm & 0777) < 0) {
             np_uerror (errno);
-            goto out;
+            goto done;
         }
         if (lstat (npath, &f->stat) < 0) {
             np_uerror (errno);
             rmdir (npath);
-            goto out;
+            goto done;
         }
         f->dir = opendir (npath);
         if (!f->dir) {
             np_uerror (errno);
             remove (npath);
-            goto out;
+            goto done;
         }
     } else if (perm & (Dmnamedpipe|Dmsymlink|Dmlink|Dmdevice)) {
         if (_create_special (fid, npath, perm, extension) < 0)
-            goto out;
+            goto done;
 
         if (lstat (npath, &f->stat) < 0) {
             np_uerror (errno);
             remove (npath);
-            goto out;
+            goto done;
         }
     } else {
         f->fd = open (npath, O_CREAT|_omode2uflags (mode), perm & 0777);
         if (f->fd < 0) {
             np_uerror (errno);
-            goto out;
+            goto done;
         }
         if (lstat (npath, &f->stat) < 0) {
             np_uerror(errno);
             remove(npath);
-            goto out;
+            goto done;
         }
         if (!(mode & Owrite) && !diod_conf_get_readahead ()) {
             if (posix_fadvise (f->fd, 0, 0, POSIX_FADV_RANDOM) < 0)
@@ -916,10 +906,10 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     _ustat2qid (&f->stat, &qid);
     if (!((ret = np_create_rcreate (&qid, 0)))) {
         np_uerror (ENOMEM);
-        goto out;
+        goto done;
     }
 
-out:
+done:
     if (npath)
         free (npath);
     return ret;
@@ -1000,6 +990,8 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (!(ret = np_alloc_rread (count))) {
         np_uerror (ENOMEM);
         goto done;
@@ -1025,6 +1017,8 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
     int n;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if ((n = _pwrite (fid, data, count, offset)) < 0)
         goto done;
     if (!(ret = np_create_rwrite (n))) {
@@ -1057,6 +1051,8 @@ diod_remove (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (remove (f->path) < 0) {
         np_uerror (errno);
         goto done;
@@ -1078,6 +1074,8 @@ diod_stat (Npfid *fid)
     Npfcall *ret = NULL;
     Npwstat wstat;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     wstat.extension = NULL;
     if (_fidstat (f) < 0)
         goto done;
@@ -1101,6 +1099,8 @@ diod_wstat(Npfid *fid, Npstat *st)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (_fidstat (f) < 0)
         goto done;
     if (st->name.len != 0) {
@@ -1251,6 +1251,8 @@ diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
     int n;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (!(ret = np_create_raread (rsize))) {
         np_uerror (ENOMEM);
         goto done;
@@ -1329,6 +1331,8 @@ diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
     int n;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     n = _cache_write (fid, data, rsize, offset);
     if (n == 0) {
         if (count > rsize)
@@ -1361,6 +1365,8 @@ diod_statfs (Npfid *fid)
     struct statvfs svb;
     Npfcall *ret = NULL;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (_fidstat(f) < 0)
         goto done;
     if (statfs (f->path, &sb) < 0) {
@@ -1394,6 +1400,8 @@ diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
     char *newpath = NULL;
     int newpathlen;
 
+    if (!diod_switch_user (fid->user))
+        goto done;
     if (!(ret = np_create_rrename ())) {
         np_uerror (ENOMEM);
         goto done;

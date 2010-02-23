@@ -97,6 +97,8 @@ static Npuserpool upool = {
 typedef struct {
     int         magic;
     int         munged;         /* user supplied a valid munge cred */
+    void       *payload;        /* munge payload (if any) */
+    int         paylen;         /* length of payload (if any) */
     gid_t       gid;            /* primary gid */
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
@@ -104,50 +106,54 @@ typedef struct {
 
 Npuserpool *diod_upool = &upool;
 
-/* Switch to user/group, permanently.
- * Load the user's supplementary groups.
- * This is called after a fork - avoid locks!
+/* Switch fsuid to user/group and load supplemental groups.
+ * N.B. ../tests/t00, ../tests/t01, and ../tests/t02
+ * demonstrate that this works with pthreads work crew.
  */
-void
-diod_become_user (Npuser *u)
+int
+diod_switch_user (Npuser *u)
 {
     Duser *d = u->aux;
+    int ret = 0;
 
     assert (d->magic == DUSER_MAGIC);
 
-    if (setgroups (d->nsg, d->sg) < 0)
-        _exit (1);
-    if (setregid (d->gid, d->gid) < 0)
-        _exit (1);
-    if (setreuid (u->uid, u->uid) < 0)
-        _exit (1);
+    if (setgroups (d->nsg, d->sg) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    setfsgid (d->gid);
+    setfsuid (u->uid);
+    ret = 1;
+done:
+    return ret;
 }
 
-static Duser *
-_alloc_duser (struct passwd *pwd, int munged)
+static void
+_free_duser (Duser *d)
+{
+    if (d->payload)
+        free (d->payload);
+    free (d);
+}
+
+int
+_getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 {
     FILE *f;
     int i, err;
     struct group grp, *grpp;
     char buf[GROUP_BUFSIZE];
-    Duser *d = NULL;
-
-    if (!(d = np_malloc (sizeof (*d))))
-        goto done;
-    d->magic = DUSER_MAGIC;
-    d->munged = munged;
-    d->gid = pwd->pw_gid;
-    d->nsg = 0;
-    if (!(f = fopen (PATH_GROUP, "r"))) {
-        np_uerror (errno);
-        goto done;
-    }
-    /* the primary group will be added too if in /etc/group (this is ok) */
+   
+    *glenp = 0; 
+    if (!(f = fopen (PATH_GROUP, "r")))
+        return 0;
     while ((err = fgetgrent_r (f, &grp, buf, sizeof (buf), &grpp)) == 0) {
         for (i = 0; grpp->gr_mem[i] != NULL; i++) {
             if (strcmp (grpp->gr_mem[i], pwd->pw_name) == 0) {
-                if (d->nsg < NGROUPS_MAX) {
-                    d->sg[d->nsg++] = grpp->gr_gid;
+                if (*glenp < NGROUPS_MAX) {
+                    if (grpp->gr_gid != pwd->pw_gid)
+                        gp[(*glenp)++] = grpp->gr_gid;
                 } else
                     msg ("user %s exceeded supplementary group max of %d",
                          pwd->pw_name, NGROUPS_MAX);
@@ -156,23 +162,75 @@ _alloc_duser (struct passwd *pwd, int munged)
         }
     } 
     fclose (f);
+    return 1;
+}
+
+static Duser *
+_alloc_duser (struct passwd *pwd, int munged, void *payload, int paylen)
+{
+    Duser *d = NULL;
+
+    if (!(d = np_malloc (sizeof (*d))))
+        goto done;
+    d->magic = DUSER_MAGIC;
+    d->munged = munged;
+    d->payload = payload;
+    d->paylen = paylen;
+    d->gid = pwd->pw_gid;
+    if (!_getsg (pwd, d->sg, &d->nsg))
+        np_uerror (errno);
 done:
     if (np_haserror () && d != NULL) {
-        free (d);
+        _free_duser (d);
         d = NULL;
     }
     return d;
 }
 
+/* Switch to user/group, load the user's supplementary groups.
+ * Print message and exit on failure.
+ */
+void
+diod_become_user (char *name, uid_t uid, int realtoo)
+{
+    int err;
+    struct passwd pw, *pwd;
+    char buf[PASSWD_BUFSIZE];
+    int nsg;
+    gid_t sg[NGROUPS_MAX];
+
+    if (name) {
+        if ((err = getpwnam_r (name, &pw, buf, sizeof(buf), &pwd)) != 0)
+            errn_exit (err, "error looking up uid %d", uid);
+        if (!pwd)
+            msg_exit ("error looking up uid %d", uid);
+    } else {
+        if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0)
+            errn_exit (err, "error looking up uid %d", uid);
+        if (!pwd)
+            msg_exit ("error looking up uid %d", uid);
+    }
+    if (!_getsg (pwd, sg, &nsg))
+        err_exit (PATH_GROUP); 
+    if (setgroups (nsg, sg) < 0)
+        err_exit ("setgroups");
+    if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
+        err_exit ("setreuid");
+    if (setreuid (realtoo ? pwd->pw_uid : -1, pwd->pw_uid) < 0)
+        err_exit ("setreuid");
+}
+
+
 static Npuser *
-_alloc_user (Npuserpool *up, struct passwd *pwd, int munged)
+_alloc_user (Npuserpool *up, struct passwd *pwd, int munged,
+             void *payload, int paylen)
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
-    if (!(u->aux = _alloc_duser (pwd, munged)))
+    if (!(u->aux = _alloc_duser (pwd, munged, payload, paylen)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -193,7 +251,7 @@ _alloc_user (Npuserpool *up, struct passwd *pwd, int munged)
 done:
     if (np_haserror () && u != NULL) {
         if (u->aux)
-            free (u->aux);
+            _free_duser (u->aux);
         if (u->uname)
             free (u->uname);
         free (u);
@@ -203,15 +261,15 @@ done:
 }
 
 /* Called from npfs/libnpfs/user.c::np_user_decref ().
- * Caller frees u, we must free the rest.
  */
 static void
 diod_udestroy (Npuserpool *up, Npuser *u)
 {
     if (u->aux)
-        free (u->aux);
+        _free_duser (u->aux);
     if (u->uname)
         free (u->uname);
+    /* caller frees u */
 }
 
 int
@@ -225,7 +283,7 @@ diod_user_has_mungecred (Npuser *u)
 }
 
 static int
-_decode_mungecred (char *uname, uid_t *uidp)
+_decode_mungecred (char *uname, uid_t *uidp, void **pp, int *lp)
 {
     int ret = -1;
 #if HAVE_LIBMUNGE
@@ -237,7 +295,7 @@ _decode_mungecred (char *uname, uid_t *uidp)
         np_uerror (ENOMEM);
         goto done;
     }
-    err = munge_decode (uname, ctx, NULL, NULL, &uid, NULL);
+    err = munge_decode (uname, ctx, pp, lp, &uid, NULL);
     memset (uname, 0, strlen (uname));
     /* FIXME: there is another copy in Npfcall->uname to sanitize */
     /* FIXME: the cred will be logged if DEBUG_9P_TRACE is enabled */
@@ -267,9 +325,11 @@ diod_uname2user (Npuserpool *up, char *uname)
     char buf[PASSWD_BUFSIZE];
     uid_t uid;
     int munged = 0;
+    void *payload = NULL;
+    int paylen = 0;
 
     if (diod_conf_get_munge () && strncmp (uname, "MUNGE:", 6) == 0) {
-        if (_decode_mungecred (uname, &uid) < 0)
+        if (_decode_mungecred (uname, &uid, &payload, &paylen) < 0)
             goto done;
         if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);
@@ -287,7 +347,7 @@ diod_uname2user (Npuserpool *up, char *uname)
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd, munged)))
+    if (!(u = _alloc_user (up, pwd, munged, payload, paylen)))
         goto done;
     np_user_incref (u);
 done:
@@ -312,7 +372,7 @@ diod_uid2user(Npuserpool *up, u32 uid)
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd, 0)))
+    if (!(u = _alloc_user (up, pwd, 0, NULL, 0)))
         goto done;
 done:
     np_user_incref (u);

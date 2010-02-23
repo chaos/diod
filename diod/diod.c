@@ -46,12 +46,13 @@
 #include "diod_conf.h"
 #include "diod_trans.h"
 #include "diod_sock.h"
+#include "diod_upool.h"
 
 #include "ops.h"
 
 static void _daemonize (void);
 
-#define OPTIONS "fd:l:w:c:e:armxF:"
+#define OPTIONS "fd:l:w:c:e:armxF:u:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -66,6 +67,7 @@ static const struct option longopts[] = {
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
+    {"runas-uid",       required_argument,  0, 'u'},
     {0, 0, 0, 0},
 };
 #else
@@ -88,6 +90,7 @@ usage()
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
+"   -u,--runas-uid UID     only allow UID to attach\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -106,10 +109,12 @@ main(int argc, char **argv)
     int Fopt = 0;
     char *lopt = NULL;
     char *copt = NULL;
+    char *uopt = NULL;
     int wopt = 0;
     char *eopt = NULL;
     struct pollfd *fds = NULL;
     int nfds = 0;
+    uid_t uid;
    
     diod_log_init (argv[0]); 
     if (!isatty (STDERR_FILENO))
@@ -154,6 +159,9 @@ main(int argc, char **argv)
             case 'F':   /* --listen-fds N */
                 Fopt = strtoul (optarg, NULL, 10);
                 break;
+            case 'u':   /* --runas-uid UID */
+                uopt = optarg;
+                break;
             default:
                 usage();
         }
@@ -176,7 +184,7 @@ main(int argc, char **argv)
     if (dopt)
         diod_conf_set_debuglevel (dopt);
     if (lopt)
-        diod_conf_set_listen (lopt);
+        diod_conf_set_diodlisten (lopt);
     if (wopt)
         diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
     if (eopt)  
@@ -185,9 +193,16 @@ main(int argc, char **argv)
         diod_conf_set_munge (0);
     if (xopt)  
         diod_conf_set_exit_on_lastuse (1);
+    if (uopt) {
+        errno = 0;
+        uid = strtoul (uopt, NULL, 10);
+        if (errno != 0)
+            err_exit ("--runas-uid argument");
+        diod_conf_set_runasuid (uid);
+    }
 
     /* sane config? */
-    if (!diod_conf_get_listen () && Fopt == 0)
+    if (!diod_conf_get_diodlisten () && Fopt == 0)
         msg_exit ("no listen address specified");
     diod_conf_validate_exports ();
 #if ! HAVE_TCP_WRAPPERS
@@ -199,6 +214,12 @@ main(int argc, char **argv)
         msg_exit ("no munge support, yet config enables it");
 #endif
 
+    /* drop privileges, unless running for multiple users */
+    if (diod_conf_get_runasuid (&uid))
+        diod_become_user (NULL, uid, 1);
+    else if (geteuid () != 0)
+        msg_exit ("if not running as root, you must specify --runas-uid");
+            
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
@@ -206,7 +227,7 @@ main(int argc, char **argv)
         if (!diod_sock_listen_fds (&fds, &nfds, Fopt))
             msg_exit ("failed to set up listen ports");
     } else {
-        if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_listen ()))
+        if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_diodlisten ()))
             msg_exit ("failed to set up listen ports");
     }
 
