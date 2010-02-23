@@ -30,6 +30,7 @@
 #endif
 #include <string.h>
 #include <errno.h>
+#include <mntent.h>
 #define GPL_LICENSED 1
 #include <munge.h>
 
@@ -38,7 +39,7 @@
 #include "diod_log.h"
 #include "diod_upool.h"
 
-#define OPTIONS "u:pc:d:"
+#define OPTIONS "u:pc:d:n"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -46,6 +47,7 @@ static const struct option longopts[] = {
     {"private-server",  no_argument,         0, 'p'},
     {"diodctl-port",    required_argument,   0, 'c'},
     {"diod-port",       required_argument,   0, 'd'},
+    {"no-mtab",         no_argument,         0, 'n'},
     {0, 0, 0, 0},
 };
 #else
@@ -58,6 +60,7 @@ static void  _diod_mount       (char *ip, char *dir, char *aname, char *port);
 static void  _diodctl_mount    (char *ip, char *dir, char *port);
 static char *_diodctl_getport  (char *dir);
 static void  _umount           (const char *target);
+static int   _update_mtab      (char *dev, char *dir, char *opt);
 
 static void
 usage (void)
@@ -68,6 +71,7 @@ usage (void)
 "   -p,--private-server          get private server instance for this user\n"
 "   -c,--diodctl-port PORT       connect to diodctl using PORT (only if -p)\n"
 "   -d,--diod-port PORT          connect to diod using PORT (only if not -p)\n"
+"   -n,--no-mtab                 do not update /etc/mtab\n"
 );
     exit (1);
 }
@@ -79,6 +83,7 @@ main (int argc, char *argv[])
     int c;
     struct stat sb;
     int popt = 0;
+    int nopt = 0;
     char *uopt = NULL;
     char *copt = NULL;
     char *dopt = NULL;
@@ -99,6 +104,9 @@ main (int argc, char *argv[])
                 break;
             case 'c':   /* --diodctl-port PORT */
                 copt = optarg;
+                break;
+            case 'n':   /* --no-mtab */
+                nopt = 1;
                 break;
             default:
                 usage ();
@@ -150,7 +158,46 @@ main (int argc, char *argv[])
     } else
         _diod_mount (ip, dir, aname, dopt);
 
+    free (aname);
+    free (ip);
+
+    if (!nopt) {
+        if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {
+            _umount (dir);
+            exit (1);
+        }
+    }
+
     exit (0);
+}
+
+static int
+_update_mtab (char *dev, char *dir, char *opt)
+{
+    FILE *f;
+    int ret = 0;
+    struct mntent mnt;
+
+    mnt.mnt_fsname = dev;
+    mnt.mnt_dir = dir;
+    mnt.mnt_type = "diod";
+    mnt.mnt_opts = opt;
+    mnt.mnt_freq = 0;
+    mnt.mnt_passno = 0;
+
+    if (!(f = setmntent (_PATH_MOUNTED, "a"))) {
+        err (_PATH_MOUNTED);
+        goto done;
+    }
+    if (addmntent (f, &mnt) != 0) {
+        msg ("failed to add entry to %s", _PATH_MOUNTED);
+        goto done;
+    }
+    ret = 1;
+done:
+    if (f)
+        endmntent (f);
+    return ret;
 }
 
 static void
@@ -281,6 +328,37 @@ done:
     return ret;
 }
 
+/* Obtain the IP address for 'name' and write it into 'ip' which is of
+ * size 'len'.
+ */
+static char *
+_name2ip (char *name)
+{
+    char buf[NI_MAXHOST], *ip;
+    struct addrinfo hints, *res;
+    int error;
+
+    memset (&hints, 0, sizeof(hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((error = getaddrinfo (name, NULL, &hints, &res)))
+        err_exit ("getaddrinfo: %s: %s", name, gai_strerror(error));
+    if (!res)
+        err_exit ("%s has no address info", name);
+
+    /* FIXME: we take the first entry in the res array.
+     * Should we loop through them and take the first one that works?
+     */
+    if (getnameinfo (res->ai_addr, res->ai_addrlen, buf, sizeof (buf),
+                     NULL, 0, NI_NUMERICHOST) < 0)
+        err_exit ("%s has no address", name);
+    freeaddrinfo (res);
+    if (!(ip = strdup (buf)))
+        err_exit ("out of memory");
+    return ip;
+}
+
 /* Given a "device" in host:aname format, parse out the host (converting
  * to ip address for in-kernel v9fs which can't handle hostnames),
  * and the aname.  Exit on error.
@@ -288,32 +366,20 @@ done:
 static void
 _parse_device (char *device, char **anamep, char **ipp)
 {
-    char *host = device, *aname;
-    struct addrinfo hints, *res;
-    static char ip[NI_MAXHOST];
-    int error;
+    char *host, *ip, *p, *aname;
 
-    aname = strchr (device, ':');
-    if (!aname)
+    if (!(host = strdup (device)))
+        msg_exit ("out of memory");
+    if (!(p = strchr (host, ':')))
         msg_exit ("device is not in host:directory format");
-    *aname++ = '\0';
-
-    memset (&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    if ((error = getaddrinfo (host, NULL, &hints, &res)))
-        err_exit ("getaddrinfo: %s: %s", host, gai_strerror(error));
-    if (res == NULL)
-        err_exit ("%s has no address info", host);
-    /* FIXME: we take the first entry in the res array.
-     * Should we loop through them and take the first one that works?
-     */
-    if (getnameinfo (res->ai_addr, res->ai_addrlen, ip, sizeof(ip),
-                     NULL, 0, NI_NUMERICHOST) < 0)
-        err_exit ("%s has no address", host);
-    freeaddrinfo (res);
+    *p++ = '\0';
+    if (!(aname = strdup (p)))
+        msg_exit ("out of memory");
+    ip = _name2ip (host);
+    free (host);
+    
+    *ipp = ip;
     *anamep = aname;
-    *ipp = ip; 
 }
 
 /*
