@@ -58,7 +58,7 @@
 typedef struct {
     uid_t uid;              /* uid diod child is running as */
     pid_t pid;              /* pid of diod child */
-    char *name;             /* host:port */
+    char *name;             /* port */
     pthread_t wait_thread;  /* thread to call waitpid () on child */
     struct pollfd *fds;     /* listen fds passed to child */
     int nfds;               /* count of above */

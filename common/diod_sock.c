@@ -64,7 +64,7 @@ static int
 _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp,
                      int quiet)
 {
-    struct addrinfo hints, *res, *r;
+    struct addrinfo hints, *res = NULL, *r;
     int opt, i, error, fd, nents = 0;
     struct pollfd *fds = *fdsp;
     int nfds = *nfdsp;
@@ -110,12 +110,13 @@ _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp,
         }
         fds[nfds++].fd = fd;
     }
-    freeaddrinfo (res);
 
     *fdsp = fds;
     *nfdsp = nfds;
     ret = nfds;
 done:
+    if (res)
+        freeaddrinfo (res);
     return ret;
 }
 
@@ -133,34 +134,31 @@ diod_sock_setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
  * dynamically allocated between BASE_PORT and MAX_PORT.
  * Fd's are placed in pollfd array (allocated/expanded).
  * Returns 0 on failure, nonzero on success.
- * A "host:port" string is placed in kp (caller must free).
+ * A port string is placed in pp (caller must free).
  */
 int
-diod_sock_setup_alloc (char *host, struct pollfd **fdsp, int *nfdsp, char **kp)
+diod_sock_setup_alloc (char *host, struct pollfd **fdsp, int *nfdsp, char **pp)
 {
     int i = BASE_PORT;
-    char port[NI_MAXSERV];
-    int len = strlen (host) + 16;
-    char *key;
+    char *port;
     int ret = 0;
 
-    if (!(key = malloc (len))) {
+    if (!(port = malloc (NI_MAXSERV))) {
         msg ("out of memory");
         goto done;
     }
     for (i = BASE_PORT; i < MAX_PORT; i++) {
-        snprintf (port, sizeof(port), "%d", i);
+        snprintf (port, NI_MAXSERV, "%d", i);
         if (_setup_one (host, port, fdsp, nfdsp, 1)) {
-            snprintf (key, len, "%s:%d\n", host, i);
             ret = 1;
             break;
         }
     }
 done:
-    if (ret == 1)
-        *kp = key;
-    else if (key)
-        free (key);
+    if (ret == 1) {
+        *pp = port;
+    } else if (port)
+        free (port);
     return ret;
 }
 

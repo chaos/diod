@@ -56,7 +56,7 @@ static void  _parse_device     (char *device, char **anamep, char **ipp);
 static void  _create_mungecred (char **credp, char *payload);
 static void  _diod_mount       (char *ip, char *dir, char *aname, char *port);
 static void  _diodctl_mount    (char *ip, char *dir, char *port);
-static char *_diodctl_getport  (char *dir, char *buf, int len);
+static char *_diodctl_getport  (char *dir);
 static void  _umount           (const char *target);
 
 static void
@@ -115,7 +115,7 @@ main (int argc, char *argv[])
     if (popt && dopt)
         msg_exit ("--private-server and --diod-port cannot be used together");
     if (copt && !popt)
-        msg_exit ("--diodctl-port is only used with --private-server");
+        msg_exit ("--diodctl-port can only be used with --private-server");
     if (uopt && !strcmp (uopt, "root") && !popt)
         msg_exit ("--mount-user root can only be used with --private-server");
 
@@ -137,14 +137,13 @@ main (int argc, char *argv[])
 
     if (popt) {
         char *port;
-        char buf[NI_MAXHOST*2 + 2];
 
         _diodctl_mount (ip, dir, copt);
         sleep (1); /* FIXME: avoid segfault in Npfile land */
-        port = _diodctl_getport (dir, buf, sizeof (buf));
+        port = _diodctl_getport (dir);
         _umount (dir);
         if (!port)
-            exit (1);
+            exit (1); 
         sleep (1); /* FIXME: allow time for diod to call listen */
         _diod_mount (ip, dir, aname, port);
         free (port);
@@ -231,10 +230,11 @@ _diodctl_mount (char *ip, char *dir, char *port)
 }
 
 static char *
-_diodctl_getport (char *dir, char *buf, int len)
+_diodctl_getport (char *dir)
 {
     char *ctl = NULL, *server = NULL;
     FILE *f;
+    int port;
     char *ret = NULL;
    
     /* poke /ctl to trigger creation of new server (if needed) */ 
@@ -253,7 +253,7 @@ _diodctl_getport (char *dir, char *buf, int len)
     }
     fclose (f);
 
-    /* read host:port from /server */
+    /* read port from /server */
     if (asprintf (&server, "%s/server", dir) < 0) {
         msg ("out of memory");
         goto done;
@@ -262,22 +262,17 @@ _diodctl_getport (char *dir, char *buf, int len)
         err ("error opening %s", server);
         goto done;
     }
-    if (!(fgets (buf, len, f))) {
-        msg ("unexpected EOF reading %s", server);
+    if (fscanf (f, "%d", &port) != 1) {
+        msg ("failed to read port number from %s", server);
         fclose (f);
         goto done;
     }
     fclose (f);
-
-    /* drop traling \n and parse out the port number */
-    if (strlen (buf) > 0 && buf[strlen (buf) - 1] == '\n')
-        buf[strlen (buf) - 1] = '\0';
-    if (!(ret = strchr (buf, ':'))) {
-        msg ("server did not contain expected content");
+    if (!(ret = malloc (NI_MAXSERV))) {
+        msg ("out of memory");
         goto done;
     }
-    ret++;
-    msg ("obtained port %s", ret);
+    snprintf (ret, NI_MAXSERV, "%d", port); 
 done:
     if (ctl)
         free (ctl);
@@ -301,7 +296,7 @@ _parse_device (char *device, char **anamep, char **ipp)
     aname = strchr (device, ':');
     if (!aname)
         msg_exit ("device is not in host:directory format");
-    *aname ++ = '\0';
+    *aname++ = '\0';
 
     memset (&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;

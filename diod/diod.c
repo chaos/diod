@@ -219,7 +219,7 @@ main(int argc, char **argv)
         diod_become_user (NULL, uid, 1);
     else if (geteuid () != 0)
         msg_exit ("if not running as root, you must specify --runas-uid");
-            
+
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");

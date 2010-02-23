@@ -116,6 +116,9 @@ diod_switch_user (Npuser *u)
     Duser *d = u->aux;
     int ret = 0;
 
+    if (diod_conf_get_runasuid (NULL))
+        return 1;
+
     assert (d->magic == DUSER_MAGIC);
 
     if (setgroups (d->nsg, d->sg) < 0) {

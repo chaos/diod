@@ -5,7 +5,7 @@ void diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap);
 int  diod_sock_setup_one   (char *host, char *port, struct pollfd **fdsp,
                             int *nfdsp);
 int  diod_sock_setup_alloc (char *host, struct pollfd **fdsp, int *nfdsp,
-                            char **kp);
+                            char **pp);
 
 
 /*
