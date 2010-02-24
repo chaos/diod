@@ -512,8 +512,10 @@ diod_connclose (Npconn *conn)
     if ((errnum = pthread_mutex_lock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
     conn_count--;
-    if (conn_count == 0 && conn_used)
-        msg_exit ("exiting on last use");
+    if (conn_count == 0 && conn_used) {
+        msg ("exiting on last use");
+        exit (0);
+    }
     if ((errnum = pthread_mutex_unlock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
 }
