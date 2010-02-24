@@ -262,6 +262,7 @@ file2wstat(Npfile *file, Npwstat *wstat)
 	wstat->uid = file->uid->uname;
 	wstat->gid = file->gid->gname;
 	wstat->muid = file->muid->uname;
+	assert (wstat->muid != NULL);
 	wstat->extension = file->extension;
 	wstat->n_uid = file->uid->uid;
 	wstat->n_gid = file->gid->gid;
@@ -682,12 +683,13 @@ done:
 Npfcall*
 npfile_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
-	int n, ecode;
+	int n;
 	Npfcall *ret;
 	Npfilefid *f;
 	Npfile *file;
 	Npfileops *fops;
-	char *ename;
+	//int ecode;
+	//char *ename;
 
 	ret = NULL;
 	f = fid->aux;
@@ -702,14 +704,17 @@ npfile_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 	}
 
 	n = (*fops->write)(f, offset, count, data, req);
-
+#if 0 	/* FIXME npfile_modified () causes muid to reference the current user,
+	 * but doesn't manage the user refcount, so user can be freed leaving
+	 * muid dangling.  Commenting out for now - muid will just be static.
+	 */
 	np_rerror(&ename, &ecode);
 	if (!ename || n<0) {
 		pthread_mutex_lock(&file->lock);
 		npfile_modified(file, fid->user);
 		pthread_mutex_unlock(&file->lock);
 	}
-
+#endif
 	if (n >= 0)
 		ret = np_create_rwrite(n);
 

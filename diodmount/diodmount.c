@@ -39,7 +39,7 @@
 #include "diod_log.h"
 #include "diod_upool.h"
 
-#define OPTIONS "u:pc:d:n"
+#define OPTIONS "u:pc:d:nD"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -48,6 +48,7 @@ static const struct option longopts[] = {
     {"diodctl-port",    required_argument,   0, 'c'},
     {"diod-port",       required_argument,   0, 'd'},
     {"no-mtab",         no_argument,         0, 'n'},
+    {"diodctl-only",    no_argument,         0, 'D'},
     {0, 0, 0, 0},
 };
 #else
@@ -72,6 +73,7 @@ usage (void)
 "   -c,--diodctl-port PORT       connect to diodctl using PORT (only if -p)\n"
 "   -d,--diod-port PORT          connect to diod using PORT (only if not -p)\n"
 "   -n,--no-mtab                 do not update /etc/mtab\n"
+"   -D,--diodctl-only            mount diodctl file system only (needs -p -u)\n"
 );
     exit (1);
 }
@@ -84,6 +86,7 @@ main (int argc, char *argv[])
     struct stat sb;
     int popt = 0;
     int nopt = 0;
+    int Dopt = 0;
     char *uopt = NULL;
     char *copt = NULL;
     char *dopt = NULL;
@@ -108,6 +111,9 @@ main (int argc, char *argv[])
             case 'n':   /* --no-mtab */
                 nopt = 1;
                 break;
+            case 'D':   /* --diodctl-only */
+                Dopt = 1;
+                break;
             default:
                 usage ();
         }
@@ -126,6 +132,8 @@ main (int argc, char *argv[])
         msg_exit ("--diodctl-port can only be used with --private-server");
     if (uopt && !strcmp (uopt, "root") && !popt)
         msg_exit ("--mount-user root can only be used with --private-server");
+    if (Dopt && !popt)
+        msg_exit ("--diodctl-only can only be used with --private-server");
 
     if (stat (dir, &sb) < 0)
         err_exit (dir);
@@ -148,10 +156,14 @@ main (int argc, char *argv[])
 
         _diodctl_mount (ip, dir, copt);
         port = _diodctl_getport (dir);
-        _umount (dir);
         if (!port)
             exit (1); 
-        _diod_mount (ip, dir, aname, port);
+        if (Dopt)
+            msg ("use port %s to contact server", port);
+        else {
+            _umount (dir);
+            _diod_mount (ip, dir, aname, port);
+        }
         free (port);
     } else
         _diod_mount (ip, dir, aname, dopt);

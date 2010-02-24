@@ -78,33 +78,97 @@ static Conf config = {
 };
 
 
-void diod_conf_init (void)
+void
+diod_conf_init (void)
 {
     diod_conf_set_diodctllisten ("0.0.0.0:10005");
     diod_conf_set_diodlisten ("0.0.0.0:10006");
     diod_conf_set_diodpath (X_SBINDIR "/diod");
 }
 
-int diod_conf_get_debuglevel (void) { return config.debuglevel; }
-void diod_conf_set_debuglevel (int i) { config.debuglevel = i; }
+int
+diod_conf_get_debuglevel (void)
+{
+    return config.debuglevel;
+}
 
-int diod_conf_get_nwthreads (void) { return config.nwthreads; }
-void diod_conf_set_nwthreads (int i) { config.nwthreads = i; }
+void
+diod_conf_set_debuglevel (int i)
+{
+    config.debuglevel = i;
+}
 
-int diod_conf_get_foreground (void) { return config.foreground; }
-void diod_conf_set_foreground (int i) { config.foreground = i; }
+int
+diod_conf_get_nwthreads (void)
+{
+    return config.nwthreads;
+}
 
-int diod_conf_get_munge (void) { return config.munge; }
-void diod_conf_set_munge (int i) { config.munge = i; }
+void
+diod_conf_set_nwthreads (int i)
+{
+    config.nwthreads = i;
+}
 
-int diod_conf_get_tcpwrappers (void) { return config.tcpwrappers; }
-void diod_conf_set_tcpwrappers (int i) { config.tcpwrappers = i; }
+int
+diod_conf_get_foreground (void)
+{
+    return config.foreground;
+}
 
-int diod_conf_get_readahead (void) { return config.readahead; }
-void diod_conf_set_readahead (int i) { config.readahead = i; }
+void
+diod_conf_set_foreground (int i)
+{
+    config.foreground = i;
+}
 
-int diod_conf_get_exit_on_lastuse (void) { return config.exit_on_lastuse; }
-void diod_conf_set_exit_on_lastuse (int i) { config.exit_on_lastuse = i; }
+int
+diod_conf_get_munge (void)
+{
+    return config.munge;
+}
+
+void
+diod_conf_set_munge (int i)
+{
+    config.munge = i;
+}
+
+int
+diod_conf_get_tcpwrappers (void)
+{
+    return config.tcpwrappers;
+}
+
+void
+diod_conf_set_tcpwrappers (int i)
+{
+    config.tcpwrappers = i;
+}
+
+int
+diod_conf_get_readahead (void)
+{
+    return config.readahead;
+}
+
+void
+diod_conf_set_readahead (int i)
+{
+    config.readahead = i;
+}
+
+int
+diod_conf_get_exit_on_lastuse (void)
+{
+    return config.exit_on_lastuse;
+}
+
+void
+diod_conf_set_exit_on_lastuse (int i)
+{
+    config.exit_on_lastuse = i;
+}
 
 int
 diod_conf_get_runasuid (uid_t *uidp)
@@ -113,21 +177,35 @@ diod_conf_get_runasuid (uid_t *uidp)
         *uidp = config.runasuid;
     return config.runasuid_valid;
 }
-void diod_conf_set_runasuid (uid_t uid)
+
+void
+diod_conf_set_runasuid (uid_t uid)
 {
     config.runasuid_valid = 1;
     config.runasuid = uid;
 }
 
-char *diod_conf_get_diodpath (void) { return config.diodpath; }
-void diod_conf_set_diodpath (char *s)
+char *
+diod_conf_get_diodpath (void)
+{
+    return config.diodpath;
+}
+
+void
+diod_conf_set_diodpath (char *s)
 {
     if (!(config.diodpath = strdup (s)))
         msg_exit ("out of memory");
 }
 
-List diod_conf_get_diodlisten (void) { return config.diodlisten; }
-void diod_conf_set_diodlisten (char *s)
+List
+diod_conf_get_diodlisten (void)
+{
+    return config.diodlisten;
+}
+
+void
+diod_conf_set_diodlisten (char *s)
 {
     char *cpy;
 
@@ -143,8 +221,14 @@ void diod_conf_set_diodlisten (char *s)
     }
 }
 
-List diod_conf_get_diodctllisten (void) { return config.diodctllisten; }
-void diod_conf_set_diodctllisten (char *s)
+List
+diod_conf_get_diodctllisten (void)
+{
+    return config.diodctllisten;
+}
+
+void
+diod_conf_set_diodctllisten (char *s)
 {
     char *cpy;
 

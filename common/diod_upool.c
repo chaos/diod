@@ -24,12 +24,12 @@
 /* diod_upool.c - user lookup for diod distributed I/O daemon */
 
 /* This upool implementation does no caching of /etc/passwd and /etc/group.
- * Instead it creates Npuser's anew at attach time, shares them among cloned
- * fids, and deletes them when the refcount goes to zero (e.g. when root is
- * clunked at umount time).  Npgroup's are not used at all.  Instead the user's
- * primary and supplementary groups are stored a private struct linked to
- * Npuser->aux in the form of an array suitable for passing directly to
- * setgroups().
+ * Instead it creates Npusers and Mpgroups anew at attach time, shares them
+ * among cloned fids, and deletes them when the refcount goes to zero
+ * (e.g. when root is clunked at umount time).  A users supplementary groups
+ * are not stored in Npuser->groups; instead supplementary groups are stored
+ * a private struct linked to Npuser->aux in the form of an array suitable
+ * for passing directly to setgroups().
  *
  * Summary of refcount strategy:  
  * Tattach: created via diod_u*2user() with refcount 1 (see below)
@@ -41,7 +41,7 @@
  * until an attach is received with a valid munge cred in the uname field.
  * If that attach succedes, subsequent non-munge attaches on the same
  * transport (set up per mount) succeed if the original attach was root or
- * the same user.
+ * the same user (this logic is in the per-fs srv->attach method).
  */
 
 #if HAVE_CONFIG_H
@@ -96,6 +96,7 @@ static Npuserpool upool = {
 };
 
 /* Private Duser struct, linked to Npuser->aux.
+ * Usage of munge payload here is TBD - maybe the user's batch id for stats?
  */
 #define DUSER_MAGIC 0x3455DDDF
 typedef struct {
@@ -128,6 +129,10 @@ diod_switch_user (Npuser *u)
         np_uerror (errno);
         goto done;
     }
+    /* Need a clever way to check for errors here.
+     * Perhaps touch a file in /tmp and verify stat->st_uid, st_gid match?
+     * Can we afford the probably dozens of millesconds needed to do that?
+     */
     setfsgid (u->dfltgroup->gid);
     setfsuid (u->uid);
     ret = 1;
@@ -241,7 +246,7 @@ _alloc_user (Npuserpool *up, struct passwd *pwd, int munged,
         np_uerror (err);
         goto done;
     }
-    u->refcount = 1; /* FIXME: should be zero? */
+    u->refcount = 0;
     u->upool = up;
     u->uid = pwd->pw_uid;
     if (!(u->uname = strdup (pwd->pw_name))) {
@@ -262,6 +267,7 @@ done:
         free (u);
         u = NULL;
     }
+    msg ("_alloc_user: %s (%p)", pwd->pw_name, u);
     return u; 
 }
 
@@ -270,7 +276,7 @@ done:
 static void
 diod_udestroy (Npuserpool *up, Npuser *u)
 {
-    msg ("I destroyed a user! (%s)", u->uname ? u->uname : "<unknown>");
+    msg ("diod_udestroy: %s", u->uname ? u->uname : "<unknown>");
     if (u->aux)
         _free_duser (u->aux);
     if (u->uname)
@@ -397,7 +403,7 @@ _alloc_group (Npuserpool *up, struct group *gr)
         np_uerror (err);
         goto done;
     }
-    g->refcount = 1; /* FIXME: should be zero? */
+    g->refcount = 0;
     g->upool = up;
     g->gid = gr->gr_gid;
     if (!(g->gname = strdup (gr->gr_name))) {
@@ -413,6 +419,7 @@ done:
         free (g);
         g = NULL;
     }
+    msg ("_alloc_group: %s (%p)", gr->gr_name, g);
     return g; 
 
 }
@@ -466,7 +473,7 @@ done:
 static void
 diod_gdestroy(Npuserpool *up, Npgroup *g)
 {
-    msg ("I destroyed a group! (%s)", g->gname ? g->gname : "<unknown>");
+    msg ("diod_gdestroy: %s", g->gname ? g->gname : "<unknown>");
     if (g->gname)
         free (g->gname);
     /* caller frees g */

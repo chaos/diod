@@ -42,23 +42,27 @@ static char *prog = NULL;
 typedef enum { DEST_STDERR, DEST_SYSLOG } dest_t;
 static dest_t dest = DEST_STDERR;
 
-void diod_log_init (char *p)
+void
+diod_log_init (char *p)
 {
     prog = basename (p);
     openlog (prog, LOG_NDELAY | LOG_PID, LOG_DAEMON);
 }
 
-void diod_log_fini (void)
+void
+diod_log_fini (void)
 {
     closelog ();
 }
 
-void diod_log_to_syslog (void)
+void
+diod_log_to_syslog (void)
 {
     dest = DEST_SYSLOG;
 }
 
-static void _verr (int errnum, const char *fmt, va_list ap)
+static void
+_verr (int errnum, const char *fmt, va_list ap)
 {
     char buf[256];
     char errbuf[64];
@@ -76,7 +80,8 @@ static void _verr (int errnum, const char *fmt, va_list ap)
     }
 }
 
-static void _vlog (const char *fmt, va_list ap)
+static void
+_vlog (const char *fmt, va_list ap)
 {
     char buf[256];
 
@@ -93,7 +98,8 @@ static void _vlog (const char *fmt, va_list ap)
 
 /* Log message and errno string, then exit.
  */
-void err_exit (const char *fmt, ...)
+void
+err_exit (const char *fmt, ...)
 {
     va_list ap;
 
@@ -105,7 +111,8 @@ void err_exit (const char *fmt, ...)
 
 /* Log message and errno string.
  */
-void err (const char *fmt, ...)
+void
+err (const char *fmt, ...)
 {
     va_list ap;
 
@@ -116,7 +123,8 @@ void err (const char *fmt, ...)
 
 /* Log message and errnum string, then exit.
  */
-void errn_exit (int errnum, const char *fmt, ...)
+void
+errn_exit (int errnum, const char *fmt, ...)
 {
     va_list ap;
 
@@ -128,7 +136,8 @@ void errn_exit (int errnum, const char *fmt, ...)
 
 /* Log message and errnum string.
  */
-void errn (int errnum, const char *fmt, ...)
+void
+errn (int errnum, const char *fmt, ...)
 {
     va_list ap;
 
@@ -140,7 +149,8 @@ void errn (int errnum, const char *fmt, ...)
 
 /* Log message, then exit.
  */
-void msg_exit (const char *fmt, ...)
+void
+msg_exit (const char *fmt, ...)
 {
     va_list ap;
 
@@ -152,7 +162,8 @@ void msg_exit (const char *fmt, ...)
 
 /* Log message.
  */
-void msg (const char *fmt, ...)
+void
+msg (const char *fmt, ...)
 {
     va_list ap;
 
