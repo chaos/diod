@@ -317,6 +317,46 @@ diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
     /*NOTREACHED*/
 }
 
+int
+diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
+{
+    int i, error, fd = -1;
+    struct addrinfo hints, *res = NULL, *r;
+
+    memset (&hints, 0, sizeof (hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((error = getaddrinfo (host, port, &hints, &res)) != 0) {
+        msg ("getaddrinfo localhost:%s: %s", port, gai_strerror (error));
+        goto done;
+    }
+    if (!res) {
+        msg ("could not look up %s:%s", host, port);
+        goto done;
+    }
+    for (i = 0; i < maxtries && fd == -1; i++) {
+        for (r = res; r != NULL && fd == -1; r = r->ai_next) {
+            if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
+                continue;
+            if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
+                close (fd);
+                fd = -1;
+            }
+        }
+        if (fd == -1)
+            usleep (1000 * retry_wait_ms);
+    }
+    if (fd == -1) {
+        msg ("%d connect attempts to %s:%s failed", i, host, port);
+        goto done;
+    }
+done:
+    if (res)
+        freeaddrinfo (res);
+    return fd;
+}
+    
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */

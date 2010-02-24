@@ -261,7 +261,7 @@ _ctl_root_create (void)
     root->atime = time(NULL);
     root->mtime = root->atime;
     root->uid = user;
-    root->gid = NULL;
+    root->gid = user->dfltgroup;
     root->muid = user;
 
     if (!(tmpstr = strdup ("exports")))

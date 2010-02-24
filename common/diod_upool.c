@@ -72,7 +72,7 @@
 #define NGROUPS_MAX     256  /* FIXME: sysconf(_SC_NGROUPS_MAX); */
 #endif
 #define PASSWD_BUFSIZE  4096 /* FIXME: sysconf(_SC_GETPW_R_SIZE_MAX) ? */
-#define GROUP_BUFSIZE   4096
+#define GROUP_BUFSIZE   4096 /* FIXME: sysconf(_SC_GETGR_R_SIZE_MAX) ? */
 #define PATH_GROUP      "/etc/group"
 #define SQUASH_UID      65534
 #define SQUASH_GID      65534
@@ -81,14 +81,18 @@ static Npuser       *diod_uname2user (Npuserpool *, char *uname);
 static Npuser       *diod_uid2user (Npuserpool *, u32 uid);
 static void          diod_udestroy (Npuserpool *up, Npuser *u);
 
+static Npgroup      *diod_gname2group(Npuserpool *, char *gname);
+static Npgroup      *diod_gid2group(Npuserpool *, u32 gid);
+static void          diod_gdestroy(Npuserpool *, Npgroup *);
+
 static Npuserpool upool = {
     .uname2user     = diod_uname2user,
     .uid2user       = diod_uid2user,
-    .gname2group    = NULL,
-    .gid2group      = NULL,
+    .gname2group    = diod_gname2group,
+    .gid2group      = diod_gid2group,
     .ismember       = NULL,
     .udestroy       = diod_udestroy,
-    .gdestroy       = NULL,
+    .gdestroy       = diod_gdestroy,
 };
 
 /* Private Duser struct, linked to Npuser->aux.
@@ -99,7 +103,6 @@ typedef struct {
     int         munged;         /* user supplied a valid munge cred */
     void       *payload;        /* munge payload (if any) */
     int         paylen;         /* length of payload (if any) */
-    gid_t       gid;            /* primary gid */
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
 } Duser;
@@ -125,7 +128,7 @@ diod_switch_user (Npuser *u)
         np_uerror (errno);
         goto done;
     }
-    setfsgid (d->gid);
+    setfsgid (u->dfltgroup->gid);
     setfsuid (u->uid);
     ret = 1;
 done:
@@ -179,7 +182,6 @@ _alloc_duser (struct passwd *pwd, int munged, void *payload, int paylen)
     d->munged = munged;
     d->payload = payload;
     d->paylen = paylen;
-    d->gid = pwd->pw_gid;
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
@@ -239,7 +241,7 @@ _alloc_user (Npuserpool *up, struct passwd *pwd, int munged,
         np_uerror (err);
         goto done;
     }
-    u->refcount = 0;
+    u->refcount = 1; /* FIXME: should be zero? */
     u->upool = up;
     u->uid = pwd->pw_uid;
     if (!(u->uname = strdup (pwd->pw_name))) {
@@ -247,7 +249,7 @@ _alloc_user (Npuserpool *up, struct passwd *pwd, int munged,
         goto done;
     }
 
-    u->dfltgroup = NULL;    /* not used */
+    u->dfltgroup = up->gid2group(up, pwd->pw_gid);
     u->groups = NULL;       /* not used */
     u->ngroups = 0;         /* not used */
     u->next = NULL;         /* not used */
@@ -268,6 +270,7 @@ done:
 static void
 diod_udestroy (Npuserpool *up, Npuser *u)
 {
+    msg ("I destroyed a user! (%s)", u->uname ? u->uname : "<unknown>");
     if (u->aux)
         _free_duser (u->aux);
     if (u->uname)
@@ -380,6 +383,93 @@ diod_uid2user(Npuserpool *up, u32 uid)
 done:
     np_user_incref (u);
     return u;
+}
+
+static Npgroup *
+_alloc_group (Npuserpool *up, struct group *gr)
+{
+    Npgroup *g;
+    int err;
+
+    if (!(g = np_malloc (sizeof (*g))))
+        goto done;
+    if ((err = pthread_mutex_init (&g->lock, NULL)) != 0) {
+        np_uerror (err);
+        goto done;
+    }
+    g->refcount = 1; /* FIXME: should be zero? */
+    g->upool = up;
+    g->gid = gr->gr_gid;
+    if (!(g->gname = strdup (gr->gr_name))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    g->aux = NULL;          /* not used */
+    g->next = NULL;         /* not used */
+done:
+    if (np_haserror () && g != NULL) {
+        if (g->gname)
+            free (g->gname);
+        free (g);
+        g = NULL;
+    }
+    return g; 
+
+}
+
+static Npgroup *
+diod_gname2group(Npuserpool *up, char *gname)
+{
+    Npgroup *g = NULL; 
+    int err;
+    struct group gr, *grp = NULL;
+    char buf[GROUP_BUFSIZE];
+
+    if ((err = getgrnam_r (gname, &gr, buf, sizeof(buf), &grp)) != 0) {
+        np_uerror (err);
+        goto done;
+    }
+    if (!grp) {
+        np_uerror (ESRCH);
+        goto done;
+    }
+    if (!(g = _alloc_group (up, grp)))
+        goto done;
+    np_group_incref (g);
+done:
+    return g;
+}
+
+static Npgroup *
+diod_gid2group(Npuserpool *up, u32 gid)
+{
+    Npgroup *g = NULL; 
+    int err;
+    struct group gr, *grp = NULL;
+    char buf[GROUP_BUFSIZE];
+
+    if ((err = getgrgid_r (gid, &gr, buf, sizeof(buf), &grp)) != 0) {
+        np_uerror (err);
+        goto done;
+    }
+    if (!grp) {
+        np_uerror (ESRCH);
+        goto done;
+    }
+    if (!(g = _alloc_group (up, grp)))
+        goto done;
+    np_group_incref (g);
+done:
+    return g;
+}
+
+static void
+diod_gdestroy(Npuserpool *up, Npgroup *g)
+{
+    msg ("I destroyed a group! (%s)", g->gname ? g->gname : "<unknown>");
+    if (g->gname)
+        free (g->gname);
+    /* caller frees g */
 }
 
 /*

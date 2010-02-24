@@ -260,11 +260,11 @@ file2wstat(Npfile *file, Npwstat *wstat)
 	wstat->length = file->length;
 	wstat->name = file->name;
 	wstat->uid = file->uid->uname;
-	wstat->gid = file->gid ? file->gid->gname : ""; /* FIXME jg */
+	wstat->gid = file->gid->gname;
 	wstat->muid = file->muid->uname;
 	wstat->extension = file->extension;
 	wstat->n_uid = file->uid->uid;
-	wstat->n_gid = file->gid ? file->gid->gid : wstat->n_uid; /* FIXME jg */
+	wstat->n_gid = file->gid->gid;
 	wstat->n_muid = file->muid->uid;
 }
 

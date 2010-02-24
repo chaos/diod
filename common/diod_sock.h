@@ -6,7 +6,8 @@ int  diod_sock_setup_one   (char *host, char *port, struct pollfd **fdsp,
                             int *nfdsp);
 int  diod_sock_setup_alloc (char *host, struct pollfd **fdsp, int *nfdsp,
                             char **pp);
-
+int  diod_sock_connect     (char *host, char *port,
+                            int maxtries, int retry_wait_ms);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

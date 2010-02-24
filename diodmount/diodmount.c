@@ -147,12 +147,10 @@ main (int argc, char *argv[])
         char *port;
 
         _diodctl_mount (ip, dir, copt);
-        sleep (1); /* FIXME: avoid segfault in Npfile land */
         port = _diodctl_getport (dir);
         _umount (dir);
         if (!port)
             exit (1); 
-        sleep (1); /* FIXME: allow time for diod to call listen */
         _diod_mount (ip, dir, aname, port);
         free (port);
     } else
@@ -174,6 +172,7 @@ main (int argc, char *argv[])
 static int
 _update_mtab (char *dev, char *dir, char *opt)
 {
+    uid_t saved_euid = geteuid ();
     FILE *f;
     int ret = 0;
     struct mntent mnt;
@@ -185,18 +184,26 @@ _update_mtab (char *dev, char *dir, char *opt)
     mnt.mnt_freq = 0;
     mnt.mnt_passno = 0;
 
+    if (seteuid (0) < 0) {
+        err ("failed to set effective uid to root");
+        goto done;
+    }
     if (!(f = setmntent (_PATH_MOUNTED, "a"))) {
         err (_PATH_MOUNTED);
         goto done;
     }
     if (addmntent (f, &mnt) != 0) {
         msg ("failed to add entry to %s", _PATH_MOUNTED);
+        endmntent (f);
+        goto done;
+    }
+    endmntent (f);
+    if (seteuid (saved_euid) < 0) {
+        err ("failed to restore effective uid to %d", saved_euid);
         goto done;
     }
     ret = 1;
 done:
-    if (f)
-        endmntent (f);
     return ret;
 }
 
@@ -249,11 +256,15 @@ static void
 _diod_mount (char *ip, char *dir, char *aname, char *port)
 {
     char *options, *cred;
+    char access[32];
+
+    if (geteuid () != 0) 
+        snprintf (access, sizeof (access), ",access=%d", geteuid ());
 
     _create_mungecred (&cred, NULL);
     /* FIXME: msize should be configurable */
-    if (asprintf (&options, "port=%s,uname=%s,aname=%s,msize=65560",
-                  port ? port : "10006", cred, aname) < 0) {
+    if (asprintf (&options, "port=%s,uname=%s,aname=%s,msize=65560%s",
+                  port ? port : "10006", cred, aname, access) < 0) {
         msg_exit ("out of memory");
     }
     _mount (ip, dir, options);
@@ -265,10 +276,10 @@ static void
 _diodctl_mount (char *ip, char *dir, char *port)
 {
     char *options, *cred;
-
+    
     _create_mungecred (&cred, NULL);
-    if (asprintf (&options, "port=%s,uname=%s,aname=/diodctl",
-                  port ? port : "10005", cred) < 0) {
+    if (asprintf (&options, "port=%s,uname=%s,aname=/diodctl,access=%d",
+                  port ? port : "10005", cred, geteuid ()) < 0) {
         msg_exit ("out of memory");
     }
     _mount (ip, dir, options);

@@ -149,7 +149,7 @@ diodctl_serv_init (char *path)
  * Suitable for cast to (ListFindF).
  */
 static int
-_match_server_byuid (Server *s, uid_t *uid)
+_smatch (Server *s, uid_t *uid)
 {
     return (s->uid == *uid);
 }
@@ -171,7 +171,7 @@ _remove_server (Server *s)
         msg ("failed to lock serverlist");
         goto done;
     }
-    if (!list_find (itr, (ListFindF)_match_server_byuid, &s->uid)) {
+    if (!list_find (itr, (ListFindF)_smatch, &s->uid)) {
         msg ("failed to delete server from list");
         goto unlock_and_done;
     }
@@ -190,6 +190,7 @@ done:
 }
 
 /* Thread to wait on child process and report status.
+ * FIXME: when diodctl dies with SIGSEGV, this thread hangs
  */
 static void *
 _wait_pid (void *arg)
@@ -270,8 +271,8 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-c%s", path_config) < 0)
         goto done;
-    if (_append_arg (s, "-x") < 0)
-        goto done;
+    //if (_append_arg (s, "-x") < 0)
+    //    goto done;
     if (_append_arg (s, "-f") < 0)
         goto done;
     if (_append_arg (s, "-u%d", s->uid) < 0)
@@ -303,15 +304,15 @@ _exec_server (Server *s)
     _exit (1);
 }
 
-
 /* Spawn a new diod daemon running as [uid].
  * We are holding serverlist->lock.
  */
-static void
+static Server *
 _new_server (Npuser *user, char *ip)
 {
     int i, error;
     Server *s = NULL;
+    int fd;
 
     if (!(s = _alloc_server ()))
         goto done;
@@ -337,6 +338,10 @@ _new_server (Npuser *user, char *ip)
             break;
     }
 
+    /* connect (with retries) until server responds */
+    if ((fd = diod_sock_connect (ip, s->name, 30, 100)) == -1)
+        goto done;
+    close (fd);
     if ((error = pthread_create (&s->wait_thread, NULL, _wait_pid, s))) {
         np_uerror (error);
         goto done; 
@@ -348,8 +353,13 @@ _new_server (Npuser *user, char *ip)
 done:
     for (i = 0; i < s->nfds; i++)
         close (s->fds[i].fd);
-    if (np_haserror () && s != NULL)
-        _free_server (s);
+    if (np_haserror ()) {
+        if (s) {
+            _free_server (s);
+            s = NULL;
+        }
+    }
+    return s;
 }
 
 /* Get servername for a particular user.
@@ -370,8 +380,7 @@ diodctl_serv_getname (Npuser *user, u64 offset, u32 count, u8* data)
         np_uerror (err);
         goto done;
     }
-    s = list_find_first (serverlist->servers, (ListFindF)_match_server_byuid,
-                         &user->uid);
+    s = list_find_first (serverlist->servers, (ListFindF)_smatch, &user->uid);
     if (s) {
         cpylen = strlen (s->name) - offset;
         if (cpylen > count)
@@ -397,16 +406,16 @@ diodctl_serv_create (Npuser *user, char *ip)
 {
     int err;
     int ret = 0;
+    Server *s;
 
     if ((err = pthread_mutex_lock (&serverlist->lock))) {
         np_uerror (err);
         goto done;
     }
     /* FIXME: what if found server is listening on wrong ip? */
-    if (!list_find_first (serverlist->servers, (ListFindF)_match_server_byuid,
-                          &user->uid)) {
-        _new_server (user, ip);
-    }
+    s = list_find_first (serverlist->servers, (ListFindF)_smatch, &user->uid);
+    if (!s)
+        s = _new_server (user, ip);
 
     if ((err = pthread_mutex_unlock (&serverlist->lock))) {
         np_uerror (err);
