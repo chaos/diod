@@ -58,9 +58,6 @@ static int  diod_trans_read (u8 *data, u32 count, void *a);
 static int  diod_trans_write (u8 *data, u32 count, void *a);
 void diod_trans_destroy (void *);
 
-static pthread_mutex_t  transcount_lock = PTHREAD_MUTEX_INITIALIZER;
-static int              transcount = 0;
-
 Nptrans *
 diod_trans_create (int fd, char *host, char *ip, char *svc)
 {
@@ -95,10 +92,6 @@ diod_trans_create (int fd, char *host, char *ip, char *svc)
         return NULL;
     }
 
-    pthread_mutex_lock (&transcount_lock);
-    transcount++;
-    pthread_mutex_unlock (&transcount_lock);
-
     dt->trans = npt;
     return npt;
 }
@@ -119,17 +112,7 @@ diod_trans_destroy (void *a)
     if (dt->svc)
         free (dt->svc);
 
-    pthread_mutex_lock (&transcount_lock);
-    transcount--;
-    pthread_mutex_unlock (&transcount_lock);
-
     free (dt);
-
-    /* FIXME: npfs/fs/nullfs.c exits on srv->connclose - check that out? */
-    if (transcount == 0 && diod_conf_get_exit_on_lastuse ()) {
-        msg ("exiting on last unmount");
-        exit (0);
-    }
 }
 
 static int

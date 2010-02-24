@@ -271,8 +271,8 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-c%s", path_config) < 0)
         goto done;
-    //if (_append_arg (s, "-x") < 0)
-    //    goto done;
+    if (_append_arg (s, "-x") < 0)
+        goto done;
     if (_append_arg (s, "-f") < 0)
         goto done;
     if (_append_arg (s, "-u%d", s->uid) < 0)

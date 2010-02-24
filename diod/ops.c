@@ -117,6 +117,8 @@ Npfcall     *diod_stat   (Npfid *fid);
 Npfcall     *diod_wstat  (Npfid *fid, Npstat *stat);
 void         diod_flush  (Npreq *req);
 void         diod_fiddestroy(Npfid *fid);
+void         diod_connclose(Npconn *conn);
+void         diod_connopen (Npconn *conn);
 
 Npfcall     *diod_aread  (Npfid *fid, u8 datacheck, u64 offset, u32 count,
                           u32 rsize, Npreq *req);
@@ -143,6 +145,11 @@ static int  _cache_read_ahead   (Npfid *fid, void *buf, u32 count,
                                  u32 rsize, u64 offset);
 static int  _cache_read         (Npfid *fid, void *buf, u32 rsize, u64 offset);
 
+
+static pthread_mutex_t  conn_lock = PTHREAD_MUTEX_INITIALIZER;
+static int              conn_count = 0;
+static int              conn_used = 0;
+
 char *Enoextension = "empty extension while creating special file";
 char *Eformat = "incorrect extension format";
 
@@ -168,6 +175,8 @@ diod_register_ops (Npsrv *srv)
     srv->fiddestroy = diod_fiddestroy;
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->debugprintf = msg;
+    srv->connclose = diod_connclose;
+    srv->connopen = diod_connopen;
 
     /* 9p2000.h */
     srv->aread = diod_aread;
@@ -489,6 +498,56 @@ done:
     return ret;
 }
 
+/* Exit on last connection close iff there has been some 9P spoken.
+ * This is so we can tell the difference between an actual mount
+ * and a simple connection attempt by diodctl to test our listen port.
+ */
+void
+diod_connclose (Npconn *conn)
+{
+    int errnum;
+
+    if (!diod_conf_get_exit_on_lastuse ())
+        return;
+    if ((errnum = pthread_mutex_lock (&conn_lock)))
+        errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
+    conn_count--;
+    if (conn_count == 0 && conn_used)
+        msg_exit ("exiting on last use");
+    if ((errnum = pthread_mutex_unlock (&conn_lock)))
+        errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
+}
+
+void
+diod_connopen (Npconn *conn)
+{
+    int errnum;
+
+    if (!diod_conf_get_exit_on_lastuse ())
+        return;
+    if (!diod_conf_get_exit_on_lastuse ())
+        return;
+    if ((errnum = pthread_mutex_lock (&conn_lock)))
+        errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
+    conn_count++; 
+    if ((errnum = pthread_mutex_unlock (&conn_lock)))
+        errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
+}
+
+static void
+_connused (Npconn *conn)
+{
+    int errnum;
+
+    if (!diod_conf_get_exit_on_lastuse ())
+        return;
+    if ((errnum = pthread_mutex_lock (&conn_lock)))
+        errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
+    conn_used++; 
+    if ((errnum = pthread_mutex_unlock (&conn_lock)))
+        errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
+}
+
 /* Tversion - negotiate 9P protocol version.
  */
 Npfcall*
@@ -512,6 +571,7 @@ diod_version (Npconn *conn, u32 msize, Npstr *version)
         np_uerror (ENOMEM);
         goto done;
     }
+    _connused (conn);
 done:
     return ret;
 }
