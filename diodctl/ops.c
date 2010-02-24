@@ -101,6 +101,8 @@ done:
 static Npfcall*
 _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
 {
+    char *host = diod_trans_get_host (fid->conn->trans);
+    char *ip = diod_trans_get_ip (fid->conn->trans);
     Npfile *root = (Npfile *)fid->conn->srv->treeaux;
     Npfcall *ret = NULL;
     Npfilefid *f;
@@ -148,8 +150,9 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     }
     fid->aux = f;
     np_fid_incref (fid);
-
 done:
+    msg ("attach user %s path /diodctl host %s(%s): %s",
+         fid->user->uname, host, ip, np_haserror () ? "DENIED" : "ALLOWED");
     if (np_haserror ())
         npfile_fiddestroy (fid); /* frees fid->aux as Npfilefid* if not NULL */
     return ret;
@@ -237,7 +240,7 @@ static Npfileops server_ops = {
 };
 static Npfileops ctl_ops = {
         .write = _ctl_write,
-        .wstat = _noop_wstat, /* required: mtime is set before a write */
+        .wstat = _noop_wstat, /* needed because mtime is set before a write */
 };
 
 /* Create the file system representation for /diodctl.

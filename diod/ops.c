@@ -582,6 +582,9 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     np_fid_incref (fid);
 
 done:
+    msg ("attach user %s path %s host %s(%s): %s",
+         fid->user->uname, (f && f->path) ? f->path : "<unknown>", host, ip,
+         np_haserror () ? "DENIED" : "ALLOWED");
     if (np_haserror ()) {
         if (f)
             _fidfree (f);

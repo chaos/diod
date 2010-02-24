@@ -359,9 +359,6 @@ diod_conf_match_export (char *path, char *host, char *ip, uid_t uid, int *errp)
     if (res == 0)
         *errp = EPERM;
 done:
-    msg ("attach user %d path %s host %s(%s): %s", uid, path, host, ip,
-         res ? "ALLOWED" : "DENIED");
-
     return res;
 }
 

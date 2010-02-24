@@ -267,7 +267,6 @@ done:
         free (u);
         u = NULL;
     }
-    msg ("_alloc_user: %s (%p)", pwd->pw_name, u);
     return u; 
 }
 
@@ -276,7 +275,6 @@ done:
 static void
 diod_udestroy (Npuserpool *up, Npuser *u)
 {
-    msg ("diod_udestroy: %s", u->uname ? u->uname : "<unknown>");
     if (u->aux)
         _free_duser (u->aux);
     if (u->uname)
@@ -348,7 +346,6 @@ diod_uname2user (Npuserpool *up, char *uname)
             goto done;
         }
         munged = 1;
-        msg ("decoded munge cred for uid %d", uid);
     } else {
         if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);
@@ -419,7 +416,6 @@ done:
         free (g);
         g = NULL;
     }
-    msg ("_alloc_group: %s (%p)", gr->gr_name, g);
     return g; 
 
 }
@@ -473,7 +469,6 @@ done:
 static void
 diod_gdestroy(Npuserpool *up, Npgroup *g)
 {
-    msg ("diod_gdestroy: %s", g->gname ? g->gname : "<unknown>");
     if (g->gname)
         free (g->gname);
     /* caller frees g */

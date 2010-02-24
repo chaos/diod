@@ -288,7 +288,7 @@ _accept_one (Npsrv *srv, int fd, int wrap)
         return;
     }
 
-    msg ("accepted connection from %s on port %s", host, svc);
+    //msg ("accepted connection from %s on port %s", host, svc);
 }
  
 /* Loop accepting and handling new connections.
