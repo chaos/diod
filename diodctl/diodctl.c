@@ -70,7 +70,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:e:amD:"
+#define OPTIONS "fd:l:w:c:e:amD:p"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -83,6 +83,7 @@ static const struct option longopts[] = {
     {"allowany",        no_argument,        0, 'a'},
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"diod-path",       required_argument,  0, 'D'},
+    {"allow-private",   no_argument,        0, 'p'},
     {0, 0, 0, 0},
 };
 #else
@@ -103,6 +104,7 @@ usage()
 "   -a,--allowany          disable TCP wrappers checks\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
+"   -p,--allow-private     spawn private copies of diod for users\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -116,6 +118,7 @@ main(int argc, char **argv)
     int dopt = 0;
     int aopt = 0;
     int mopt = 0;
+    int popt = 0;
     char *lopt = NULL;
     char *copt = NULL;
     int wopt = 0;
@@ -161,6 +164,9 @@ main(int argc, char **argv)
             case 'D':   /* --diod-path PATH */
                 Dopt = optarg;
                 break;
+            case 'p':   /* --allow-private */
+                popt = 1;
+                break;
             default:
                 usage();
         }
@@ -188,6 +194,8 @@ main(int argc, char **argv)
         diod_conf_set_munge (0);
     if (Dopt)  
         diod_conf_set_diodpath (Dopt);
+    if (popt)  
+        diod_conf_set_allowprivate (1);
 
     /* sane config? */
     diod_conf_validate_exports ();

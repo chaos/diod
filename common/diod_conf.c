@@ -53,6 +53,7 @@ typedef struct {
     int          munge;
     int          tcpwrappers;
     int          readahead;
+    int          allowprivate;
     int          exit_on_lastuse;
     uid_t        runasuid;
     int          runasuid_valid;
@@ -69,6 +70,7 @@ static Conf config = {
     .munge          = 1,
     .tcpwrappers    = 1,
     .readahead      = 0,
+    .allowprivate   = 0,
     .exit_on_lastuse= 0,
     .runasuid_valid = 0,
     .diodpath       = NULL, /* diod_conf_init initializes */
@@ -156,6 +158,18 @@ void
 diod_conf_set_readahead (int i)
 {
     config.readahead = i;
+}
+
+int
+diod_conf_get_allowprivate (void)
+{
+    return config.allowprivate;
+}
+
+void
+diod_conf_set_allowprivate (int i)
+{
+    config.allowprivate = i;
 }
 
 int
@@ -302,6 +316,7 @@ diod_conf_mkconfig (void)
     _vfprintf (path, f, "munge = %d\n", config.munge);
     _vfprintf (path, f, "tcpwrappers = %d\n", config.tcpwrappers);
     _vfprintf (path, f, "readahead = %d\n", config.readahead);
+    _vfprintf (path, f, "allowprivate = %d\n", config.allowprivate);
     _vfprintf (path, f, "exit_on_lastuse = %d\n", config.exit_on_lastuse);
     _vfprintf (path, f, "diodpath = \"%s\"\n", config.diodpath);
     _write_list_of_strings (path, f, "diodlisten", config.diodlisten);
@@ -568,6 +583,7 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (path, L, "munge", &config.munge);
         _lua_getglobal_int (path, L, "tcpwrappers", &config.tcpwrappers);
         _lua_getglobal_int (path, L, "readahead", &config.readahead);
+        _lua_getglobal_int (path, L, "allowprivate", &config.allowprivate);
         _lua_getglobal_int (path, L, "exit_on_lastuse",
                             &config.exit_on_lastuse);
         if (_lua_getglobal_uint (path, L, "runasuid", &config.runasuid))

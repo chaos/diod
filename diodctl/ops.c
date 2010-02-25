@@ -151,8 +151,9 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     fid->aux = f;
     np_fid_incref (fid);
 done:
-    msg ("attach user %s path /diodctl host %s(%s): %s",
-         fid->user->uname, host, ip, np_haserror () ? "DENIED" : "ALLOWED");
+    msg ("attach user %s path %.*s host %s(%s): %s",
+         fid->user->uname, aname->len, aname->str,
+         host, ip, np_haserror () ? "DENIED" : "ALLOWED");
     if (np_haserror ())
         npfile_fiddestroy (fid); /* frees fid->aux as Npfilefid* if not NULL */
     return ret;
@@ -214,10 +215,13 @@ _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
     char *ip = diod_trans_get_ip (fid->conn->trans);
+    int ret = 0;
 
-    if (diodctl_serv_create (fid->user, ip))
-        return count;
-    return 0;
+    if (!diod_conf_get_allowprivate ())
+        np_uerror (EPERM);
+    else if (diodctl_serv_create (fid->user, ip))
+        ret = count;
+    return ret;
 }
 
 /* A no-op (no error) wstat.

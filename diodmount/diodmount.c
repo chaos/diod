@@ -62,7 +62,7 @@
 #include "diod_log.h"
 #include "diod_upool.h"
 
-#define OPTIONS "u:pc:d:nD"
+#define OPTIONS "u:pc:d:nx:o:O:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -71,7 +71,9 @@ static const struct option longopts[] = {
     {"diodctl-port",    required_argument,   0, 'c'},
     {"diod-port",       required_argument,   0, 'd'},
     {"no-mtab",         no_argument,         0, 'n'},
-    {"diodctl-only",    no_argument,         0, 'D'},
+    {"list-exports",    required_argument,   0, 'x'},
+    {"diod-option",     required_argument,   0, 'o'},
+    {"diodctl-option",  required_argument,   0, 'O'},
     {0, 0, 0, 0},
 };
 #else
@@ -80,23 +82,28 @@ static const struct option longopts[] = {
 
 static void  _parse_device     (char *device, char **anamep, char **ipp);
 static void  _create_mungecred (char **credp, char *payload);
-static void  _diod_mount       (char *ip, char *dir, char *aname, char *port);
-static void  _diodctl_mount    (char *ip, char *dir, char *port);
+static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
+                                char *opts);
+static void  _diodctl_mount    (char *ip, char *dir, char *port, char *opts);
 static char *_diodctl_getport  (char *dir);
+static int   _diodctl_listexp  (char *dir);
 static void  _umount           (const char *target);
 static int   _update_mtab      (char *dev, char *dir, char *opt);
+static char *_name2ip          (char *name);
 
 static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodmount [OPTIONS] device directory\n"
-"   -u,--mount-user USER         set up the mount so only USER can use it\n"
-"   -p,--private-server          get private server instance for this user\n"
-"   -c,--diodctl-port PORT       connect to diodctl using PORT (only if -p)\n"
-"   -d,--diod-port PORT          connect to diod using PORT (only if not -p)\n"
-"   -n,--no-mtab                 do not update /etc/mtab\n"
-"   -D,--diodctl-only            mount diodctl file system only (needs -p -u)\n"
+"Usage: diodmount -x,--list-exports HOST\n"
+"   or: diodmount [OPTIONS] device directory\n"
+"   -u,--mount-user USER          set up the mount so only USER can use it\n"
+"   -p,--private-server           get private server instance for USER\n"
+"   -n,--no-mtab                  do not update /etc/mtab\n"
+"   -c,--diodctl-port PORT        connect to diodctl using PORT\n"
+"   -d,--diod-port PORT           connect to diod using PORT\n"
+"   -o,--diod-options OPT[,...]   additional mount options for diod\n"
+"   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
 );
     exit (1);
 }
@@ -109,10 +116,12 @@ main (int argc, char *argv[])
     struct stat sb;
     int popt = 0;
     int nopt = 0;
-    int Dopt = 0;
     char *uopt = NULL;
     char *copt = NULL;
     char *dopt = NULL;
+    char *xopt = NULL;
+    char *oopt = NULL;
+    char *Oopt = NULL;
 
     diod_log_init (argv[0]);
 
@@ -134,12 +143,37 @@ main (int argc, char *argv[])
             case 'n':   /* --no-mtab */
                 nopt = 1;
                 break;
-            case 'D':   /* --diodctl-only */
-                Dopt = 1;
+            case 'x':   /* --list-exports HOST */
+                xopt = optarg;
+                break;
+            case 'o':   /* --diod-option OPT[,OPT]... */
+                oopt = optarg;
+                break;
+            case 'O':   /* --diodctl-option OPT[,OPT]... */
+                Oopt = optarg;
                 break;
             default:
                 usage ();
         }
+    }
+
+    /* If just listing exports, take care of it here and exit.
+     */
+    if (xopt) {
+        char tmpl[] = "/tmp/diodmount.XXXXXX";
+        char *ip = _name2ip (xopt);
+        int ret;
+
+        if (uopt || popt || dopt || nopt)
+            msg_exit ("--list-exports cannot be used with -updn");
+        if (!(dir = mkdtemp (tmpl)))
+            err_exit ("failed to create temporary directory for mount");
+        _diodctl_mount (ip, dir, copt, Oopt);
+        free (ip);
+        unlink (dir);
+        ret = _diodctl_listexp (dir);
+        _umount (dir);
+        exit (ret);
     }
 
     if (optind != argc - 2)
@@ -155,8 +189,6 @@ main (int argc, char *argv[])
         msg_exit ("--diodctl-port can only be used with --private-server");
     if (uopt && !strcmp (uopt, "root") && !popt)
         msg_exit ("--mount-user root can only be used with --private-server");
-    if (Dopt && !popt)
-        msg_exit ("--diodctl-only can only be used with --private-server");
 
     if (stat (dir, &sb) < 0)
         err_exit (dir);
@@ -174,22 +206,20 @@ main (int argc, char *argv[])
 
     _parse_device (device, &aname, &ip);
 
-    if (popt) {
+    if (!strcmp (aname, "/diodctl")) {
+        _diodctl_mount (ip, dir, copt, Oopt);
+    } else if (popt) {
         char *port;
 
-        _diodctl_mount (ip, dir, copt);
+        _diodctl_mount (ip, dir, copt, Oopt);
         port = _diodctl_getport (dir);
         if (!port)
             exit (1); 
-        if (Dopt)
-            msg ("uid %d should use port %s to mount server", geteuid (), port);
-        else {
-            _umount (dir);
-            _diod_mount (ip, dir, aname, port);
-        }
+        _umount (dir);
+        _diod_mount (ip, dir, aname, port, oopt);
         free (port);
     } else
-        _diod_mount (ip, dir, aname, dopt);
+        _diod_mount (ip, dir, aname, dopt, oopt);
 
     free (aname);
     free (ip);
@@ -288,18 +318,20 @@ _create_mungecred (char **credp, char *payload)
 }
 
 static void
-_diod_mount (char *ip, char *dir, char *aname, char *port)
+_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
 {
     char *options, *cred;
     char access[32];
 
-    if (geteuid () != 0) 
-        snprintf (access, sizeof (access), ",access=%d", geteuid ());
+    /* FIXME: scan opts to handle conflicts with options below */
+    /* FIXME: msize should be configurable */
 
     _create_mungecred (&cred, NULL);
-    /* FIXME: msize should be configurable */
-    if (asprintf (&options, "port=%s,uname=%s,aname=%s,msize=65560%s",
-                  port ? port : "10006", cred, aname, access) < 0) {
+    if (geteuid () != 0) 
+        snprintf (access, sizeof (access), ",access=%d", geteuid ());
+    if (asprintf (&options, "port=%s,uname=%s,aname=%s,msize=65560%s%s%s",
+                  port ? port : "10006", cred, aname, access,
+                  opts ? "," : "", opts ? opts : "") < 0) {
         msg_exit ("out of memory");
     }
     _mount (ip, dir, options);
@@ -308,13 +340,19 @@ _diod_mount (char *ip, char *dir, char *aname, char *port)
 }
 
 static void
-_diodctl_mount (char *ip, char *dir, char *port)
+_diodctl_mount (char *ip, char *dir, char *port, char *opts)
 {
     char *options, *cred;
-    
+    char access[32];
+   
+    /* FIXME: scan opts to handle conflicts with options below */
+
     _create_mungecred (&cred, NULL);
-    if (asprintf (&options, "port=%s,uname=%s,aname=/diodctl,access=%d",
-                  port ? port : "10005", cred, geteuid ()) < 0) {
+    if (geteuid () != 0) 
+        snprintf (access, sizeof (access), ",access=%d", geteuid ());
+    if (asprintf (&options, "port=%s,uname=%s,aname=/diodctl,%s%s%s",
+                  port ? port : "10005", cred, access,
+                  opts ? "," : "", opts ? opts : "") < 0) {
         msg_exit ("out of memory");
     }
     _mount (ip, dir, options);
@@ -322,12 +360,44 @@ _diodctl_mount (char *ip, char *dir, char *port)
     free (options);
 }
 
+static int
+_diodctl_listexp (char *dir)
+{
+    char buf[PATH_MAX];
+    char *exports = NULL;
+    FILE *f;
+    int ret = 0; 
+   
+    /* read /exports to stdout */
+    if (asprintf (&exports, "%s/exports", dir) < 0) {
+        msg ("out of memory");
+        goto done;
+    }
+    if (!(f = fopen (exports, "r"))) {
+        err ("error opening %s", exports);
+        goto done;
+    }
+    while (fgets (buf, sizeof (buf), f))
+        printf ("%s", buf);
+    if (ferror (f)) {
+        errn (ferror (f), "error reading %s", exports);
+        fclose (f);
+        goto done;
+    }
+    fclose (f);
+    ret = 1;
+done:
+    if (exports)
+        free (exports);
+    return ret;
+}
+
 static char *
 _diodctl_getport (char *dir)
 {
     char *ctl = NULL, *server = NULL;
     FILE *f;
-    int port;
+    int port, n;
     char *ret = NULL;
    
     /* poke /ctl to trigger creation of new server (if needed) */ 
@@ -340,11 +410,20 @@ _diodctl_getport (char *dir)
         goto done;
     }
     if (fprintf (f, "new") < 0) {
-        err ("error writing to %s", ctl);
+        if (errno == EPERM)
+            err ("requesting private server");
+        else
+            err ("error writing to %s", ctl);
         fclose (f);
         goto done;
     }
-    fclose (f);
+    if (fclose (f) != 0) {
+        if (errno == EPERM)
+            err ("requesting private server");
+        else
+            err ("error writing to %s", ctl);
+        goto done;
+    }
 
     /* read port from /server */
     if (asprintf (&server, "%s/server", dir) < 0) {
@@ -355,8 +434,11 @@ _diodctl_getport (char *dir)
         err ("error opening %s", server);
         goto done;
     }
-    if (fscanf (f, "%d", &port) != 1) {
-        msg ("failed to read port number from %s", server);
+    if ((n = fscanf (f, "%d", &port)) != 1) {
+        if (n < 0)
+            err ("error reading from %s", server);
+        else
+            msg ("failed to read port number from %s", server);
         fclose (f);
         goto done;
     }

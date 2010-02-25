@@ -36,6 +36,9 @@ void    diod_conf_set_foreground (int i);
 int     diod_conf_get_readahead (void);
 void    diod_conf_set_readahead (int i);
 
+int     diod_conf_get_allowprivate (void);
+void    diod_conf_set_allowprivate (int i);
+
 int     diod_conf_get_tcpwrappers (void);
 void    diod_conf_set_tcpwrappers (int i);
 

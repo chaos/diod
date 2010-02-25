@@ -148,7 +148,7 @@ static int  _cache_read         (Npfid *fid, void *buf, u32 rsize, u64 offset);
 
 static pthread_mutex_t  conn_lock = PTHREAD_MUTEX_INITIALIZER;
 static int              conn_count = 0;
-static int              conn_used = 0;
+static int              server_used = 0;
 
 char *Enoextension = "empty extension while creating special file";
 char *Eformat = "incorrect extension format";
@@ -476,7 +476,6 @@ _ustat2npwstat(char *path, struct stat *st, Npwstat *wstat)
         err = readlink (path, ext, sizeof(ext) - 1);
         if (err < 0)
             err = 0;
-
         ext[err] = '\0';
     } else if (wstat->mode & Dmdevice) {
         snprintf (ext, sizeof(ext), "%c %u %u", 
@@ -512,7 +511,7 @@ diod_connclose (Npconn *conn)
     if ((errnum = pthread_mutex_lock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
     conn_count--;
-    if (conn_count == 0 && conn_used) {
+    if (conn_count == 0 && server_used) {
         msg ("exiting on last use");
         exit (0);
     }
@@ -527,8 +526,6 @@ diod_connopen (Npconn *conn)
 
     if (!diod_conf_get_exit_on_lastuse ())
         return;
-    if (!diod_conf_get_exit_on_lastuse ())
-        return;
     if ((errnum = pthread_mutex_lock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
     conn_count++; 
@@ -537,7 +534,7 @@ diod_connopen (Npconn *conn)
 }
 
 static void
-_connused (Npconn *conn)
+_serverused (void)
 {
     int errnum;
 
@@ -545,7 +542,7 @@ _connused (Npconn *conn)
         return;
     if ((errnum = pthread_mutex_lock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
-    conn_used++; 
+    server_used = 1; 
     if ((errnum = pthread_mutex_unlock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
 }
@@ -559,10 +556,12 @@ diod_version (Npconn *conn, u32 msize, Npstr *version)
 
     if (np_strcmp (version, "9P2000.h") != 0) { /* implies 'dotu' as well */
         np_werror ("unsupported 9P version", EIO);
+        msg ("diod_version: unsupported 9P version");
         goto done;
     }
     if (msize < AIOHDRSZ + 1) {
         np_werror ("msize too small", EIO);
+        msg ("diod_version: misize to small");
         goto done;
     }
     if (msize > conn->srv->msize)
@@ -571,9 +570,9 @@ diod_version (Npconn *conn, u32 msize, Npstr *version)
     np_conn_reset (conn, msize, 1); /* 1 activates 'dotu' */
     if (!(ret = np_create_rversion (msize, "9P2000.h"))) {
         np_uerror (ENOMEM);
+        msg ("diod_version: out of memory");
         goto done;
     }
-    _connused (conn);
 done:
     return ret;
 }
@@ -593,16 +592,19 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
 
     if (nafid) {    /* 9P Tauth not supported */
         np_werror (Enoauth, EIO);
+        msg ("diod_attach: 9P Tauth is not supported");
         goto done;
     }
     if (aname->len == 0 || *aname->str != '/') {
         np_uerror (EPERM);
+        msg ("diod_attach: mount attempt for malformed aname");
         goto done;
     }
     /* If running as a particular user, reject attaches from other users.
      */
     if (diod_conf_get_runasuid (&runasuid) && fid->user->uid != runasuid) {
         np_uerror (EPERM);
+        msg ("diod_attach: attach rejected from unauthorized user");
         goto done;
     }
     /* Munge authentication involves the upool and trans layers:
@@ -617,35 +619,47 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
         } else {
             if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);
+                msg ("diod_attach: attach rejected from unauthenticated user");
                 goto done;
             }
             if (auid != 0 && auid != fid->user->uid) {
                 np_uerror (EPERM);
+                msg ("diod_attach: attach rejected from unauthenticated user");
                 goto done;
             }
         }
     }
-    if (!(f = _fidalloc ()))
-        goto done;
-    if (!(f->path = _p9strdup(aname)))
-        goto done;
-    if (!diod_conf_match_export (f->path, host, ip, fid->user->uid, &err)) {
-        np_uerror (err);
+    if (!(f = _fidalloc ())) {
+        msg ("diod_attach: out of memory");
         goto done;
     }
-    if (_fidstat (f) < 0)
+    if (!(f->path = _p9strdup(aname))) {
+        msg ("diod_attach: out of memory");
         goto done;
+    }
+    if (!diod_conf_match_export (f->path, host, ip, fid->user->uid, &err)) {
+        np_uerror (err);
+        msg ("diod_attach: %s@%s is not permitted to attach to %s",
+              fid->user->uname, host, f->path);
+        goto done;
+    }
+    if (_fidstat (f) < 0) {
+        msg ("diod_attach: could not stat mount point");
+        goto done;
+    }
     _ustat2qid (&f->stat, &qid);
     if ((ret = np_create_rattach (&qid)) == NULL) {
         np_uerror (ENOMEM);
+        msg ("diod_attach: out of memory");
         goto done;
     }
     fid->aux = f;
     np_fid_incref (fid);
+    _serverused ();
 
 done:
-    msg ("attach user %s path %s host %s(%s): %s",
-         fid->user->uname, (f && f->path) ? f->path : "<unknown>", host, ip,
+    msg ("attach user %s path %.*s host %s(%s): %s",
+         fid->user->uname, aname->len, aname->str, host, ip,
          np_haserror () ? "DENIED" : "ALLOWED");
     if (np_haserror ()) {
         if (f)
@@ -665,11 +679,14 @@ diod_clone (Npfid *fid, Npfid *newfid)
     Fid *nf = _fidalloc ();
     int ret = 0;
 
-    if (!nf)
+    if (!nf) {
+        msg ("diod_clone: out of memory");
         goto done;
-
-    if (!(nf->path = _strdup (f->path)))
+    }
+    if (!(nf->path = _strdup (f->path))) {
+        msg ("diod_clone: out of memory");
         goto done;
+    }
     newfid->aux = nf;
     ret = 1;
 
@@ -694,13 +711,17 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
     char *path = NULL;
     int ret = 0;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_walk: error switching user");
         goto done;
+    }
     if (_fidstat (f) < 0)
         goto done;
     n = strlen (f->path);
-    if (!(path = _malloc (n + wname->len + 2)))
+    if (!(path = _malloc (n + wname->len + 2))) {
+        msg ("diod_walk: out of memory");
         goto done;
+    }
     memcpy (path, f->path, n);
     path[n] = '/';
     memcpy (path + n + 1, wname->str, wname->len);
@@ -741,8 +762,10 @@ diod_open (Npfid *fid, u8 mode)
     Npfcall *res = NULL;
     Npqid qid;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_open: error switching user");
         goto done;
+    }
     if (_fidstat (f) < 0)
         goto done;
 
@@ -763,12 +786,16 @@ diod_open (Npfid *fid, u8 mode)
                 err ("posix_fadvise %s", f->path);
         }
     }
-    if (_fidstat (f) < 0) /* XXX why stat again when we just did it? */
+    /* XXX is this really an error? */
+    if (_fidstat (f) < 0) {
+        err ("diod_open: could not stat file that we just opened");
         goto done;
+    }
     f->omode = mode;
     _ustat2qid (&f->stat, &qid);
     if (!(res = np_create_ropen (&qid, 0))) {
         np_uerror (ENOMEM);
+        msg ("diod_open: out of memory");
         goto done;
     }
 
@@ -798,6 +825,7 @@ _link (Npfid *fid, char *path, char *ext)
  
     if (sscanf (ext, "%d", &nfid) == 0) {
         np_werror (Eformat, EIO);
+        msg ("diod_create: incorrect hard link extension format");
         goto done;
     }
     ofid = np_fid_find (fid->conn, nfid);
@@ -826,6 +854,7 @@ _mknod (char *path, char *ext, u32 perm)
 
     if (sscanf (ext, "%c %u %u", &ctype, &major, &minor) != 3) {
         np_werror (Eformat, EIO);
+        msg ("diod_create: incorrect mknod extension format");
         goto done;
     }
     nmode = 0;
@@ -838,6 +867,7 @@ _mknod (char *path, char *ext, u32 perm)
             break;
         default:
             np_werror (Eformat, EIO);
+            msg ("diod_create: incorrect mknod extension ctype");
             goto done;
     }
     nmode |= (perm & 0777);
@@ -862,6 +892,7 @@ _create_special (Npfid *fid, char *path, u32 perm, Npstr *extension)
 
     if (!(perm & Dmnamedpipe) && !extension->len) {
         np_werror (Enoextension, EIO);
+        msg ("diod_create: empty extension for named pipe");
         goto done;
     }
 
@@ -911,13 +942,17 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     char *npath = NULL;
     Npqid qid;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_create: error switching user");
         goto done;
+    }
     if (_fidstat (f) < 0)
         goto done;
     n = strlen (f->path);
-    if (!(npath = _malloc (n + name->len + 2)))
+    if (!(npath = _malloc (n + name->len + 2))) {
+        msg ("diod_create: out of memory");
         goto done;
+    }
     memmove (npath, f->path, n);
     npath[n] = '/';
     memmove (npath + n + 1, name->str, name->len);
@@ -971,6 +1006,7 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     _ustat2qid (&f->stat, &qid);
     if (!((ret = np_create_rcreate (&qid, 0)))) {
         np_uerror (ENOMEM);
+        msg ("diod_create: out of memory");
         goto done;
     }
 
@@ -992,15 +1028,19 @@ _copy_dirent (char *parent, int plen, char *child, u8 *buf, u32 buflen)
     struct stat st;
     Npwstat wstat;
 
-    if (!(path = _malloc (plen + strlen (child) + 2)))
+    if (!(path = _malloc (plen + strlen (child) + 2))) {
+        msg ("diod_read: out of memory");
         goto done;
+    }
     sprintf (path, "%s/%s", parent, child);
     if (lstat (path, &st) < 0) {
         np_uerror (errno);
         goto done;
     }
-    if (_ustat2npwstat (path, &st, &wstat) < 0)
+    if (_ustat2npwstat (path, &st, &wstat) < 0) {
+        msg ("diod_read: out of memory");
         goto done;
+    }
     ret = np_serialize_stat (&wstat, buf, buflen, 1); /* 1 for dotu */
     free (wstat.extension);
 
@@ -1055,10 +1095,13 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_read: error switching user");
         goto done;
+    }
     if (!(ret = np_alloc_rread (count))) {
         np_uerror (ENOMEM);
+        msg ("diod_read: out of memory");
         goto done;
     }
     if (f->dir)
@@ -1082,12 +1125,15 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
     int n;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_write: error switching user");
         goto done;
+    }
     if ((n = _pwrite (fid, data, count, offset)) < 0)
         goto done;
     if (!(ret = np_create_rwrite (n))) {
         np_uerror (ENOMEM);
+        msg ("diod_write: out of memory");
         goto done;
     }
 done:
@@ -1101,9 +1147,10 @@ diod_clunk (Npfid *fid)
 {
     Npfcall *ret;
 
-    /* FIXME: should we close the file here rather than diod_fiddestroy()? */
-    if (!(ret = np_create_rclunk ()))
+    if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
+        msg ("diod_clunk: out of memory");
+    }
 
     return ret;
 }
@@ -1116,14 +1163,17 @@ diod_remove (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_remove: error switching user");
         goto done;
+    }
     if (remove (f->path) < 0) {
         np_uerror (errno);
         goto done;
     }
     if (!(ret = np_create_rremove ())) {
         np_uerror (ENOMEM);
+        msg ("diod_remove: out of memory");
         goto done;
     }
 done:
@@ -1139,15 +1189,20 @@ diod_stat (Npfid *fid)
     Npfcall *ret = NULL;
     Npwstat wstat;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_stat: error switching user");
         goto done;
+    }
     wstat.extension = NULL;
     if (_fidstat (f) < 0)
         goto done;
-    if (_ustat2npwstat (f->path, &f->stat, &wstat) < 0)
+    if (_ustat2npwstat (f->path, &f->stat, &wstat) < 0) {
+        msg ("diod_stat: out of memory");
         goto done;
+    }
     if (!(ret = np_create_rstat(&wstat, 1))) { /* 1 for dotu */
         np_uerror (ENOMEM);
+        msg ("diod_stat: out of memory");
         goto done;
     }
 done:
@@ -1164,16 +1219,20 @@ diod_wstat(Npfid *fid, Npstat *st)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_wstat: error switching user");
         goto done;
+    }
     if (_fidstat (f) < 0)
         goto done;
     if (st->name.len != 0) {
         np_werror ("Rename via wstat is deprecated in 9P2000.h", EIO);
+        msg ("diod_wstat: rejecting deprecated wstat rename");
         goto done;
     }
     if (!(ret = np_create_rwstat())) {
         np_uerror (ENOMEM);
+        msg ("diod_wstat: out of memory");
         goto done;
     }
 
@@ -1183,6 +1242,7 @@ diod_wstat(Npfid *fid, Npstat *st)
 
         if ((st->mode & Dmdir) && !S_ISDIR(f->stat.st_mode)) {
             np_werror(Edirchange, EIO);
+            msg ("diod_wstat: Dmdir chmod on non-directory");
             goto done;
         }
         if (chmod(f->path, umode) < 0) {
@@ -1291,10 +1351,13 @@ _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
     Fid *f = fid->aux;
 
     if (!f->rc_data || f->rc_length < count) {
-        if (f->rc_data)
-            free(f->rc_data);
-        if (!(f->rc_data = _malloc (count)))
+        //if (f->rc_data)
+        //   free(f->rc_data);
+        assert (f->rc_data == NULL);
+        if (!(f->rc_data = _malloc (count))) {
+            msg ("diod_aread: out of memory (allocating %d bytes)", count);
             return -1;
+        }
     }
     f->rc_length = _pread (fid, f->rc_data, count, offset);
     f->rc_offset = offset;
@@ -1316,10 +1379,13 @@ diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
     int n;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_aread: error switching user");
         goto done;
+    }
     if (!(ret = np_create_raread (rsize))) {
         np_uerror (ENOMEM);
+        msg ("diod_aread: out of memory");
         goto done;
     }
     n = _cache_read (fid, ret->data, rsize, offset);
@@ -1379,8 +1445,11 @@ _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
 {
     Fid *f = fid->aux;
 
-    if (!(f->wc_data = _malloc (count)))
+    assert (f->wc_data == NULL);
+    if (!(f->wc_data = _malloc (count))) {
+        msg ("diod_awrite: out of memory (allocating %d bytes)", count);
         return -1;
+    }
     f->wc_length = count;
     f->wc_offset = offset;
     f->wc_pos = 0;
@@ -1396,8 +1465,10 @@ diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
     int n;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_awrite: error switching user");
         goto done;
+    }
     n = _cache_write (fid, data, rsize, offset);
     if (n == 0) {
         if (count > rsize)
@@ -1411,6 +1482,7 @@ diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
 
     if (!(ret = np_create_rawrite (n))) {
         np_uerror (ENOMEM);
+        msg ("diod_awrite: out of memory");
         goto done;
     }
 
@@ -1430,8 +1502,11 @@ diod_statfs (Npfid *fid)
     struct statvfs svb;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user))
+    /* XXX need to switch user here? */
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_statfs: error switching user");
         goto done;
+    }
     if (_fidstat(f) < 0)
         goto done;
     if (statfs (f->path, &sb) < 0) {
@@ -1447,6 +1522,7 @@ diod_statfs (Npfid *fid)
                                   sb.f_ffree, (u64) svb.f_fsid,
                                   sb.f_namelen))) {
         np_uerror (ENOMEM);
+        msg ("diod_statfs: out of memory");
         goto done;
     }
 
@@ -1465,15 +1541,20 @@ diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
     char *newpath = NULL;
     int newpathlen;
 
-    if (!diod_switch_user (fid->user))
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_rename: error switching user");
         goto done;
+    }
     if (!(ret = np_create_rrename ())) {
         np_uerror (ENOMEM);
+        msg ("diod_rename: out of memory");
         goto done;
     }
     newpathlen = newname->len + strlen (d->path) + 2;
-    if (!(newpath = _malloc (newpathlen)))
+    if (!(newpath = _malloc (newpathlen))) {
+        msg ("diod_rename: out of memory");
         goto done;
+    }
     snprintf (newpath, newpathlen, "%s/%s", d->path, newname->str);
     if (rename (f->path, newpath) < 0) {
         np_uerror (errno);

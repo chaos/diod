@@ -120,21 +120,23 @@ diod_switch_user (Npuser *u)
     Duser *d = u->aux;
     int ret = 0;
 
+    assert (d->magic == DUSER_MAGIC);
+
     if (diod_conf_get_runasuid (NULL))
         return 1;
-
-    assert (d->magic == DUSER_MAGIC);
 
     if (setgroups (d->nsg, d->sg) < 0) {
         np_uerror (errno);
         goto done;
     }
-    /* Need a clever way to check for errors here.
-     * Perhaps touch a file in /tmp and verify stat->st_uid, st_gid match?
-     * Can we afford the probably dozens of millesconds needed to do that?
-     */
-    setfsgid (u->dfltgroup->gid);
-    setfsuid (u->uid);
+    if (setfsgid (u->dfltgroup->gid) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    if (setfsuid (u->uid) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
     ret = 1;
 done:
     return ret;
@@ -325,6 +327,7 @@ done:
 }
 
 /* N.B. This (or diod_uid2user) is called when handling a 9P attach message.
+ * Also called when building a pseudo file system as in diodctl/ops.c.
  */
 static Npuser *
 diod_uname2user (Npuserpool *up, char *uname)
@@ -364,6 +367,7 @@ done:
 }
 
 /* This (or diod_uname2user) is called when handling a 9P attach message.
+ * Also called when building a pseudo file system as in diodctl/ops.c.
  */
 static Npuser *
 diod_uid2user(Npuserpool *up, u32 uid)

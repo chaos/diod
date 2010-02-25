@@ -75,6 +75,9 @@ X. TODO
 - flock advisory file lock
 - fcntl(lock) advisory record lock
 - one stuck fs can hang all npfs worker threads
-- per-thread euid/egid is dangerously unportable? (add tests!)
 - seekdir (offset != 0), telldir incompat with 9P
 - limit aread/awrite size (breaks atomicity, but better than malloc==NULL /oom)
+- handle simultaneous aread/awrite on same fid
+- mount generates attach + stat / - can we cache stat / result to avoid
+  touching all the file system at mount time (e.g. when doing it at the
+  beginning of every cluster job)?  If just one fs is down, everything hangs.
