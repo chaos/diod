@@ -71,8 +71,12 @@ AC_CONFIG_FILES( \
   liblsd/Makefile \
   man/Makefile \
   man/diod.8 \
+  man/diodctl.8 \
+  man/diodmount.8 \
+  man/diod.conf.5 \
   scripts/Makefile \
   scripts/diod.init \
+  scripts/diodctl.init \
   test/Makefile \
   diod/Makefile \
   diodctl/Makefile \

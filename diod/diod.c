@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/param.h>
+#include <sys/resource.h>
 #include <string.h>
 #include <poll.h>
 
@@ -50,7 +51,12 @@
 
 #include "ops.h"
 
+#ifndef NR_OPEN
+#define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
+#endif
+
 static void _daemonize (void);
+static void _setrlimit (void);
 
 #define OPTIONS "fd:l:w:c:e:armxF:u:"
 #if HAVE_GETOPT_LONG
@@ -214,6 +220,9 @@ main(int argc, char **argv)
         msg_exit ("no munge support, yet config enables it");
 #endif
 
+    if (geteuid () == 0)
+        _setrlimit ();
+
     /* drop privileges, unless running for multiple users */
     if (diod_conf_get_runasuid (&uid))
         diod_become_user (NULL, uid, 1);
@@ -253,6 +262,36 @@ _daemonize (void)
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();
+}
+
+/* Remove any resource limits that might hamper our (non-root) children.
+ */
+static void
+_setrlimit (void)
+{
+    struct rlimit r, r2;
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_FSIZE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_FSIZE");
+
+    r.rlim_cur = r.rlim_max = NR_OPEN;
+    r2.rlim_cur = r2.rlim_max = sysconf(_SC_OPEN_MAX);
+    if (setrlimit (RLIMIT_NOFILE, &r) < 0)
+        if (errno != EPERM || setrlimit (RLIMIT_NOFILE, &r2) < 0)
+            err_exit ("setrlimit RLIMIT_NOFILE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_LOCKS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_LOCKS");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_CORE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_CORE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_AS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_AS");
 }
 
 /*

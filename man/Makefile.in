@@ -38,7 +38,8 @@ host_triplet = @host@
 target_triplet = @target@
 subdir = man
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diod.8.in
+	$(srcdir)/diod.8.in $(srcdir)/diod.conf.5.in \
+	$(srcdir)/diodctl.8.in $(srcdir)/diodmount.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -49,13 +50,14 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diod.8
+CONFIG_CLEAN_FILES = diod.8 diodctl.8 diodmount.8 diod.conf.5
 SOURCES =
 DIST_SOURCES =
+man5dir = $(mandir)/man5
+am__installdirs = "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man8dir)"
 man8dir = $(mandir)/man8
-am__installdirs = "$(DESTDIR)$(man8dir)"
 NROFF = nroff
-MANS = $(man8_MANS)
+MANS = $(man5_MANS) $(man8_MANS)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMDEP_FALSE = @AMDEP_FALSE@
@@ -175,9 +177,13 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-man8_MANS = diod.8
+man8_MANS = diod.8 diodctl.8 diodmount.8
+man5_MANS = diod.conf.5
 EXTRA_DIST = \
-	diod.8
+	diod.8 \
+	diodctl.8 \
+	diodmount.8 \
+	diod.conf.5
 
 all: all-am
 
@@ -213,7 +219,58 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 diod.8: $(top_builddir)/config.status $(srcdir)/diod.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodctl.8: $(top_builddir)/config.status $(srcdir)/diodctl.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodmount.8: $(top_builddir)/config.status $(srcdir)/diodmount.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diod.conf.5: $(top_builddir)/config.status $(srcdir)/diod.conf.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 uninstall-info-am:
+install-man5: $(man5_MANS) $(man_MANS)
+	@$(NORMAL_INSTALL)
+	test -z "$(man5dir)" || $(mkdir_p) "$(DESTDIR)$(man5dir)"
+	@list='$(man5_MANS) $(dist_man5_MANS) $(nodist_man5_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.5*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    5*) ;; \
+	    *) ext='5' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man5dir)/$$inst'"; \
+	  $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man5dir)/$$inst"; \
+	done
+uninstall-man5:
+	@$(NORMAL_UNINSTALL)
+	@list='$(man5_MANS) $(dist_man5_MANS) $(nodist_man5_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.5*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    5*) ;; \
+	    *) ext='5' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " rm -f '$(DESTDIR)$(man5dir)/$$inst'"; \
+	  rm -f "$(DESTDIR)$(man5dir)/$$inst"; \
+	done
 install-man8: $(man8_MANS) $(man_MANS)
 	@$(NORMAL_INSTALL)
 	test -z "$(man8dir)" || $(mkdir_p) "$(DESTDIR)$(man8dir)"
@@ -297,7 +354,7 @@ check-am: all-am
 check: check-am
 all-am: Makefile $(MANS)
 installdirs:
-	for dir in "$(DESTDIR)$(man8dir)"; do \
+	for dir in "$(DESTDIR)$(man5dir)" "$(DESTDIR)$(man8dir)"; do \
 	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
 	done
 install: install-am
@@ -348,7 +405,7 @@ install-exec-am:
 
 install-info: install-info-am
 
-install-man: install-man8
+install-man: install-man5 install-man8
 
 installcheck-am:
 
@@ -370,16 +427,17 @@ ps-am:
 
 uninstall-am: uninstall-info-am uninstall-man
 
-uninstall-man: uninstall-man8
+uninstall-man: uninstall-man5 uninstall-man8
 
 .PHONY: all all-am check check-am clean clean-generic distclean \
 	distclean-generic distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-exec \
 	install-exec-am install-info install-info-am install-man \
-	install-man8 install-strip installcheck installcheck-am \
-	installdirs maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am uninstall \
-	uninstall-am uninstall-info-am uninstall-man uninstall-man8
+	install-man5 install-man8 install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
+	pdf-am ps ps-am uninstall uninstall-am uninstall-info-am \
+	uninstall-man uninstall-man5 uninstall-man8
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

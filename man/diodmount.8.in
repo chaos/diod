@@ -1,0 +1,84 @@
+.TH diodmount 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+diodmount \- mount diod file systems
+.SH SYNOPSIS
+.B diodmount
+.I "[OPTIONS]"
+.I HOST:/dir
+.I dir
+.LP
+.B diodmount
+.I "--list-exports HOST"
+.SH DESCRIPTION
+.B diodmount
+is the mount utility for the distributed I/O daemon.
+.LP
+This command must be run as root.
+.SH OPTIONS
+.TP
+.I "-x, --list-exports HOST"
+List file systems exported by HOST.
+.TP
+.I "-u, --mount-user USER"
+Causes the file system to be mounted so that only USER can access it.
+.TP
+.I "-p, --private-server"
+Spawn a server dedicated to I/O forwarding for USER.
+This option can only be used in conjunction with \fI--mount-user\fR.
+.TP
+.I "-n, --no-mtab"
+Do not update /etc/mtab.  This may be appropriate, for example, when
+the file system is mounted in a private name space.
+.TP
+.I "-c, --diodctl-port PORT"
+Connect to the diodctl server on a port other than its default (10005).
+.TP
+.I "-d, --diod-port PORT"
+Connect to the diod server on a port other than its default (10006).
+This option does not work with \fI--private-server\fR
+as a port will be dynamically assigned to the private server.
+.TP
+.I "-o, --diod-options OPT,[OPT,...]"
+Pass additional 9P mount options when mounting the 
+.B diod
+server.
+Do not specify the \fIport\fR, \fIuname\fR, \fIaname\fR, \fImsize\fR,
+or \fIaccess\fR options as 
+.B diodmount
+already sets the value of these options.
+.TP
+.I "-O, --diodctl-options OPT,[OPT,...]"
+Pass additional 9P mount when mouting the
+.B diodctl
+server.
+Do not specify the \fIport\fR, \fIuname\fR, \fIaname\fR, or \fIaccess\fR
+options as 
+.B diodmount
+already sets the value of these options.
+.SH "EXAMPLES"
+.LP
+List the file systems exported by tycho42:
+.nf
+    diodmount -x tycho42
+.fi
+.LP
+Mount /g/g99 from tycho42, so that all users can access it:
+.nf
+    diodmount tycho42:/g/g99 /g/g99
+.fi
+.LP
+Mount tycho42's diodctl server directly for testing:
+.nf
+    diodmount tycho42:/diodctl /g/g99
+.fi
+.LP
+Mount /p/lcrater1 on tycho[101-164], with a private server for garlick:
+.nf
+    pdsh -w tycho[101-164] \\
+        diodmount -p -u garlick tycho42:/p/lcrater1 /p/lcrater1
+.fi
+.nf
+.SH "SEE ALSO"
+diod (8),
+diodctl (8),
+diod.conf (5)

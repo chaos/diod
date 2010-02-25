@@ -1,0 +1,63 @@
+.TH diod 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+diod \- distributed I/O daemon
+.SH SYNOPSIS
+.B diod
+.I "[OPTIONS]"
+.SH DESCRIPTION
+.B diod
+is a 9P2000.h server used in combination with the kernel v9fs file system
+for I/O forwarding on Linux clusters.
+.SH OPTIONS
+.TP
+.I "-f, --foreground"
+Disable default daemon behavior which is to change working directory
+to the run directory, fork, update the pid file, drop the controlling tty,
+and divert log messages to syslog.
+.TP
+.I "-d, --debug MASK"
+Set the debug mask.  The bit values are:
+0x1 log decoded 9P protocol messages;
+0x2 log any 9P operation errors.
+.TP
+.I "-s, --sameuser"
+Run all I/O operations as the user that started the
+.B diod
+daemon.  With this option, more than one daemon is allowed to start.
+.TP
+.I "-l, --listen IP:PORT"
+Set the listen address (default 0.0.0.0:564).  
+.TP
+.I "-w, --nwthreads INT"
+Set the number of worker threads to spawn to handle 9P operations.
+.TP
+.I "-c, --config-file PATH"
+Set config file path.
+.TP
+.I "-e, --export PATH"
+Set one export on the command line.
+Any exports in the config file are then ignored.
+.TP
+.I "-a, --allowany"
+Override TCP wrappers and reserved port checking.
+.TP
+.I "-r, --readahead"
+.B diod
+normally disables kernel read-ahead using posix_madvise(POSIX_MADV_RANDOM)
+because read-ahead tends to get confused by the way reads are
+distributed over \fBdiod's\fR worker threads.
+This option causes the posix_madvise call to be skipped.
+.SH "LOGGING"
+With the \fI--foreground\fR option,
+.B diod
+logs all messages to stderr.
+Otherwise they go to syslog LOG_DAEMON at LOG_ERR level.
+.SH "FILES"
+@X_SBINDIR@/diod
+.br
+@X_SYSCONFDIR@/diod.conf
+.br
+@X_LOCALSTATEDIR@/run/diod.pid
+.SH "SEE ALSO"
+diod.conf (5)
+hosts_access (5)

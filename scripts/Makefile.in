@@ -38,7 +38,7 @@ host_triplet = @host@
 target_triplet = @target@
 subdir = scripts
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diod.init.in
+	$(srcdir)/diod.init.in $(srcdir)/diodctl.init.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -49,7 +49,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diod.init
+CONFIG_CLEAN_FILES = diod.init diodctl.init
 SOURCES =
 DIST_SOURCES =
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -172,7 +172,8 @@ target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
 EXTRA_DIST = \
-	diod.init
+	diod.init \
+	diodctl.init
 
 all: all-am
 
@@ -207,6 +208,8 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 diod.init: $(top_builddir)/config.status $(srcdir)/diod.init.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodctl.init: $(top_builddir)/config.status $(srcdir)/diodctl.init.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 uninstall-info-am:
 tags: TAGS
@@ -330,9 +333,12 @@ uninstall-am: uninstall-info-am uninstall-local
 install-data-local:
 	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/diod.init \
 		$(DESTDIR)$(sysconfdir)/init.d/diod
+	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/diodctl.init \
+		$(DESTDIR)$(sysconfdir)/init.d/diodctl
 
 uninstall-local:
 	$(RM) $(DESTDIR)$(sysconfdir)/init.d/diod
+	$(RM) $(DESTDIR)$(sysconfdir)/init.d/diodctl
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

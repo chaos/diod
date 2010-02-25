@@ -11,7 +11,7 @@
 # Description:        Start/Stop diod (distributed I/O daemon)
 ###############################################################################
 ### BEGIN INIT INFO
-# Provides:           diodctl
+# Provides:           diod
 # Required-Start:     $local_fs $named $network
 # Required-Stop:      $local_fs $named $network
 # Should-Start:       $remote_fs $syslog $time
@@ -30,11 +30,11 @@ sbindir="@sbindir@"
 sysconfdir="@sysconfdir@"
 localstatedir="@localstatedir@"
 
-DESC="diod"
-DAEMON="$sbindir/diod"
+DESC="diodctl"
+DAEMON="$sbindir/diodctl"
 #DAEMON_ARGS=
 CONFIG=$sysconfdir/diod.conf
-PIDFILE="$localstatedir/run/diod/diod.pid"
+PIDFILE="$localstatedir/run/diod/diodctl.pid"
 #NICE=
 #USER=@RUN_AS_USER@
 #SIGHUP_RELOAD=
