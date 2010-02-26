@@ -1,8 +1,6 @@
 .TH 9p-intro 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
 .SH NAME
 9p intro \- introduction to the Plan 9 File Protocol, 9P
-.SH SYNOPSIS
-#include <fcall.h>
 .SH DESCRIPTION
 A Plan 9 server is an agent that provides one or more hierarchical file
 systems -- file trees -- that may be accessed by Plan 9 processes.
@@ -227,15 +225,75 @@ archives. (Bit 28 is skipped for historical reasons.) These bits are
 reproduced, from the top bit down, in the type byte of the Qid: QTDIR,
 QTAPPEND, QTEXCL, (skipping one bit) QTAUTH, and QTTMP. The name QTFILE,
 defined to be zero, identifies the value of the type for a plain file.
-.SH "LINUX EXTENSIONS"
-tbd
+.SH "UNIX EXTENSIONS"
+9P2000.u defines several extensions necessary to provide UNIX file
+semantics via 9P.  These fall into the categories of 
+1) numerical representation of users/groups in UNIX versus strings in Plan 9;
+2) support for additional file types (symbolic links, hard links, character
+devices, block devices, pipes) and file mode bits (set-user-id, sticky-bit,
+and directory exec (X)) in UNIX that have no Plan 9 counterparts; and
+3) numerical system error codes in UNIX versus strings in Plan 9.
+These extensions, negotiated by the version transaction, affect the format
+of the auth, attach, create, and error messages
+.LP
+.nf
+size[4] Tauth tag[2] afid[4] uname[s] aname[s] n_uname[4]
+size[4] Rauth tag[2] aqid[13]
+size[4] Tattach tag[2] fid[4] afid[4] uname[s] aname[s] n_uname[4]
+size[4] Rattach tag[2] qid[13]
+size[4] Tcreate tag[2] fid[4] name[s] perm[4] mode[1] extension[s]
+size[4] Rcreate tag[2] qid[13] iounit[4]
+size[4] Rerror tag[2] ename[s] ecode[4]
+.fi
+.LP
+as well as the stat[n] structure used in the stat, wstat, and read
+operations.  Under .u the stat[n] structure includes numerical uid, gid,
+and muid fields, as well as an extension[s] field that represents the
+new mode bits and file types.  See 9p-stat(5) for more detail.
+.SH "DIOD EXTENSIONS"
+.B diod
+further extends 9P with new requests for
+1) large atomic I/O with optional checksum (aread, awrite);
+2) obtaining file system statistics for df (statfs);
+3) advisory file and byte range locking (lock, flock);
+and 4) renaming files across directories (rename).
+These options are currently negotiated by the version transaction
+as 9P2000.h, where .h implies all the .u extensions as well.
+.LP
+.nf	
+size[4] Taread tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4]
+size[4] Raread tag[2] count[4] data[count] check[4]
+size[4] Tawrite tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4] data[count] check[4]
+size[4] Rawrite tag[2] count[4]
+size[4] Tstatfs tag[2] fid[4]
+size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ffree[8] fsid[8] namelen[4]
+size[4] Tlock tag[2] fid[4] cmd[1] type[1] pid[8] start[8] end[8]
+size[4] Rlock tag[2] type[1] pid[8] start[8] end[8]
+size[4] Tflock  tag[2] fid[4] cmd[1]
+size[4] Rflock tag[2]
+size[4] Trename tag[2] fid[4] newdirfid[4] name[s]
+size[4] Rrename tag[2]
+.fi
+.LP
+It is a long term goal to push the checksumming provided by aread/awrite
+into the transport layer so all protocol operations are covered.
+Also, it may be possible to design a transport which allows msize to
+be expanded to the point where separate atomic read/write operations are
+unnecesssary.
+.LP
+The statfs, rename, lock, and flock operations are likely candidates
+for inclusion in the 9P2010 update to the 9P protocol.
+.LP
+At this time advisory locking is not implemented in \fBdiod\fR as it is
+incompatible with the thread pool model used in npfs.
 .SH ORIGIN
 The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-http://plan9.bell-labs.com/sys/man/index.html
+[plan9] http://plan9.bell-labs.com/sys/man/index.html
 .LP
-``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
+[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
 Eric Van Hensbergen and Ron Minnich, 2005.
-
+.LP
+[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html

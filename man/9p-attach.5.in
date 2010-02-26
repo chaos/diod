@@ -12,31 +12,87 @@ size[4] Tattach tag[2] fid[4] afid[4] uname[s] aname[s]
 size[4] Rattach tag[2] qid[13]
 .fi
 .SH DESCRIPTION
-The attach message serves as a fresh introduction from a user on the client machine to the server. The message identifies the user (uname) and may select the file tree to access (aname). The afid argument specifies a fid previously established by an auth  message, as described below.
+The attach message serves as a fresh introduction from a user on the client
+machine to the server.  The message identifies the user (uname) and may
+select the file tree to access (aname).  The afid argument specifies a
+fid previously established by an auth  message, as described below.
 .LP
-As a result of the attach transaction, the client will have a connection to the root directory of the desired file tree, represented by fid. An error is returned if fid is already in use. The server's idea of the root of the file tree is represented by the returned qid.
+As a result of the attach transaction, the client will have a connection
+to the root directory of the desired file tree, represented by fid.
+An error is returned if fid is already in use.
+The server's idea of the root of the file tree is represented by
+the returned qid.
 .LP
-If the client does not wish to authenticate the connection, or knows that authentication is not required, the afid field in the attach message should be set to NOFID, defined as (u32int)~0 in <fcall.h>. If the client does wish to authenticate, it must acquire and validate an afid using an auth message before doing the attach.
+If the client does not wish to authenticate the connection, or knows that
+authentication is not required, the afid field in the attach message
+should be set to NOFID, defined as (u32int)~0 in <fcall.h>.
+If the client does wish to authenticate, it must acquire and validate
+an afid using an auth message before doing the attach.
 .LP
-The auth message contains afid, a new fid to be established for authentication, and the uname and aname that will be those of the following attach message. If the server does not require authentication, it returns Rerror to the Tauth message.
+The auth message contains afid, a new fid to be established for
+authentication, and the uname and aname that will be those of the
+following attach message.  If the server does not require authentication,
+it returns Rerror to the Tauth message.
 .LP
-If the server does require authentication, it returns aqid defining a file of type QTAUTH (see intro(5)) that may be read and written (using read and write messages in the usual way) to execute an authentication protocol. That protocol's definition is not part of 9P itself.
+If the server does require authentication, it returns aqid defining a
+file of type QTAUTH (see 9p-intro(5)) that may be read and written
+(using read and write messages in the usual way) to execute an
+authentication protocol. That protocol's definition is not part of 9P itself.
 .LP
-Once the protocol is complete, the same afid is presented in the attach message for the user, granting entry. The same validated afid may be used for multiple attach messages with the same uname and aname.
-.SH "LINUX EXTENSIONS"
-tbd
+Once the protocol is complete, the same afid is presented in the attach
+message for the user, granting entry. The same validated afid may be used
+for multiple attach messages with the same uname and aname.
+.SH "UNIX EXTENSIONS"
+.nf
+size[4] Tauth tag[2] afid[4] uname[s] aname[s] n_uname[4]
+size[4] Rauth tag[2] aqid[13]
+size[4] Tattach tag[2] fid[4] afid[4] uname[s] aname[s] n_uname[4]
+size[4] Rattach tag[2] qid[13]
+.fi
+.LP
+A numeric uname field has been added to the attach and auth messages in
+order to provide hints to map a string to a numeric id if such a facility
+is not available.  The numeric uname should be given preference over
+the uname string unless n_uname is unspecified (~0). 
+.SH "DIOD EXTENSIONS"
+.B diod
+uses munge(7) for authentication.  Instead of using the auth transaction,
+\fBdiod\fR simply puts the user's munge credential string in uname[s].
+This allows it to be passed in to v9fs from user space at mount time
+via the \fIuname\fR mount option.  If v9fs is mounted multi-user
+(\fIaccess=any\fR) then the initial mount should send root's munge
+credential and subsequent kernel-generated attach requests on the same
+connection for other users are presumed valid.
+If the file system is mounted with a non-root munge credential,
+then subsequent kernel-generated attaches from other users, including root,
+are denied.  On the client, this has the same effect as the
+v9fs \fIaccess=<uid>\fR mount option.
 .SH "LINUX ENTRY POINTS"
-tbd
+An attach transaction will be generated at mount(2) time, as ``nobody''
+or as the value of the v9fs \fIuname\fR mount option.
+If v9fs was mounted with \fIaccess=any\fR, each new user that accesses
+the file system will generate a new attach transaction.
 .SH "PLAN9 ENTRY POINTS"
-An attach transaction will be generated for kernel devices (see intro(3)) when a system call evaluates a file name beginning with #. Pipe(2) generates an attach on the kernel device pipe(3). The mount system call (see bind(2)) generates an attach message to the remote file server. When the kernel boots, an attach is made to the root device, root(3), and then an attach is made to the requested file server machine.
+An attach transaction will be generated for kernel devices (see intro(3))
+when a system call evaluates a file name beginning with #. Pipe(2) generates
+an attach on the kernel device pipe(3). The mount system call (see bind(2))
+generates an attach message to the remote file server. When the kernel boots,
+an attach is made to the root device, root(3), and then an attach is made
+to the requested file server machine.
 .LP
-An auth transaction is generated by the fauth(2) system call or by the first mount system call on an uninitialized connection.
+An auth transaction is generated by the fauth(2) system call or by the
+first mount system call on an uninitialized connection.
 .SH ORIGIN
 The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-http://plan9.bell-labs.com/sys/man/index.html
+[plan9] http://plan9.bell-labs.com/sys/man/index.html
 .LP
-``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
+[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
 Eric Van Hensbergen and Ron Minnich, 2005.
+.LP
+[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
+.LP
+9p-intro(5)
+

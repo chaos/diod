@@ -13,9 +13,14 @@ fail if the client does not have write permission in the parent directory.
 .LP
 It is correct to consider remove to be a clunk with the side effect of removing the file if permissions allow.
 .LP
-If a file has been opened as multiple fids, possibly on different connections, and one fid is used to remove the file, whether the other fids continue to provide access to the file is implementation–defined. The Plan 9 file servers (like fs(4)) remove the file immediately: attempts to use the other fids will yield a ``phase error.'' U9fs(4) follows the semantics of the underlying Unix file system, so other fids typically remain usable.
+If a file has been opened as multiple fids, possibly on different connections,
+and one fid is used to remove the file, whether the other fids continue to
+provide access to the file is implementation–defined.  The Plan 9 file
+servers (like fs(4)) remove the file immediately:  attempts to use the other
+fids will yield a ``phase error.'' U9fs(4) follows the semantics of the
+underlying Unix file system, so other fids typically remain usable.
 .SH "LINUX EXTENSIONS"
-tbd
+None.
 .SH "LINUX ENTRY POINTS"
 tbd
 .SH "PLAN9 ENTRY POINTS"
@@ -29,4 +34,5 @@ http://plan9.bell-labs.com/sys/man/index.html
 .LP
 ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
 Eric Van Hensbergen and Ron Minnich, 2005.
-
+.LP
+9p-intro(5)
