@@ -1,63 +1,105 @@
 .TH diod 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
 .SH NAME
-diod \- distributed I/O daemon
-.SH SYNOPSIS
-.B diod
-.I "[OPTIONS]"
+diod.conf \- distributed I/O daemon configuration file
 .SH DESCRIPTION
-.B diod
-is a 9P2000.h server used in combination with the kernel v9fs file system
-for I/O forwarding on Linux clusters.
-.SH OPTIONS
+The diod.conf file is actually a LUA script.
+Both \fBdiod\fR and \fBdiodctl\fR read this file on startup.
+Internal config defaults are overridden by settings in the file,
+and some of those values can in turn be overridden on the command line.
+.LP
+Config settings take the form of LUA global variables which are read out
+after the config file is executed.  Therefore, the values of said variables
+can either be statically assigned or dynamically generated. 
+The variables are described below.
+.SH "CONFIG VARIABLES"
 .TP
-.I "-f, --foreground"
-Disable default daemon behavior which is to change working directory
-to the run directory, fork, update the pid file, drop the controlling tty,
-and divert log messages to syslog.
+.I "allowprivate = 1"
+Allow \fBdiodctl\fI to spawn private instances of \fBdiod\fR
+when requested by \fBdiodmount -p\fR.
 .TP
-.I "-d, --debug MASK"
+.I "readahead = 1"
+Enable kernel readahead, which is disabled by default.
+.TP
+.I "diodlisten = { ""IP:PORT"" [,""IP:PORT"",...] }"
+List the interfaces and ports that \fBdiod\fR should listen on.
+The default is "0.0.0.0:10006".
+Note: when \fBdiod\fR is spawned by \fBdiodctl\fR,
+listen addresses are dynamically assigned and limited by \fIdiodctllisten\fR.
+.TP
+.I "diodctllisten = { ""IP:PORT"" [, ""IP:PORT"", ...] }"
+List the interfaces and ports that \fBdiodctl\fR should listen on.
+The default is "0.0.0.0:10005".
+.TP
+.I "exports = { ""/path"" [, ""/path"", ...] }"
+List the file systems that clients will be allowed to mount.
+All paths should be fully qualified.
+Note that \fBdiod\fR will not traverse file system boundaries due to inode
+uniqueness constraints.
+.TP
+.I "nwthreads = INTEGER"
+Sets the number of worker threads created to handle 9P requests.
+The defualt is 16.
+.TP
+.I "debuglevel = INTEGER"
 Set the debug mask.  The bit values are:
-0x1 log decoded 9P protocol messages;
-0x2 log any 9P operation errors.
+1 log decoded 9P protocol messages;
+2 log any 9P operation errors.
+This option is intended for testing only.
 .TP
-.I "-s, --sameuser"
-Run all I/O operations as the user that started the
-.B diod
-daemon.  With this option, more than one daemon is allowed to start.
+.I "foreground = 1"
+If set to 1, daemons will run in the foreground, in the current working
+directory, logging to stderr.
+This option is intended for testing only.
 .TP
-.I "-l, --listen IP:PORT"
-Set the listen address (default 0.0.0.0:564).  
+.I "munge = 0"
+Disable munge authentication.  See warning in diod (8).
+This option is intended for testing only.
 .TP
-.I "-w, --nwthreads INT"
-Set the number of worker threads to spawn to handle 9P operations.
+.I "tcpwrappers = 0"
+Disable TCP wrapper checks.
+This option is intended for testing only.
 .TP
-.I "-c, --config-file PATH"
-Set config file path.
+.I "exit_on_lastuse = 1"
+Arrange for \fBdiod\fR to exit when the last connection closes, if
+clients have successfully attached.
+This is intended to be passed on the \fBdiod\fR command line from \fBdiodctl\fR.
 .TP
-.I "-e, --export PATH"
-Set one export on the command line.
-Any exports in the config file are then ignored.
+.I "runasuid = UID"
+Always run \fBdiod\fR as the specified UID.
+This is intended to be passed on the \fBdiod\fR command line from \fBdiodctl\fR.
 .TP
-.I "-a, --allowany"
-Override TCP wrappers and reserved port checking.
-.TP
-.I "-r, --readahead"
-.B diod
-normally disables kernel read-ahead using posix_madvise(POSIX_MADV_RANDOM)
-because read-ahead tends to get confused by the way reads are
-distributed over \fBdiod's\fR worker threads.
-This option causes the posix_madvise call to be skipped.
-.SH "LOGGING"
-With the \fI--foreground\fR option,
-.B diod
-logs all messages to stderr.
-Otherwise they go to syslog LOG_DAEMON at LOG_ERR level.
+.I "diodpath"
+Override \fBdiodctl\fR's default path to \fBdiod\fR server executable.
+This option is intended for testing only.
+.SH "EXAMPLE"
+.nf
+--
+-- example diod.conf
+--
+allowprivate = 1
+exports = {
+        "/g/g0",
+        "/g/g11",
+        "/g/g12",
+        "/g/g13",
+        "/g/g14",
+        "/g/g15",
+        "/g/g16",
+        "/g/g17",
+        "/g/g18",
+        "/g/g19",
+        "/g/g20",
+        "/g/g21",
+        "/g/g22",
+        "/g/g23",
+        "/g/g24",
+        "/g/g90",
+        "/g/g91",
+        "/g/g92",
+        "/g/g99"
+}
+.fi
 .SH "FILES"
-@X_SBINDIR@/diod
-.br
 @X_SYSCONFDIR@/diod.conf
-.br
-@X_LOCALSTATEDIR@/run/diod.pid
 .SH "SEE ALSO"
-diod.conf (5)
-hosts_access (5)
+diod (8), diodctl (8)
