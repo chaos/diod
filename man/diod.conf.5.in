@@ -102,4 +102,6 @@ exports = {
 .SH "FILES"
 @X_SYSCONFDIR@/diod.conf
 .SH "SEE ALSO"
-diod (8), diodctl (8)
+lua (1), diod (8), diodctl (8)
+.LP
+http://www.lua.org/

@@ -13,6 +13,7 @@ Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: tcp_wrappers
 BuildRequires: zlib-devel
 BuildRequires: lua
+BuildRequires: munge-devel
 
 %description
 diod is a 9P2000.h server used in combination with the kernel v9fs file
@@ -47,4 +48,6 @@ rm -rf ${RPM_BUILD_ROOT}
 %doc AUTHORS COPYING README INSTALL ChangeLog
 %{_sbindir}/*
 %{_mandir}/man8/*
+%{_mandir}/man5/*
 %attr(0755,root,root) %{_sysconfdir}/init.d/diod
+%attr(0755,root,root) %{_sysconfdir}/init.d/diodctl
