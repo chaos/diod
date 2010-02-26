@@ -1,0 +1,69 @@
+.TH 9p-open 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p open, create \- prepare a fid for I/O on an existing or new file
+.SH SYNOPSIS
+.nf
+size[4] Topen tag[2] fid[4] mode[1]
+size[4] Ropen tag[2] qid[13] iounit[4]
+.fi
+.LP
+.nf
+size[4] Tcreate tag[2] fid[4] name[s] perm[4] mode[1]
+size[4] Rcreate tag[2] qid[13] iounit[4]
+.fi
+.SH DESCRIPTION
+The open request asks the file server to check permissions and prepare a fid for I/O with subsequent read and write messages. The mode field determines the type of I/O: 0 (called OREAD in <libc.h>), 1 (OWRITE), 2 (ORDWR), and 3 (OEXEC) mean read access, write access, read and write access, and execute access, to be checked against the permissions for the file. In addition, if mode has the OTRUNC (0x10) bit set, the file is to be truncated, which requires write permission (if the file is append–only, and permission is granted, the open succeeds but the file will not be truncated); if the mode has the ORCLOSE (0x40) bit set, the file is to be removed when the fid is clunked, which requires permission to remove the file from its directory. All other bits in mode should be zero. It is illegal to write a directory, truncate it, or attempt to remove it on close. If the file is marked for exclusive use (see stat(5)), only one client can have the file open at any time. That is, after such a file has been opened, further opens will fail until fid has been clunked. All these permissions are checked at the time of the open request; subsequent changes to the permissions of files do not affect the ability to read, write, or remove an open file.
+.LP
+The create request asks the file server to create a new file with the name supplied, in the directory (dir) represented by fid, and requires write permission in the directory. The owner of the file is the implied user id of the request, the group of the file is the same as dir, and the permissions are the value of
+.IP
+.nf	
+perm & (~0666 | (dir.perm & 0666))
+.fi
+.LP
+if a regular file is being created and
+.IP	
+.nf
+perm & (~0777 | (dir.perm & 0777))
+.fi
+.LP
+if a directory is being created. This means, for example, that if the create allows read permission to others, but the containing directory does not, then the created file will not allow others to read the file.
+.LP
+Finally, the newly created file is opened according to mode, and fid will represent the newly opened file. Mode is not checked against the permissions in perm. The qid for the new file is returned with the create reply message.
+.LP
+Directories are created by setting the DMDIR bit (0x80000000) in the perm.
+.LP
+The names . and .. are special; it is illegal to create files with these names.
+.LP
+It is an error for either of these messages if the fid is already the product of a successful open or create message.
+.LP
+An attempt to create a file in a directory where the given name already exists will be rejected; in this case, the create system call (see open(2)) uses open with truncation. The algorithm used by the create system call is: first walk to the directory to contain the file. If that fails, return an error. Next walk to the specified file. If the walk succeeds, send a request to open and truncate the file and return the result, successful or not. If the walk fails, send a create message. If that fails, it may be because the file was created by another process after the previous walk failed, so (once) try the walk and open again.
+.LP
+For the behavior of create on a union directory, see bind(2).
+.LP
+The iounit field returned by open and create may be zero. If it is not, it is the maximum number of bytes that are guaranteed to be read from or written to the file without breaking the I/O transfer into multiple 9P messages; see read(5).
+.SH "LINUX EXTENSIONS"
+tbd
+.SH "LINUX ENTRY POINTS"
+tbd
+.SH "PLAN9 ENTRY POINTS"
+Open and create both generate open messages; only create generates a create
+message.  The iounit associated with an open file may be discovered by
+calling iounit(2).
+.LP
+For programs that need atomic file creation, without the race that exists
+in the open–create sequence described above, the kernel does the following.
+If the OEXCL (0x1000) bit is set in the mode for a create system call, the
+open message is not sent; the kernel issues only the create.  Thus, if the
+file exists, create will draw an error, but if it doesn't and the create
+system call succeeds, the process issuing the create is guaranteed to be
+the one that created the file.
+.SH ORIGIN
+The Plan 9 operating system, fourth edition, 2002.
+.br
+Copyright (c) 2010 Lucent Technologies. All rights reserved.
+.SH "SEE ALSO"
+http://plan9.bell-labs.com/sys/man/index.html
+.LP
+``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
+Eric Van Hensbergen and Ron Minnich, 2005.
+

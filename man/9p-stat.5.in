@@ -1,0 +1,99 @@
+.TH 9p-stat 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p stat, wstat \- inquire or change file attributes
+.SH SYNOPSIS
+.nf
+size[4] Tstat tag[2] fid[4]
+size[4] Rstat tag[2] stat[n]
+.fi
+.LP
+.nf
+size[4] Twstat tag[2] fid[4] stat[n]
+size[4] Rwstat tag[2]
+.fi
+.SH DESCRIPTION
+The stat transaction inquires about the file identified by fid. The reply will contain a machine–independent directory entry, stat, laid out as follows:
+.TP
+.I "size[2]"
+total byte count of the following data
+.TP
+.I "type[2]"
+for kernel use
+.TP
+.I "dev[4]"
+for kernel use
+.TP
+.I "qid.type[1]"
+the type of the file (directory, etc.), represented as a bit vector corresponding to the high 8 bits of the file's mode word.
+.TP
+.I "qid.vers[4]"
+version number for given path
+.TP
+.I "qid.path[8]"
+the file server's unique identification for the file
+.TP
+.I "mode[4]"
+permissions and flags
+.TP
+.I "atime[4]"
+last access time
+.TP
+.I "mtime[4]"
+last modification time
+.TP
+.I "length[8]"
+length of file in bytes
+.TP
+.I "name[s]"
+file name; must be / if the file is the root directory of the server
+.TP
+.I "uid[s]"
+owner name
+.TP
+.I "gid[s]"
+group name
+.TP
+.I "muid[s]"
+name of the user who last modified the file
+.LP
+Integers in this encoding are in little–endian order (least significant byte first). The convM2D and convD2M routines (see fcall(2)) convert between directory entries and a C structure called a Dir.
+.LP
+The mode contains permission bits as described in intro(5) and the following: 0x80000000 (DMDIR, this file is a directory), 0x40000000 (DMAPPEND, append only), 0x20000000 (DMEXCL, exclusive use), 0x04000000 (DMTMP, temporary); these are echoed in Qid.type. Writes to append–only files always place their data at the end of the file; the offset in the write message is ignored, as is the OTRUNC bit in an open. Exclusive use files may be open for I/O by only one fid at a time across all clients of the server. If a second open is attempted, it draws an error. Servers may implement a timeout on the lock on an exclusive use file: if the fid holding the file open has been unused for an extended period (of order at least minutes), it is reasonable to break the lock and deny the initial fid further I/O. Temporary files are not included in nightly archives (see fossil(4)).
+.LP
+The two time fields are measured in seconds since the epoch (Jan 1 00:00 1970 GMT). The mtime field reflects the time of the last change of content (except when later changed by wstat). For a plain file, mtime is the time of the most recent create, open with truncation, or write; for a directory it is the time of the most recent remove, create, or wstat of a file in the directory. Similarly, the atime field records the last read of the contents; also it is set whenever mtime is set. In addition, for a directory, it is set by an attach, walk, or create, all whether successful or not.
+.LP
+The muid field names the user whose actions most recently changed the mtime of the file.
+.LP
+The length records the number of bytes in the file. Directories and most files representing devices have a conventional length of 0.
+.LP
+The stat request requires no special permissions.
+.LP
+The wstat request can change some of the file status information. The name can be changed by anyone with write permission in the parent directory; it is an error to change the name to that of an existing file. The length can be changed (affecting the actual length of the file) by anyone with write permission on the file. It is an error to attempt to set the length of a directory to a non–zero value, and servers may decide to reject length changes for other reasons. The mode and mtime can be changed by the owner of the file or the group leader of the file's current group. The directory bit cannot be changed by a wstat; the other defined permission and mode bits can. The gid can be changed: by the owner if also a member of the new group; or by the group leader of the file's current group if also leader of the new group (see intro(5) for more information about permissions and users(6) for users and groups). None of the other data can be altered by a wstat and attempts to change them will trigger an error. In particular, it is illegal to attempt to change the owner of a file. (These conditions may be relaxed when establishing the initial state of a file server; see fsconfig(8).)
+.LP
+Either all the changes in wstat request happen, or none of them does: if the request succeeds, all changes were made; if it fails, none were.
+.LP
+A wstat request can avoid modifying some properties of the file by providing explicit ``don't touch'' values in the stat data that is sent: zero–length strings for text values and the maximum unsigned value of appropriate size for integral values. As a special case, if all the elements of the directory entry in a Twstat message are ``don't touch'' values, the server may interpret it as a request to guarantee that the contents of the associated file are committed to stable storage before the Rwstat message is returned. (Consider the message to mean, ``make the state of the file exactly what it claims to be.'')
+.LP
+A read of a directory yields an integral number of directory entries in the machine independent encoding given above (see read(5)).
+.LP
+Note that since the stat information is sent as a 9P variable–length datum, it is limited to a maximum of 65535 bytes.
+.SH "LINUX EXTENSIONS"
+tbd
+.SH "LINUX ENTRY POINTS"
+tbd
+.SH "PLAN9 ENTRY POINTS"
+Stat messages are generated by fstat and stat.
+.LP
+Wstat messages are generated by fwstat and wstat.
+.SH BUGS
+To make the contents of a directory, such as returned by read(5), easy to parse, each directory entry begins with a size field. For consistency, the entries in Twstat and Rstat messages also contain their size, which means the size appears twice. For example, the Rstat message is formatted as ``(4+1+2+2+n)[4] Rstat tag[2] n[2] (n–2)[2] type[2] dev[4]...,'' where n is the value returned by convD2M.
+.SH ORIGIN
+The Plan 9 operating system, fourth edition, 2002.
+.br
+Copyright (c) 2010 Lucent Technologies. All rights reserved.
+.SH "SEE ALSO"
+http://plan9.bell-labs.com/sys/man/index.html
+.LP
+``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
+Eric Van Hensbergen and Ron Minnich, 2005.
+

@@ -37,9 +37,15 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 subdir = man
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diod.8.in $(srcdir)/diod.conf.5.in \
-	$(srcdir)/diodctl.8.in $(srcdir)/diodmount.8.in
+DIST_COMMON = $(srcdir)/9p-attach.5.in $(srcdir)/9p-clunk.5.in \
+	$(srcdir)/9p-error.5.in $(srcdir)/9p-flush.5.in \
+	$(srcdir)/9p-intro.5.in $(srcdir)/9p-open.5.in \
+	$(srcdir)/9p-read.5.in $(srcdir)/9p-remove.5.in \
+	$(srcdir)/9p-stat.5.in $(srcdir)/9p-version.5.in \
+	$(srcdir)/9p-walk.5.in $(srcdir)/Makefile.am \
+	$(srcdir)/Makefile.in $(srcdir)/diod.8.in \
+	$(srcdir)/diod.conf.5.in $(srcdir)/diodctl.8.in \
+	$(srcdir)/diodmount.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -50,7 +56,10 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diod.8 diodctl.8 diodmount.8 diod.conf.5
+CONFIG_CLEAN_FILES = diod.8 diodctl.8 diodmount.8 diod.conf.5 \
+	9p-attach.5 9p-flush.5 9p-read.5 9p-version.5 9p-clunk.5 \
+	9p-intro.5 9p-remove.5 9p-walk.5 9p-error.5 9p-open.5 \
+	9p-stat.5
 SOURCES =
 DIST_SOURCES =
 man5dir = $(mandir)/man5
@@ -177,14 +186,27 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-man8_MANS = diod.8 diodctl.8 diodmount.8
-man5_MANS = diod.conf.5
-EXTRA_DIST = \
+man8_MANS = \
 	diod.8 \
 	diodctl.8 \
-	diodmount.8 \
+	diodmount.8
+
+man5_MANS = \
+	diod.conf.5 \
+	9p-attach.5 \
+	9p-clunk.5 \
+	9p-error.5 \
+	9p-flush.5 \
+	9p-intro.5 \
+	9p-open.5 \
+	9p-read.5 \
+	9p-remove.5 \
+	9p-stat.5 \
+	9p-version.5 \
+	9p-walk.5 \
 	diod.conf.5
 
+EXTRA_DIST = $(man8_MANS) $(man5_MANS)
 all: all-am
 
 .SUFFIXES:
@@ -224,6 +246,28 @@ diodctl.8: $(top_builddir)/config.status $(srcdir)/diodctl.8.in
 diodmount.8: $(top_builddir)/config.status $(srcdir)/diodmount.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 diod.conf.5: $(top_builddir)/config.status $(srcdir)/diod.conf.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-attach.5: $(top_builddir)/config.status $(srcdir)/9p-attach.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-flush.5: $(top_builddir)/config.status $(srcdir)/9p-flush.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-read.5: $(top_builddir)/config.status $(srcdir)/9p-read.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-version.5: $(top_builddir)/config.status $(srcdir)/9p-version.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-clunk.5: $(top_builddir)/config.status $(srcdir)/9p-clunk.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-intro.5: $(top_builddir)/config.status $(srcdir)/9p-intro.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-remove.5: $(top_builddir)/config.status $(srcdir)/9p-remove.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-walk.5: $(top_builddir)/config.status $(srcdir)/9p-walk.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-error.5: $(top_builddir)/config.status $(srcdir)/9p-error.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-open.5: $(top_builddir)/config.status $(srcdir)/9p-open.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-stat.5: $(top_builddir)/config.status $(srcdir)/9p-stat.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 uninstall-info-am:
 install-man5: $(man5_MANS) $(man_MANS)
