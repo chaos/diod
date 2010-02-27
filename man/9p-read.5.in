@@ -41,8 +41,27 @@ Because 9P implementations may limit the size of individual messages,
 more than one message may be produced by a single read or write call.
 The iounit field returned by open(5), if non–zero, reports the maximum
 size that is guaranteed to be transferred atomically.
-.SH "LINUX EXTENSIONS"
-None, but see 9p-aread(5).
+.SH "DIOD EXTENSIONS"
+\fBdiod\fR adds atomic read/write requests with optional checksums.
+.LP
+.nf
+size[4] Taread tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4]
+size[4] Raread tag[2] count[4] data[count] check[4]
+size[4] Tawrite tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4] data[count] check[4]
+size[4] Rawrite tag[2] count[4]
+.fi
+.LP
+These are like read/write except when a read/write system call has to
+make multiple calls due to msize constraints, aread/awrite present
+the original request size in rsize so that the server can make one
+read/write call and buffer it, preserving atomicity.
+The rsize decreases on successive calls
+by the total number of bytes transferred until it is equal to
+count on the last call.
+.LP
+In addition, data is protected by an optional 32 bit check field.
+The datacheck field configures checksum behavior (0x00 for disabled,
+0x01 for Adler32).
 .SH "LINUX ENTRY POINTS"
 tbd
 .SH "PLAN9 ENTRY POINTS"
@@ -55,9 +74,11 @@ The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-http://plan9.bell-labs.com/sys/man/index.html
+[plan9] http://plan9.bell-labs.com/sys/man/index.html
 .LP
-``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
+[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
 Eric Van Hensbergen and Ron Minnich, 2005.
 .LP
-9p-intro(5), 9p-aread(5)
+[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
+.LP
+9p-intro(5)

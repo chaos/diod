@@ -1,0 +1,17 @@
+.TH 9p-statfs 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p statfs \- get file system statistics
+.SH SYNOPSIS
+.nf
+size[4] Tstatfs tag[2] fid[4]
+size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ff
+ree[8] fsid[8] namelen[4]
+.fi
+.SH DESCRIPTION
+The \fIstatfs\fR message is used to request file system information returned
+by the statfs(2) system call, which is used by df(1) to report file system
+and disk space usage.
+.SH ORIGIN
+\fIstatfs\fR is a \fBdiod\fR extension to 9P.
+.SH "SEE ALSO"
+9p-intro(5)

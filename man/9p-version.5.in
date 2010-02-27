@@ -18,7 +18,9 @@ The server may respond with the client's version string, or a version string ide
 The client and server will use the protocol version defined by the server's response for all subsequent communication on the connection.
 .LP
 A successful version request initializes the connection. All outstanding I/O on the connection is aborted; all active fids are freed (`clunked') automatically. The set of messages between version requests is called a session.
-.SH "LINUX EXTENSIONS"
+.SH "UNIX EXTENSIONS"
+Extracted from [rfc9p2000.u]:
+.LP
 Support for 9P2000.u is an optional extension which isn't quite covered in
 the existing version semantics for 9P2000.  The original protocol
 specification describes discarding anything after an initial period in
@@ -36,7 +38,6 @@ Clients should be implemented in such a way to be able to operate without
 the extensions in some degraded form of operation.  Specifics for how to
 gracefully degrade operation without specific extensions are suggested by
 [rfc9p2000.u].
-
 .SH "LINUX ENTRY POINTS"
 tbd
 .SH "PLAN9 ENTRY POINTS"
@@ -52,3 +53,5 @@ Copyright (c) 2010 Lucent Technologies. All rights reserved.
 Eric Van Hensbergen and Ron Minnich, 2005.
 .LP
 [rfc9p2000.h] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
+.LP
+9p-intro(5)

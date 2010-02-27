@@ -26,7 +26,8 @@ for kernel use
 for kernel use
 .TP
 .I "qid.type[1]"
-the type of the file (directory, etc.), represented as a bit vector corresponding to the high 8 bits of the file's mode word.
+the type of the file (directory, etc.), represented as a bit vector
+corresponding to the high 8 bits of the file's mode word.
 .TP
 .I "qid.vers[4]"
 version number for given path
@@ -63,9 +64,12 @@ byte first).  The convM2D and convD2M routines (see fcall(2)) convert
 between directory entries and a C structure called a Dir.
 .LP
 The mode contains permission bits as described in intro(5) and the
-following:  0x80000000 (DMDIR, this file is a directory), 0x40000000 (DMAPPEND,
-append only), 0x20000000 (DMEXCL, exclusive use), 0x04000000 (DMTMP,
-temporary); these are echoed in Qid.type.  Writes to append–only files
+following:
+0x80000000 (DMDIR, this file is a directory),
+0x40000000 (DMAPPEND, append only),
+0x20000000 (DMEXCL, exclusive use),
+0x04000000 (DMTMP, temporary);
+these are echoed in Qid.type.  Writes to append–only files
 always place their data at the end of the file; the offset in the write
 message is ignored, as is the OTRUNC bit in an open.  Exclusive use files
 may be open for I/O by only one fid at a time across all clients of the
@@ -131,51 +135,10 @@ machine independent encoding given above (see 9p-read(5)).
 Note that since the stat information is sent as a 9P variable–length datum,
 it is limited to a maximum of 65535 bytes.
 .SH "UNIX EXTENSIONS"
-There are four new fields in the stat structure supporting 9P2000
-extensions - as well as new qid.type bits and mode bits. 
-.TP
-.I "size[2]"
-total byte count of the following data 
-.TP
-.I "type[2]"
-for kernel use 
-.TP
-.I "dev[4]"
-for kernel use 
-.TP
-.I "qid.type[1]"
-the type of the file (directory, etc.), represented as a bit vector
-corresponding to the high 8 bits of the file's mode word. 
-.TP
-.I "qid.vers[4]"
-version number for given path 
-.TP
-.I "qid.path[8]"
-the file server's unique identification for the file 
-.TP
-.I "mode[4]"
-permissions and flags 
-.TP
-.I "atime[4]"
-last access time 
-.TP
-.I "mtime[4]"
-last modification time 
-.TP
-.I "length[8]"
-length of file in bytes 
-.TP
-.I "name[s]"
-file name; must be / if the file is the root directory of the server 
-.TP
-.I "uid[s]"
-owner name 
-.TP
-.I "gid[s]"
-group name 
-.TP
-.I "muid[s]"
-name of the user who last modified the file 
+Extracted from [rfc9p2000.u]:
+.LP
+There are four new fields appended to the stat structure supporting 9P2000
+extensions - as well as new mode bits and corresponding qid.type bits.
 .TP
 .I "extension[s]"
 For use by the UNIX extension to store data about special files (links,
@@ -194,11 +157,25 @@ The n_uid, n_gid, and n_muid are numeric hints that clients may use to map
 numeric ids when a string to numeric id mapping facility is not available.
 .LP
 extension[s] is a string describing special files, depending on the mode bit.
-For DSYMLINK files, the string is the target of the link.
+For DMSYMLINK (files, the string is the target of the link.
 For DMDEVICE files, the string is "b 1 2" for a block device with major 1,
 minor 2. For normal files, this string is empty. 
+.LP
+The new mode bits are
+0x02000000 (DMSYMLINK, this file is a symbolic link),
+0x00800000 (DMDEVICE, this file is a device),
+0x00200000 (DMNAMEDPIPE, this file is a named pipe),
+0x00100000 (DMSOCKET, this file is a socket),
+0x00080000 (DMSETUID, set-uid), and
+0x00040000 (DMSETGID, set-gid).
 .SH BUGS
-To make the contents of a directory, such as returned by read(5), easy to parse, each directory entry begins with a size field. For consistency, the entries in Twstat and Rstat messages also contain their size, which means the size appears twice. For example, the Rstat message is formatted as ``(4+1+2+2+n)[4] Rstat tag[2] n[2] (n–2)[2] type[2] dev[4]...,'' where n is the value returned by convD2M.
+To make the contents of a directory, such as returned by 9p-read(5),
+easy to parse, each directory entry begins with a size field.
+For consistency, the entries in Twstat and Rstat messages also
+contain their size, which means the size appears twice.
+For example, the Rstat message is formatted as
+``(4+1+2+2+n)[4] Rstat tag[2] n[2] (n–2)[2] type[2] dev[4]...,''
+where n is the value returned by convD2M.
 .SH ORIGIN
 The Plan 9 operating system, fourth edition, 2002.
 .br
@@ -210,3 +187,5 @@ Copyright (c) 2010 Lucent Technologies. All rights reserved.
 Eric Van Hensbergen and Ron Minnich, 2005.
 .LP
 [rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
+.LP
+9p-intro(5)

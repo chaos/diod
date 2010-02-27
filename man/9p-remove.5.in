@@ -19,8 +19,6 @@ provide access to the file is implementation–defined.  The Plan 9 file
 servers (like fs(4)) remove the file immediately:  attempts to use the other
 fids will yield a ``phase error.'' U9fs(4) follows the semantics of the
 underlying Unix file system, so other fids typically remain usable.
-.SH "LINUX EXTENSIONS"
-None.
 .SH "LINUX ENTRY POINTS"
 tbd
 .SH "PLAN9 ENTRY POINTS"
@@ -30,9 +28,11 @@ The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-http://plan9.bell-labs.com/sys/man/index.html
+[plan9] http://plan9.bell-labs.com/sys/man/index.html
 .LP
-``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
+[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
 Eric Van Hensbergen and Ron Minnich, 2005.
+.LP
+[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
 .LP
 9p-intro(5)

@@ -76,6 +76,8 @@ AC_CONFIG_FILES( \
   man/diod.conf.5 \
   man/9p-attach.5 \
   man/9p-flush.5 \
+  man/9p-flock.5 \
+  man/9p-lock.5 \
   man/9p-read.5 \
   man/9p-version.5 \
   man/9p-clunk.5 \
@@ -84,7 +86,9 @@ AC_CONFIG_FILES( \
   man/9p-walk.5 \
   man/9p-error.5 \
   man/9p-open.5 \
+  man/9p-rename.5 \
   man/9p-stat.5 \
+  man/9p-statfs.5 \
   scripts/Makefile \
   scripts/diod.init \
   scripts/diodctl.init \

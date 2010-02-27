@@ -1,0 +1,15 @@
+.TH 9p-lock 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p lock \- POSIX advisory record locking
+.SH SYNOPSIS
+.nf
+size[4] Tlock tag[2] fid[4] cmd[1] type[1] pid[8] start[8] end[8]
+size[4] Rlock tag[2] type[1] pid[8] start[8] end[8]
+.fi
+.SH DESCRIPTION
+The \fIlock\fR message is used to implement POSIX advisory record locking
+as described in fcntl(2).
+.SH ORIGIN
+\fIlock\fR is a \fBdiod\fR extension to 9P.
+.SH "SEE ALSO"
+9p-intro(5)

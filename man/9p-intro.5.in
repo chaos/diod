@@ -226,13 +226,14 @@ reproduced, from the top bit down, in the type byte of the Qid: QTDIR,
 QTAPPEND, QTEXCL, (skipping one bit) QTAUTH, and QTTMP. The name QTFILE,
 defined to be zero, identifies the value of the type for a plain file.
 .SH "UNIX EXTENSIONS"
+UNIX extensions are defined in [rfc9p2000.u].
+.LP
 9P2000.u defines several extensions necessary to provide UNIX file
 semantics via 9P.  These fall into the categories of 
 1) numerical representation of users/groups in UNIX versus strings in Plan 9;
-2) support for additional file types (symbolic links, hard links, character
-devices, block devices, pipes) and file mode bits (set-user-id, sticky-bit,
-and directory exec (X)) in UNIX that have no Plan 9 counterparts; and
-3) numerical system error codes in UNIX versus strings in Plan 9.
+2) numerical representation of UNIX system errors versus strings in Plan 9;
+3) support for additional file types and file mode bits that have no
+Plan 9 counterparts.
 These extensions, negotiated by the version transaction, affect the format
 of the auth, attach, create, and error messages
 .LP
@@ -247,9 +248,7 @@ size[4] Rerror tag[2] ename[s] ecode[4]
 .fi
 .LP
 as well as the stat[n] structure used in the stat, wstat, and read
-operations.  Under .u the stat[n] structure includes numerical uid, gid,
-and muid fields, as well as an extension[s] field that represents the
-new mode bits and file types.  See 9p-stat(5) for more detail.
+operations.  See 9p-stat(5), 9p-attach(5), 9p-open(5), and 9p-error(5).
 .SH "DIOD EXTENSIONS"
 .B diod
 further extends 9P with new requests for
@@ -297,3 +296,6 @@ Copyright (c) 2010 Lucent Technologies. All rights reserved.
 Eric Van Hensbergen and Ron Minnich, 2005.
 .LP
 [rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
+.LP
+9p-attach(5), 9p-clunk(5), 9p-error(5), 9p-flush(5), 9p-open(5),
+9p-read(5), 9p-remove(5), 9p-stat(5), 9p-version(5), 9p-walk(5)
