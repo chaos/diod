@@ -4,8 +4,7 @@
 .SH SYNOPSIS
 .nf
 size[4] Tstatfs tag[2] fid[4]
-size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ff
-ree[8] fsid[8] namelen[4]
+size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ffree[8] fsid[8] namelen[4]
 .fi
 .SH DESCRIPTION
 The \fIstatfs\fR message is used to request file system information returned

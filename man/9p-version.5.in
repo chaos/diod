@@ -27,8 +27,8 @@ specification describes discarding anything after an initial period in
 the version string.  We use the information following the period as a
 method for negotiating optional protocol extensions.
 .LP
-If a client desires support for the UNIX extensions, it will send the add
-a .u to the end of the version string (e.g. 9P2000.u).  If a server is
+If a client desires support for the UNIX extensions, it will add a .u
+to the end of the version string (e.g. 9P2000.u).  If a server is
 capable of supporting the extension, it will return 9P2000.u back to the
 client.  If the server is incapable or unwilling to support the extensions,
 it will return the version string without the extension specification
@@ -38,6 +38,9 @@ Clients should be implemented in such a way to be able to operate without
 the extensions in some degraded form of operation.  Specifics for how to
 gracefully degrade operation without specific extensions are suggested by
 [rfc9p2000.u].
+.SH "DIOD EXTENSIONS"
+The \fBdiod\fR extensions are negotiated as above only the version string is
+9P2000.h.  9P2000.h implies the UNIX extensions as well.
 .SH "LINUX ENTRY POINTS"
 tbd
 .SH "PLAN9 ENTRY POINTS"
