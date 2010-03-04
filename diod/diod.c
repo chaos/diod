@@ -257,8 +257,11 @@ _daemonize (void)
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
 
-    if (chdir (rdir) < 0)
-        err_exit ("chdir %s", rdir);
+    if (chdir (rdir) < 0) {
+        err ("warning: chdir %s", rdir);
+        if (chdir ("/") < 0)
+            err_exit ("chdir /");
+    }
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();

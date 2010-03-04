@@ -1,0 +1,50 @@
+#!/bin/bash
+
+DIODMOUNT=../diodmount/diodmount
+DIODCTL=../diodctl/diodctl
+DIOD=../diod/diod
+DIODCONF=../etc/diod.conf
+
+tmpdir=
+mntdir=
+
+fini ()
+{
+    echo cleaning up temp dirs
+    if [ -n "$tmpdir" ] && [ -d $tmpdir ]; then
+        rm -f $tmpdir/a
+        rmdir $tmpdir
+    fi
+    if [ -n "$mntdir" ] && [ -d $mntdir ]; then
+        rmdir $mntdir
+    fi
+    exit $1
+}
+
+init ()
+{
+    echo creating temporary file system and mount point
+    tmpdir=$(mktemp -d)
+    mntdir=$(mktemp -d)
+}
+
+init
+echo starting diod
+$DIOD -c $DIODCONF -f -l "localhost:2006" -x -m -e $tmpdir &
+sleep 1
+
+echo mounting file system
+$DIODMOUNT -n -m -d 2006 localhost:$tmpdir $mntdir || fini 1
+
+echo creating file in regular file system
+dd status=noxfer if=/dev/zero of=$tmpdir/a count=128 || fini 1
+
+echo comparing file in regular and diod file systems
+cmp $tmpdir/a $mntdir/a || fini 1
+
+echo unmounting file system
+umount $mntdir
+
+echo waiting for diod to terminate
+wait
+fini 0

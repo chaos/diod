@@ -1,0 +1,6 @@
+creating temporary file system and mount point
+starting diod
+mounting file system
+unmounting file system
+waiting for diod to terminate
+cleaning up temp dirs

@@ -56,13 +56,14 @@
 #include <mntent.h>
 #define GPL_LICENSED 1
 #include <munge.h>
+#include <pwd.h>
 
 #include "npfs.h"
 
 #include "diod_log.h"
 #include "diod_upool.h"
 
-#define OPTIONS "u:pc:d:nx:o:O:"
+#define OPTIONS "u:pc:d:nx:o:O:m"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -74,6 +75,7 @@ static const struct option longopts[] = {
     {"list-exports",    required_argument,   0, 'x'},
     {"diod-option",     required_argument,   0, 'o'},
     {"diodctl-option",  required_argument,   0, 'O'},
+    {"no-munge-auth",   no_argument,         0, 'm'},
     {0, 0, 0, 0},
 };
 #else
@@ -83,8 +85,9 @@ static const struct option longopts[] = {
 static void  _parse_device     (char *device, char **anamep, char **ipp);
 static void  _create_mungecred (char **credp, char *payload);
 static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
-                                char *opts);
-static void  _diodctl_mount    (char *ip, char *dir, char *port, char *opts);
+                                char *opts, int mopt);
+static void  _diodctl_mount    (char *ip, char *dir, char *port, char *opts,
+                                int mopt);
 static char *_diodctl_getport  (char *dir);
 static int   _diodctl_listexp  (char *dir);
 static void  _umount           (const char *target);
@@ -104,6 +107,7 @@ usage (void)
 "   -d,--diod-port PORT           connect to diod using PORT\n"
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
+"   -m,--no-munge-auth            disable munge authentication\n"
 );
     exit (1);
 }
@@ -116,6 +120,7 @@ main (int argc, char *argv[])
     struct stat sb;
     int popt = 0;
     int nopt = 0;
+    int mopt = 0;
     char *uopt = NULL;
     char *copt = NULL;
     char *dopt = NULL;
@@ -152,6 +157,9 @@ main (int argc, char *argv[])
             case 'O':   /* --diodctl-option OPT[,OPT]... */
                 Oopt = optarg;
                 break;
+            case 'm':   /* --no-munge-auth */
+                mopt = 1;
+                break;
             default:
                 usage ();
         }
@@ -168,7 +176,7 @@ main (int argc, char *argv[])
             msg_exit ("--list-exports cannot be used with -updn");
         if (!(dir = mkdtemp (tmpl)))
             err_exit ("failed to create temporary directory for mount");
-        _diodctl_mount (ip, dir, copt, Oopt);
+        _diodctl_mount (ip, dir, copt, Oopt, mopt);
         free (ip);
         unlink (dir);
         ret = _diodctl_listexp (dir);
@@ -207,19 +215,19 @@ main (int argc, char *argv[])
     _parse_device (device, &aname, &ip);
 
     if (!strcmp (aname, "/diodctl")) {
-        _diodctl_mount (ip, dir, copt, Oopt);
+        _diodctl_mount (ip, dir, copt, Oopt, mopt);
     } else if (popt) {
         char *port;
 
-        _diodctl_mount (ip, dir, copt, Oopt);
+        _diodctl_mount (ip, dir, copt, Oopt, mopt);
         port = _diodctl_getport (dir);
         if (!port)
             exit (1); 
         _umount (dir);
-        _diod_mount (ip, dir, aname, port, oopt);
+        _diod_mount (ip, dir, aname, port, oopt, mopt);
         free (port);
     } else
-        _diod_mount (ip, dir, aname, dopt, oopt);
+        _diod_mount (ip, dir, aname, dopt, oopt, mopt);
 
     free (aname);
     free (ip);
@@ -318,7 +326,21 @@ _create_mungecred (char **credp, char *payload)
 }
 
 static void
-_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
+_get_uname (char **namep)
+{
+    struct passwd *pwd = getpwuid (geteuid ());
+    char *name;
+
+    if (!pwd)
+        msg_exit ("could not look up uid=%d", geteuid ());
+    if (!(name = strdup (pwd->pw_name)))
+        msg_exit ("out of memory");
+    *namep = name;
+}
+
+
+static void
+_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts, int mopt)
 {
     char *options, *cred;
     char access[32];
@@ -326,7 +348,10 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
     /* FIXME: scan opts to handle conflicts with options below */
     /* FIXME: msize should be configurable */
 
-    _create_mungecred (&cred, NULL);
+    if (mopt)
+        _get_uname (&cred);
+    else
+        _create_mungecred (&cred, NULL);
     if (geteuid () != 0) 
         snprintf (access, sizeof (access), ",access=%d", geteuid ());
     if (asprintf (&options, "port=%s,uname=%s,aname=%s,msize=65560%s%s%s",
@@ -340,14 +365,17 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
 }
 
 static void
-_diodctl_mount (char *ip, char *dir, char *port, char *opts)
+_diodctl_mount (char *ip, char *dir, char *port, char *opts, int mopt)
 {
     char *options, *cred;
     char access[32];
    
     /* FIXME: scan opts to handle conflicts with options below */
 
-    _create_mungecred (&cred, NULL);
+    if (mopt)
+        _get_uname (&cred);
+    else
+        _create_mungecred (&cred, NULL);
     if (geteuid () != 0) 
         snprintf (access, sizeof (access), ",access=%d", geteuid ());
     if (asprintf (&options, "port=%s,uname=%s,aname=/diodctl,%s%s%s",
