@@ -1293,7 +1293,7 @@ diod_wstat(Npfid *fid, Npstat *st)
         }
     }
 
-    /* fsync - designated by a "do nothing" wstat, see stat(5.plan9) */
+    /* fsync - designated by a "do nothing" wstat, see 9p.stat(5) */
     if (st->mode == (u32)~0 && st->mtime == (u32)~0 && st->atime == (u32)~0
                             && st->n_uid == (u32)~0 && st->n_gid == (u32)~0
                             && st->length == ~0     && st->name.len == 0) {

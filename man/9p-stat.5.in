@@ -157,9 +157,9 @@ The n_uid, n_gid, and n_muid are numeric hints that clients may use to map
 numeric ids when a string to numeric id mapping facility is not available.
 .LP
 extension[s] is a string describing special files, depending on the mode bit.
-For DMSYMLINK (files, the string is the target of the link.
+For DMSYMLINK files, the string is the target of the link.
 For DMDEVICE files, the string is "b 1 2" for a block device with major 1,
-minor 2. For normal files, this string is empty. 
+minor 2.  For normal files, this string is empty. 
 .LP
 The new mode bits are
 0x02000000 (DMSYMLINK, this file is a symbolic link),
