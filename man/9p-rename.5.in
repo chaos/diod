@@ -1,4 +1,4 @@
-.TH 9p-statfs 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.TH 9p-rename 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
 .SH NAME
 9p rename \- rename a file
 .SH SYNOPSIS

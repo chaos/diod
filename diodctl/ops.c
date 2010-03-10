@@ -56,7 +56,6 @@
 static Npfile       *_ctl_root_create (void);
 static Npfcall      *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname,
                                   Npstr *aname);
-static Npfcall      *_ctl_version (Npconn *conn, u32 msize, Npstr *version);
 
 void
 diodctl_register_ops (Npsrv *srv)
@@ -65,35 +64,7 @@ diodctl_register_ops (Npsrv *srv)
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->debugprintf = msg;
     srv->upool = diod_upool;
-    srv->version = _ctl_version;
     srv->attach = _ctl_attach;
-}
-
-/* Tversion - negotiate 9P protocol version (9P2000.u or bust).
- */
-static Npfcall*
-_ctl_version (Npconn *conn, u32 msize, Npstr *version)
-{
-    Npfcall *ret = NULL;
-
-    if (np_strcmp (version, "9P2000.h") && np_strcmp (version, "9P2000.u")) {
-        np_werror ("unsupported 9P version", EIO);
-        goto done;
-    }
-    if (msize < IOHDRSZ + 1) {
-        np_werror ("msize too small", EIO);
-        goto done;
-    }
-    if (msize > conn->srv->msize)
-        msize = conn->srv->msize;
-
-    np_conn_reset (conn, msize, 1); /* 1 activates 'dotu' */
-    if (!(ret = np_create_rversion (msize, "9P2000.u"))) {
-        np_uerror (ENOMEM);
-        goto done;
-    }
-done:
-    return ret;
 }
 
 /* Tattach - announce a new user, and associate her fid with the root dir.

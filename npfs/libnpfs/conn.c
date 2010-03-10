@@ -52,7 +52,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans)
 	conn->resetting = 0;
 	conn->srv = srv;
 	conn->msize = srv->msize;
-	conn->dotu = srv->dotu;
+	conn->proto_version = srv->proto_version;
 	conn->shutdown = 0;
 	conn->fidpool = np_fidpool_create();
 	conn->trans = trans;
@@ -141,7 +141,7 @@ again:
 		if (n < size)
 			continue;
 
-		if (!np_deserialize(fc, fc->pkt, conn->dotu))
+		if (!np_deserialize(fc, fc->pkt, np_conn_dotu(conn)))
 			break;
 
 		if ((conn->srv->debuglevel & DEBUG_9P_TRACE)
@@ -151,7 +151,7 @@ again:
 			int len = sizeof(s);
 			
 			n += snprintf(s+n, len-n, "<<< (%p) ", conn);
-			n += np_snprintfcall(s+n, len-n, fc, conn->dotu);
+			n += np_snprintfcall(s+n, len-n, fc, np_conn_dotu(conn));
 			conn->srv->debugprintf(s);
 		}
 
@@ -190,7 +190,7 @@ again:
 }
 
 void
-np_conn_reset(Npconn *conn, u32 msize, int dotu)
+np_conn_reset(Npconn *conn, u32 msize, int proto_version)
 {
 	int i, n;
 	Npsrv *srv;
@@ -292,7 +292,7 @@ np_conn_reset(Npconn *conn, u32 msize, int dotu)
 	}
 
 	if (msize) {
-		conn->dotu = dotu;
+		conn->proto_version = proto_version;
 		conn->resetting = 0;
 		conn->fidpool = np_fidpool_create();
 		pthread_cond_broadcast(&conn->resetdonecond);
@@ -347,7 +347,7 @@ np_conn_respond(Npreq *req)
 			int len = sizeof(s);
 			
 			n += snprintf(s+n, len-n, ">>> (%p) ", conn);
-			n += np_snprintfcall(s+n, len-n, rc, conn->dotu);
+			n += np_snprintfcall(s+n, len-n, rc, np_conn_dotu(conn));
 			conn->srv->debugprintf(s);
 		}
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);

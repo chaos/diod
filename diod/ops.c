@@ -101,7 +101,6 @@ typedef struct {
     u32              wc_pos;
 } Fid;
 
-Npfcall     *diod_version(Npconn *conn, u32 msize, Npstr *version);
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
 int          diod_clone  (Npfid *fid, Npfid *newfid);
 int          diod_walk   (Npfid *fid, Npstr *wname, Npqid *wqid);
@@ -156,10 +155,8 @@ char *Eformat = "incorrect extension format";
 void
 diod_register_ops (Npsrv *srv)
 {
-    srv->dotu = 1;
     srv->msize = 65536;
     srv->upool = diod_upool;
-    srv->version = diod_version;
     srv->attach = diod_attach;
     srv->clone = diod_clone;
     srv->walk = diod_walk;
@@ -178,13 +175,12 @@ diod_register_ops (Npsrv *srv)
     srv->connclose = diod_connclose;
     srv->connopen = diod_connopen;
 
-    /* 9p2000.h */
+    srv->statfs = diod_statfs;
+    srv->rename = diod_rename;
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
-    srv->statfs = diod_statfs;
     //srv->plock = diod_lock;
     //srv->flock = diod_flock;
-    srv->rename = diod_rename;
 }
 
 /* Update stat info contained in fid.
@@ -545,36 +541,6 @@ _serverused (void)
     server_used = 1; 
     if ((errnum = pthread_mutex_unlock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
-}
-
-/* Tversion - negotiate 9P protocol version.
- */
-Npfcall*
-diod_version (Npconn *conn, u32 msize, Npstr *version)
-{
-    Npfcall *ret = NULL;
-
-    if (np_strcmp (version, "9P2000.h") != 0) { /* implies 'dotu' as well */
-        np_werror ("unsupported 9P version", EIO);
-        msg ("diod_version: unsupported 9P version");
-        goto done;
-    }
-    if (msize < AIOHDRSZ + 1) {
-        np_werror ("msize too small", EIO);
-        msg ("diod_version: misize to small");
-        goto done;
-    }
-    if (msize > conn->srv->msize)
-        msize = conn->srv->msize;
-
-    np_conn_reset (conn, msize, 1); /* 1 activates 'dotu' */
-    if (!(ret = np_create_rversion (msize, "9P2000.h"))) {
-        np_uerror (ENOMEM);
-        msg ("diod_version: out of memory");
-        goto done;
-    }
-done:
-    return ret;
 }
 
 /* Tattach - announce a new user, and associate her fid with the root dir.

@@ -53,7 +53,6 @@ static Npfcall* np_default_remove(Npfid *);
 static Npfcall* np_default_stat(Npfid *);
 static Npfcall* np_default_wstat(Npfid *, Npstat *);
 
-/* 9p2000.h extensions */
 static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
 static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
 static Npfcall* np_default_statfs(Npfid *);
@@ -71,7 +70,8 @@ np_srv_create(int nwthread)
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
-	srv->dotu = 1;
+	srv->proto_version = NPFS_PROTO_2000U | NPFS_PROTO_2000L
+					      | NPFS_PROTO_2000H;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
 	srv->shuttingdown = 0;
@@ -99,7 +99,6 @@ np_srv_create(int nwthread)
 	srv->wstat = np_default_wstat;
 	srv->upool = NULL;
 
-	/* 9p2000.h extensions */
 	srv->aread = np_default_aread;
 	srv->awrite = np_default_awrite;
 	srv->statfs = np_default_statfs;
@@ -286,88 +285,109 @@ np_wthread_create(Npsrv *srv)
 }
 
 
-
-typedef Npfcall* (*np_fcall)(Npreq *, Npfcall *);
-static np_fcall np_fcalls[] = {
-	np_version,
-	np_auth,
-	np_attach,
-	NULL,
-	np_flush,
-	np_walk,
-	np_open,
-	np_create,
-	np_read,
-	np_write,
-	np_clunk,
-	np_remove,
-	np_stat,
-	np_wstat,
-	np_aread,
-	np_awrite,
-	np_statfs,
-	np_lock,
-	np_flock,
-	np_rename,
-};
-static char *np_fnames[] = {
-	"version",
-	"auth",
-	"attach",
-	NULL,
-	"flush",
-	"walk",
-	"open",
-	"create",
-	"read",
-	"write",
-	"clunk",
-	"remove",
-	"stat",
-	"wstat",
-	"aread",
-	"awrite",
-	"statfs",
-	"lock",
-	"flock",
-	"rename",
-};
-
 static Npfcall*
 np_process_request(Npreq *req)
 {
 	Npconn *conn;
 	Npfcall *tc, *rc;
-	np_fcall f;
-	char *ename;
+	char *ename, *op;
 	int ecode;
 
 	conn = req->conn;
 	rc = NULL;
 	tc = req->tcall;
 
-	f = NULL;
-	if (tc->type<Tfirst && tc->type>Rlast)
-		np_werror("unknown message type", ENOSYS);
-	else
-		f = np_fcalls[(tc->type-Tfirst)/2];
-
 	np_werror(NULL, 0);
-	if (f)
-		rc = (*f)(req, tc);
-	else
-		np_werror("unsupported message", ENOSYS);
-
+	switch (tc->type) {
+		case Tstatfs:
+			rc = np_statfs(req, tc);
+			op = "statfs";
+			break;
+		case Trename:
+			rc = np_rename(req, tc);
+			op = "rename";
+			break;
+		case Tlock:
+			rc = np_lock(req, tc);
+			op = "lock";
+			break;
+		case Tflock:
+			rc = np_flock(req, tc);
+			op = "flock";
+			break;
+		case Taread:
+			rc = np_aread(req, tc);
+			op = "aread";
+			break;
+		case Tawrite:
+			rc = np_awrite(req, tc);
+			op = "awrite";
+			break;
+		case Tversion:
+			rc = np_version(req, tc);
+			op = "version";
+			break;
+		case Tauth:
+			rc = np_auth(req, tc);
+			op = "auth";
+			break;
+		case Tattach:
+			rc = np_attach(req, tc);
+			op = "attach";
+			break;
+		case Tflush:
+			rc = np_flush(req, tc);
+			op = "flush";
+			break;
+		case Twalk:
+			rc = np_walk(req, tc);
+			op = "walk";
+			break;
+		case Topen:
+			rc = np_open(req, tc);
+			op = "open";
+			break;
+		case Tcreate:
+			rc = np_create(req, tc);
+			op = "create";
+			break;
+		case Tread:
+			rc = np_read(req, tc);
+			op = "read";
+			break;
+		case Twrite:
+			rc = np_write(req, tc);
+			op = "write";
+			break;
+		case Tclunk:
+			rc = np_clunk(req, tc);
+			op = "clunk";
+			break;
+		case Tremove:
+			rc = np_remove(req, tc);
+			op = "remove";
+			break;
+		case Tstat:
+			rc = np_stat(req, tc);
+			op = "stat";
+			break;
+		case Twstat:
+			rc = np_wstat(req, tc);
+			op = "wstat";
+			break;
+		default:
+			np_werror("unknown message type", ENOSYS);
+			op = "<unknown>";
+			break;
+	}
 	np_rerror(&ename, &ecode);
 	if (ename != NULL) {
 		if (rc)
 			free(rc);
-		rc = np_create_rerror(ename, ecode, conn->dotu);
+		rc = np_create_rerror(ename, ecode, np_conn_dotu(conn));
 		if ((req->conn->srv->debuglevel & DEBUG_9P_ERRORS)
-		  && req->conn->srv->debugprintf) {
-			req->conn->srv->debugprintf ("%s%s error: %s\n",
-					np_fnames[(tc->type-Tfirst)/2],
-					conn->dotu ? ".u" : "",
+		  			&& req->conn->srv->debugprintf) {
+			req->conn->srv->debugprintf ("%s error: %s\n", op,
 					ecode > 0 ? strerror(ecode) : ename);
 		}
 	}
@@ -464,36 +484,50 @@ np_respond_error(Npreq *req, char *ename, int ecode)
 {
 	Npfcall *rc;
 
-	rc = np_create_rerror(ename, ecode, req->conn->dotu);
+	rc = np_create_rerror(ename, ecode, np_conn_dotu(req->conn));
 	np_respond(req, rc);
 }
 
 static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
-	int dotu;
-	char *ver;
-	Npfcall *rc;
+	int proto_ver = 0;
+	char *ver = NULL;
+	Npfcall *rc = NULL;
 
 	if (msize > conn->srv->msize)
 		msize = conn->srv->msize;
 
-	dotu = 0;
-	if (np_strcmp(version, "9P2000.u")==0 && conn->srv->dotu) {
-		ver = "9P2000.u";
-		dotu = 1;
-	} else if (np_strncmp(version, "9P2000", 6) == 0)
-		ver = "9P2000";
-	else
-		ver = NULL;
-
+	if (!np_strcmp(version, "9P2000.u")) {
+		if (conn->proto_version & NPFS_PROTO_2000U) {
+			proto_ver |= NPFS_PROTO_2000U;
+			ver = "9P2000.u";
+		} else
+			np_werror("unsupported 9P version", EIO);
+	} else if (!np_strcmp(version, "9P2000.L")) {
+		if (conn->proto_version & NPFS_PROTO_2000L) {
+			proto_ver |= NPFS_PROTO_2000U | NPFS_PROTO_2000L;
+			ver = "9P2000.L";
+		} else
+			np_werror("unsupported 9P version", EIO);
+	} else if (!np_strcmp(version, "9P2000.H")) {
+		if (conn->proto_version & NPFS_PROTO_2000H) {
+			proto_ver |= NPFS_PROTO_2000U | NPFS_PROTO_2000L
+						      | NPFS_PROTO_2000H;
+			ver = "9P2000.H";
+		} else
+			np_werror("unsupported 9P version", EIO);
+	}
 	if (msize < IOHDRSZ)
 		np_werror("msize too small", EIO);
-	else if (ver) {
-		np_conn_reset(conn, msize, dotu);
-		rc = np_create_rversion(msize, ver);
-	} else
-		np_werror("unsupported 9P version", EIO);
+	if ((proto_ver & NPFS_PROTO_2000H) && msize < AIOHDRSZ + 1)
+		np_werror("msize too small", EIO);
+
+	if (!np_haserror ()) {
+		np_conn_reset(conn, msize, proto_ver);
+		if (!(rc = np_create_rversion(msize, ver)))
+			np_uerror(ENOMEM);
+	}
 
 	return rc;
 }

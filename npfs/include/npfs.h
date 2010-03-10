@@ -90,7 +90,21 @@ typedef struct Nprename Nprename;
 
 /* message types */
 enum {
-	Tfirst		= 100,
+	/* 9P2000.L */
+	Tstatfs         = 8,
+	Rstatfs,
+	Trename         = 20,
+	Rrename,
+	Tlock           = 52,
+	Rlock,
+	Tflock          = 54,
+	Rflock,
+	/* 9P2000.H */
+	Taread          = 80,
+	Raread,
+	Tawrite         = 82,
+	Rawrite,
+	/* 9P2000 */
 	Tversion	= 100,
 	Rversion,
 	Tauth		= 102,
@@ -119,21 +133,6 @@ enum {
 	Rstat,
 	Twstat		= 126,
 	Rwstat,
-	/* 9p2000.h extensions */
-	Taread          = 128,
-	Raread,
-	Tawrite         = 130,
-	Rawrite,
-	Tstatfs         = 132,
-	Rstatfs,
-	Tlock           = 134,
-	Rlock,
-	Tflock          = 136,
-	Rflock,
-	Trename         = 138,
-	Rrename,
-
-	Rlast
 };
 
 /* lock cmd values */
@@ -386,7 +385,7 @@ struct Npconn {
 	pthread_cond_t	resetdonecond;
 
 	u32		msize;
-	int		dotu;
+	int		proto_version;
 	int		shutdown;
 	Npsrv*		srv;
 	Nptrans*	trans;
@@ -437,9 +436,15 @@ enum {
         DEBUG_9P_ERRORS=0x02,
 };
 
+enum {
+	NPFS_PROTO_2000U=0x01,
+	NPFS_PROTO_2000L=0x02,
+	NPFS_PROTO_2000H=0x04,
+};
+
 struct Npsrv {
 	u32		msize;
-	int		dotu;		/* 9P2000.u support flag */
+	int		proto_version;
 	void*		srvaux;
 	void*		treeaux;
 	int		debuglevel;
@@ -754,3 +759,12 @@ Npfcall *npfile_wstat(Npfid *fid, Npstat *stat);
 
 void *np_malloc(int);
 int np_mount(char *mntpt, int mntflags, char *opts);
+
+static inline int np_conn_dotu (Npconn *conn)
+{
+ 	return conn->proto_version & NPFS_PROTO_2000U;
+}
+static inline int np_srv_dotu (Npsrv *srv)
+{
+ 	return srv->proto_version & NPFS_PROTO_2000U;
+}

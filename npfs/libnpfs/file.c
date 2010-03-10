@@ -640,9 +640,8 @@ npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		cf = f->dirent;
 		while (n<count && cf!=NULL) {
 			file2wstat(cf, &wstat);
-			i = np_serialize_stat(&wstat, ret->data + n, count - n - 1,
-				fid->conn->dotu);
-
+			i = np_serialize_stat(&wstat, ret->data + n,
+				count - n - 1, np_conn_dotu(fid->conn));
 			if (i==0)
 				break;
 
@@ -798,7 +797,7 @@ npfile_stat(Npfid *fid)
 	file2wstat(file, &wstat);
 	pthread_mutex_unlock(&file->lock);
 
-	return np_create_rstat(&wstat, fid->conn->dotu);
+	return np_create_rstat(&wstat, np_conn_dotu(fid->conn));
 }
 
 Npfcall*
@@ -863,7 +862,7 @@ done:
 void
 npfile_init_srv(Npsrv *srv, Npfile *root)
 {
-	srv->dotu = 1;
+	srv->proto_version = NPFS_PROTO_2000U;
 	srv->attach = npfile_attach;
 	srv->clone = npfile_clone;
 	srv->walk = npfile_walk;

@@ -40,4 +40,4 @@ umount $mntdir
 
 echo waiting for diod to terminate
 wait
-fini
+fini 0

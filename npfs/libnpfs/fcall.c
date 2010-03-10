@@ -420,7 +420,7 @@ np_create(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->perm&(Dmnamedpipe|Dmsymlink|Dmlink|Dmdevice|Dmsocket)
-	&& !fid->conn->dotu) {
+					&& !np_conn_dotu(fid->conn)) {
 		np_werror(Eperm, EPERM);
 		goto done;
 	}
