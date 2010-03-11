@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-TEST=$(basename $0)
-# test $(id -u) == 0 || exit 77 #skip if not root
+TEST=$(basename $0 | cut -d- -f1)
+test $(id -u) == 0 || exit 77 #skip if not root
 
 ./twrite >$TEST.out 2>&1
 

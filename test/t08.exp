@@ -1,0 +1,2 @@
+diodmount: opt string='mickey=42,goofey=yes,donald,foo,bar,baz,lastone'
+diodmount: opt string='goofey=yes,donald,lastone,mickey=string,foo=12,bar=15,baz'

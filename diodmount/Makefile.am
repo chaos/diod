@@ -12,4 +12,6 @@ diodmount_LDADD = \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 diodmount_SOURCES = \
-	diodmount.c
+	diodmount.c \
+	opt.c \
+	opt.h

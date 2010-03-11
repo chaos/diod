@@ -33,7 +33,7 @@ $DIOD -c $DIODCONF -f -l "localhost:2006" -x -m -e $tmpdir &
 sleep 1
 
 echo mounting file system
-$DIODMOUNT -n -m -d 2006 localhost:$tmpdir $mntdir || fini 1
+$DIODMOUNT -o uname=root,port=2006 -n localhost:$tmpdir $mntdir || fini 1
 
 echo unmounting file system
 umount $mntdir

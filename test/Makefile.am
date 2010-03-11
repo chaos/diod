@@ -2,7 +2,7 @@ check_PROGRAMS = tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/diod"
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08
 
 CLEANFILES = *.out *.diff
 
