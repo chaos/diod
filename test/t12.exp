@@ -1,4 +1,5 @@
 starting diod
 mounting
+running statfs comparison
 unmounting
 waiting for diod to terminate

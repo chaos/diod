@@ -227,8 +227,27 @@ target_alias = @target_alias@
 target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
-TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/src/diod"
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08
+TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
+	"PATH_DIODCTL=$(top_builddir)/diodctl/diodctl" \
+	"PATH_DIODMOUNT=$(top_builddir)/diodmount/diodmount" \
+	"PATH_DIODCONF=$(top_builddir)/etc/diod.conf" \
+	"PATH_MNTDIR=$(shell readlink -f $(top_builddir)/test/mnt.d)" \
+	"PATH_EXPDIR=$(shell readlink -f $(top_builddir)/test/exp.d)"
+TESTS = \
+	t00-pthreads-setfsuid \
+	t01-setfsuid-setgroups \
+	t02-pthreads-setgroups \
+	t03-pthreads-seteuid \
+	t04-pthreads-fcntl \
+	t05-mount-sanity \
+	t06-read-sanity \
+	t07-write-sanity \
+	t08-option-parse \
+	t09-mount-9P2000 \
+	t10-mount-9P2000.u \
+	t11-mount-9P2000.L \
+	t12-mount-9P2000.H
+
 CLEANFILES = *.out *.diff
 AM_CPPFLAGS = \
         -I../npfs/include -I../liblsd -I../common
@@ -246,6 +265,7 @@ tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
+tstatfs_SOURCES = tstatfs.c $(common_sources)
 all: all-am
 
 .SUFFIXES:
@@ -504,8 +524,6 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-clean: clean-am
-
 clean-am: clean-checkPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
@@ -564,6 +582,14 @@ uninstall-am: uninstall-info-am
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-info-am
 
+
+$(TESTS): $(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d
+
+$(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d:
+	mkdir -p $@
+
+clean: clean-am
+	rmdir $(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:

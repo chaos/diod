@@ -1,8 +1,32 @@
-check_PROGRAMS = tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl
+check_PROGRAMS = tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl tstatfs
 
 TESTS_ENVIRONMENT = env
-TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/diod"
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08
+TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
+TESTS_ENVIRONMENT += "PATH_DIODCTL=$(top_builddir)/diodctl/diodctl"
+TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/diodmount/diodmount"
+TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
+TESTS_ENVIRONMENT += "PATH_MNTDIR=$(shell readlink -f $(top_builddir)/test/mnt.d)"
+TESTS_ENVIRONMENT += "PATH_EXPDIR=$(shell readlink -f $(top_builddir)/test/exp.d)"
+
+TESTS = \
+	t00-pthreads-setfsuid \
+	t01-setfsuid-setgroups \
+	t02-pthreads-setgroups \
+	t03-pthreads-seteuid \
+	t04-pthreads-fcntl \
+	t05-mount-sanity \
+	t06-read-sanity \
+	t07-write-sanity \
+	t08-option-parse \
+	t09-mount-9P2000 \
+	t10-mount-9P2000.u \
+	t11-mount-9P2000.L \
+	t12-mount-9P2000.H
+
+$(TESTS): $(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d
+
+$(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d:
+	mkdir -p $@
 
 CLEANFILES = *.out *.diff
 
@@ -23,3 +47,7 @@ tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
+tstatfs_SOURCES = tstatfs.c $(common_sources)
+
+clean: clean-am
+	rmdir $(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d

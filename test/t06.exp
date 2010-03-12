@@ -1,10 +1,8 @@
-creating temporary file system and mount point
 starting diod
-mounting file system
+mounting
 creating file in regular file system
 128+0 records in
 128+0 records out
 comparing file in regular and diod file systems
-unmounting file system
+unmounting
 waiting for diod to terminate
-cleaning up temp dirs

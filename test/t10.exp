@@ -1,0 +1,11 @@
+starting diod
+mounting
+running statfs comparison
+f_type differs
+f_blocks differs
+f_bfree differs
+f_bavail differs
+f_files differs
+f_ffree differs
+unmounting
+waiting for diod to terminate
