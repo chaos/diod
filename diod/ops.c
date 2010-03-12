@@ -1191,15 +1191,36 @@ diod_wstat(Npfid *fid, Npstat *st)
     }
     if (_fidstat (f) < 0)
         goto done;
-    if (st->name.len != 0) {
-        np_werror ("Rename via wstat is deprecated in 9P2000.h", EIO);
-        msg ("diod_wstat: rejecting deprecated wstat rename");
-        goto done;
-    }
     if (!(ret = np_create_rwstat())) {
         np_uerror (ENOMEM);
         msg ("diod_wstat: out of memory");
         goto done;
+    }
+
+    /* rename */
+    if (st->name.len != 0) {
+        char *p = strrchr(f->path, '/');
+        char *npath;
+
+        if (!p)
+            p = f->path + strlen(f->path);
+        if (!(npath = malloc(st->name.len + (p - f->path) + 2))) {
+            msg ("diod_wstat: out of memory");
+            goto done;
+        }
+        memcpy(npath, f->path, p - f->path);
+        npath[p - f->path] = '/';
+        memcpy(npath + (p - f->path) + 1, st->name.str, st->name.len);
+        npath[(p - f->path) + 1 + st->name.len] = 0;
+        if (strcmp(npath, f->path) != 0) {
+            if (rename(f->path, npath) < 0) {
+                np_uerror (errno);
+                free (npath);
+                goto done;
+            }
+            free (f->path);
+            f->path = npath;
+        }
     }
 
     /* chmod */

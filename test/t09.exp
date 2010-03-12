@@ -7,5 +7,6 @@ f_bfree differs
 f_bavail differs
 f_files differs
 f_ffree differs
+6 differences
 unmounting
 waiting for diod to terminate

@@ -7,5 +7,9 @@ f_bfree differs
 f_bavail differs
 f_files differs
 f_ffree differs
+6 differences
+trying rename
+trying rename to new directory
+rename: Invalid cross-device link
 unmounting
 waiting for diod to terminate

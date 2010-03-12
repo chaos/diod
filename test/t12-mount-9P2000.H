@@ -11,6 +11,17 @@ doit ()
 			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
 	echo running statfs comparison
 	./tstatfs $PATH_EXPDIR $PATH_MNTDIR || :  # should succeed
+
+	echo trying rename
+	touch $PATH_MNTDIR/a
+	./trename $PATH_MNTDIR/a $PATH_MNTDIR/b
+
+	echo trying rename to new directory
+	mkdir -p $PATH_MNTDIR/dir
+	./trename $PATH_MNTDIR/b $PATH_MNTDIR/dir/c
+	rm -f $PATH_MNTDIR/dir/c
+	rmdir $PATH_MNTDIR/dir
+
 	echo unmounting
 	umount $PATH_MNTDIR
 	echo waiting for diod to terminate

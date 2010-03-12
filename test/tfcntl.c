@@ -27,7 +27,7 @@ typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 static state_t         state = S0;
 static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
-static char path[] = "/tmp/testfsuid.XXXXXX";
+static char path[] = "/tmp/test.fcntl.XXXXXX";
 static int fd = -1;
 
 static void
@@ -57,6 +57,10 @@ mkfile (void)
     fd = _mkstemp (path);
     if (write (fd, buf, sizeof (buf)) < 0)
         err_exit ("write");
+    if (close (fd) < 0)
+        err_exit ("close");
+    if ((fd = open (path, O_RDWR)) < 0)
+        err_exit ("open %s", path);
 }
 
 static void *proc1 (void *a)
@@ -69,7 +73,7 @@ static void *proc1 (void *a)
     f.l_start = 0;
     f.l_len = 64;
     if (fcntl (fd, F_SETLK, &f) < 0)
-        err_exit ("proc1: fcntl");
+        err_exit ("proc1: fcntl F_SETLK");
     change_state (S1);
 
     wait_state (S2);
@@ -88,7 +92,7 @@ static void *proc2 (void *a)
     f.l_start = 0;
     f.l_len = 64;
     if (fcntl (fd, F_SETLK, &f) < 0)
-        err_exit ("proc2: fcntl");
+        err_exit ("proc2: fcntl F_SETLK");
     change_state (S2);
 
     wait_state (S3);
@@ -101,6 +105,7 @@ main (int arg, char *argv[])
     pthread_t t1, t2;
     struct flock f;
     pid_t pid;
+    int status;
 
     diod_log_init (argv[0]);
 
@@ -113,14 +118,14 @@ main (int arg, char *argv[])
     f.l_start = 0;
     f.l_len = 64;
     if (fcntl (fd, F_SETLK, &f) < 0)
-        err_exit ("proc0: fcntl");
+        err_exit ("proc0: fcntl F_SETLK");
     msg ("proc0: locking bytes 32-64");
     f.l_type = F_WRLCK;
     f.l_whence = SEEK_SET;
     f.l_start = 32;
     f.l_len = 64;
     if (fcntl (fd, F_SETLK, &f) < 0)
-        err_exit ("proc0: fcntl");
+        err_exit ("proc0: fcntl F_SETLK");
 
     /* two threads contending for write lock */
     _create (&t1, proc1, NULL);
@@ -131,24 +136,55 @@ main (int arg, char *argv[])
 
     fflush (stderr);
 
-    /* two processes contending for write lock */
+    /* two processes contending for write lock - inherited fd */
     switch (pid = fork ()) {
         case -1:
             err_exit ("fork");
         case 0: /* child */
-            msg ("proc0(child): locking bytes 32-64");
+            msg ("child0: locking bytes 32-64");
             f.l_type = F_WRLCK;
             f.l_whence = SEEK_SET;
             f.l_start = 32;
             f.l_len = 64;
             if (fcntl (fd, F_SETLK, &f) < 0)
-                err_exit ("proc0(child): ");
-            msg ("proc0(child): unexpected success");
+                err_exit ("child0: fcntl F_SETLK");
+            msg ("child0: unexpected success");
             break;
         default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("wait");
             break;
     }
 
+    /* two processes contending for write lock - seperate fd's */
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            if (close (fd) < 0)
+                err_exit ("child1: close");
+            if ((fd = open (path, O_RDWR)) < 0)
+                err_exit ("open %s (child)", path);
+            msg ("child1: locking bytes 32-64");
+            f.l_type = F_WRLCK;
+            f.l_whence = SEEK_SET;
+            f.l_start = 32;
+            f.l_len = 64;
+            if (fcntl (fd, F_SETLK, &f) < 0)
+                err_exit ("child1: fcntl F_SETLK");
+            msg ("child1: unexpected success");
+            close (fd);
+            break;
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("wait");
+            break;
+    }
+
+    if (close (fd) < 0)
+        err_exit ("close");
+    if (unlink (path) < 0)
+        err_exit ("unlink %s", path);
     exit (0);
 }
 

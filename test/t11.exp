@@ -1,5 +1,8 @@
 starting diod
 mounting
 running statfs comparison
+0 differences
+trying rename
+trying rename to new directory
 unmounting
 waiting for diod to terminate
