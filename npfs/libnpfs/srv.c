@@ -498,7 +498,9 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 	if (msize > conn->srv->msize)
 		msize = conn->srv->msize;
 
-	if (!np_strcmp(version, "9P2000.u")) {
+	if (!np_strcmp(version, "9P2000")) {
+		ver = "9P2000";
+	} else if (!np_strcmp(version, "9P2000.u")) {
 		if (conn->proto_version & NPFS_PROTO_2000U) {
 			proto_ver |= NPFS_PROTO_2000U;
 			ver = "9P2000.u";
@@ -517,7 +519,9 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 			ver = "9P2000.H";
 		} else
 			np_werror("unsupported 9P version", EIO);
-	}
+	} else
+		np_werror("unsupported 9P version", EIO);
+
 	if (msize < IOHDRSZ)
 		np_werror("msize too small", EIO);
 	if ((proto_ver & NPFS_PROTO_2000H) && msize < AIOHDRSZ + 1)

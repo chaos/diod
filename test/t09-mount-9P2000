@@ -18,9 +18,7 @@ doit ()
 }
 
 TEST=$(basename $0 | cut -d- -f1)
-exit 1 # FIXME: crashes system!  skip for now
 test $(id -u) == 0 || exit 77 #skip if not root
-
 
 doit >$TEST.out 2>&1
 

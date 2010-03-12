@@ -81,8 +81,8 @@ static void *proc1 (void *a)
 
 static void *proc2 (void *a)
 {
-    assert (check_fsid ("task2", 0, 0));
     wait_state (S1);
+    assert (check_fsid ("task2", 0, 0));
     change_fsid ("task2", TEST_UID, TEST_GID);
     assert (check_fsid ("task2", TEST_UID, TEST_GID));
     change_state (S2);
