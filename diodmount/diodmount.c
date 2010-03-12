@@ -326,6 +326,7 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
     opt_add (o, "port=%s", port ? port : "10006");
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
+    opt_add (o, "version=9P2000.H");
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)
