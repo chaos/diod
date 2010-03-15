@@ -24,7 +24,8 @@ TESTS = \
 	t11-mount-9P2000.L \
 	t12-mount-9P2000.H \
 	t13-rename-across-dirs \
-	t14-statfs
+	t14-statfs \
+	t15-fsync
 
 $(TESTS): mnt.d exp.d
 
