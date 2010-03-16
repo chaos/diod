@@ -81,10 +81,12 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
 
     if (nafid) {    /* 9P Tauth not supported */
         np_werror (Enoauth, EIO);
+         msg ("diodctl_attach: 9P Tauth is not supported");
         goto done;
     }
     if (np_strcmp (aname, "/diodctl") != 0) {
         np_uerror (EPERM);
+        msg ("diodctl_attach: mount attempt for aname other than /diodctl");
         goto done;
     }
     /* Munge authentication involves the upool and trans layers:
@@ -99,23 +101,28 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
         } else {
             if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);
+                msg ("diodctl_attach: attach rejected from unauthenticated user");
                 goto done;
             }
             if (auid != 0 && auid != fid->user->uid) {
                 np_uerror (EPERM);
+                msg ("diodctl_attach: attach rejected from unauthenticated user");
                 goto done;
             }
         }
     }
     if (!npfile_checkperm (root, fid->user, 4)) {
         np_uerror (EPERM);
+        msg ("diodctl_attach: root file mode denies access for user");
         goto done;
     }
     if (!(f = npfile_fidalloc (root, fid))) {
+        msg ("diodctl_attach: out of memory");
         np_uerror (ENOMEM);
         goto done;
     }
     if (!(ret = np_create_rattach (&root->qid))) {
+        msg ("diodctl_attach: out of memory");
         np_uerror (ENOMEM);
         goto done;
     }
@@ -185,12 +192,12 @@ static int
 _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
-    char *ip = diod_trans_get_ip (fid->conn->trans);
     int ret = 0;
 
-    if (!diod_conf_get_allowprivate ())
+    if (!diod_conf_get_allowprivate ()) {
         np_uerror (EPERM);
-    else if (diodctl_serv_create (fid->user, ip))
+        msg ("diodctl_write:  diodctl is not configured for private mounts");
+    } else if (diodctl_serv_create (fid->user))
         ret = count;
     return ret;
 }

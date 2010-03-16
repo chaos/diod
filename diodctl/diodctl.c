@@ -212,13 +212,14 @@ main(int argc, char **argv)
         msg_exit ("must run as root");
     _setrlimit ();
 
+    if (!diod_conf_get_foreground ())
+        _daemonize ();
+
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
     if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_diodctllisten ()))
         msg_exit ("failed to set up listen ports");
-    if (!diod_conf_get_foreground ())
-        _daemonize ();
 
     /* FIXME: temp file created by diod_conf_mkconfig () needs cleanup */
     diodctl_serv_init (diod_conf_mkconfig ());
@@ -236,12 +237,8 @@ _daemonize (void)
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
 
-    if (chdir (rdir) < 0) {
-        err ("warning: chdir %s", rdir);
-        if (chdir ("/") < 0)
-            err_exit ("chdir /");
-    }
-
+    if (chdir (rdir) < 0 && chdir ("/") < 0)
+        err_exit ("chdir /");
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();

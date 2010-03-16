@@ -1,0 +1,11 @@
+2010-03-16 Jim Garlick <garlick@llnl.gov>
+
+	* diod/diod.c, diodctl/diodctl.c : Daemonize before listening or
+	daemon () closes our ports for us.  Remove log complaints about chdir
+	to rundir.
+
+	* diodctl/ops.c : Include a log message for all attach failures.
+
+2010-03-16 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre1

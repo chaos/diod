@@ -223,6 +223,9 @@ main(int argc, char **argv)
     if (geteuid () == 0)
         _setrlimit ();
 
+    if (!diod_conf_get_foreground ())
+        _daemonize ();
+
     /* drop privileges, unless running for multiple users */
     if (diod_conf_get_runasuid (&uid))
         diod_become_user (NULL, uid, 1);
@@ -240,9 +243,6 @@ main(int argc, char **argv)
             msg_exit ("failed to set up listen ports");
     }
 
-    if (!diod_conf_get_foreground ())
-        _daemonize ();
-
     diod_register_ops (srv);
     diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
     /*NOTREACHED*/
@@ -257,11 +257,8 @@ _daemonize (void)
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
 
-    if (chdir (rdir) < 0) {
-        err ("warning: chdir %s", rdir);
-        if (chdir ("/") < 0)
-            err_exit ("chdir /");
-    }
+    if (chdir (rdir) < 0 && chdir ("/") < 0)
+        err_exit ("chdir /");
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();

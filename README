@@ -13,3 +13,7 @@ TODO
 - mount generates attach + stat / - can we cache stat / result to avoid
   touching all the file system at mount time (e.g. when doing it at the
   beginning of every cluster job)?  If just one fs is down, everything hangs.
+- diodmount should umount control file system when it aborts for other reasons
+- init scripts 'restart' fails to start server if it is not already running
+- init scripts should create rundir if it doesn't exist
+- diodctl dynamic allocation of ports needs to use all server interfaces
