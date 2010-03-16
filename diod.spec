@@ -12,11 +12,11 @@ Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 # tcp_wrappers-devel on rhel6
 BuildRequires: tcp_wrappers
 BuildRequires: zlib-devel
-BuildRequires: lua
+BuildRequires: lua-devel
 BuildRequires: munge-devel
 
 %description
-diod is a 9P2000.h server used in combination with the kernel v9fs file
+diod is a 9P server used in combination with the kernel v9fs file
 system for I/O forwarding on Linux clusters.
 
 %prep
