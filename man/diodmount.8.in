@@ -29,32 +29,15 @@ This option can only be used in conjunction with \fI--mount-user\fR.
 .I "-n, --no-mtab"
 Do not update /etc/mtab.  This may be appropriate, for example, when
 the file system is mounted in a private name space.
-.TP
-.I "-c, --diodctl-port PORT"
-Connect to the diodctl server on a port other than its default (10005).
-.TP
-.I "-d, --diod-port PORT"
-Connect to the diod server on a port other than its default (10006).
-This option does not work with \fI--private-server\fR
-as a port will be dynamically assigned to the private server.
-.TP
 .I "-o, --diod-options OPT,[OPT,...]"
-Pass additional 9P mount options when mounting the 
-.B diod
-server.
-Do not specify the \fIport\fR, \fIuname\fR, \fIaname\fR, \fImsize\fR,
-or \fIaccess\fR options as 
-.B diodmount
-already sets the value of these options.
+Pass additional 9P mount options when mounting the \fBdiod\fR server.
+Options specified in this way override the options that \fBdiodmount\fR
+sets up internally.
 .TP
 .I "-O, --diodctl-options OPT,[OPT,...]"
-Pass additional 9P mount when mouting the
-.B diodctl
-server.
-Do not specify the \fIport\fR, \fIuname\fR, \fIaname\fR, or \fIaccess\fR
-options as 
-.B diodmount
-already sets the value of these options.
+Pass additional 9P mount when mouting the \fBdiodctl\fR server.
+Options specified in this way override the options that \fBdiodmount\fR
+sets up internally.
 .SH "EXAMPLES"
 .LP
 List the file systems exported by tycho42:
