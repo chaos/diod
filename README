@@ -16,4 +16,3 @@ TODO
 - diodmount should umount control file system when it aborts for other reasons
 - init scripts 'restart' fails to start server if it is not already running
 - init scripts should create rundir if it doesn't exist
-- diodctl dynamic allocation of ports needs to use all server interfaces
