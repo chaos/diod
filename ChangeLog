@@ -1,10 +1,17 @@
-2010-03-16 Jim Garlick <garlick@llnl.gov>
+2010-03-17 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c, diodctl/diodctl.c : Daemonize before listening or
 	daemon () closes our ports for us.  Remove log complaints about chdir
 	to rundir.
 
 	* diodctl/ops.c : Include a log message for all attach failures.
+
+	* test/Makefile.am : Remove test directories only if they exist.
+
+	* common/diod_sock.[ch], diodctl/serv.c : Fix a bug in the testing
+	of the connection to private diod server.  Also restructure the code
+	to test all of the listen addresses until successful.  Improve
+	logging on failure.
 
 2010-03-16 Jim Garlick <garlick@llnl.gov>
 

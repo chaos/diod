@@ -121,6 +121,7 @@ main(int argc, char **argv)
     struct pollfd *fds = NULL;
     int nfds = 0;
     uid_t uid;
+    List hplist;
    
     diod_log_init (argv[0]); 
     if (!isatty (STDERR_FILENO))
@@ -236,10 +237,11 @@ main(int argc, char **argv)
     if (!srv)
         msg_exit ("out of memory");
     if (Fopt) {
-        if (!diod_sock_listen_fds (&fds, &nfds, Fopt))
+        if (!diod_sock_listen_first_nfds (&fds, &nfds, Fopt))
             msg_exit ("failed to set up listen ports");
     } else {
-        if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_diodlisten ()))
+        hplist = diod_conf_get_diodlisten ();
+        if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
             msg_exit ("failed to set up listen ports");
     }
 

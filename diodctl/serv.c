@@ -43,6 +43,7 @@
 #include <poll.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <netdb.h>
 
 #include "npfs.h"
 #include "list.h"
@@ -58,7 +59,7 @@
 typedef struct {
     uid_t uid;              /* uid diod child is running as */
     pid_t pid;              /* pid of diod child */
-    char *name;             /* port */
+    char *port;             /* port */
     pthread_t wait_thread;  /* thread to call waitpid () on child */
     struct pollfd *fds;     /* listen fds passed to child */
     int nfds;               /* count of above */
@@ -77,7 +78,6 @@ static char *path_config = NULL;
 #define BASE_PORT       1942 /* arbitrary non-privileged port */
 #define MAX_PORT        (BASE_PORT + 1024)
 
-
 /* Free server struct.  Suitable for cast to (ListDelF).
  */
 static void
@@ -85,8 +85,8 @@ _free_server (Server *s)
 {
     int i;
 
-    if (s->name)
-        free (s->name);
+    if (s->port)
+        free (s->port);
     if (s->pid != 0) {
         if (kill (s->pid, SIGTERM) < 0)
             err ("could not send SIGTERM to pid %d", s->pid);
@@ -204,20 +204,24 @@ _wait_pid (void *arg)
         if (pid == s->pid) {
             if (WIFEXITED (status)) {
                 if (WEXITSTATUS (status) != 0)
-                    msg ("%s exited with %d", s->name, WEXITSTATUS (status));
+                    msg ("diod (port %s user %d) exited with %d",
+                         s->port, s->uid, WEXITSTATUS (status));
             } else if (WIFSIGNALED (status)) {
-                msg ("%s killed by signal %d", s->name, WTERMSIG (status));
+                msg ("diod (port %s user %d) killed by signal %d",
+                      s->port, s->uid, WTERMSIG (status));
             } else if (WIFSTOPPED(status)) {
-                msg ("%s stopped by signal %d", s->name, WSTOPSIG(status));
+                msg ("diod (port %s user %d) stopped by signal %d",
+                     s->port, s->uid, WSTOPSIG(status));
                 continue;
             } else if (WIFCONTINUED(status)) {
-                msg ("%s continued", s->name);
+                msg ("diod (port %s user %d) continued",
+                     s->port, s->uid);
                 continue;
             }
         }
     } while (pid < 0 && errno == EINTR);
     if (pid < 0)
-        err ("wait for %s", s->name);
+        err ("wait for diod (port %s user %d)", s->port, s->uid);
     else
         s->pid = 0; /* prevent _free_server () from sending signal */
     _remove_server (s);
@@ -304,23 +308,55 @@ _exec_server (Server *s)
     _exit (1);
 }
 
+/* Dynamically allocate a port for diod to listen on
+ * in the range of BASE_PORT:MAX_PORT.
+ * Assign port string to *portp (caller to free).
+ * Expand *fdsp and *nfdsp to include the new file descriptor(s).
+ * Return the number of file descriptors opened (can return 0).
+ */
+static int
+_alloc_ports (List l, struct pollfd **fdsp, int *nfdsp, char **portp)
+{
+    int i = BASE_PORT;
+    char *port;
+    int ret = 0;
+    int flags = DIOD_SOCK_SKIPLISTEN | DIOD_SOCK_QUIET_EADDRINUSE;
+
+    if (!(port = malloc (NI_MAXSERV))) {
+        msg ("out of memory");
+        goto done;
+    }
+    for (i = BASE_PORT; i <= MAX_PORT; i++) {
+        snprintf (port, NI_MAXSERV, "%d", i);
+        ret = diod_sock_listen_hostport_list (l, fdsp, nfdsp, port, flags);
+        if (ret > 0) {
+            *portp = port;
+            break;
+        }
+    }
+done:
+    if (ret == 0 && port)
+        free (port);
+    return ret;
+}
+
 /* Spawn a new diod daemon running as [uid].
  * We are holding serverlist->lock.
  */
 static Server *
-_new_server (Npuser *user, char *ip)
+_new_server (Npuser *user)
 {
+    List l = diod_conf_get_diodctllisten ();
     int i, error;
     Server *s = NULL;
-    int fd;
 
     if (!(s = _alloc_server ()))
         goto done;
 
     s->uid = user->uid;
 
-    if (!diod_sock_setup_alloc (ip, &s->fds, &s->nfds, &s->name)) {
-        msg ("failed to allocate port for user %d on %s", user->uid, ip);
+    if (!_alloc_ports (l, &s->fds, &s->nfds, &s->port)) {
+        msg ("failed to allocate diod port for user %d", user->uid);
         np_uerror (EIO);
         goto done;
     }
@@ -330,6 +366,7 @@ _new_server (Npuser *user, char *ip)
     switch (s->pid = fork ()) {
         case -1:
             np_uerror (errno);
+            err ("fork error while starting diod server");
             break;
         case 0: /* child */
             _exec_server (s);
@@ -339,15 +376,18 @@ _new_server (Npuser *user, char *ip)
     }
 
     /* connect (with retries) until server responds */
-    if ((fd = diod_sock_connect (ip, s->name, 30, 100)) == -1)
+    if (!diod_sock_tryconnect (l, s->port, 30, 100)) {
+        msg ("could not connect to new diod server - maybe it didn't start?");
         goto done;
-    close (fd);
+    }
     if ((error = pthread_create (&s->wait_thread, NULL, _wait_pid, s))) {
         np_uerror (error);
+        errn (error, "could not start thread to wait on new diod server");
         goto done; 
     }
     if (!list_append (serverlist->servers, s)) {
         np_uerror (ENOMEM);
+        msg ("out of memory while accounting for new diod server");
         goto done;
     }
 done:
@@ -362,12 +402,12 @@ done:
     return s;
 }
 
-/* Get servername for a particular user.
+/* Get server port for a particular user.
  * Copy its description starting at 'offset' into 'data', max 'count' bytes.
  * This backs the read handler for 'server', hence the funny args.
  *
  * FIXME: improbable case: read is split into smaller chunks,
- * and server name changes in between reads.
+ * and server port changes in between reads.
  */
 int
 diodctl_serv_getname (Npuser *user, u64 offset, u32 count, u8* data)
@@ -382,12 +422,12 @@ diodctl_serv_getname (Npuser *user, u64 offset, u32 count, u8* data)
     }
     s = list_find_first (serverlist->servers, (ListFindF)_smatch, &user->uid);
     if (s) {
-        cpylen = strlen (s->name) - offset;
+        cpylen = strlen (s->port) - offset;
         if (cpylen > count)
             cpylen = count;
         if (cpylen < 0)
             cpylen = 0;
-        memcpy (data, s->name + offset, cpylen);
+        memcpy (data, s->port + offset, cpylen);
     } else
         np_uerror (ESRCH);
     if ((err = pthread_mutex_unlock (&serverlist->lock))) {
@@ -415,7 +455,7 @@ diodctl_serv_create (Npuser *user, char *ip)
     /* FIXME: what if found server is listening on wrong ip? */
     s = list_find_first (serverlist->servers, (ListFindF)_smatch, &user->uid);
     if (!s)
-        s = _new_server (user, ip);
+        s = _new_server (user);
 
     if ((err = pthread_mutex_unlock (&serverlist->lock))) {
         np_uerror (err);

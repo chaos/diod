@@ -126,6 +126,7 @@ main(int argc, char **argv)
     char *Dopt = NULL;
     struct pollfd *fds = NULL;
     int nfds = 0;
+    List hplist;
    
     diod_log_init (argv[0]); 
     if (!isatty (STDERR_FILENO))
@@ -218,7 +219,9 @@ main(int argc, char **argv)
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
-    if (!diod_sock_listen_list (&fds, &nfds, diod_conf_get_diodctllisten ()))
+
+    hplist = diod_conf_get_diodctllisten ();
+    if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
         msg_exit ("failed to set up listen ports");
 
     /* FIXME: temp file created by diod_conf_mkconfig () needs cleanup */

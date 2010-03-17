@@ -44,6 +44,7 @@
 #include <tcpd.h>
 #endif
 #include <poll.h>
+#include <assert.h>
 
 #include "npfs.h"
 #include "list.h"
@@ -57,12 +58,14 @@ int         allow_severity = LOG_INFO;
 int         deny_severity = LOG_WARNING;
 #define DAEMON_NAME     "diod"
 
-#define BASE_PORT       1942    /* arbitrary non-privileged port */
-#define MAX_PORT        (BASE_PORT + 1024)
-
+/* Open/bind sockets for all addresses that can be associated with host:port,
+ * and expand pollfd array (*fdsp) to contain the new file descriptors,
+ * updating its size (*nfdsp) also.
+ * Return the number of file descriptors added (can be 0).
+ * This is a helper for diod_sock_listen_hostport_list ().
+ */
 static int 
-_setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp,
-                     int quiet)
+_setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp, int flags)
 {
     struct addrinfo hints, *res = NULL, *r;
     int opt, i, error, fd, nents = 0;
@@ -104,7 +107,8 @@ _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp,
             continue;
         }
         if (bind (fd, r->ai_addr, r->ai_addrlen) < 0) {
-            err ("bind: %s:%s", host, port);
+            if (errno != EADDRINUSE || !(flags & DIOD_SOCK_QUIET_EADDRINUSE))
+                err ("bind: %s:%s", host, port);
             close (fd);
             continue;
         }
@@ -120,50 +124,8 @@ done:
     return ret;
 }
 
-/* Bind to sockets associated with host:port name.
- * Fd's are placed in pollfd array (allocated/expanded).
- * Returns 0 on failure, nonzero on success.
- */
-int 
-diod_sock_setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
-{
-    return _setup_one (host, port, fdsp, nfdsp, 0);
-}
-
-/* Bind to sockets associated with host:port name, where port is 
- * dynamically allocated between BASE_PORT and MAX_PORT.
- * Fd's are placed in pollfd array (allocated/expanded).
- * Returns 0 on failure, nonzero on success.
- * A port string is placed in pp (caller must free).
- */
-int
-diod_sock_setup_alloc (char *host, struct pollfd **fdsp, int *nfdsp, char **pp)
-{
-    int i = BASE_PORT;
-    char *port;
-    int ret = 0;
-
-    if (!(port = malloc (NI_MAXSERV))) {
-        msg ("out of memory");
-        goto done;
-    }
-    for (i = BASE_PORT; i < MAX_PORT; i++) {
-        snprintf (port, NI_MAXSERV, "%d", i);
-        if (_setup_one (host, port, fdsp, nfdsp, 1)) {
-            ret = 1;
-            break;
-        }
-    }
-done:
-    if (ret == 1) {
-        *pp = port;
-    } else if (port)
-        free (port);
-    return ret;
-}
-
-int
-diod_sock_listen (struct pollfd *fds, int nfds)
+static int
+_listen_fds (struct pollfd *fds, int nfds)
 {
     int ret = 0;
     int i;
@@ -175,12 +137,53 @@ diod_sock_listen (struct pollfd *fds, int nfds)
     return ret;
 }
 
+/* Set up listen ports based on list of host:port strings.
+ * If nport is non-NULL, use it in place of host:port ports.
+ * Return the number of file descriptors opened (can return 0).
+ */
+int
+diod_sock_listen_hostport_list (List l, struct pollfd **fdsp, int *nfdsp,
+                                char *nport, int flags)
+{
+    ListIterator itr;
+    char *hostport, *host, *port;
+    int n, ret = 0;
+
+    if (!(itr = list_iterator_create(l))) {
+        msg ("out of memory");
+        goto done;
+    }
+    while ((hostport = list_next(itr))) {
+        if (!(host = strdup (hostport))) {
+            msg ("out of memory");
+            goto done;
+        }
+        port = strchr (host, ':');
+        assert (port != NULL);
+        *port++ = '\0';
+        if (nport)
+            port = nport;
+        if ((n = _setup_one (host, port, fdsp, nfdsp, flags)) == 0) {
+            free (host);
+            goto done;
+        }
+        ret += n;
+        free (host);
+    }
+    if (!(flags & DIOD_SOCK_SKIPLISTEN))
+        ret = _listen_fds (*fdsp, *nfdsp);
+done:
+    if (itr)
+        list_iterator_destroy(itr);
+    return ret;
+}
+
 /* Listen on the first nfds file descriptors, which are assumed to be
  * open and bound to appropriate addresses.
  * Return 0 on failure, nonzero on success.
  */
 int
-diod_sock_listen_fds (struct pollfd **fdsp, int *nfdsp, int nfds)
+diod_sock_listen_first_nfds (struct pollfd **fdsp, int *nfdsp, int nfds)
 {
     struct pollfd *fds;
     int i;
@@ -195,43 +198,13 @@ diod_sock_listen_fds (struct pollfd **fdsp, int *nfdsp, int nfds)
     *nfdsp = nfds;
     *fdsp = fds;
 
-    ret = diod_sock_listen (fds, nfds);
-done:
-    return ret;
-}
-
-/* Set up listen ports based on list of host:port strings.
- * Return 0 on failure, nonzero on success.
- */
-int
-diod_sock_listen_list (struct pollfd **fdsp, int *nfdsp, List l)
-{
-    ListIterator itr;
-    char *hostport, *host, *port;
-    int ret = 0;
-
-    if (!(itr = list_iterator_create(l))) {
-        msg ("out of memory");
-        goto done;
-    }
-    while ((hostport = list_next(itr))) {
-        if (!(host = strdup (hostport))) {
-            msg ("out of memory");
-            goto done;
-        }
-        port = strchr (host, ':');
-        *port++ = '\0';
-        if (diod_sock_setup_one (host, port, fdsp, nfdsp) == 0)
-            goto done;
-    }
-    list_iterator_destroy(itr);
-
-    ret = diod_sock_listen (*fdsp, *nfdsp);
+    ret = _listen_fds (fds, nfds);
 done:
     return ret;
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
+ * This is a helper for diod_sock_accept_loop ().
  */
 static void
 _accept_one (Npsrv *srv, int fd, int wrap)
@@ -287,11 +260,10 @@ _accept_one (Npsrv *srv, int fd, int wrap)
         diod_trans_destroy (trans);
         return;
     }
-
-    //msg ("accepted connection from %s on port %s", host, svc);
 }
  
-/* Loop accepting and handling new connections.
+/* Loop accepting and handling new 9P connections.
+ * Both diod and diodctl use this.
  */
 void
 diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
@@ -317,10 +289,12 @@ diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
     /*NOTREACHED*/
 }
 
-int
-diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
+/* Try to connect to host:port.  Return 1 on success, 0 on failure.
+ */
+static int
+_connect_one (char *host, char *port)
 {
-    int i, error, fd = -1;
+    int error, fd = -1;
     struct addrinfo hints, *res = NULL, *r;
 
     memset (&hints, 0, sizeof (hints));
@@ -328,33 +302,72 @@ diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
     hints.ai_socktype = SOCK_STREAM;
 
     if ((error = getaddrinfo (host, port, &hints, &res)) != 0) {
-        msg ("getaddrinfo localhost:%s: %s", port, gai_strerror (error));
+        msg ("getaddrinfo %s:%s", host, port, gai_strerror (error));
         goto done;
     }
     if (!res) {
         msg ("could not look up %s:%s", host, port);
         goto done;
     }
-    for (i = 0; i < maxtries && fd == -1; i++) {
-        for (r = res; r != NULL && fd == -1; r = r->ai_next) {
-            if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
-                continue;
-            if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
-                close (fd);
-                fd = -1;
-            }
+    for (r = res; r != NULL && fd == -1; r = r->ai_next) {
+        if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
+            continue;
+        if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
+            close (fd);
+            fd = -1;
         }
-        if (fd == -1)
-            usleep (1000 * retry_wait_ms);
     }
-    if (fd == -1) {
-        msg ("%d connect attempts to %s:%s failed", i, host, port);
-        goto done;
-    }
-done:
     if (res)
         freeaddrinfo (res);
-    return fd;
+done:
+    if (fd != -1) {
+        close (fd);
+        return 1;
+    }
+    return 0;
+}
+
+/* Try to connect to any members of host:port list.
+ * If nport is non-NULL, substitute that for :port.
+ * Return 1 on success, 0 on failure.
+ */
+int
+diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
+{
+    int i, res = 0;
+    char *hostport, *host, *port;
+    ListIterator itr;
+
+    if (!(itr = list_iterator_create(l))) {
+        msg ("out of memory");
+        goto done;
+    }
+    for (i = 0; i < maxtries; i++) {
+        if (i > 0) {
+            usleep (1000 * retry_wait_ms);
+            list_iterator_reset (itr);
+        }
+        while ((hostport = list_next(itr))) {
+            if (!(host = strdup (hostport))) {
+                msg ("out of memory");
+                goto done;
+            }
+            port = strchr (host, ':');
+            assert (port != NULL);
+            *port++ = '\0';
+            if (nport)
+                port = nport;
+            if ((res = _connect_one (host, port))) {
+                free (host);
+                goto done;
+            }
+            free (host);
+        }
+    }
+done:
+    if (itr)
+        list_iterator_destroy(itr);
+    return res;
 }
     
 /*

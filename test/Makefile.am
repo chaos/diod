@@ -55,4 +55,5 @@ tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
 
 clean: clean-am
-	rmdir $(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d
+	-rmdir mnt.d
+	-rmdir exp.d

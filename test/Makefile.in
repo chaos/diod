@@ -618,7 +618,8 @@ mnt.d exp.d:
 	mkdir -p $@
 
 clean: clean-am
-	rmdir $(top_builddir)/test/mnt.d $(top_builddir)/test/exp.d
+	-rmdir mnt.d
+	-rmdir exp.d
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
 .NOEXPORT:
