@@ -24,7 +24,7 @@
 /* diod_upool.c - user lookup for diod distributed I/O daemon */
 
 /* This upool implementation does no caching of /etc/passwd and /etc/group.
- * Instead it creates Npusers and Mpgroups anew at attach time, shares them
+ * Instead it creates Npusers and Npgroups anew at attach time, shares them
  * among cloned fids, and deletes them when the refcount goes to zero
  * (e.g. when root is clunked at umount time).  A users supplementary groups
  * are not stored in Npuser->groups; instead supplementary groups are stored

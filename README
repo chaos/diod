@@ -16,3 +16,10 @@ TODO
 - diodmount should umount control file system when it aborts for other reasons
 - init scripts 'restart' fails to start server if it is not already running
 - init scripts should create rundir if it doesn't exist
+- handle lustre ioctls?
+    error on ioctl 0x4008669a
+      for '/p/lcrater2/garlick/ior-fpp.1000010/testfile.00000000' (3):
+      Inappropriate ioctl for device
+    error: setstripe: create stripe file
+      '/p/lcrater2/garlick/ior-fpp.1000010/testfile.00000000' failed
+

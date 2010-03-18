@@ -177,10 +177,13 @@ main(int argc, char **argv)
         usage();
     if (lopt && Fopt)
         msg_exit ("--listen-fds and --listen are mutually exclusive options");
-
+#if HAVE_LUA_H
     /* config file overrides defaults */
     diod_conf_init_config_file (copt);
-
+#else
+    if (copt)
+        msg_exit ("No lua support, yet --config-file was specified");
+#endif
     /* command line overrides config file */
     if (fopt)
         diod_conf_set_foreground (1);

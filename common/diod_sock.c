@@ -263,7 +263,7 @@ _accept_one (Npsrv *srv, int fd, int wrap)
 }
  
 /* Loop accepting and handling new 9P connections.
- * Both diod and diodctl use this.
+ * This comprises the main service loop in diod and diodctl daemons.
  */
 void
 diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
@@ -329,6 +329,7 @@ done:
 
 /* Try to connect to any members of host:port list.
  * If nport is non-NULL, substitute that for :port.
+ * Make maxtries attempts, waiting retry_wait_ms milliseconds between attempts.
  * Return 1 on success, 0 on failure.
  */
 int
@@ -347,7 +348,7 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
             usleep (1000 * retry_wait_ms);
             list_iterator_reset (itr);
         }
-        while ((hostport = list_next(itr))) {
+        while (res == 0 && (hostport = list_next(itr))) {
             if (!(host = strdup (hostport))) {
                 msg ("out of memory");
                 goto done;
@@ -357,10 +358,7 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
             *port++ = '\0';
             if (nport)
                 port = nport;
-            if ((res = _connect_one (host, port))) {
-                free (host);
-                goto done;
-            }
+            res = _connect_one (host, port);
             free (host);
         }
     }

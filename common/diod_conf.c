@@ -458,6 +458,7 @@ diod_conf_validate_exports (void)
     list_iterator_destroy (itr);
 }
 
+#ifdef HAVE_LUA_H
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
@@ -598,6 +599,7 @@ diod_conf_init_config_file (char *path)
         lua_close(L);
     }
 }
+#endif /* HAVE_LUA_H */
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

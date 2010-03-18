@@ -1,29 +1,60 @@
 What do these tests show?
 
-t00 - Show that pthreads can independently setfsuid/setfsgid.
-      This is a strategy for handling the I/O of multiple users in
-      threaded work crew.
+t00-pthreads-setfsuid
+	Show that pthreads can independently setfsuid/setfsgid.
+	This is a strategy for handling the I/O of multiple users in
+	threaded work crew.
 
-t01 - Show that supplementary groups work as advertised when
-      setfsuid/setfsgid being used.
+t01-setfsuid-setgroups
+	Show that supplementary groups work as advertised when
+	setfsuid/setfsgid being used.
 
-t02 - Check that pthreads can independently setgroups.
-      This is a strategy for handling the I/O of multiple users in
-      a threaded work crew.
+t02-pthreads-setgroups
+	Check that pthreads can independently setgroups.
+	This is a strategy for handling the I/O of multiple users in
+	a threaded work crew.
 
-t03 - Demonstrate that pthreads cannot independently seteuid/setegid.
-      This was the original npfs strategy for handing I/O of multiple
-      users in a threaded work crew.  Not valid post-linuxthreads.
+t03-pthreads-seteuid
+	Demonstrate that pthreads cannot independently seteuid/setegid.
+	This was the original npfs strategy for handing I/O of multiple
+	users in a threaded work crew.  Not valid post-linuxthreads.
 
-t04 - Demonstrate that fcntl advisory locking does not treat threads
-      like individual procesess, e.g. locks are shared among threads.
-      This means a threaded work crew cannot manage fcntl locks on behalf
-      of multiple remote processes.
+t04-pthreads-fcntl
+	Demonstrate that fcntl advisory locking does not treat threads
+	like individual procesess, e.g. locks are shared among threads.
+	This means a threaded work crew cannot manage fcntl locks on behalf
+	of multiple remote processes.
 
-t05 - Simple mount/unmount sanity test for diod
+t05-mount-sanity
+	Simple mount/unmount sanity test for diod (default options).
 
-t06 - Simple mount/read/unmount sanity test for diod
+t06-read-sanity
+	Simple mount/read/unmount sanity test for diod
 
-t07 - Simple mount/write/unmount sanity test for diod
+t07-write-sanity
+	Simple mount/write/unmount sanity test for diod
 
-t08 - Unit test for diodmount option handling module.
+t08-option-parse
+	Unit test for diodmount option handling module.
+
+t09-mount-9P2000
+	Simple mount/unmount sanity test for legacy protocol.
+
+t10-mount-9P2000.u
+	Simple mount/unmount sanity test for 9P2000.u protocol.
+
+t11-mount-9P2000.L
+	Simple mount/unmount sanity test for 9P2000.L protocol.
+
+t12-mount-9P2000.H
+	Simple mount/unmount sanity test for 9P2000.H protocol.
+
+t13-rename-across-dirs
+	Demonstrate that 9P2000.L rename works across directories.
+
+t14-statfs
+	Demonstrate that 9P2000.L statfs returns correct data.
+
+t15-fsync
+	Demonstrate that 9P2000.u fsync does not return an error.
+

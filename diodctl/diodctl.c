@@ -174,9 +174,13 @@ main(int argc, char **argv)
     }
     if (optind < argc)
         usage();
-
+#if HAVE_LUA_H
     /* config file overrides defaults */
     diod_conf_init_config_file (copt);
+#else
+    if (copt)
+        msg_exit ("No lua support, yet --config-file was specified");
+#endif
 
     /* command line overrides config file */
     if (fopt)
