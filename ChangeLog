@@ -1,3 +1,11 @@
+2010-03-19 Jim Garlick <garlick@llnl.gov>
+
+	* diod/ops.c, man/9p-*.in : Document 9P2000.L ops vs 9P2000.H.
+
+	* npfs/include/npfs.h, npfs/libnpfs/conn.c, npfs/libnpfs/srv.c,
+	npfs/libnpfs/file.c, npfs/libnpfs/fcall.c : Convert proto_version
+	from a bitmask to discrete value like in upstream v9fs.
+
 2010-03-17 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre2

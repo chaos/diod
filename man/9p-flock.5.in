@@ -9,7 +9,7 @@ size[4] Rflock tag[2]
 .SH DESCRIPTION
 The \fIflock\fR message is used to implement advisory file locking,
 as described in flock(2).
-.SH ORIGIN
-\fIflock\fR is a \fBdiod\fR extension to 9P.
+.SH "UNIX EXTENSIONS"
+The \fIflock\fR message was added in 9P2000.L.
 .SH "SEE ALSO"
 9p-intro(5)

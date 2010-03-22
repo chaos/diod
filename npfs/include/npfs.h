@@ -437,9 +437,10 @@ enum {
 };
 
 enum {
-	NPFS_PROTO_2000U=0x01,
-	NPFS_PROTO_2000L=0x02,
-	NPFS_PROTO_2000H=0x04,
+	NPFS_PROTO_LEGACY=0,
+	NPFS_PROTO_2000U=1,
+	NPFS_PROTO_2000L=2,
+	NPFS_PROTO_2000H=3,
 };
 
 struct Npsrv {
@@ -477,7 +478,6 @@ struct Npsrv {
 	Npfcall*	(*stat)(Npfid *fid);
 	Npfcall*	(*wstat)(Npfid *fid, Npstat *stat);
 
-	/* 9p2000.h extensions */
 	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
 				 u32 count, u32 rsize, Npreq *req);
 	Npfcall*	(*awrite)(Npfid *fid, u64 offset, u32 count,
@@ -686,7 +686,6 @@ Npfcall *np_create_twstat(u32 fid, Npwstat *wstat, int dotu);
 Npfcall *np_create_rwstat(void);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
-/* 9p2000.h */
 Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize);
 Npfcall *np_create_raread(u32 count);
 Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize, u8 *data);
@@ -760,11 +759,15 @@ Npfcall *npfile_wstat(Npfid *fid, Npstat *stat);
 void *np_malloc(int);
 int np_mount(char *mntpt, int mntflags, char *opts);
 
-static inline int np_conn_dotu (Npconn *conn)
+static inline int np_conn_extend (Npconn *conn)
 {
- 	return conn->proto_version & NPFS_PROTO_2000U;
+ 	return conn->proto_version == NPFS_PROTO_2000U
+	    || conn->proto_version == NPFS_PROTO_2000L
+	    || conn->proto_version == NPFS_PROTO_2000H;
 }
-static inline int np_srv_dotu (Npsrv *srv)
+static inline int np_srv_extend (Npsrv *srv)
 {
- 	return srv->proto_version & NPFS_PROTO_2000U;
+ 	return srv->proto_version == NPFS_PROTO_2000U
+	    || srv->proto_version == NPFS_PROTO_2000L
+	    || srv->proto_version == NPFS_PROTO_2000H;
 }

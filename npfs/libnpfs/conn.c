@@ -141,7 +141,7 @@ again:
 		if (n < size)
 			continue;
 
-		if (!np_deserialize(fc, fc->pkt, np_conn_dotu(conn)))
+		if (!np_deserialize(fc, fc->pkt, np_conn_extend(conn)))
 			break;
 
 		if ((conn->srv->debuglevel & DEBUG_9P_TRACE)
@@ -151,7 +151,7 @@ again:
 			int len = sizeof(s);
 			
 			n += snprintf(s+n, len-n, "<<< (%p) ", conn);
-			n += np_snprintfcall(s+n, len-n, fc, np_conn_dotu(conn));
+			n += np_snprintfcall(s+n, len-n, fc, np_conn_extend(conn));
 			conn->srv->debugprintf(s);
 		}
 
@@ -347,7 +347,7 @@ np_conn_respond(Npreq *req)
 			int len = sizeof(s);
 			
 			n += snprintf(s+n, len-n, ">>> (%p) ", conn);
-			n += np_snprintfcall(s+n, len-n, rc, np_conn_dotu(conn));
+			n += np_snprintfcall(s+n, len-n, rc, np_conn_extend(conn));
 			conn->srv->debugprintf(s);
 		}
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);

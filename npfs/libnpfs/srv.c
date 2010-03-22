@@ -70,8 +70,7 @@ np_srv_create(int nwthread)
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
-	srv->proto_version = NPFS_PROTO_2000U | NPFS_PROTO_2000L
-					      | NPFS_PROTO_2000H;
+	srv->proto_version = NPFS_PROTO_2000H;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
 	srv->shuttingdown = 0;
@@ -384,7 +383,7 @@ np_process_request(Npreq *req)
 	if (ename != NULL) {
 		if (rc)
 			free(rc);
-		rc = np_create_rerror(ename, ecode, np_conn_dotu(conn));
+		rc = np_create_rerror(ename, ecode, np_conn_extend(conn));
 		if ((req->conn->srv->debuglevel & DEBUG_9P_ERRORS)
 		  			&& req->conn->srv->debugprintf) {
 			req->conn->srv->debugprintf ("%s error: %s\n", op,
@@ -484,14 +483,15 @@ np_respond_error(Npreq *req, char *ename, int ecode)
 {
 	Npfcall *rc;
 
-	rc = np_create_rerror(ename, ecode, np_conn_dotu(req->conn));
+	rc = np_create_rerror(ename, ecode, np_conn_extend(req->conn));
 	np_respond(req, rc);
 }
 
 static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
-	int proto_ver = 0;
+	int min_msize = IOHDRSZ;
+	int proto_ver;
 	char *ver = NULL;
 	Npfcall *rc = NULL;
 
@@ -499,32 +499,34 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 		msize = conn->srv->msize;
 
 	if (!np_strcmp(version, "9P2000")) {
+		ver = NPFS_PROTO_LEGACY;
 		ver = "9P2000";
 	} else if (!np_strcmp(version, "9P2000.u")) {
-		if (conn->proto_version & NPFS_PROTO_2000U) {
-			proto_ver |= NPFS_PROTO_2000U;
+		if (conn->proto_version == NPFS_PROTO_2000U
+		 || conn->proto_version == NPFS_PROTO_2000L
+		 || conn->proto_version == NPFS_PROTO_2000H) {
+			proto_ver = NPFS_PROTO_2000U;
 			ver = "9P2000.u";
 		} else
 			np_werror("unsupported 9P version", EIO);
 	} else if (!np_strcmp(version, "9P2000.L")) {
-		if (conn->proto_version & NPFS_PROTO_2000L) {
-			proto_ver |= NPFS_PROTO_2000U | NPFS_PROTO_2000L;
+		if (conn->proto_version == NPFS_PROTO_2000L
+		 || conn->proto_version == NPFS_PROTO_2000H) {
+			proto_ver = NPFS_PROTO_2000L;
 			ver = "9P2000.L";
 		} else
 			np_werror("unsupported 9P version", EIO);
 	} else if (!np_strcmp(version, "9P2000.H")) {
-		if (conn->proto_version & NPFS_PROTO_2000H) {
-			proto_ver |= NPFS_PROTO_2000U | NPFS_PROTO_2000L
-						      | NPFS_PROTO_2000H;
+		if (conn->proto_version == NPFS_PROTO_2000H) {
+			proto_ver = NPFS_PROTO_2000H;
 			ver = "9P2000.H";
+			min_msize = AIOHDRSZ + 1;
 		} else
 			np_werror("unsupported 9P version", EIO);
 	} else
 		np_werror("unsupported 9P version", EIO);
 
-	if (msize < IOHDRSZ)
-		np_werror("msize too small", EIO);
-	if ((proto_ver & NPFS_PROTO_2000H) && msize < AIOHDRSZ + 1)
+	if (msize < min_msize)
 		np_werror("msize too small", EIO);
 
 	if (!np_haserror ()) {

@@ -88,7 +88,7 @@ np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts)
 	ps = srv->srvaux;
 	snprintf(options, sizeof(options), 
 		"msize=%d,name=%s,%s,proto=fd,rfdno=%d,wfdno=%d,%s",
-		srv->msize, user, np_srv_dotu(srv)?"":"noextend",
+		srv->msize, user, np_srv_extend(srv)?"":"noextend",
 		ps->pipout[0], ps->pipin[1], opts);
  
 	n = mount("none", mntpt, "9p", mntflags, options);

@@ -1357,7 +1357,7 @@ _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
     return _cache_read (fid, buf, rsize, offset);
 }
 
-/* Taread - atomic read (9p2000.h).
+/* Taread - atomic read (9P2000.H).
  */
 Npfcall*
 diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
@@ -1444,7 +1444,7 @@ _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
     return _cache_write (fid, buf, rsize, offset);
 }
 
-/* Tawrite - atomic write (9p2000.h).
+/* Tawrite - atomic write (9P2000.H).
  */
 Npfcall*
 diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
@@ -1477,7 +1477,7 @@ done:
     return ret;
 }
 
-/* Tstatfs - read file system  information (9p2000.h)
+/* Tstatfs - read file system  information (9P2000.L)
  * N.B. must call statfs() and statvfs() as
  * only statvfs provides (unsigned long) f_fsid
  */
@@ -1517,7 +1517,7 @@ done:
     return ret;
 }
 
-/* Trename - rename a file, potentially to another directory (9p2000.h)
+/* Trename - rename a file, potentially to another directory (9P2000.L)
  */
 Npfcall*
 diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)

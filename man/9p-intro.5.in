@@ -249,29 +249,33 @@ size[4] Rerror tag[2] ename[s] ecode[4]
 .LP
 as well as the stat[n] structure used in the stat, wstat, and read
 operations.  See 9p-stat(5), 9p-attach(5), 9p-open(5), and 9p-error(5).
+.LP
+Additional Linux extensions are defined in 9P2000.L.
+\fBdiod\fR speculatively implements 9P2000.L operations for 
+obtaining file system statistics for df (statfs),
+renaming files across directories (rename),
+and advisory file and byte range locking (lock, flock).
+.LP
+.nf
+size[4] Tstatfs tag[2] fid[4]
+size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ffree[8] fsid[8] namelen[4]
+size[4] Trename tag[2] fid[4] newdirfid[4] name[s]
+size[4] Rrename tag[2]
+size[4] Tlock tag[2] fid[4] cmd[1] type[1] pid[8] start[8] end[8]
+size[4] Rlock tag[2] type[1] pid[8] start[8] end[8]
+size[4] Tflock  tag[2] fid[4] cmd[1]
+size[4] Rflock tag[2]
+.fi
 .SH "DIOD EXTENSIONS"
 .B diod
-further extends 9P with new requests for
-1) large atomic I/O with optional checksum (aread, awrite);
-2) obtaining file system statistics for df (statfs);
-3) advisory file and byte range locking (lock, flock);
-and 4) renaming files across directories (rename).
-These options are currently negotiated by the version transaction
-as 9P2000.h, where .h implies all the .u extensions as well.
+further extends 9P with new requests for large atomic I/O with optional
+checksum.  This extension is labeled 9P2000.H.
 .LP
 .nf	
 size[4] Taread tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4]
 size[4] Raread tag[2] count[4] data[count] check[4]
 size[4] Tawrite tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4] data[count] check[4]
 size[4] Rawrite tag[2] count[4]
-size[4] Tstatfs tag[2] fid[4]
-size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ffree[8] fsid[8] namelen[4]
-size[4] Tlock tag[2] fid[4] cmd[1] type[1] pid[8] start[8] end[8]
-size[4] Rlock tag[2] type[1] pid[8] start[8] end[8]
-size[4] Tflock  tag[2] fid[4] cmd[1]
-size[4] Rflock tag[2]
-size[4] Trename tag[2] fid[4] newdirfid[4] name[s]
-size[4] Rrename tag[2]
 .fi
 .LP
 It is a long term goal to push the checksumming provided by aread/awrite
@@ -279,9 +283,6 @@ into the transport layer so all protocol operations are covered.
 Also, it may be possible to design a transport which allows msize to
 be expanded to the point where separate atomic read/write operations are
 unnecesssary.
-.LP
-The statfs, rename, lock, and flock operations are likely candidates
-for inclusion in the 9P2010 update to the 9P protocol.
 .LP
 At this time advisory locking is not implemented in \fBdiod\fR as it is
 incompatible with the thread pool model used in npfs.

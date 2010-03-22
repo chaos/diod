@@ -9,8 +9,9 @@ size[4] Rrename tag[2]
 .SH DESCRIPTION
 The \fIrename\fR message is used to change the name of a file,
 possibly moving it to a new directory.
-The 9P \fIwstat\fR command can only rename a file within the same directory.
-.SH ORIGIN
-\fIrename\fR is a \fBdiod\fR extension to 9P.
+The original 9P \fIwstat\fR command can only rename a file within the
+same directory.
+.SH "UNIX EXTENSIONS"
+The \fIrename\fR message was added in 9P2000.L.
 .SH "SEE ALSO"
 9p-intro(5)

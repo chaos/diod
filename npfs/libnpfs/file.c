@@ -641,7 +641,7 @@ npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		while (n<count && cf!=NULL) {
 			file2wstat(cf, &wstat);
 			i = np_serialize_stat(&wstat, ret->data + n,
-				count - n - 1, np_conn_dotu(fid->conn));
+				count - n - 1, np_conn_extend(fid->conn));
 			if (i==0)
 				break;
 
@@ -797,7 +797,7 @@ npfile_stat(Npfid *fid)
 	file2wstat(file, &wstat);
 	pthread_mutex_unlock(&file->lock);
 
-	return np_create_rstat(&wstat, np_conn_dotu(fid->conn));
+	return np_create_rstat(&wstat, np_conn_extend(fid->conn));
 }
 
 Npfcall*
