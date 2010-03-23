@@ -58,3 +58,7 @@ t14-statfs
 t15-fsync
 	Demonstrate that 9P2000.u fsync does not return an error.
 
+16-stat
+	Create files and compare their stat(2) results.
+	This underscores problems for st_nlink, st_size for directories,
+	st_blocks, and st_blksize.

@@ -357,21 +357,17 @@ _omode2uflags (u8 mode)
 }
 
 /* Create a 9P qid from a file's stat info.
- * N.B. v9fs converts qid->path to inode numbers (must be unique per mount!)
+ * N.B. v9fs maps st_ino = qid->path + 2, presumably since inode 0 and 1
+ * are special for Linux but not for Plan 9.  For I/O forwarding we want
+ * inodes to be direct mapped, so set qid->path = st_ino - 2.
  */
 static void
 _ustat2qid (struct stat *st, Npqid *qid)
 {
-    int n;
-
-    qid->path = 0;
-    n = sizeof (qid->path);
-    if (n > sizeof (st->st_ino))
-        n = sizeof (st->st_ino);
-    memmove (&qid->path, &st->st_ino, n);
-
+    assert (st->st_ino != 0);
+    assert (st->st_ino != 1);
+    qid->path = st->st_ino - 2;
     qid->version = st->st_mtime ^ (st->st_size << 8);
-
     qid->type = 0;
     if (S_ISDIR(st->st_mode))
         qid->type |= Qtdir;

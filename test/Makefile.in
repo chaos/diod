@@ -38,7 +38,7 @@ host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsuppgrp$(EXEEXT) tfcntl$(EXEEXT) \
-	tstatfs$(EXEEXT) trename$(EXEEXT)
+	tstatfs$(EXEEXT) trename$(EXEEXT) tstat$(EXEEXT)
 subdir = test
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -94,6 +94,14 @@ tsetuid_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_tstat_OBJECTS = tstat.$(OBJEXT) $(am__objects_1)
+tstat_OBJECTS = $(am_tstat_OBJECTS)
+tstat_LDADD = $(LDADD)
+tstat_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
+	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tstatfs_OBJECTS = tstatfs.$(OBJEXT) $(am__objects_1)
 tstatfs_OBJECTS = $(am_tstatfs_OBJECTS)
 tstatfs_LDADD = $(LDADD)
@@ -118,11 +126,12 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(tfcntl_SOURCES) $(trename_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstatfs_SOURCES) \
-	$(tsuppgrp_SOURCES)
+	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
+	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
 DIST_SOURCES = $(tfcntl_SOURCES) $(trename_SOURCES) \
 	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
-	$(tsetuid_SOURCES) $(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
+	$(tsetuid_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -266,9 +275,11 @@ TESTS = \
 	t12-mount-9P2000.H \
 	t13-rename-across-dirs \
 	t14-statfs \
-	t15-fsync
+	t15-fsync \
+	t16-stat
 
 CLEANFILES = *.out *.diff
+AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
         -I../npfs/include -I../liblsd -I../common
 
@@ -287,6 +298,7 @@ tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
 tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
+tstat_SOURCES = tstat.c $(common_sources)
 all: all-am
 
 .SUFFIXES:
@@ -338,6 +350,9 @@ tsetfsuidsupp$(EXEEXT): $(tsetfsuidsupp_OBJECTS) $(tsetfsuidsupp_DEPENDENCIES)
 tsetuid$(EXEEXT): $(tsetuid_OBJECTS) $(tsetuid_DEPENDENCIES) 
 	@rm -f tsetuid$(EXEEXT)
 	$(LINK) $(tsetuid_LDFLAGS) $(tsetuid_OBJECTS) $(tsetuid_LDADD) $(LIBS)
+tstat$(EXEEXT): $(tstat_OBJECTS) $(tstat_DEPENDENCIES) 
+	@rm -f tstat$(EXEEXT)
+	$(LINK) $(tstat_LDFLAGS) $(tstat_OBJECTS) $(tstat_LDADD) $(LIBS)
 tstatfs$(EXEEXT): $(tstatfs_OBJECTS) $(tstatfs_DEPENDENCIES) 
 	@rm -f tstatfs$(EXEEXT)
 	$(LINK) $(tstatfs_LDFLAGS) $(tstatfs_OBJECTS) $(tstatfs_LDADD) $(LIBS)
@@ -356,6 +371,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuidsupp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetuid.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstatfs.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsuppgrp.Po@am__quote@
 

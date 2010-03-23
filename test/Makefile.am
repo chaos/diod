@@ -1,5 +1,5 @@
 check_PROGRAMS = \
-	tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl tstatfs trename
+	tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl tstatfs trename tstat
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
@@ -25,7 +25,8 @@ TESTS = \
 	t12-mount-9P2000.H \
 	t13-rename-across-dirs \
 	t14-statfs \
-	t15-fsync
+	t15-fsync \
+	t16-stat
 
 $(TESTS): mnt.d exp.d
 
@@ -33,6 +34,8 @@ mnt.d exp.d:
 	mkdir -p $@
 
 CLEANFILES = *.out *.diff
+
+AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
         -I../npfs/include -I../liblsd -I../common
@@ -53,6 +56,7 @@ tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
 tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
+tstat_SOURCES = tstat.c $(common_sources)
 
 clean: clean-am
 	-rmdir mnt.d

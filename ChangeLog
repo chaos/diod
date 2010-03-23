@@ -1,3 +1,11 @@
+2010-03-23 Jim Garlick <garlick@llnl.gov>
+
+	* test/t16*, test/tstat.c : Compare stat results.
+
+2010-03-22 Jim Garlick <garlick@llnl.gov>
+
+	* diod/ops.c : _ustat2qid: assign inode number directly to qid->path.
+
 2010-03-19 Jim Garlick <garlick@llnl.gov>
 
 	* diod/ops.c, man/9p-*.in : Document 9P2000.L ops vs 9P2000.H.
