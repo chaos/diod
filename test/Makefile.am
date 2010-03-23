@@ -26,7 +26,8 @@ TESTS = \
 	t13-rename-across-dirs \
 	t14-statfs \
 	t15-fsync \
-	t16-stat
+	t16-stat \
+	t17-chmod
 
 $(TESTS): mnt.d exp.d
 

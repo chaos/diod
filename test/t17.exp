@@ -1,0 +1,42 @@
+starting diod
+mounting
+creating file and directory
+testing file server to client
+0
+111
+2222
+2333
+4444
+4555
+6666
+6777
+testing file client to server
+0
+111
+2222
+2333
+4444
+4555
+6666
+6777
+testing directory server to client
+0
+111
+2222
+2333
+4444
+4555
+6666
+6777
+testing directory client to server
+0
+111
+2222
+2333
+4444
+4555
+6666
+6777
+removing file and directory
+unmounting
+waiting for diod to terminate

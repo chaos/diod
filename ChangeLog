@@ -1,6 +1,9 @@
 2010-03-23 Jim Garlick <garlick@llnl.gov>
 
-	* test/t16*, test/tstat.c : Compare stat results.
+	* test/t16-stat, test/tstat.c : Compare stat results.
+
+	* test/t17-chmod : Make sure all mode bits can be set and read
+	on client and server.
 
 2010-03-22 Jim Garlick <garlick@llnl.gov>
 

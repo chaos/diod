@@ -1,0 +1,49 @@
+#!/bin/bash -e
+
+testmode ()
+{
+	for i in 0 1 2 3 4 5 6 7; do
+		chmod $i$i$i$i $1
+		stat -c "%a" $2
+	done
+}
+
+doit ()
+{
+	echo starting diod
+	$PATH_DIOD -c $PATH_DIODCONF -f -l "localhost:2006" -x -m \
+			-e $PATH_EXPDIR &
+	sleep 1
+	echo mounting
+	$PATH_DIODMOUNT -o uname=root,port=2006,version=9p2000.L \
+			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
+
+	echo "creating file and directory"
+	touch $PATH_MNTDIR/a
+	mkdir $PATH_MNTDIR/b
+
+	echo "testing file server to client"
+	testmode $PATH_EXPDIR/a $PATH_MNTDIR/a
+	echo "testing file client to server"
+	testmode $PATH_MNTDIR/a $PATH_EXPDIR/a
+	echo "testing directory server to client"
+	testmode $PATH_EXPDIR/b $PATH_MNTDIR/b
+	echo "testing directory client to server"
+	testmode $PATH_MNTDIR/b $PATH_EXPDIR/b
+
+	echo "removing file and directory"
+	rm -f $PATH_MNTDIR/a
+	rmdir $PATH_MNTDIR/b
+
+	echo unmounting
+	umount $PATH_MNTDIR
+	echo waiting for diod to terminate
+	wait
+}
+
+TEST=$(basename $0 | cut -d- -f1)
+test $(id -u) == 0 || exit 77 #skip if not root
+
+doit >$TEST.out 2>&1
+
+diff $TEST.exp $TEST.out >$TEST.diff
