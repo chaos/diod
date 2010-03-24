@@ -67,7 +67,7 @@
 
 #include "opt.h"
 
-#define OPTIONS "u:pnx:o:O:T"
+#define OPTIONS "u:pnx:o:O:Tv"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -78,6 +78,7 @@ static const struct option longopts[] = {
     {"diod-option",     required_argument,   0, 'o'},
     {"diodctl-option",  required_argument,   0, 'O'},
     {"test-opt",        no_argument,         0, 'T'},
+    {"verbose",         no_argument,         0, 'v'},
     {0, 0, 0, 0},
 };
 #else
@@ -86,8 +87,8 @@ static const struct option longopts[] = {
 
 static void  _parse_device     (char *device, char **anamep, char **ipp);
 static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
-                                char *opts);
-static void  _diodctl_mount    (char *ip, char *dir, char *opts);
+                                char *opts, int vopt);
+static void  _diodctl_mount    (char *ip, char *dir, char *opts, int vopt);
 static char *_diodctl_getport  (char *dir);
 static int   _diodctl_listexp  (char *dir);
 static void  _umount           (const char *target);
@@ -105,6 +106,7 @@ usage (void)
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
+"   -v,--verbose                  be verbose about what is going on\n"
 );
     exit (1);
 }
@@ -117,6 +119,7 @@ main (int argc, char *argv[])
     struct stat sb;
     int popt = 0;
     int nopt = 0;
+    int vopt = 0;
     char *uopt = NULL;
     char *xopt = NULL;
     char *oopt = NULL;
@@ -148,6 +151,9 @@ main (int argc, char *argv[])
             case 'T':   /* --test-opt [hidden test option] */
                 opt_test ();
                 exit (0);
+            case 'v':   /* --verbose */
+                vopt = 1;
+                break;
             default:
                 usage ();
         }
@@ -164,7 +170,7 @@ main (int argc, char *argv[])
             msg_exit ("--list-exports cannot be used with -updn");
         if (!(dir = mkdtemp (tmpl)))
             err_exit ("failed to create temporary directory for mount");
-        _diodctl_mount (ip, dir, Oopt);
+        _diodctl_mount (ip, dir, Oopt, vopt);
         free (ip);
         unlink (dir);
         ret = _diodctl_listexp (dir);
@@ -199,19 +205,19 @@ main (int argc, char *argv[])
     _parse_device (device, &aname, &ip);
 
     if (!strcmp (aname, "/diodctl")) {
-        _diodctl_mount (ip, dir, Oopt);
+        _diodctl_mount (ip, dir, Oopt, vopt);
     } else if (popt) {
         char *port;
 
-        _diodctl_mount (ip, dir, Oopt);
+        _diodctl_mount (ip, dir, Oopt, vopt);
         port = _diodctl_getport (dir);
         if (!port)
             exit (1); 
         _umount (dir);
-        _diod_mount (ip, dir, aname, port, oopt);
+        _diod_mount (ip, dir, aname, port, oopt, vopt);
         free (port);
     } else
-        _diod_mount (ip, dir, aname, NULL, oopt);
+        _diod_mount (ip, dir, aname, NULL, oopt, vopt);
 
     free (aname);
     free (ip);
@@ -317,7 +323,7 @@ _create_mungecred (char *payload)
 }
 
 static void
-_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
+_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts, int vopt)
 {
     Opt o = opt_create ();
     char *options, *cred;
@@ -327,7 +333,8 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
     opt_add (o, "version=9p2000.H");
-    /* FIXME: add datcheck */
+    opt_add (o, "datacheck");
+    /*opt_add (o, "debug=1");*/
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)
@@ -336,12 +343,14 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
     options = opt_string (o);
     opt_destroy (o);
 
+    if (vopt)
+        msg ("mount %s %s -o%s", ip, dir, options);
     _mount (ip, dir, options);
     free (options);
 }
 
 static void
-_diodctl_mount (char *ip, char *dir, char *opts)
+_diodctl_mount (char *ip, char *dir, char *opts, int vopt)
 {
     Opt o = opt_create ();
     char *options, *cred;
@@ -349,6 +358,7 @@ _diodctl_mount (char *ip, char *dir, char *opts)
     opt_add (o, "uname=%s", (cred = _create_mungecred (NULL)));
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
+    /*opt_add (o, "debug=1");*/
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)
@@ -357,6 +367,8 @@ _diodctl_mount (char *ip, char *dir, char *opts)
     options = opt_string (o);
     opt_destroy (o);
 
+    if (vopt)
+        msg ("mount %s %s -o%s", ip, dir, options);
     _mount (ip, dir, options);
     free (options);
 }

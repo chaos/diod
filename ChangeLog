@@ -1,3 +1,10 @@
+2010-03-24 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre3
+
+	* diodmount/diodmount.c : Add --verbose option.
+	Mount diod with 'datacheck' option by default.
+
 2010-03-23 Jim Garlick <garlick@llnl.gov>
 
 	* test/t16-stat, test/tstat.c : Compare stat results.
@@ -5,7 +12,7 @@
 	* test/t17-chmod : Make sure all mode bits can be set and read
 	on client and server.
 
-	* diodmount/diod.c : Match mount options caselessly.
+	* diodmount/opt.c : Match mount options caselessly.
 
 	* diod/diod.c, diod/ops.c, common/diod_conf.[ch] : Drop readahead
 	option.
