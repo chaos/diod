@@ -743,10 +743,6 @@ diod_open (Npfid *fid, u8 mode)
             np_uerror (errno);
             goto done;
         }
-        if (!(mode & Owrite) && !diod_conf_get_readahead ()) {
-            if (posix_fadvise (f->fd, 0, 0, POSIX_FADV_RANDOM) < 0)
-                err ("posix_fadvise %s", f->path);
-        }
     }
     /* XXX is this really an error? */
     if (_fidstat (f) < 0) {
@@ -955,10 +951,6 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
             np_uerror(errno);
             remove(npath);
             goto done;
-        }
-        if (!(mode & Owrite) && !diod_conf_get_readahead ()) {
-            if (posix_fadvise (f->fd, 0, 0, POSIX_FADV_RANDOM) < 0)
-                err ("posix_fadvise %s", npath);
         }
     }
     free (f->path);

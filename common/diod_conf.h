@@ -33,9 +33,6 @@ void    diod_conf_set_nwthreads (int i);
 int     diod_conf_get_foreground (void);
 void    diod_conf_set_foreground (int i);
 
-int     diod_conf_get_readahead (void);
-void    diod_conf_set_readahead (int i);
-
 int     diod_conf_get_allowprivate (void);
 void    diod_conf_set_allowprivate (int i);
 

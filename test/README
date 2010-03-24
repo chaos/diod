@@ -60,5 +60,9 @@ t15-fsync
 
 16-stat
 	Create files and compare their stat(2) results.
-	This underscores problems for st_nlink, st_size for directories,
-	st_blocks, and st_blksize.
+	This underscores 9P2000.u problems for st_nlink, st_size for
+	directories, st_blocks, and st_blksize.
+
+17-chmod
+	Set all the mode bits (7777) on a file and directory on server
+	and verify that they are reflected in client stat, the do the reverse.

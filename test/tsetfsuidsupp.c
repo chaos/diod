@@ -9,6 +9,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <pthread.h>
+#include <sys/fsuid.h>
+#include <grp.h>
 
 #include "diod_log.h"
 #include "test.h"

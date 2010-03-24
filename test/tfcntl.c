@@ -6,6 +6,9 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -14,6 +17,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <grp.h>
 
 #include "diod_log.h"
 
@@ -79,6 +83,7 @@ static void *proc1 (void *a)
     wait_state (S2);
     change_state (S3);
     wait_state (S4);
+    return NULL;
 }
 
 static void *proc2 (void *a)
@@ -97,6 +102,7 @@ static void *proc2 (void *a)
 
     wait_state (S3);
     change_state (S4);
+    return NULL;
 }
 
 int

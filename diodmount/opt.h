@@ -31,6 +31,7 @@ void            opt_add_override (Opt o, const char *fmt, ...);
 void            opt_add_cslist (Opt o, char *s);
 void            opt_add_cslist_override (Opt o, char *s);
 char           *opt_find (Opt o, char *key);
+char           *opt_find_withval (Opt o, char *keyval);
 void            opt_test (void);
 
 /*

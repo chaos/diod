@@ -58,7 +58,7 @@
 static void _daemonize (void);
 static void _setrlimit (void);
 
-#define OPTIONS "fd:l:w:c:e:armxF:u:"
+#define OPTIONS "fd:l:w:c:e:amxF:u:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -69,7 +69,6 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
     {"allowany",        no_argument,        0, 'a'},
-    {"readahead",       no_argument,        0, 'r'},
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
@@ -92,7 +91,6 @@ usage()
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
-"   -r,--readahead         do not disable kernel readahead with fadvise\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
@@ -109,7 +107,6 @@ main(int argc, char **argv)
     int fopt = 0;
     int dopt = 0;
     int aopt = 0;
-    int ropt = 0;
     int mopt = 0;
     int xopt = 0;
     int Fopt = 0;
@@ -154,9 +151,6 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 aopt = 1;
                 break;
-            case 'r':   /* --readahead */
-                ropt = 1;
-                break;
             case 'm':   /* --no-munge-auth */
                 mopt = 1;
                 break;
@@ -187,8 +181,6 @@ main(int argc, char **argv)
     /* command line overrides config file */
     if (fopt)
         diod_conf_set_foreground (1);
-    if (ropt)
-        diod_conf_set_readahead (1);
     if (aopt)
         diod_conf_set_tcpwrappers (0);
     if (dopt)

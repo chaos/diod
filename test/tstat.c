@@ -38,32 +38,33 @@ main (int argc, char *argv[])
     }
     if (s1.st_mode != s2.st_mode) {
         fprintf (stderr, "st_mode differs (0%lo != 0%lo)\n",
-                s1.st_mode, s2.st_mode);
+                (long unsigned int)s1.st_mode, (long unsigned int)s2.st_mode);
         diff++;
     }
     if (s1.st_nlink != s2.st_nlink) {
         fprintf (stderr, "st_nlink differs (%d != %d)\n",
-                s1.st_nlink, s2.st_nlink);
+                (int)s1.st_nlink, (int)s2.st_nlink);
         diff++;
     }
     if (s1.st_uid != s2.st_uid) {
         fprintf (stderr, "st_uid differs (%lu != %lu)\n",
-                s1.st_uid, s2.st_uid);
+                (long unsigned int)s1.st_uid, (long unsigned int)s2.st_uid);
         diff++;
     }
     if (s1.st_gid != s2.st_gid) {
         fprintf (stderr, "st_gid differs (%lu != %lu)\n",
-                s1.st_gid, s2.st_gid);
+                (long unsigned int)s1.st_gid, (long unsigned int)s2.st_gid);
         diff++;
     }
     if (s1.st_rdev != s2.st_rdev) {
         fprintf (stderr, "st_rdev differs (%lu != %lu)\n",
-                s1.st_rdev != s2.st_rdev);
+                (long unsigned int)s1.st_rdev, (long unsigned int)s2.st_rdev);
         diff++;
     }
     if (s1.st_size != s2.st_size) {
         fprintf (stderr, "st_size differs (%llu != %llu)\n",
-                s1.st_size, s2.st_size);
+                (long long unsigned int)s1.st_size,
+                (long long unsigned int)s2.st_size);
         diff++;
     }
     if (s1.st_blksize != s2.st_blksize) {

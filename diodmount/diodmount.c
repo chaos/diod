@@ -309,7 +309,7 @@ _create_mungecred (char *payload)
     struct passwd *pwd;
 
     if (!(pwd = getpwuid (geteuid ())))
-        msg_exit ("munge_encode: could not look up uid %d", geteuid ());
+        msg_exit ("could not look up uid %d", geteuid ());
     if (!(mungecred = strdup (pwd->pw_name)))
         msg_exit ("out of memory");
 #endif
@@ -326,7 +326,8 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts)
     opt_add (o, "port=%s", port ? port : "10006");
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
-    opt_add (o, "version=9P2000.H");
+    opt_add (o, "version=9p2000.H");
+    /* FIXME: add datcheck */
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)

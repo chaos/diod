@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <grp.h>
 
 #include "diod_log.h"
 
@@ -23,7 +24,7 @@ static state_t         state = S0;
 static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 
-static int
+static void
 show_groups (char *s)
 {
     gid_t g[32];
@@ -71,6 +72,7 @@ static void *proc1 (void *a)
     change_state (S3);
 
     wait_state (S4);
+    return NULL;
 }
 
 static void *proc2 (void *a)
@@ -88,6 +90,7 @@ static void *proc2 (void *a)
     wait_state (S3);
     show_groups ("task2");
     change_state (S4);
+    return NULL;
 }
 
 int main(int argc, char *argv[])

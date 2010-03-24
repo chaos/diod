@@ -5,6 +5,11 @@
 	* test/t17-chmod : Make sure all mode bits can be set and read
 	on client and server.
 
+	* diodmount/diod.c : Match mount options caselessly.
+
+	* diod/diod.c, diod/ops.c, common/diod_conf.[ch] : Drop readahead
+	option.
+
 2010-03-22 Jim Garlick <garlick@llnl.gov>
 
 	* diod/ops.c : _ustat2qid: assign inode number directly to qid->path.

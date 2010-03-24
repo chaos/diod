@@ -43,11 +43,6 @@ but the command line accepts only one.
 .I "-a, --allowany"
 Override TCP wrappers checks and allow any client to connect.
 .TP
-.I "-r, --readahead"
-Allow kernel readahead.
-This disables the default behavior of calling
-posix_madvise(POSIX_MADV_RANDOM) on every file.
-.TP
 .I "-m, --no-munge-auth"
 This option allows users to attach without security credentials.
 WARNING: this option leaves exported file systems vulnerable to

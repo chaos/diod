@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <grp.h>
 
 #include "diod_log.h"
 #include "test.h"
@@ -61,6 +62,7 @@ static void *proc1 (void *a)
 
     wait_state (S4);
     msg ("task1: geteuid %d", geteuid ());
+    return NULL;
 }
 
 static void *proc2 (void *a)
@@ -80,6 +82,7 @@ static void *proc2 (void *a)
     _setreuid (-1, TEST_UID3);
     msg ("task2: geteuid %d", geteuid ());
     change_state (S4);
+    return NULL;
 }
 
 int main(int argc, char *argv[])

@@ -9,6 +9,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <grp.h>
+#include <sys/fsuid.h>
 
 #include "diod_log.h"
 
@@ -77,6 +79,7 @@ static void *proc1 (void *a)
     change_state (S3);
     wait_state (S4);
     assert (check_fsid ("task1", TEST_UID, TEST_GID));
+    return NULL;
 }
 
 static void *proc2 (void *a)
@@ -90,6 +93,7 @@ static void *proc2 (void *a)
     change_fsid ("task2", 0, 0);
     assert (check_fsid ("task2", 0, 0));
     change_state (S4);
+    return NULL;
 }
 
 int main(int argc, char *argv[])

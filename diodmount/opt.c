@@ -98,6 +98,13 @@ opt_string (Opt o)
 }
 
 static int
+_match_keyval (char *item, char *key)
+{
+    return (strcasecmp(item, key) == 0);
+}
+
+
+static int
 _match_key (char *item, char *key)
 {
     char *p = strchr (item, '=');
@@ -105,7 +112,7 @@ _match_key (char *item, char *key)
     char *q = strchr (key, '=');
     int m = q ? q - key : strlen (key);
 
-    return (m == n && strncmp(item, key, n) == 0);
+    return (m == n && strncasecmp(item, key, n) == 0);
 }
 
 void
@@ -186,6 +193,15 @@ opt_find (Opt o, char *key)
 
     return list_find_first (o->list, (ListFindF)_match_key, key);
 }
+
+char *
+opt_find_withval (Opt o, char *keyval)
+{
+    assert (o->magic == OPT_MAGIC);
+
+    return list_find_first (o->list, (ListFindF)_match_keyval, keyval);
+}
+
 
 void
 opt_test (void)
