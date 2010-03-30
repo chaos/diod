@@ -675,8 +675,6 @@ done:
 	return rc;
 }
 
-/* 9p2000.h extensions */
-
 Npfcall *
 np_aread(Npreq *req, Npfcall *tc)
 {

@@ -42,9 +42,6 @@ gracefully degrade operation without specific extensions are suggested by
 A second attempt to make 9P UNIX friendly is 9P2000.L.
 Diod speculatively implements some of the 9P2000.L operations.
 9P2000.L will eventually replace 9P2000.u.
-.SH "DIOD EXTENSIONS"
-The \fBdiod\fR extensions are negotiated as above only the version string is
-9P2000.H.  9P2000.H is a superset of 9P2000.L.
 .SH "LINUX ENTRY POINTS"
 tbd
 .SH "PLAN9 ENTRY POINTS"

@@ -22,7 +22,7 @@ TESTS = \
 	t09-mount-9P2000 \
 	t10-mount-9P2000.u \
 	t11-mount-9P2000.L \
-	t12-mount-9P2000.H \
+	t12-mount-bogus \
 	t13-rename-across-dirs \
 	t14-statfs \
 	t15-fsync \

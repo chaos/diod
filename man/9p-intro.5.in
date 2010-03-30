@@ -268,8 +268,8 @@ size[4] Rflock tag[2]
 .fi
 .SH "DIOD EXTENSIONS"
 .B diod
-further extends 9P with new requests for large atomic I/O with optional
-checksum.  This extension is labeled 9P2000.H.
+further extends 9P2000.L with new requests for large atomic I/O with optional
+checksum.
 .LP
 .nf	
 size[4] Taread tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4]

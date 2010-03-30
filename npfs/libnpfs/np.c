@@ -1021,8 +1021,6 @@ np_create_rwstat(void)
 	return np_post_check(fc, bufp);
 }
 
-/* 9p2000.h extensions */
-
 Npfcall *
 np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize)
 {
@@ -1478,8 +1476,6 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		buf_get_int16(bufp);
 		buf_get_stat(bufp, &fc->stat, dotu);
 		break;
-
-	/* 9p2000.h extensions */
 
 	case Taread:
 		fc->fid = buf_get_int32(bufp);

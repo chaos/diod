@@ -46,8 +46,10 @@ t10-mount-9P2000.u
 t11-mount-9P2000.L
 	Simple mount/unmount sanity test for 9P2000.L protocol.
 
-t12-mount-9P2000.H
-	Simple mount/unmount sanity test for 9P2000.H protocol.
+t12-mount-bogus
+	Ensure that mount of an unknown protocol fails, and that
+	it kernel doesn't lock up with debugging on in that case.
+	This is a regression test for a bug we had at one time.
 
 t13-rename-across-dirs
 	Demonstrate that 9P2000.L rename works across directories.

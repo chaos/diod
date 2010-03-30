@@ -70,7 +70,7 @@ np_srv_create(int nwthread)
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
-	srv->proto_version = NPFS_PROTO_2000H;
+	srv->proto_version = NPFS_PROTO_2000L;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
 	srv->shuttingdown = 0;
@@ -503,24 +503,15 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 		ver = "9P2000";
 	} else if (!np_strcmp(version, "9P2000.u")) {
 		if (conn->proto_version == NPFS_PROTO_2000U
-		 || conn->proto_version == NPFS_PROTO_2000L
-		 || conn->proto_version == NPFS_PROTO_2000H) {
+		 || conn->proto_version == NPFS_PROTO_2000L) {
 			proto_ver = NPFS_PROTO_2000U;
 			ver = "9P2000.u";
 		} else
 			np_werror("unsupported 9P version", EIO);
 	} else if (!np_strcmp(version, "9P2000.L")) {
-		if (conn->proto_version == NPFS_PROTO_2000L
-		 || conn->proto_version == NPFS_PROTO_2000H) {
+		if (conn->proto_version == NPFS_PROTO_2000L) {
 			proto_ver = NPFS_PROTO_2000L;
 			ver = "9P2000.L";
-		} else
-			np_werror("unsupported 9P version", EIO);
-	} else if (!np_strcmp(version, "9P2000.H")) {
-		if (conn->proto_version == NPFS_PROTO_2000H) {
-			proto_ver = NPFS_PROTO_2000H;
-			ver = "9P2000.H";
-			min_msize = AIOHDRSZ + 1;
 		} else
 			np_werror("unsupported 9P version", EIO);
 	} else

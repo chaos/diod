@@ -37,14 +37,13 @@ Npfcall *np_clunk(Npreq *req, Npfcall *tc);
 Npfcall *np_remove(Npreq *req, Npfcall *tc);
 Npfcall *np_stat(Npreq *req, Npfcall *tc);
 Npfcall *np_wstat(Npreq *req, Npfcall *tc);
-/* 9P2000.h extensions */
-Npfcall *np_aread(Npreq *req, Npfcall *tc);
-Npfcall *np_awrite(Npreq *req, Npfcall *tc);
-Npfcall *np_sync(Npreq *req, Npfcall *tc);
+/* 9P2000.L extensions */
+Npfcall *np_rename(Npreq *req, Npfcall *tc);
 Npfcall *np_statfs(Npreq *req, Npfcall *tc);
 Npfcall *np_lock(Npreq *req, Npfcall *tc);
 Npfcall *np_flock(Npreq *req, Npfcall *tc);
-Npfcall *np_rename(Npreq *req, Npfcall *tc);
+Npfcall *np_aread(Npreq *req, Npfcall *tc);
+Npfcall *np_awrite(Npreq *req, Npfcall *tc);
 
 /* fmt.c */
 int np_printstat(FILE *f, Npstat *st, int dotu);

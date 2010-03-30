@@ -327,8 +327,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "Rwstat tag %u", tag);
 		break;
 
-	/* 9p2000.h extensions */
-
 	case Taread:
 		n += snprintf(s+n,len-n, "Taread tag %u fid %d datacheck %d offset %llu count %u rsize %u", 
 			tag, fid, fc->datacheck, (unsigned long long)fc->offset,

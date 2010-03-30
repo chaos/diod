@@ -82,11 +82,10 @@ typedef struct Npdirops Npdirops;
 typedef struct Nppoll Nppoll;
 typedef struct Npollfd Npollfd;
 
-/* 9p2000.h extensions */
 typedef struct Npstatfs Npstatfs;
+typedef struct Nprename Nprename;
 typedef struct Nplock Nplock;
 typedef struct Npflock Npflock;
-typedef struct Nprename Nprename;
 
 /* message types */
 enum {
@@ -99,7 +98,6 @@ enum {
 	Rlock,
 	Tflock          = 54,
 	Rflock,
-	/* 9P2000.H */
 	Taread          = 80,
 	Raread,
 	Tawrite         = 82,
@@ -326,7 +324,7 @@ struct Npfcall {
 	Npstr		extension;		/* Tcreate */
 	u32		n_uname;
 
-	/* 9P2000.h extensions */
+	/* 9P2000.L extensions */
 	u32		rsize;			/* Taread, Tawrite */
 	u8		datacheck;		/* Taread, Tawrite */
 	u32		check;			/* Raread, Tawrite */
