@@ -126,6 +126,7 @@ Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 Npfcall     *diod_flock  (Npfid *fid, u8 cmd);
+Npfcall     *diod_lock   (Npfid *fid, u8 cmd, Nplock *flck);
 
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
@@ -180,7 +181,9 @@ diod_register_ops (Npsrv *srv)
     srv->rename = diod_rename;
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
-    //srv->plock = diod_lock;
+#if 0
+    srv->plock = diod_lock;
+#endif
     srv->flock = diod_flock;
 }
 
@@ -1551,10 +1554,10 @@ done:
 }
 
 /* Tflock - lock/unlock BSD advisory file lock
- * Lock upgrade behavior is per-fd not per-process, so our model where one
- * process (diod) manages locks on behalf of many remote processes using
- * a separate file descriptor per process works well. 
- * N.B. deadlock?
+ * Lock upgrade behavior is per-fd not per-process, which fits our model
+ * where one process (diod) manages locks on behalf of many remote processes
+ * using a separate file descriptor per process.
+ * FIXME:  thread pool deadlock on ~LOCK_NB?
  */
 Npfcall*
 diod_flock (Npfid *fid, u8 cmd)
@@ -1604,6 +1607,91 @@ done:
     }
     return ret;
 }
+
+#if 0
+/* Tlock - lock/unlock posix advisory record lock 
+ * FIXME: Wildly incorrect implementation here (diod is a single process).
+ * FIXME: thread pool deadlock on F_SETLKW
+ */
+Npfcall*
+diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
+{
+    Fid *f = fid->aux;
+    Npfcall *ret = NULL;
+    struct flock fl;
+    int op;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_lock: error switching user");
+        goto done;
+    }
+    switch (cmd) {
+        case P9_LOCK_GETLK:
+            op = F_GETLK;
+            break;
+        case P9_LOCK_SETLK:
+            op = F_SETLK;
+            break;
+        case P9_LOCK_SETLKW:
+            op = F_SETLKW;
+            break;
+        default:
+            np_uerror (EIO);
+            msg ("diod_lock: incorrect cmd value received (0x%x)", cmd);
+            goto done;
+    }
+    switch (flck->type) {
+        case P9_LOCK_RDLCK:
+            fl.l_type = F_RDLCK;
+            break;
+        case P9_LOCK_WRLCK:
+            fl.l_type = F_WRLCK;
+            break;
+        case P9_LOCK_UNLCK:
+            fl.l_type = F_UNLCK;
+            break;
+        default:
+            np_uerror (EIO);
+            msg ("diod_lock: incorrect type value received (0x%x)", flck->type);
+            goto done;
+    }
+    fl.l_whence = SEEK_SET;
+    fl.l_start = flck->start;
+    fl.l_len = flck->end - flck->start;
+
+    /* FIXME: handle EINTR ? */
+    if (fcntl (f->fd, op, &fl) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    switch (fl.l_type) {
+        case F_RDLCK:
+            flck->type = P9_LOCK_RDLCK;
+            break;
+        case F_WRLCK:
+            flck->type = P9_LOCK_WRLCK;
+            break;
+        case F_UNLCK:
+            flck->type = P9_LOCK_UNLCK;
+            break;
+    }
+
+    if (!(ret = np_create_rlock(flck->type, fl.l_pid, fl.l_start,
+                                fl.l_start + fl.l_len))) {
+        np_uerror (ENOMEM);
+        msg ("diod_flock: out of memory");
+        goto done;
+    }
+done:
+    if (np_haserror ()) {
+        if (ret) {
+            free (ret);
+            ret = NULL;
+        }
+    }
+    return ret;
+}
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
