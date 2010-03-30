@@ -1,0 +1,8 @@
+starting diod
+mounting
+flock/unlock once
+nested non-blocking flock/unlock
+correct: second lock would block
+removing file
+unmounting
+waiting for diod to terminate

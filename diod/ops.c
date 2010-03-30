@@ -125,6 +125,7 @@ Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
                           u8 *data, Npreq *req);
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
+Npfcall     *diod_flock  (Npfid *fid, u8 cmd);
 
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
@@ -180,7 +181,7 @@ diod_register_ops (Npsrv *srv)
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
     //srv->plock = diod_lock;
-    //srv->flock = diod_flock;
+    srv->flock = diod_flock;
 }
 
 /* Update stat info contained in fid.
@@ -1541,6 +1542,61 @@ done:
     if (np_haserror ()) {
         if (newpath)
             free (newpath);
+        if (ret) {
+            free (ret);
+            ret = NULL;
+        }
+    }
+    return ret;
+}
+
+/* Tflock - lock/unlock BSD advisory file lock
+ * Lock upgrade behavior is per-fd not per-process, so our model where one
+ * process (diod) manages locks on behalf of many remote processes using
+ * a separate file descriptor per process works well. 
+ * N.B. deadlock?
+ */
+Npfcall*
+diod_flock (Npfid *fid, u8 cmd)
+{
+    Fid *f = fid->aux;
+    Npfcall *ret = NULL;
+    int op;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_flock: error switching user");
+        goto done;
+    }
+    if (!(ret = np_create_rflock())) {
+        np_uerror (ENOMEM);
+        msg ("diod_flock: out of memory");
+        goto done;
+    }
+    switch (cmd & 0x3) {
+        case P9_FLOCK_SH:
+            op = LOCK_SH;
+            break;
+        case P9_FLOCK_EX:
+            op = LOCK_EX;
+            break;
+        case P9_FLOCK_UN:
+            op = LOCK_UN;
+            break;
+        default:
+            np_uerror (EIO);
+            msg ("diod_flock: incorrect cmd value received (0x%x)", cmd);
+            goto done;
+    }
+    if (cmd & P9_FLOCK_NB)
+        op |= LOCK_NB;
+
+    /* FIXME: handle EINTR ? */
+    if (flock (f->fd, op) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+done:
+    if (np_haserror ()) {
         if (ret) {
             free (ret);
             ret = NULL;

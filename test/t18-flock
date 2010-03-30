@@ -1,0 +1,39 @@
+#!/bin/bash -e
+
+doit ()
+{
+	echo starting diod
+	$PATH_DIOD -c $PATH_DIODCONF -f -l "localhost:2006" -x -m \
+			-e $PATH_EXPDIR &
+	sleep 1
+	echo mounting
+	$PATH_DIODMOUNT -o uname=root,port=2006,version=9p2000.L \
+			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
+
+	echo flock/unlock once
+	flock -x $PATH_MNTDIR/a -c /bin/true
+
+	echo nested non-blocking flock/unlock
+	if flock -x $PATH_MNTDIR/a -c \
+			"flock -x -n $PATH_MNTDIR/a -c /bin/true"; then
+		echo "incorrect: lock taken twice"
+	else
+		echo "correct: second lock would block"
+	fi
+
+	echo "removing file"
+	rm -f $PATH_MNTDIR/a
+
+	echo unmounting
+	umount $PATH_MNTDIR
+	echo waiting for diod to terminate
+	wait
+}
+
+TEST=$(basename $0 | cut -d- -f1)
+test $(id -u) == 0 || exit 77 #skip if not root
+test -x /usr/bin/flock || exit 77 #skip if no flock binary
+
+doit >$TEST.out 2>&1
+
+diff $TEST.exp $TEST.out >$TEST.diff

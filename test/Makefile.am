@@ -27,7 +27,8 @@ TESTS = \
 	t14-statfs \
 	t15-fsync \
 	t16-stat \
-	t17-chmod
+	t17-chmod \
+	t18-flock
 
 $(TESTS): mnt.d exp.d
 

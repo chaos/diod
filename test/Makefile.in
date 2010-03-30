@@ -277,7 +277,8 @@ TESTS = \
 	t14-statfs \
 	t15-fsync \
 	t16-stat \
-	t17-chmod
+	t17-chmod \
+	t18-flock
 
 CLEANFILES = *.out *.diff
 AM_CFLAGS = @GCCWARN@
