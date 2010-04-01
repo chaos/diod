@@ -8,7 +8,8 @@ check_PROGRAMS = \
 	trename \
 	tstat \
 	tflock \
-	tfcntl2
+	tfcntl2 \
+	tconfig
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"

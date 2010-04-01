@@ -39,7 +39,7 @@ target_triplet = @target@
 check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsuppgrp$(EXEEXT) tfcntl$(EXEEXT) \
 	tstatfs$(EXEEXT) trename$(EXEEXT) tstat$(EXEEXT) \
-	tflock$(EXEEXT) tfcntl2$(EXEEXT)
+	tflock$(EXEEXT) tfcntl2$(EXEEXT) tconfig$(EXEEXT)
 subdir = test
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -53,11 +53,19 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
+tconfig_SOURCES = tconfig.c
+tconfig_OBJECTS = tconfig.$(OBJEXT)
+tconfig_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+tconfig_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
+	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am__objects_1 =
 am_tfcntl_OBJECTS = tfcntl.$(OBJEXT) $(am__objects_1)
 tfcntl_OBJECTS = $(am_tfcntl_OBJECTS)
 tfcntl_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 tfcntl_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
 	$(top_builddir)/npfs/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -142,11 +150,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(tfcntl_SOURCES) tfcntl2.c $(tflock_SOURCES) \
+SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c $(tflock_SOURCES) \
 	$(trename_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
 	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
-DIST_SOURCES = $(tfcntl_SOURCES) tfcntl2.c $(tflock_SOURCES) \
+DIST_SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c $(tflock_SOURCES) \
 	$(trename_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
 	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
@@ -357,6 +365,9 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+tconfig$(EXEEXT): $(tconfig_OBJECTS) $(tconfig_DEPENDENCIES) 
+	@rm -f tconfig$(EXEEXT)
+	$(LINK) $(tconfig_LDFLAGS) $(tconfig_OBJECTS) $(tconfig_LDADD) $(LIBS)
 tfcntl$(EXEEXT): $(tfcntl_OBJECTS) $(tfcntl_DEPENDENCIES) 
 	@rm -f tfcntl$(EXEEXT)
 	$(LINK) $(tfcntl_LDFLAGS) $(tfcntl_OBJECTS) $(tfcntl_LDADD) $(LIBS)
@@ -394,6 +405,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock.Po@am__quote@

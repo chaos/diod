@@ -20,11 +20,9 @@ This command must be run as root.
 List file systems exported by HOST.
 .TP
 .I "-u, --mount-user USER"
-Causes the file system to be mounted so that only USER can access it.
-.TP
-.I "-p, --private-server"
-Spawn a server dedicated to I/O forwarding for USER.
-This option can only be used in conjunction with \fI--mount-user\fR.
+Causes the file system to be mounted so that only USER can access it,
+and spawn a server dedicated to I/O forwarding for USER if there isn't
+one already.
 .TP
 .I "-n, --no-mtab"
 Do not update /etc/mtab.  This may be appropriate, for example, when
@@ -58,7 +56,7 @@ Mount tycho42's diodctl server directly for testing:
 Mount /p/lcrater1 on tycho[101-164], with a private server for garlick:
 .nf
     pdsh -w tycho[101-164] \\
-        diodmount -p -u garlick tycho42:/p/lcrater1 /p/lcrater1
+        diodmount -u garlick tycho42:/p/lcrater1 /p/lcrater1
 .fi
 .nf
 .SH "SEE ALSO"

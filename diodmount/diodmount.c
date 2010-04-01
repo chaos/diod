@@ -27,10 +27,6 @@
  *     All users can access dir.
  *     The server is shared by all mounts of this type for all users.
  *
- * Usage: diodmount -u USER host:path dir
- *     Only USER can access dir.
- *     The server is shared by all mounts of this type for all users.
- *       
  * Usage: diodmount -p -u USER host:path dir
  *     Only USER can access dir.
  *     The server is shared by all mounts by USER of this type.
@@ -67,12 +63,11 @@
 
 #include "opt.h"
 
-#define OPTIONS "u:pnx:o:O:Tv"
+#define OPTIONS "u:nx:o:O:Tv"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"mount-user",      required_argument,   0, 'u'},
-    {"private-server",  no_argument,         0, 'p'},
     {"no-mtab",         no_argument,         0, 'n'},
     {"list-exports",    required_argument,   0, 'x'},
     {"diod-option",     required_argument,   0, 'o'},
@@ -102,7 +97,6 @@ usage (void)
 "Usage: diodmount -x,--list-exports HOST\n"
 "   or: diodmount [OPTIONS] device directory\n"
 "   -u,--mount-user USER          set up the mount so only USER can use it\n"
-"   -p,--private-server           get private server instance for USER\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
@@ -117,7 +111,6 @@ main (int argc, char *argv[])
     char *device, *dir, *aname, *ip;
     int c;
     struct stat sb;
-    int popt = 0;
     int nopt = 0;
     int vopt = 0;
     char *uopt = NULL;
@@ -132,9 +125,6 @@ main (int argc, char *argv[])
         switch (c) {
             case 'u':   /* --mount-user USER */
                 uopt = optarg;
-                break;
-            case 'p':   /* --private-server */
-                popt = 1;
                 break;
             case 'n':   /* --no-mtab */
                 nopt = 1;
@@ -166,8 +156,8 @@ main (int argc, char *argv[])
         char *ip = _name2ip (xopt);
         int ret;
 
-        if (uopt || popt || nopt)
-            msg_exit ("--list-exports cannot be used with -updn");
+        if (uopt || nopt)
+            msg_exit ("--list-exports cannot be used with -un");
         if (!(dir = mkdtemp (tmpl)))
             err_exit ("failed to create temporary directory for mount");
         _diodctl_mount (ip, dir, Oopt, vopt);
@@ -182,11 +172,6 @@ main (int argc, char *argv[])
         usage ();
     device = argv[optind++];
     dir = argv[optind++];
-
-    if (popt && !uopt)
-        msg_exit ("--private-server requested but no --mount-user given");
-    if (uopt && !strcmp (uopt, "root") && !popt)
-        msg_exit ("--mount-user root can only be used with --private-server");
 
     if (stat (dir, &sb) < 0)
         err_exit (dir);
@@ -206,7 +191,7 @@ main (int argc, char *argv[])
 
     if (!strcmp (aname, "/diodctl")) {
         _diodctl_mount (ip, dir, Oopt, vopt);
-    } else if (popt) {
+    } else if (uopt) {
         char *port;
 
         _diodctl_mount (ip, dir, Oopt, vopt);
