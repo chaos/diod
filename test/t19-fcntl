@@ -3,7 +3,7 @@
 doit ()
 {
 	echo starting diod
-	$PATH_DIOD -c $PATH_DIODCONF -f -l "localhost:2006" -x -m \
+	$PATH_DIOD -d3 -c $PATH_DIODCONF -f -l "localhost:2006" -x -m \
 			-e $PATH_EXPDIR &
 	sleep 1
 	echo mounting
@@ -11,7 +11,7 @@ doit ()
 			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
 
 	dd if=/dev/zero of=$PATH_MNTDIR/a count=1024 status=noxfer
-	./tflock $PATH_MNTDIR/a
+	./tfcntl2 $PATH_MNTDIR/a
 	rm -f $PATH_MNTDIR/a
 	echo unmounting
 	umount $PATH_MNTDIR

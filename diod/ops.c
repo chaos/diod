@@ -127,7 +127,6 @@ Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 Npfcall     *diod_flock  (Npfid *fid, u8 cmd);
 Npfcall     *diod_lock   (Npfid *fid, u8 cmd, Nplock *flck);
-
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
 static u32       _umode2npmode  (mode_t umode);
@@ -181,9 +180,7 @@ diod_register_ops (Npsrv *srv)
     srv->rename = diod_rename;
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
-#if 0
     srv->plock = diod_lock;
-#endif
     srv->flock = diod_flock;
 }
 
@@ -1556,8 +1553,9 @@ done:
 /* Tflock - lock/unlock BSD advisory file lock
  * Lock upgrade behavior is per-fd not per-process, which fits our model
  * where one process (diod) manages locks on behalf of many remote processes
- * using a separate file descriptor per process.
- * FIXME:  thread pool deadlock on ~LOCK_NB?
+ * using a separate fd per process.
+ * FIXME: implement blocking requests without thread pool deadlock
+ * FIXME: handle EINTR return from flock call?
  */
 Npfcall*
 diod_flock (Npfid *fid, u8 cmd)
@@ -1570,12 +1568,9 @@ diod_flock (Npfid *fid, u8 cmd)
         msg ("diod_flock: error switching user");
         goto done;
     }
-    if (!(ret = np_create_rflock())) {
-        np_uerror (ENOMEM);
-        msg ("diod_flock: out of memory");
-        goto done;
-    }
-    switch (cmd & 0x3) {
+    if (!(cmd & P9_FLOCK_NB) && (cmd & 3) != P9_FLOCK_UN)
+        msg ("diod_flock: warning: blocking operations not implemented yet");
+    switch (cmd & 3) {
         case P9_FLOCK_SH:
             op = LOCK_SH;
             break;
@@ -1590,108 +1585,105 @@ diod_flock (Npfid *fid, u8 cmd)
             msg ("diod_flock: incorrect cmd value received (0x%x)", cmd);
             goto done;
     }
-    if (cmd & P9_FLOCK_NB)
-        op |= LOCK_NB;
-
-    /* FIXME: handle EINTR ? */
-    if (flock (f->fd, op) < 0) {
+    if (flock (f->fd, op | LOCK_NB) < 0) {
         np_uerror (errno);
         goto done;
     }
-done:
-    if (np_haserror ()) {
-        if (ret) {
-            free (ret);
-            ret = NULL;
-        }
+    if (!(ret = np_create_rflock())) {
+        np_uerror (ENOMEM);
+        msg ("diod_flock: out of memory");
+        goto done;
     }
+done:
     return ret;
 }
 
-#if 0
+#ifndef INT_LIMIT
+#define INT_LIMIT(x) (~((x)1 << (sizeof(x)*8 - 1)))
+#endif
+
 /* Tlock - lock/unlock posix advisory record lock 
- * FIXME: Wildly incorrect implementation here (diod is a single process).
- * FIXME: thread pool deadlock on F_SETLKW
+ * FIXME: implement blocking requests without thread pool deadlock
+ * FIXME: implement record locking
+ * FIXME: implement in terms of fcntl locks
+ * N.B. This temporary implementation is in terms of flock.
  */
 Npfcall*
 diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
 {
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    struct flock fl;
     int op;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_lock: error switching user");
         goto done;
     }
+    if (cmd == P9_LOCK_SETLKW && flck->type != P9_LOCK_UNLCK)
+        msg ("diod_lock: warning: blocking operations not implemented yet");
+    if ((flck->start != 0 || flck->end != INT_LIMIT(off_t))) {
+        np_uerror (EIO);
+        msg ("diod_lock: record locking not implemented yet");
+        goto done;
+    }
+    switch (flck->type) {
+        case P9_LOCK_RDLCK:
+            op = LOCK_SH;
+            break;
+        case P9_LOCK_WRLCK:
+            op = LOCK_EX;
+            break;
+        case P9_LOCK_UNLCK:
+            op = LOCK_UN;
+            break;
+        default:
+            np_uerror (EIO);
+            msg ("diod_lock: incorrect lock type (0x%x)", flck->type);
+            goto done;
+    }
     switch (cmd) {
         case P9_LOCK_GETLK:
-            op = F_GETLK;
+            if (op == LOCK_UN) {
+                np_uerror (EINVAL);
+                msg ("diod_lock: cannot GETLCK a type of UNLCK");
+                goto done;
+            }
+            if (flock (f->fd, op | LOCK_NB) < 0) {
+                if (errno != EACCES && errno != EAGAIN) {
+                    np_uerror (errno);
+                    goto done;
+                }
+                flck->type = (op == LOCK_EX ? P9_LOCK_WRLCK : P9_LOCK_RDLCK);
+            } else {
+                if (flock (f->fd, LOCK_UN) < 0) {
+                    np_uerror (errno);
+                    goto done;
+                }
+                flck->type = P9_LOCK_UNLCK;
+            }
             break;
         case P9_LOCK_SETLK:
-            op = F_SETLK;
-            break;
         case P9_LOCK_SETLKW:
-            op = F_SETLKW;
+            if (flock (f->fd, op | LOCK_NB) < 0) {
+                if (errno == EAGAIN) /* don't trigger a retry in client vfs */
+                    errno = EACCES;
+                np_uerror (errno); 
+                goto done;
+            }
             break;
         default:
             np_uerror (EIO);
             msg ("diod_lock: incorrect cmd value received (0x%x)", cmd);
             goto done;
     }
-    switch (flck->type) {
-        case P9_LOCK_RDLCK:
-            fl.l_type = F_RDLCK;
-            break;
-        case P9_LOCK_WRLCK:
-            fl.l_type = F_WRLCK;
-            break;
-        case P9_LOCK_UNLCK:
-            fl.l_type = F_UNLCK;
-            break;
-        default:
-            np_uerror (EIO);
-            msg ("diod_lock: incorrect type value received (0x%x)", flck->type);
-            goto done;
-    }
-    fl.l_whence = SEEK_SET;
-    fl.l_start = flck->start;
-    fl.l_len = flck->end - flck->start;
-
-    /* FIXME: handle EINTR ? */
-    if (fcntl (f->fd, op, &fl) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    switch (fl.l_type) {
-        case F_RDLCK:
-            flck->type = P9_LOCK_RDLCK;
-            break;
-        case F_WRLCK:
-            flck->type = P9_LOCK_WRLCK;
-            break;
-        case F_UNLCK:
-            flck->type = P9_LOCK_UNLCK;
-            break;
-    }
-
-    if (!(ret = np_create_rlock(flck->type, fl.l_pid, fl.l_start,
-                                fl.l_start + fl.l_len))) {
+    if (!(ret = np_create_rlock(flck->type, flck->pid, 0, 0))) {
         np_uerror (ENOMEM);
-        msg ("diod_flock: out of memory");
+        msg ("diod_lock: out of memory");
         goto done;
     }
 done:
-    if (np_haserror ()) {
-        if (ret) {
-            free (ret);
-            ret = NULL;
-        }
-    }
     return ret;
 }
-#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

@@ -1,5 +1,14 @@
 check_PROGRAMS = \
-	tsetuid tsetfsuid tsetfsuidsupp tsuppgrp tfcntl tstatfs trename tstat
+	tsetuid \
+	tsetfsuid \
+	tsetfsuidsupp \
+	tsuppgrp \
+	tfcntl \
+	tstatfs \
+	trename \
+	tstat \
+	tflock \
+	tfcntl2
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
@@ -28,7 +37,8 @@ TESTS = \
 	t15-fsync \
 	t16-stat \
 	t17-chmod \
-	t18-flock
+	t18-flock \
+	t19-fcntl
 
 $(TESTS): mnt.d exp.d
 
@@ -59,6 +69,7 @@ tfcntl_SOURCES = tfcntl.c $(common_sources)
 tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
+tflock_SOURCES = tflock.c $(common_sources)
 
 clean: clean-am
 	-rmdir mnt.d

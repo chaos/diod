@@ -1,8 +1,8 @@
-2010-03-30 Jim Garlick <garlick@llnl.gov>
+2010-04-01 Jim Garlick <garlick@llnl.gov>
 
-	* diod/ops.c : Added fcntl lock implementation, incomplete (disabled).
+	* diod/ops.c, tests/t19* : Initial fcntl lock implementation.
 
-	* diod/ops.c, tests/t18* : Added simple flock implementation and test.
+	* diod/ops.c, tests/t18* : Initial flock implementation.
 
 	* : Remove vestiges of 9P20000.H.  It's all .L now.
 

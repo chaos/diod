@@ -1,8 +1,15 @@
 starting diod
 mounting
-flock/unlock once
-nested non-blocking flock/unlock
-correct: second lock would block
-removing file
+1024+0 records in
+1024+0 records out
+tflock: fd: blocking exclusive request succeeded
+tflock: fd2: exclusive request failed: Resource temporarily unavailable
+tflock: fd: shared request (downgrade) succeeded
+tflock: fd2: shared request succeeded
+tflock: fd2: exclusive request failed: Resource temporarily unavailable
+tflock: fd: unlock succeeded
+tflock: fd2: exclusive request succeeded
+tflock: fd2: unlock succeeded
+tflock: cleaning up
 unmounting
 waiting for diod to terminate

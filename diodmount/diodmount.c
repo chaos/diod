@@ -356,6 +356,7 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt)
     opt_add (o, "uname=%s", (cred = _create_mungecred (NULL)));
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
+    opt_add (o, "version=9p2000.L");
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)

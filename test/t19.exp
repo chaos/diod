@@ -1,0 +1,15 @@
+starting diod
+mounting
+1024+0 records in
+1024+0 records out
+tfcntl2: fd: blocking exclusive request succeeded
+tfcntl2: fd2: exclusive request failed: Permission denied
+tfcntl2: fd: shared request (downgrade) succeeded
+tfcntl2: fd2: shared request succeeded
+tfcntl2: fd2: exclusive request (upgrade) failed: Permission denied
+tfcntl2: fd: unlock succeeded
+tfcntl2: fd2: exclusive request succeeded
+tfcntl2: fd2: unlock succeeded
+tfcntl2: cleaning up
+unmounting
+waiting for diod to terminate

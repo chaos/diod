@@ -68,3 +68,9 @@ t15-fsync
 17-chmod
 	Set all the mode bits (7777) on a file and directory on server
 	and verify that they are reflected in client stat, the do the reverse.
+
+18-flock
+	Simple test to exercise BSD advisory file locks.
+
+19-fcntl
+	Simple test to exercise POSIX advisory record locks.
