@@ -333,6 +333,7 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts, int vopt)
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
     opt_add (o, "version=9p2000.L");
+    opt_add (o, "debug=0x1"); /* errors */
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)
@@ -357,6 +358,7 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt)
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
     opt_add (o, "version=9p2000.L");
+    opt_add (o, "debug=0x1"); /* errors */
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
     if (opts)

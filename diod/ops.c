@@ -1346,7 +1346,7 @@ _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
     return _cache_read (fid, buf, rsize, offset);
 }
 
-/* Taread - atomic read (9P2000.H).
+/* Taread - atomic read
  */
 Npfcall*
 diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
@@ -1433,7 +1433,7 @@ _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
     return _cache_write (fid, buf, rsize, offset);
 }
 
-/* Tawrite - atomic write (9P2000.H).
+/* Tawrite - atomic write
  */
 Npfcall*
 diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)

@@ -1,5 +1,7 @@
 2010-04-01 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre4
+
 	* diod/ops.c, tests/t19* : Initial fcntl lock implementation.
 
 	* diod/ops.c, tests/t18* : Initial flock implementation.
