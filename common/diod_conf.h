@@ -33,9 +33,6 @@ void    diod_conf_set_nwthreads (int i);
 int     diod_conf_get_foreground (void);
 void    diod_conf_set_foreground (int i);
 
-int     diod_conf_get_allowprivate (void);
-void    diod_conf_set_allowprivate (int i);
-
 int     diod_conf_get_tcpwrappers (void);
 void    diod_conf_set_tcpwrappers (int i);
 
@@ -52,19 +49,21 @@ char   *diod_conf_get_diodpath (void);
 void    diod_conf_set_diodpath (char *s);
 
 List    diod_conf_get_diodlisten (void);
-void    diod_conf_set_diodlisten (char *s);
+void    diod_conf_clr_diodlisten (void);
+void    diod_conf_add_diodlisten (char *s);
 
 List    diod_conf_get_diodctllisten (void);
-void    diod_conf_set_diodctllisten (char *s);
+void    diod_conf_clr_diodctllisten (void);
+void    diod_conf_add_diodctllisten (char *s);
 
 int     diod_conf_match_export (char *path, char *host, char *ip, uid_t uid,
                                 int *errp);
 void    diod_conf_validate_exports (void);
-void    diod_conf_set_export (char *path);
+void    diod_conf_clr_export (void);
+void    diod_conf_add_export (char *path);
 char   *diod_conf_cat_exports (void);
-
-char   *diod_conf_mkconfig (void);
-
+char   *diod_conf_write_exports (void);
+void    diod_conf_read_exports (char *path);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

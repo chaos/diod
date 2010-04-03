@@ -27,7 +27,7 @@
  *     All users can access dir.
  *     The server is shared by all mounts of this type for all users.
  *
- * Usage: diodmount -p -u USER host:path dir
+ * Usage: diodmount -u USER host:path dir
  *     Only USER can access dir.
  *     The server is shared by all mounts by USER of this type.
  */
@@ -63,7 +63,7 @@
 
 #include "opt.h"
 
-#define OPTIONS "u:nx:o:O:Tv"
+#define OPTIONS "u:nx:o:O:Tvd"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -74,6 +74,7 @@ static const struct option longopts[] = {
     {"diodctl-option",  required_argument,   0, 'O'},
     {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
+    {"direct",          no_argument,         0, 'd'},
     {0, 0, 0, 0},
 };
 #else
@@ -101,6 +102,7 @@ usage (void)
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
 "   -v,--verbose                  be verbose about what is going on\n"
+"   -d,--direct                   mount diod directly (requires -o port=N)\n"
 );
     exit (1);
 }
@@ -113,6 +115,7 @@ main (int argc, char *argv[])
     struct stat sb;
     int nopt = 0;
     int vopt = 0;
+    int dopt = 0;
     char *uopt = NULL;
     char *xopt = NULL;
     char *oopt = NULL;
@@ -144,6 +147,9 @@ main (int argc, char *argv[])
             case 'v':   /* --verbose */
                 vopt = 1;
                 break;
+            case 'd':   /* --direct */
+                dopt = 1;
+                break;
             default:
                 usage ();
         }
@@ -156,8 +162,6 @@ main (int argc, char *argv[])
         char *ip = _name2ip (xopt);
         int ret;
 
-        if (uopt || nopt)
-            msg_exit ("--list-exports cannot be used with -un");
         if (!(dir = mkdtemp (tmpl)))
             err_exit ("failed to create temporary directory for mount");
         _diodctl_mount (ip, dir, Oopt, vopt);
@@ -183,15 +187,18 @@ main (int argc, char *argv[])
 
     /* If not mounting as root, seteuid to the user whose munge
      * credentials will be used for the initial attach.
+     * We restore root privileges later.
      */
     if (uopt)
         diod_become_user (uopt, 0, 0);
 
     _parse_device (device, &aname, &ip);
 
-    if (!strcmp (aname, "/diodctl")) {
+    if (dopt)
+        _diod_mount (ip, dir, aname, NULL, oopt, vopt);
+    else if (!strcmp (aname, "/diodctl")) {
         _diodctl_mount (ip, dir, Oopt, vopt);
-    } else if (uopt) {
+    } else {
         char *port;
 
         _diodctl_mount (ip, dir, Oopt, vopt);
@@ -201,8 +208,7 @@ main (int argc, char *argv[])
         _umount (dir);
         _diod_mount (ip, dir, aname, port, oopt, vopt);
         free (port);
-    } else
-        _diod_mount (ip, dir, aname, NULL, oopt, vopt);
+    }
 
     free (aname);
     free (ip);
@@ -314,7 +320,8 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts, int vopt)
     char *options, *cred;
 
     opt_add (o, "uname=%s", (cred = _create_mungecred (NULL)));
-    opt_add (o, "port=%s", port ? port : "10006");
+    if (port)
+        opt_add (o, "port=%s", port);
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
     opt_add (o, "version=9p2000.L");
@@ -342,7 +349,6 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt)
     opt_add (o, "uname=%s", (cred = _create_mungecred (NULL)));
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
-    opt_add (o, "version=9p2000.L");
     opt_add (o, "debug=0x1"); /* errors */
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());

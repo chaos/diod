@@ -5,12 +5,9 @@ diodctl \- distributed I/O daemon superserver
 .B diodctl
 .I "[OPTIONS]"
 .SH DESCRIPTION
-.B diodctl
-is the distributed I/O daemon super-server, which
-supplies a list of exported file systems and can dynamically start
-.B diod
-servers when requested by
-.B diodmount.
+\fBdiodctl\fR is the distributed I/O daemon super-server, which 
+dynamically starts \fBdiod\fR servers when requested by \fBdiodmount\fR.
+It can also supply a list of exported file systems.
 .LP
 Configuration is read from the diod.conf (5) config file.
 Some configuration can be overridden on the command line, as described below.
@@ -28,11 +25,10 @@ Set the debug mask.  The bit values are:
 .TP
 .I "-l, --listen IP:PORT"
 Set the listen address (default 0.0.0.0:10005).  
-A list of listen addresses can be specified in the config file 
-(diodctllisten parameter) but the command line accepts only one.
+This option may be specified more than once.
 .TP
 .I "-w, --nwthreads INT"
-Set the number of worker threads to spawn to handle 9P operations.
+Set the number of worker threads to spawn per server to handle 9P operations.
 The default is 16.
 .TP
 .I "-c, --config-file PATH"
@@ -40,10 +36,7 @@ Set config file path.
 .TP
 .I "-e, --export PATH"
 Set the file system to be exported.
-A list of exports can be specified in the config file (exports parameter),
-but the command line accepts only one.
-For \fBdiodctl\fR this affects the file systems that are listed
-by \fBdiodmount -x\fR.
+This option may be specified more than once.
 .TP
 .I "-a, --allowany"
 Override TCP wrappers checks and allow any client to connect.
@@ -55,9 +48,6 @@ This option is intended for testing only.
 .I "-D, --diod-path PATH"
 Override the default path to the \fBdiod\fR server executable.
 This option is intended for testing only.
-.TP
-.I "-p, --allow-private"
-Enable the spawning of private instances of the \fBdiod\fR server.
 .SH "LOGGING"
 \fBdiodctl\fR logs all messages to the LOG_DAEMON syslog facility
 at LOG_ERR severity.

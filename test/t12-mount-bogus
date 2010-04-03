@@ -3,16 +3,15 @@
 doit ()
 {
 	echo starting diod
-	$PATH_DIOD -c $PATH_DIODCONF -f -l "localhost:2006" -x -m \
-			-e $PATH_EXPDIR &
+	$PATH_DIOD -f -l "localhost:2006" -x -m -e $PATH_EXPDIR &
 	sleep 1
 	echo mounting with version=BOGUS
-	if $PATH_DIODMOUNT -o uname=root,port=2006,version=BOGUS \
+	if $PATH_DIODMOUNT -d -o uname=root,port=2006,version=BOGUS \
 			-n localhost:$PATH_EXPDIR $PATH_MNTDIR; then
 		echo mount successful
 	else
 		echo mount failed, retrying with version=9p2000.L
-		$PATH_DIODMOUNT -o uname=root,port=2006,version=9P2000.L \
+		$PATH_DIODMOUNT -d -o uname=root,port=2006,version=9P2000.L \
 			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
 		echo mount successful
 	fi

@@ -65,6 +65,7 @@ typedef struct {
     int nfds;               /* count of above */
     int ac;
     char **av;
+    char *tmp_exports;      /* temp file containing export list */
 } Server;
 
 typedef struct {
@@ -73,7 +74,6 @@ typedef struct {
 } Serverlist;
 
 static Serverlist *serverlist = NULL;
-static char *path_config = NULL;
 
 #define BASE_PORT       1942 /* arbitrary non-privileged port */
 #define MAX_PORT        (BASE_PORT + 1024)
@@ -85,6 +85,8 @@ _free_server (Server *s)
 {
     int i;
 
+    if (s->tmp_exports && unlink (s->tmp_exports) < 0)
+        err ("could not unlink tmp exports file: %s", s->tmp_exports);
     if (s->port)
         free (s->port);
     if (s->pid != 0) {
@@ -131,7 +133,7 @@ done:
  * Exit on error.
  */
 void
-diodctl_serv_init (char *path)
+diodctl_serv_init (void)
 {
     int err;
 
@@ -141,8 +143,6 @@ diodctl_serv_init (char *path)
         msg_exit ("out of memory");
     if ((err = pthread_mutex_init (&serverlist->lock, NULL)))
         msg_exit ("pthread_mutex_init: %s", strerror (err));
-    if (path)
-        path_config = path;
 }
 
 /* Return nonzero if s is server for uid.
@@ -203,9 +203,8 @@ _wait_pid (void *arg)
         pid = waitpid (s->pid, &status, 0);
         if (pid == s->pid) {
             if (WIFEXITED (status)) {
-                if (WEXITSTATUS (status) != 0)
-                    msg ("diod (port %s user %d) exited with %d",
-                         s->port, s->uid, WEXITSTATUS (status));
+                msg ("diod (port %s user %d) exited with %d",
+                      s->port, s->uid, WEXITSTATUS (status));
             } else if (WIFSIGNALED (status)) {
                 msg ("diod (port %s user %d) killed by signal %d",
                       s->port, s->uid, WTERMSIG (status));
@@ -258,30 +257,34 @@ done:
     return ret;
 }
 
-/* Exec child diod server.
- * We converted the config registry back in to a (temporary) config file
- * which we now tell diod to use.  This is to pick up any changes from
- * the diodctl command line.  Then we override those based on the specific
- * needs of diod running as a child of diodctl.
+/* Prep for exec of child diod server.
  */
 static int
 _build_server_args (Server *s)
 {
     int ret = 0;
 
-    assert (path_config != NULL);
-
     if (_append_arg (s, "diod-%d", s->uid) < 0)
-        goto done;
-    if (_append_arg (s, "-c%s", path_config) < 0)
-        goto done;
-    if (_append_arg (s, "-x") < 0)
         goto done;
     if (_append_arg (s, "-f") < 0)
         goto done;
-    if (_append_arg (s, "-u%d", s->uid) < 0)
+    if (_append_arg (s, "-x") < 0)
+        goto done;
+    if (s->uid != 0 && _append_arg (s, "-u%d", s->uid) < 0)
         goto done;
     if (_append_arg (s, "-F%d", s->nfds) < 0)
+        goto done;
+    if (_append_arg (s, "-d%d", diod_conf_get_debuglevel ()) < 0)
+        goto done;
+    if (_append_arg (s, "-w%d", diod_conf_get_nwthreads ()) < 0)
+        goto done;
+    if (!diod_conf_get_tcpwrappers () && _append_arg (s, "-a") < 0)
+        goto done;
+    if (!diod_conf_get_munge () && _append_arg (s, "-m") < 0)
+        goto done;
+    if (!(s->tmp_exports = diod_conf_write_exports ()))
+        goto done;
+    if (_append_arg (s, "-E%s", s->tmp_exports) < 0)
         goto done;
     ret = 1;
 done:
@@ -442,7 +445,7 @@ done:
  * This backs the write handler for 'ctl'.
  */
 int
-diodctl_serv_create (Npuser *user, char *ip)
+diodctl_serv_create (Npuser *user)
 {
     int err;
     int ret = 0;

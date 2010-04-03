@@ -194,10 +194,7 @@ _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
     Npfid *fid = file->fid;
     int ret = 0;
 
-    if (!diod_conf_get_allowprivate ()) {
-        np_uerror (EPERM);
-        msg ("diodctl_write:  diodctl is not configured for private mounts");
-    } else if (diodctl_serv_create (fid->user, NULL))
+    if (diodctl_serv_create (fid->user))
         ret = count;
     return ret;
 }

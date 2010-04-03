@@ -9,8 +9,8 @@ diod \- distributed I/O daemon
 is the distributed I/O daemon server, which
 implements I/O forwarding on Linux clusters.
 .LP
-Configuration is read from the diod.conf (5) config file.
-Some configuration can be overridden on the command line, as described below.
+Usually diod is spawned by the \fBdiodctl\fR, but it can be run standalone
+if required.
 .SH OPTIONS
 .TP
 .I "-f, --foreground"
@@ -25,29 +25,25 @@ Set the debug mask.  The bit values are:
 .TP
 .I "-l, --listen IP:PORT"
 Set the listen address (default 0.0.0.0:10006).
-A list of listen addresses can be specified in the config file (diodlisten
-parameter) but the command line accepts only one.
+This option may be specified more than once.
 .TP
 .I "-w, --nwthreads INT"
 Set the number of worker threads to spawn to handle 9P operations.
 The default is 16.
 .TP
-.I "-c, --config-file PATH"
-Set config file path.
-.TP
 .I "-e, --export PATH"
 Set the file system to be exported.
-A list of exports can be specified in the config file (exports parameter),
-but the command line accepts only one.
+This option may be specified more than once and in combination with \fI-E\fR.
+.TP
+.I "-E, --export-file PATH"
+Read the file system(s) to be exported from PATH.
+This option may be specified more than once and in combination with \fI-e\fR.
 .TP
 .I "-a, --allowany"
 Override TCP wrappers checks and allow any client to connect.
 .TP
 .I "-m, --no-munge-auth"
 This option allows users to attach without security credentials.
-WARNING: this option leaves exported file systems vulnerable to
-access by any user who can connect to your server and speak 9P.
-It is intended for testing only.
 .TP
 .I "-x, --exit-on-lastuse"
 Exit when the last connection drops, if clients have successfully attached.
@@ -66,8 +62,6 @@ at LOG_ERR severity.
 .SH "FILES"
 @X_SBINDIR@/diod
 .br
-@X_SYSCONFDIR@/diod.conf
-.br
 @X_LOCALSTATEDIR@/run/diod.pid
 .SH "SEE ALSO"
-diodctl (8), diodmount (8), diod.conf (5), hosts_access (5)
+diodctl (8), diodmount (8), hosts_access (5)

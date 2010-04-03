@@ -1602,7 +1602,7 @@ done:
 #define INT_LIMIT(x) (~((x)1 << (sizeof(x)*8 - 1)))
 #endif
 
-/* Tlock - lock/unlock posix advisory record lock 
+/* Tlock - lock/unlock/test posix advisory record lock 
  * FIXME: implement blocking requests without thread pool deadlock
  * FIXME: implement record locking
  * FIXME: implement in terms of fcntl locks

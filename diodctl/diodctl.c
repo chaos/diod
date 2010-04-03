@@ -70,7 +70,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:e:amD:p"
+#define OPTIONS "fd:l:w:c:e:amD:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -83,7 +83,6 @@ static const struct option longopts[] = {
     {"allowany",        no_argument,        0, 'a'},
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"diod-path",       required_argument,  0, 'D'},
-    {"allow-private",   no_argument,        0, 'p'},
     {0, 0, 0, 0},
 };
 #else
@@ -104,7 +103,6 @@ usage()
 "   -a,--allowany          disable TCP wrappers checks\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
-"   -p,--allow-private     spawn private copies of diod for users\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -114,16 +112,9 @@ main(int argc, char **argv)
 {
     Npsrv *srv;
     int c;
-    int fopt = 0;
-    int dopt = 0;
-    int aopt = 0;
-    int mopt = 0;
-    int popt = 0;
-    char *lopt = NULL;
+    int eopt = 0;
+    int lopt = 0;
     char *copt = NULL;
-    int wopt = 0;
-    char *eopt = NULL;
-    char *Dopt = NULL;
     struct pollfd *fds = NULL;
     int nfds = 0;
     List hplist;
@@ -133,40 +124,63 @@ main(int argc, char **argv)
         diod_log_to_syslog();
     diod_conf_init ();
 
+    /* config file overrides defaults */
+    opterr = 0;
+    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+        switch (c) {
+            case 'c':   /* --config-file PATH */
+                copt = optarg;
+                break;
+            default:
+                break;
+        }
+    }
+#if HAVE_LUA_H
+    diod_conf_init_config_file (copt);
+#else
+    if (copt)
+        msg_exit ("No lua support but --config-file was specified");
+#endif
+    /* command line overrides config file */
+    optind = 0;
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
             case 'f':   /* --foreground */
-                fopt = 1;
+                diod_conf_set_foreground (1);
                 break;
             case 'd':   /* --debug MASK */
-                dopt = strtoul (optarg, NULL, 0);
+                diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
             case 'l':   /* --listen HOST:PORT */
+                if (!lopt) {
+                    diod_conf_clr_diodctllisten ();
+                    lopt = 1;
+                }
                 if (!strchr (optarg, ':'))
                     usage ();
-                lopt = optarg;
+                diod_conf_add_diodctllisten (optarg);
                 break;
             case 'w':   /* --nwthreads INT */
-                wopt = strtoul (optarg, NULL, 10);
+                diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
                 break;
             case 'c':   /* --config-file PATH */
-                copt = optarg;
                 break;
             case 'e':   /* --export PATH */
-                eopt = optarg;
+                if (!eopt) {
+                    diod_conf_clr_export ();
+                    eopt = 1;
+                }
+                diod_conf_add_export (optarg);
                 break;
             case 'a':   /* --allowany */
-                aopt = 1;
+                diod_conf_set_tcpwrappers (0);
                 break;
             case 'm':   /* --no-munge-auth */
-                mopt = 1;
+                diod_conf_set_munge (0);
                 break;
             case 'D':   /* --diod-path PATH */
-                Dopt = optarg;
-                break;
-            case 'p':   /* --allow-private */
-                popt = 1;
+                diod_conf_set_diodpath (optarg);
                 break;
             default:
                 usage();
@@ -174,43 +188,16 @@ main(int argc, char **argv)
     }
     if (optind < argc)
         usage();
-#if HAVE_LUA_H
-    /* config file overrides defaults */
-    diod_conf_init_config_file (copt);
-#else
-    if (copt)
-        msg_exit ("No lua support, yet --config-file was specified");
-#endif
-
-    /* command line overrides config file */
-    if (fopt)
-        diod_conf_set_foreground (1);
-    if (aopt)
-        diod_conf_set_tcpwrappers (0);
-    if (dopt)
-        diod_conf_set_debuglevel (dopt);
-    if (lopt)
-        diod_conf_set_diodctllisten (lopt);
-    if (wopt)
-        diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
-    if (eopt)  
-        diod_conf_set_export (eopt);
-    if (mopt)  
-        diod_conf_set_munge (0);
-    if (Dopt)  
-        diod_conf_set_diodpath (Dopt);
-    if (popt)  
-        diod_conf_set_allowprivate (1);
 
     /* sane config? */
     diod_conf_validate_exports ();
 #if ! HAVE_TCP_WRAPPERS
     if (diod_conf_get_tcpwrappers ())
-        msg_exit ("no TCP wrapper support, yet config enables it");
+        msg_exit ("no TCP wrapper support but config enables it");
 #endif
 #if ! HAVE_LIBMUNGE
     if (diod_conf_get_munge ())
-        msg_exit ("no munge support, yet config enables it");
+        msg_exit ("no munge support but config enables it");
 #endif
 
     if (geteuid () != 0)
@@ -228,8 +215,7 @@ main(int argc, char **argv)
     if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
         msg_exit ("failed to set up listen ports");
 
-    /* FIXME: temp file created by diod_conf_mkconfig () needs cleanup */
-    diodctl_serv_init (diod_conf_mkconfig ());
+    diodctl_serv_init ();
     diodctl_register_ops (srv);
     diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
     /*NOTREACHED*/

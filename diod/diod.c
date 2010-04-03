@@ -58,7 +58,7 @@
 static void _daemonize (void);
 static void _setrlimit (void);
 
-#define OPTIONS "fd:l:w:c:e:amxF:u:"
+#define OPTIONS "fd:l:w:e:E:amxF:u:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -66,8 +66,8 @@ static const struct option longopts[] = {
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
-    {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
+    {"export-file",     required_argument,  0, 'E'},
     {"allowany",        no_argument,        0, 'a'},
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"exit-on-lastuse", no_argument,        0, 'x'},
@@ -86,16 +86,16 @@ usage()
 "Usage: diod [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
-"   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
+"   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
-"   -c,--config-file FILE  set config file path\n"
-"   -e,--export PATH       export PATH (just one allowed)\n"
+"   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
-"Note: command line overrides config file\n");
+"   -E,--export-file PATH  read exports from PATH (one per line)\n"
+    );
     exit (1);
 }
 
@@ -104,17 +104,9 @@ main(int argc, char **argv)
 {
     Npsrv *srv;
     int c;
-    int fopt = 0;
-    int dopt = 0;
-    int aopt = 0;
-    int mopt = 0;
-    int xopt = 0;
     int Fopt = 0;
-    char *lopt = NULL;
-    char *copt = NULL;
-    char *uopt = NULL;
-    int wopt = 0;
-    char *eopt = NULL;
+    int eopt = 0;
+    int lopt = 0;
     struct pollfd *fds = NULL;
     int nfds = 0;
     uid_t uid;
@@ -125,43 +117,65 @@ main(int argc, char **argv)
         diod_log_to_syslog();
     diod_conf_init ();
 
+    /* Command line overrides defaults.
+     * Diod does not look at the config file.
+     */
+    optind = 0;
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
             case 'f':   /* --foreground */
-                fopt = 1;
+                diod_conf_set_foreground (1);
                 break;
             case 'd':   /* --debug MASK */
-                dopt = strtoul (optarg, NULL, 0);
+                diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
             case 'l':   /* --listen HOST:PORT */
+                if (!lopt) {
+                    diod_conf_clr_diodlisten ();
+                    lopt = 1;
+                }
                 if (!strchr (optarg, ':'))
                     usage ();
-                lopt = optarg;
+                diod_conf_add_diodlisten (optarg);
                 break;
             case 'w':   /* --nwthreads INT */
-                wopt = strtoul (optarg, NULL, 10);
+                diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
                 break;
             case 'c':   /* --config-file PATH */
-                copt = optarg;
                 break;
             case 'e':   /* --export PATH */
-                eopt = optarg;
+                if (!eopt) {
+                    diod_conf_clr_export ();
+                    eopt = 1;
+                }
+                diod_conf_add_export (optarg);
+                break;
+            case 'E':   /* --export-file PATH */
+                if (!eopt) {
+                    diod_conf_clr_export ();
+                    eopt = 1;
+                }
+                diod_conf_read_exports (optarg);
                 break;
             case 'a':   /* --allowany */
-                aopt = 1;
+                diod_conf_set_tcpwrappers (0);
                 break;
             case 'm':   /* --no-munge-auth */
-                mopt = 1;
+                diod_conf_set_munge (0);
                 break;
             case 'x':   /* --exit-on-lastuse */
-                xopt = 1;
+                diod_conf_set_exit_on_lastuse (1);
                 break;
             case 'F':   /* --listen-fds N */
                 Fopt = strtoul (optarg, NULL, 10);
                 break;
             case 'u':   /* --runas-uid UID */
-                uopt = optarg;
+                errno = 0;
+                uid = strtoul (optarg, NULL, 10);
+                if (errno != 0)
+                    err_exit ("--runas-uid argument");
+                diod_conf_set_runasuid (uid);
                 break;
             default:
                 usage();
@@ -169,39 +183,6 @@ main(int argc, char **argv)
     }
     if (optind < argc)
         usage();
-    if (lopt && Fopt)
-        msg_exit ("--listen-fds and --listen are mutually exclusive options");
-#if HAVE_LUA_H
-    /* config file overrides defaults */
-    diod_conf_init_config_file (copt);
-#else
-    if (copt)
-        msg_exit ("No lua support, yet --config-file was specified");
-#endif
-    /* command line overrides config file */
-    if (fopt)
-        diod_conf_set_foreground (1);
-    if (aopt)
-        diod_conf_set_tcpwrappers (0);
-    if (dopt)
-        diod_conf_set_debuglevel (dopt);
-    if (lopt)
-        diod_conf_set_diodlisten (lopt);
-    if (wopt)
-        diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
-    if (eopt)  
-        diod_conf_set_export (eopt);
-    if (mopt)  
-        diod_conf_set_munge (0);
-    if (xopt)  
-        diod_conf_set_exit_on_lastuse (1);
-    if (uopt) {
-        errno = 0;
-        uid = strtoul (uopt, NULL, 10);
-        if (errno != 0)
-            err_exit ("--runas-uid argument");
-        diod_conf_set_runasuid (uid);
-    }
 
     /* sane config? */
     if (!diod_conf_get_diodlisten () && Fopt == 0)

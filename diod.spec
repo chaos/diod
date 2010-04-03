@@ -50,4 +50,3 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_mandir}/man8/*
 %{_mandir}/man5/*
 %attr(0755,root,root) %{_sysconfdir}/init.d/diod
-%attr(0755,root,root) %{_sysconfdir}/init.d/diodctl

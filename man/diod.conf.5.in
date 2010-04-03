@@ -3,7 +3,7 @@
 diod.conf \- distributed I/O daemon configuration file
 .SH DESCRIPTION
 The diod.conf file is actually a LUA script.
-Both \fBdiod\fR and \fBdiodctl\fR read this file on startup.
+\fBdiodctl\fR read this file on startup.
 Internal config defaults are overridden by settings in the file,
 and some of those values can in turn be overridden on the command line.
 .LP
@@ -12,23 +12,12 @@ after the config file is executed.  Therefore, the values of said variables
 can either be statically assigned or dynamically generated. 
 The variables are described below.
 .SH "CONFIG VARIABLES"
-.TP
-.I "allowprivate = 1"
-Allow \fBdiodctl\fI to spawn private instances of \fBdiod\fR
-when requested by \fBdiodmount -p\fR.
-.TP
-.I "readahead = 1"
-Enable kernel readahead, which is disabled by default.
-.TP
-.I "diodlisten = { ""IP:PORT"" [,""IP:PORT"",...] }"
-List the interfaces and ports that \fBdiod\fR should listen on.
-The default is "0.0.0.0:10006".
-Note: when \fBdiod\fR is spawned by \fBdiodctl\fR,
-listen addresses are dynamically assigned and limited by \fIdiodctllisten\fR.
-.TP
-.I "diodctllisten = { ""IP:PORT"" [, ""IP:PORT"", ...] }"
+.I "listen = { ""IP:PORT"" [,""IP:PORT"",...] }"
 List the interfaces and ports that \fBdiodctl\fR should listen on.
 The default is "0.0.0.0:10005".
+Note: when \fBdiod\fR is spawned by \fBdiodctl\fR,
+listen addresses are dynamically assigned and limited by the value
+of the host portion of \fIlisten\fR values.
 .TP
 .I "exports = { ""/path"" [, ""/path"", ...] }"
 List the file systems that clients will be allowed to mount.
@@ -37,67 +26,43 @@ Note that \fBdiod\fR will not traverse file system boundaries due to inode
 uniqueness constraints.
 .TP
 .I "nwthreads = INTEGER"
-Sets the number of worker threads created to handle 9P requests.
-The defualt is 16.
+Sets the number of worker threads created to handle 9P requests per diod
+instance.  The default is 16.
 .TP
 .I "debuglevel = INTEGER"
 Set the debug mask.  The bit values are:
 1 log decoded 9P protocol messages;
 2 log any 9P operation errors.
-This option is intended for testing only.
 .TP
 .I "foreground = 1"
-If set to 1, daemons will run in the foreground, in the current working
-directory, logging to stderr.
-This option is intended for testing only.
+If set to 1, \fBdiodctl\fR and \fBdiod\fR will run in the foreground,
+in the current working directory.  With this option, \fBdiodctl\fR will
+log to stderr but any \fBdiod\fR children will log to syslog.
 .TP
 .I "munge = 0"
 Disable munge authentication.  See warning in diod (8).
-This option is intended for testing only.
 .TP
 .I "tcpwrappers = 0"
 Disable TCP wrapper checks.
-This option is intended for testing only.
 .TP
 .I "exit_on_lastuse = 1"
 Arrange for \fBdiod\fR to exit when the last connection closes, if
 clients have successfully attached.
-This is intended to be passed on the \fBdiod\fR command line from \fBdiodctl\fR.
-.TP
-.I "runasuid = UID"
-Always run \fBdiod\fR as the specified UID.
-This is intended to be passed on the \fBdiod\fR command line from \fBdiodctl\fR.
 .TP
 .I "diodpath"
 Override \fBdiodctl\fR's default path to \fBdiod\fR server executable.
-This option is intended for testing only.
 .SH "EXAMPLE"
 .nf
 --
 -- example diod.conf
 --
-allowprivate = 1
-exports = {
-        "/g/g0",
-        "/g/g11",
-        "/g/g12",
-        "/g/g13",
-        "/g/g14",
-        "/g/g15",
-        "/g/g16",
-        "/g/g17",
-        "/g/g18",
-        "/g/g19",
-        "/g/g20",
-        "/g/g21",
-        "/g/g22",
-        "/g/g23",
-        "/g/g24",
-        "/g/g90",
-        "/g/g91",
-        "/g/g92",
-        "/g/g99"
-}
+listen = { "0.0.0.0:2000" }
+exports = { "/g/g0", "/g/g11" }
+debuglevel = 1 
+nwthreads = 8
+foreground = 1
+munge = 0
+tcpwrappers = 0
 .fi
 .SH "FILES"
 @X_SYSCONFDIR@/diod.conf

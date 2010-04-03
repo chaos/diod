@@ -1,6 +1,26 @@
-2010-04-01 Jim Garlick <garlick@llnl.gov>
+2010-04-02 Jim Garlick <garlick@llnl.gov>
 
-	* diodmount/diodmount.c : Eliminate -p option and have -u imply -p.
+	* common/diod_conf.c :
+	- Avoid calling stat on mount points in diod_conf_validate_exports ().
+	- Rename 'diodctllisten' to listen', drop 'diodlisten'.
+	- Drop 'runasuid' config file key word.
+	- Drop 'allowprivate' config file key word.
+
+	* diodmount/diodmount.c : Option changes:
+	- Drop -p (private) option.
+	- Add -d (direct) option.
+
+	* diodctl/srv.c : Pass all info to diod on the command line.
+
+	* diodctl/diodctl.c : Option changes:
+	- Allow multiple -e (export) options.
+	- Allow multiple -l (listen) options.
+
+	* diod/diod.c : Option changes:
+	- Drop -c option, and do not read config file.
+	- Allow multiple -e (export) options.
+	- Allow multiple -l (listen) options.
+	- Add -E option to read exports from a flat file (made by diodctl).
 
 2010-04-01 Jim Garlick <garlick@llnl.gov>
 

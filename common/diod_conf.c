@@ -23,6 +23,10 @@
 
 /* diod_conf.c - config registry for distributed I/O daemon */
 
+/* N.B. The config file is only read by diodctl, but diod also uses this
+ * config registry.
+ */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -39,6 +43,7 @@
 #include <lualib.h>
 #endif
 #include <stdarg.h>
+#include <ctype.h>
 
 #include "list.h"
 
@@ -52,7 +57,6 @@ typedef struct {
     int          foreground;
     int          munge;
     int          tcpwrappers;
-    int          allowprivate;
     int          exit_on_lastuse;
     uid_t        runasuid;
     int          runasuid_valid;
@@ -68,7 +72,6 @@ static Conf config = {
     .foreground     = 0,
     .munge          = 1,
     .tcpwrappers    = 1,
-    .allowprivate   = 0,
     .exit_on_lastuse= 0,
     .runasuid_valid = 0,
     .diodpath       = NULL, /* diod_conf_init initializes */
@@ -81,8 +84,8 @@ static Conf config = {
 void
 diod_conf_init (void)
 {
-    diod_conf_set_diodctllisten ("0.0.0.0:10005");
-    diod_conf_set_diodlisten ("0.0.0.0:10006");
+    diod_conf_add_diodctllisten ("0.0.0.0:10005");
+    diod_conf_add_diodlisten ("0.0.0.0:10006");
     diod_conf_set_diodpath (X_SBINDIR "/diod");
 }
 
@@ -147,18 +150,6 @@ diod_conf_set_tcpwrappers (int i)
 }
 
 int
-diod_conf_get_allowprivate (void)
-{
-    return config.allowprivate;
-}
-
-void
-diod_conf_set_allowprivate (int i)
-{
-    config.allowprivate = i;
-}
-
-int
 diod_conf_get_exit_on_lastuse (void)
 {
     return config.exit_on_lastuse;
@@ -205,18 +196,26 @@ diod_conf_get_diodlisten (void)
 }
 
 void
-diod_conf_set_diodlisten (char *s)
+diod_conf_clr_diodlisten (void)
 {
-    char *cpy;
-
     if (config.diodlisten) {
         list_destroy (config.diodlisten);
         config.diodlisten = NULL;
     }
+}
+
+void
+diod_conf_add_diodlisten (char *s)
+{
+    char *cpy;
+
     if (s) {
         if (!(cpy = strdup (s)))
             msg_exit ("out of memory");
-        config.diodlisten = list_create ((ListDelF)free);
+        if (!config.diodlisten) {
+            if (!(config.diodlisten = list_create ((ListDelF)free)))
+                msg_exit ("out of memory");
+        }
         list_append (config.diodlisten, cpy);
     }
 }
@@ -228,92 +227,28 @@ diod_conf_get_diodctllisten (void)
 }
 
 void
-diod_conf_set_diodctllisten (char *s)
+diod_conf_clr_diodctllisten (void)
 {
-    char *cpy;
-
     if (config.diodctllisten) {
         list_destroy (config.diodctllisten);
         config.diodctllisten = NULL;
     }
+}
+
+void
+diod_conf_add_diodctllisten (char *s)
+{
+    char *cpy;
+
     if (s) {
         if (!(cpy = strdup (s)))
             msg_exit ("out of memory");
-        config.diodctllisten = list_create ((ListDelF)free);
+        if (!config.diodctllisten) {
+            if (!(config.diodctllisten = list_create ((ListDelF)free)))
+                msg_exit ("out of memory");
+        }
         list_append (config.diodctllisten, cpy);
     }
-}
-
-static void
-_vfprintf (char *path, FILE *f, char *fmt, ...)
-{
-    va_list ap;
-    int ret;
-
-    va_start (ap, fmt);
-    ret = vfprintf (f, fmt, ap);
-    va_end (ap);
-    if (ret < 0)
-        err_exit ("write %s", path);
-}
-
-static void
-_write_list_of_strings (char *path, FILE *f, char *name, List l)
-{
-    ListIterator itr;
-    int first = 1;
-    char *s;
-
-    if (!(itr = list_iterator_create (l)))
-        err_exit ("out of memory");
-    while ((s = list_next (itr))) {
-        if (first) {
-            _vfprintf (path, f, "%s = { ", name);
-            first = 0;
-        } else 
-            _vfprintf (path, f, ", ");
-        _vfprintf (path, f, "\"%s\"", s);
-    }
-    list_iterator_destroy (itr);
-    _vfprintf (path, f, " }\n");
-}
-
-
-/* Generate a config file, containing possible command line overrides. 
- * FIXME: unlink config file on error.
- */
-char *
-diod_conf_mkconfig (void)
-{
-    char *cpy, path[] = "/tmp/diod.conf.XXXXXX";
-    int fd;
-    FILE *f;
-
-    if ((fd = mkstemp (path)) < 0)
-        err_exit ("mkstemp %s", path);
-    if (fchmod (fd, 0644) < 0)
-        err_exit ("chmod %s", path);
-    if (!(f = fdopen (fd, "w")))
-        err_exit ("fdopen %s", path);
-
-    _vfprintf (path, f, "debuglevel = %d\n", config.debuglevel);
-    _vfprintf (path, f, "nwthreads = %d\n", config.nwthreads);
-    _vfprintf (path, f, "foreground = %d\n", config.foreground);
-    _vfprintf (path, f, "munge = %d\n", config.munge);
-    _vfprintf (path, f, "tcpwrappers = %d\n", config.tcpwrappers);
-    _vfprintf (path, f, "allowprivate = %d\n", config.allowprivate);
-    _vfprintf (path, f, "exit_on_lastuse = %d\n", config.exit_on_lastuse);
-    _vfprintf (path, f, "diodpath = \"%s\"\n", config.diodpath);
-    _write_list_of_strings (path, f, "diodlisten", config.diodlisten);
-    _write_list_of_strings (path, f, "diodctllisten", config.diodctllisten);
-    _write_list_of_strings (path, f, "exports", config.exports);
-
-    if (fclose (f) != 0)
-        err_exit ("fclose %s", path);
-    if (!(cpy = strdup (path)))
-        err_exit ("out of memory");
-
-    return cpy;
 }
 
 /* Tattach verifies path against configured exports.
@@ -411,12 +346,89 @@ _str_list_create (void)
 }
 
 void
-diod_conf_set_export (char *path)
+diod_conf_clr_export (void)
 {
-    if (config.exports)
+    if (config.exports) {
         list_destroy (config.exports);
-    config.exports = _str_list_create ();
+        config.exports = NULL;
+    }
+}
+
+void
+diod_conf_add_export (char *path)
+{
+    if (!config.exports)
+        config.exports = _str_list_create ();
     _str_list_append (config.exports, path);
+}
+
+void
+diod_conf_read_exports (char *path)
+{
+    FILE *f;
+    char buf[PATH_MAX];
+    int i;
+
+    if (!config.exports)
+        config.exports = _str_list_create ();
+    if ((f = fopen (path, "r")) == NULL)
+        err_exit ("error opening %s", path);
+    while ((fgets (buf, sizeof(buf), f))) {
+        while ((i = strlen (buf)) > 0 && isspace (buf[i - 1]))
+            buf[i - 1] = '\0';
+        if (strlen (buf) > 0)
+            diod_conf_add_export (buf);
+    }
+    (void)fclose (f);
+}
+
+char *
+diod_conf_write_exports (void)
+{
+    char path[] = "/tmp/exports.XXXXXX";
+    char *el, *cpy = NULL;
+    ListIterator itr = NULL;
+    FILE *f;
+    int fd; 
+
+    if (config.exports == NULL) {
+        msg ("cannot dump empty export list");
+        goto done;
+    }
+    if ((fd = mkstemp (path)) < 0) {
+        err ("error creating tmpfile");
+        goto done;
+    }
+    if ((f = fdopen (fd, "a")) == NULL) {
+        err ("error fdopening tmpfile");
+        goto done;
+    }
+    if ((itr = list_iterator_create (config.exports)) == NULL) {
+        err ("out of memory");
+        goto done;
+    }
+    while ((el = list_next (itr))) {
+        if (fprintf (f, "%s\n", el) < 0) {
+            err ("error writing to tmpfile");
+            (void)fclose (f);
+            (void)unlink (path);
+            goto done;
+        }
+    }
+    if (fclose (f) != 0) {
+        err ("error closing tmpfile");
+        (void)unlink (path);
+        goto done;
+    }
+    if (!(cpy = strdup (path))) {
+        err ("out of memory");
+        (void)unlink (path);
+        goto done;
+    }
+done:
+    if (itr)
+        list_iterator_destroy (itr);
+    return cpy;
 }
 
 void
@@ -424,7 +436,6 @@ diod_conf_validate_exports (void)
 {
     ListIterator itr;
     char *el;
-    struct stat sb;
 
     if (config.exports == NULL)
         msg_exit ("no exports defined");
@@ -435,10 +446,6 @@ diod_conf_validate_exports (void)
             msg_exit ("exports should begin with '/'");
         if (strstr (el, "/..") != 0)
             msg_exit ("exports should not contain '/..'"); /* FIXME */
-        if (stat (el, &sb) < 0)
-            err_exit ("could not stat %s", el);
-        if (!S_ISDIR (sb.st_mode))
-            msg_exit ("%s does not refer to a directory", el);
     }
     list_iterator_destroy (itr);
 }
@@ -462,6 +469,7 @@ _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
     return res;
 }
 
+#if 0
 static int
 _lua_getglobal_uint (char *path, lua_State *L, char *key, unsigned int *ip)
 {
@@ -479,6 +487,7 @@ _lua_getglobal_uint (char *path, lua_State *L, char *key, unsigned int *ip)
 
     return res;
 }
+#endif
 
 static int
 _lua_getglobal_string (char *path, lua_State *L, char *key, char **sp)
@@ -568,16 +577,9 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (path, L, "foreground", &config.foreground);
         _lua_getglobal_int (path, L, "munge", &config.munge);
         _lua_getglobal_int (path, L, "tcpwrappers", &config.tcpwrappers);
-        _lua_getglobal_int (path, L, "allowprivate", &config.allowprivate);
-        _lua_getglobal_int (path, L, "exit_on_lastuse",
-                            &config.exit_on_lastuse);
-        if (_lua_getglobal_uint (path, L, "runasuid", &config.runasuid))
-            config.runasuid_valid = 1;
         _lua_getglobal_string (path, L, "diodpath", &config.diodpath);
-        _lua_getglobal_list_of_strings (path, L, "diodctllisten",
+        _lua_getglobal_list_of_strings (path, L, "listen",
                             &config.diodctllisten);
-        _lua_getglobal_list_of_strings (path, L, "diodlisten",
-                            &config.diodlisten);
         _lua_getglobal_list_of_strings (path, L, "exports", &config.exports);
 
         lua_close(L);

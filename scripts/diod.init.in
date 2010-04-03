@@ -8,7 +8,7 @@
 # UCRL-CODE-2002-009.
 ###############################################################################
 # chkconfig:          2345 95 5
-# Description:        Start/Stop diod (distributed I/O daemon)
+# Description:        Start/Stop diodctl (distributed I/O daemon super server)
 ###############################################################################
 ### BEGIN INIT INFO
 # Provides:           diodctl
@@ -18,7 +18,7 @@
 # Should-Stop:        $remote_fs $syslog $time
 # Default-Start:      2 3 4 5
 # Default-Stop:       0 1 6
-# Short-Description:  Start/Stop diod (distributed I/O daemon).
+# Short-Description:  Start/Stop diodctl (distributed I/O daemon super server).
 ### END INIT INFO
 ###############################################################################
 
@@ -30,11 +30,11 @@ sbindir="@sbindir@"
 sysconfdir="@sysconfdir@"
 localstatedir="@localstatedir@"
 
-DESC="diod"
-DAEMON="$sbindir/diod"
+DESC="diodctl"
+DAEMON="$sbindir/diodctl"
 #DAEMON_ARGS=
 CONFIG=$sysconfdir/diod.conf
-PIDFILE="$localstatedir/run/diod/diod.pid"
+PIDFILE="$localstatedir/run/diod/diodctl.pid"
 #NICE=
 #USER=@RUN_AS_USER@
 #SIGHUP_RELOAD=

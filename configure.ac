@@ -91,7 +91,6 @@ AC_CONFIG_FILES( \
   man/9p-statfs.5 \
   scripts/Makefile \
   scripts/diod.init \
-  scripts/diodctl.init \
   test/Makefile \
   diod/Makefile \
   diodctl/Makefile \

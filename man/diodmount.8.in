@@ -20,9 +20,8 @@ This command must be run as root.
 List file systems exported by HOST.
 .TP
 .I "-u, --mount-user USER"
-Causes the file system to be mounted so that only USER can access it,
-and spawn a server dedicated to I/O forwarding for USER if there isn't
-one already.
+If USER is not root, causes the file system to be mounted so that only
+USER can access it.  Default is to mount as root.
 .TP
 .I "-n, --no-mtab"
 Do not update /etc/mtab.  This may be appropriate, for example, when
@@ -36,6 +35,11 @@ sets up internally.
 Pass additional 9P mount when mouting the \fBdiodctl\fR server.
 Options specified in this way override the options that \fBdiodmount\fR
 sets up internally.
+.TP
+.I "-d, --direct"
+Mount the \fBdiod\fR server directly without first mounting \fBdiodctl\fR
+to determine the port.  This must be used in conjunction with
+\fI-o port=PORT\fR.
 .SH "EXAMPLES"
 .LP
 List the file systems exported by tycho42:
