@@ -27,8 +27,7 @@ main (int argc, char *argv[])
     }
 
     if (s1.st_dev != s2.st_dev) {
-        fprintf (stderr, "st_dev differs (%lu != %lu)\n",
-                s1.st_dev, s2.st_dev);
+        fprintf (stderr, "st_dev differs\n"); /* expected failure */
         diff++;
     }
     if (s1.st_ino != s2.st_ino) {

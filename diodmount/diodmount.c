@@ -42,6 +42,7 @@
 #include <stdlib.h>
 #include <sys/mount.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <netdb.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
@@ -50,59 +51,70 @@
 #include <string.h>
 #include <errno.h>
 #include <mntent.h>
+#include <ctype.h>
 #if HAVE_LIBMUNGE
 #define GPL_LICENSED 1
 #include <munge.h>
 #endif
 #include <pwd.h>
+#include <libgen.h>
 
 #include "npfs.h"
-
+#include "list.h"
 #include "diod_log.h"
 #include "diod_upool.h"
-
 #include "opt.h"
 
-#define OPTIONS "u:nx:o:O:Tvd"
+typedef struct {
+    List exports;
+    char *port;
+} query_t;
+
+#define OPTIONS "aUu:no:O:Tvdf"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
+    {"all",             no_argument,         0, 'a'},
+    {"unmount-all",     no_argument,         0, 'U'},
     {"mount-user",      required_argument,   0, 'u'},
     {"no-mtab",         no_argument,         0, 'n'},
-    {"list-exports",    required_argument,   0, 'x'},
-    {"diod-option",     required_argument,   0, 'o'},
-    {"diodctl-option",  required_argument,   0, 'O'},
+    {"diod-options",    required_argument,   0, 'o'},
+    {"diodctl-options", required_argument,   0, 'O'},
     {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
     {"direct",          no_argument,         0, 'd'},
+    {"fake-mount",      no_argument,         0, 'f'},
     {0, 0, 0, 0},
 };
 #else
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
 
+static query_t *_diodctl_query (char *ip, char *opts, int vopt);
+static void  _free_query       (query_t *r);
 static void  _parse_device     (char *device, char **anamep, char **ipp);
 static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
-                                char *opts, int vopt);
-static void  _diodctl_mount    (char *ip, char *dir, char *opts, int vopt);
-static char *_diodctl_getport  (char *dir);
-static int   _diodctl_listexp  (char *dir);
+                                char *opts, int vopt, int fopt);
 static void  _umount           (const char *target);
 static int   _update_mtab      (char *dev, char *dir, char *opt);
+static void _update_mtab_entries (char *host, List dirs, char *opt);
+static void _create_mountpoints (List dirs, char *root);
 static char *_name2ip          (char *name);
 
 static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodmount -x,--list-exports HOST\n"
-"   or: diodmount [OPTIONS] device directory\n"
+"   diodmount [OPTIONS] device [directory]\n"
+"   -a,--all                      mount all exported file systems\n"
+"   -U,--unmount-all              unmount all exported file systems\n"
 "   -u,--mount-user USER          set up the mount so only USER can use it\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
 "   -v,--verbose                  be verbose about what is going on\n"
 "   -d,--direct                   mount diod directly (requires -o port=N)\n"
+"   -f,--fake-mount               do everything but the actual diod mount(s)\n"
 );
     exit (1);
 }
@@ -110,117 +122,206 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    char *device, *dir, *aname, *ip;
+    char *dir = NULL, *ip;
+    char *aname = NULL;
+    char *device;
     int c;
-    struct stat sb;
+    int aopt = 0;
+    int Uopt = 0;
     int nopt = 0;
     int vopt = 0;
     int dopt = 0;
+    int fopt = 0;
     char *uopt = NULL;
-    char *xopt = NULL;
     char *oopt = NULL;
     char *Oopt = NULL;
+    struct stat sb;
 
     diod_log_init (argv[0]);
 
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
+            case 'a':   /* --all */
+                aopt = 1;
+                break;
+            case 'U':   /* --unmount-all */
+                Uopt = 1;
+                break;
             case 'u':   /* --mount-user USER */
                 uopt = optarg;
                 break;
             case 'n':   /* --no-mtab */
                 nopt = 1;
                 break;
-            case 'x':   /* --list-exports HOST */
-                xopt = optarg;
-                break;
-            case 'o':   /* --diod-option OPT[,OPT]... */
+            case 'o':   /* --diod-options OPT[,OPT]... */
                 oopt = optarg;
                 break;
-            case 'O':   /* --diodctl-option OPT[,OPT]... */
+            case 'O':   /* --diodctl-options OPT[,OPT]... */
                 Oopt = optarg;
                 break;
-            case 'T':   /* --test-opt [hidden test option] */
-                opt_test ();
-                exit (0);
             case 'v':   /* --verbose */
                 vopt = 1;
                 break;
             case 'd':   /* --direct */
                 dopt = 1;
                 break;
+            case 'f':   /* --fake-mount */
+                fopt = 1;
+                break;
+            case 'T':   /* --test-opt [hidden test option] */
+                opt_test ();
+                exit (0);
             default:
                 usage ();
         }
     }
-
-    /* If just listing exports, take care of it here and exit.
-     */
-    if (xopt) {
-        char tmpl[] = "/tmp/diodmount.XXXXXX";
-        char *ip = _name2ip (xopt);
-        int ret;
-
-        if (!(dir = mkdtemp (tmpl)))
-            err_exit ("failed to create temporary directory for mount");
-        _diodctl_mount (ip, dir, Oopt, vopt);
-        free (ip);
-        unlink (dir);
-        ret = _diodctl_listexp (dir);
-        _umount (dir);
-        exit (ret);
+    if (aopt && dopt)
+        msg_exit ("--all and --direct are incompatible options");
+    if (Uopt && (aopt||uopt||oopt||dopt||fopt))
+        msg_exit ("--unmount-all cannot be used with -a -u -o -d or -f");
+    if (Uopt && !nopt)
+        msg_exit ("--unmount-all requires -n option for now");
+    if (aopt || Uopt) {/* Usage: diodmount [options] -a hostname [dir] */
+        if (optind != argc - 1 && optind != argc - 2)
+            usage ();
+        device = argv[optind++];
+        if (optind != argc)
+            dir = argv[optind++];
+        ip = _name2ip (device);
+    } else {          /* Usage: diodmount [options] hostname:/aname directory */
+        if (optind != argc - 2)
+            usage ();
+        device = argv[optind++];
+        dir = argv[optind++];
+        _parse_device (device, &aname, &ip);
     }
 
-    if (optind != argc - 2)
-        usage ();
-    device = argv[optind++];
-    dir = argv[optind++];
+    if (dir) {
+        if (stat (dir, &sb) < 0)
+            err_exit (dir);
+        if (!S_ISDIR (sb.st_mode))
+            msg_exit ("%s: not a directory", dir);
+    }
 
-    if (stat (dir, &sb) < 0)
-        err_exit (dir);
-    if (!S_ISDIR (sb.st_mode))
-        msg_exit ("%s: not a directory", dir);
-
-    if (geteuid () != 0)
-        msg_exit ("effective uid is not root");
-
-    /* If not mounting as root, seteuid to the user whose munge
-     * credentials will be used for the initial attach.
-     * We restore root privileges later.
+    /* Must start out with effective root id.
+     * We drop euid = root but preserve ruid = root for mount, etc.
      */
+    if (geteuid () != 0)
+        msg_exit ("you must be root to run diodmount");
     if (uopt)
         diod_become_user (uopt, 0, 0);
 
-    _parse_device (device, &aname, &ip);
+    /* Mount everything, obtaining port number and exports from diodctl.
+     * If directory is specified, use as the root for mount points, else /.
+     * Create mount points as needed.
+     * If -U option, unmount instead of mount.
+     * FIXME: -U should not require -n (need code to remove mtab entries)
+     * FIXME: -U should not spawn a new server if not running
+     */
+    if (aopt || Uopt) {
+        query_t *ctl = _diodctl_query (ip, Oopt, vopt);
+        ListIterator itr;
+        char *el;
 
-    if (dopt)
-        _diod_mount (ip, dir, aname, NULL, oopt, vopt);
-    else if (!strcmp (aname, "/diodctl")) {
-        _diodctl_mount (ip, dir, Oopt, vopt);
-    } else {
-        char *port;
+        _create_mountpoints (ctl->exports, dir);
 
-        _diodctl_mount (ip, dir, Oopt, vopt);
-        port = _diodctl_getport (dir);
-        if (!port)
-            exit (1); 
-        _umount (dir);
-        _diod_mount (ip, dir, aname, port, oopt, vopt);
-        free (port);
-    }
+        if (!(itr = list_iterator_create (ctl->exports)))
+            msg_exit ("out of memory");
+        while ((el = list_next (itr))) {
+            char path[PATH_MAX];
 
-    free (aname);
-    free (ip);
-
-    if (!nopt) {
-        if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {
-            _umount (dir);
-            exit (1);
+            snprintf (path, sizeof (path), "%s%s", dir ? dir : "", el);
+            if (aopt)
+                _diod_mount (ip, path, el, ctl->port, oopt, vopt, fopt);
+            if (Uopt) {
+                if (vopt)
+                    msg ("umount %s", path); 
+                if (umount (path) < 0)
+                    err ("error unmounting %s", path);
+            }
         }
+        list_iterator_destroy (itr);
+
+        if (!nopt)
+            _update_mtab_entries (device, ctl->exports, MNTOPT_DEFAULTS);
+        _free_query (ctl);
+
+    /* Mount one file system directly.
+     * User needs to specify the port with -o port=N.
+     */
+    } else if (dopt) {
+        _diod_mount (ip, dir, aname, NULL, oopt, vopt, fopt);
+        if (!nopt) {
+            if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {
+                _umount (dir);
+                exit (1);
+            }
+        }
+
+    /* Mount one file system, obtaining port number from diodctl.
+     */
+    } else {
+        query_t *ctl = _diodctl_query (ip, Oopt, vopt);
+
+        _diod_mount (ip, dir, aname, ctl->port, oopt, vopt, fopt);
+        _free_query (ctl);
     }
 
+    free (ip);
+    if (aname)
+        free (aname);
     exit (0);
+}
+
+static int
+_mkdir_p (char *path, mode_t mode)
+{
+    struct stat sb;
+    char *cpy;
+    int res = 0;
+
+    if (stat (path, &sb) == 0) {
+        if (!S_ISDIR (sb.st_mode)) {
+            errno = ENOTDIR;
+            return -1;
+        }
+        return 0;
+    }
+    if (!(cpy = strdup (path))) {
+        errno = ENOMEM;
+        return -1;
+    }
+    res = _mkdir_p (dirname (cpy), mode);
+    free (cpy);
+    if (res == 0)
+        res = mkdir (path, mode);
+
+    return res;
+}
+
+static void
+_create_mountpoints (List dirs, char *root)
+{
+    ListIterator itr;
+    char *el;
+    struct stat sb;
+    char path[PATH_MAX];
+
+    if (!(itr = list_iterator_create (dirs)))
+        msg_exit ("out of memory");
+    while ((el = list_next (itr))) {
+        snprintf (path, sizeof(path), "%s%s", root ? root : "", el);
+        if (stat (path, &sb) < 0) {
+            if (_mkdir_p (path, 0755) < 0)
+                err_exit ("mkdir %s", el);
+            if (stat (el, &sb) < 0)
+                err_exit ("stat %s", el);
+        } 
+        if (!S_ISDIR (sb.st_mode))
+            msg_exit ("%s: not a directory", el);
+    }
+    list_iterator_destroy (itr);
 }
 
 static int
@@ -262,6 +363,22 @@ done:
 }
 
 static void
+_update_mtab_entries (char *host, List dirs, char *opt)
+{
+    char dev[PATH_MAX + NI_MAXSERV + 1];
+    ListIterator itr;
+    char *el;
+
+    if (!(itr = list_iterator_create (dirs)))
+        msg_exit ("out of memory");
+    while ((el = list_next (itr))) {
+        snprintf(dev, sizeof (dev), "%s:%s", host, el);
+        (void)_update_mtab (dev, el, opt);
+    }
+    list_iterator_destroy (itr);
+}
+
+static void
 _mount (const char *source, const char *target, const void *data)
 {
     uid_t saved_euid = geteuid ();
@@ -283,6 +400,19 @@ _umount (const char *target)
         err_exit ("failed to set effective uid to root");
     if (umount (target) < 0)
         err_exit ("umount %s", target);
+    if (seteuid (saved_euid) < 0)
+        err_exit ("failed to restore effective uid to %d", saved_euid);
+}
+
+static void
+_unshare (void)
+{
+    uid_t saved_euid = geteuid ();
+
+    if (seteuid (0) < 0)
+        err_exit ("failed to set effective uid to root");
+    if (unshare (CLONE_NEWNS) < 0)
+        err_exit ("failed to unshare name space");
     if (seteuid (saved_euid) < 0)
         err_exit ("failed to restore effective uid to %d", saved_euid);
 }
@@ -314,7 +444,8 @@ _create_mungecred (char *payload)
 }
 
 static void
-_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts, int vopt)
+_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
+             int vopt, int fopt)
 {
     Opt o = opt_create ();
     char *options, *cred;
@@ -336,7 +467,8 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts, int vopt)
 
     if (vopt)
         msg ("mount %s %s -o%s", ip, dir, options);
-    _mount (ip, dir, options);
+    if (!fopt)
+        _mount (ip, dir, options);
     free (options);
 }
 
@@ -364,100 +496,207 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt)
     free (options);
 }
 
-static int
-_diodctl_listexp (char *dir)
+/* read file to stdout */
+static void
+_cat_file (char *path)
 {
     char buf[PATH_MAX];
-    char *exports = NULL;
     FILE *f;
-    int ret = 0; 
-   
-    /* read /exports to stdout */
-    if (asprintf (&exports, "%s/exports", dir) < 0) {
-        msg ("out of memory");
-        goto done;
-    }
-    if (!(f = fopen (exports, "r"))) {
-        err ("error opening %s", exports);
-        goto done;
-    }
+
+    if (!(f = fopen (path, "r")))
+        err_exit ("error opening %s", path);
     while (fgets (buf, sizeof (buf), f))
-        printf ("%s", buf);
-    if (ferror (f)) {
-        errn (ferror (f), "error reading %s", exports);
-        fclose (f);
-        goto done;
-    }
+        printf ("%s%s", buf, buf[strlen (buf) - 1] == '\n' ? "" : "\n");
+    if (ferror (f))
+        errn_exit (ferror (f), "error reading %s", path);
     fclose (f);
-    ret = 1;
-done:
-    if (exports)
-        free (exports);
-    return ret;
 }
 
-static char *
+/* put string [s] to file */
+static void
+_puts_file (char *path, char *s)
+{
+    FILE *f;
+
+    if (!(f = fopen (path, "w")))
+        err_exit ("error opening %s", path);
+    if (fprintf (f, "%s", s) < 0)
+        err_exit ("error writing to %s", path);
+    if (fclose (f) != 0)
+        err_exit ("error writing to %s", path);
+}
+
+/* Print exports on stdout.
+ */
+static void
+_diodctl_listexp (char *dir)
+{
+    char *exports;
+   
+    if (asprintf (&exports, "%s/exports", dir) < 0)
+        msg_exit ("out of memory");
+    _cat_file (exports);
+    free (exports);
+}
+
+/* Print port for euid's server on stdout.
+ */
+static void
 _diodctl_getport (char *dir)
 {
-    char *ctl = NULL, *server = NULL;
-    FILE *f;
-    int port, n;
-    char *ret = NULL;
+    char *ctl, *server;
    
     /* poke /ctl to trigger creation of new server (if needed) */ 
-    if (asprintf (&ctl, "%s/ctl", dir) < 0) {
-        msg ("out of memory");
-        goto done;
-    }
-    if (!(f = fopen (ctl, "w"))) {
-        err ("error opening %s", ctl);
-        goto done;
-    }
-    if (fprintf (f, "new") < 0) {
-        if (errno == EPERM)
-            err ("requesting private server");
-        else
-            err ("error writing to %s", ctl);
-        fclose (f);
-        goto done;
-    }
-    if (fclose (f) != 0) {
-        if (errno == EPERM)
-            err ("requesting private server");
-        else
-            err ("error writing to %s", ctl);
-        goto done;
-    }
+    if (asprintf (&ctl, "%s/ctl", dir) < 0)
+        msg_exit ("out of memory");
+    _puts_file (ctl, "new");
+    free (ctl);
 
-    /* read port from /server */
-    if (asprintf (&server, "%s/server", dir) < 0) {
-        msg ("out of memory");
+    /* read port from /server and cat to stdout */
+    if (asprintf (&server, "%s/server", dir) < 0)
+        msg_exit ("out of memory");
+    _cat_file (server);
+    free (server);
+}
+
+static query_t *
+_alloc_query (void)
+{
+    query_t *r;
+    
+    if (!(r = malloc (sizeof (*r))))
+        err_exit ("out of memory");
+    if (!(r->exports = list_create ((ListDelF)free)))
+        err_exit ("out of memory");
+    r->port = NULL;
+    return r;
+}
+
+static void
+_free_query (query_t *r)
+{
+    list_destroy (r->exports);
+    if (r->port)
+        free (r->port);
+    free (r);
+}
+
+static void
+_delete_trailing_whitespace (char *s)
+{
+    int n = strlen (s) - 1;
+
+    while (n >= 0) {
+        if (!isspace (s[n]))
+            break;
+        s[n--] = '\0';
+    }
+}
+
+/* Helper for _diodctl_query ().  This is the parent leg of the fork
+ * conditional, responsible for reading data from pipe [fd], assigning it
+ * to query_t [r], reaping the child [pid], and returning success (1) or 
+ * failure (0).  N.B. This function cannot exit directly on error because
+ * the temporary mount point has to be cleaned up.
+ */
+static int
+_diodctl_query_parent (int fd, pid_t pid, query_t *r)
+{
+    int status, res = 0;
+    FILE *f;
+    char buf[PATH_MAX], *cpy;
+
+    if (!(f = fdopen (fd, "r"))) {
+        err ("error fdopening pipe");
         goto done;
     }
-    if (!(f = fopen (server, "r"))) {
-        err ("error opening %s", server);
-        goto done;
+    while (fgets (buf, sizeof (buf), f)) {
+        _delete_trailing_whitespace (buf);
+        if (!(cpy = strdup (buf))) {
+            msg ("out of memory");
+            goto done;
+        }
+        if (r->port == NULL)
+            r->port = cpy;
+        else if (!list_append (r->exports, cpy)) {
+            msg ("out of memory");
+            goto done;
+        }
     }
-    if ((n = fscanf (f, "%d", &port)) != 1) {
-        if (n < 0)
-            err ("error reading from %s", server);
-        else
-            msg ("failed to read port number from %s", server);
-        fclose (f);
+    if (ferror (f)) {
+        errn (ferror (f), "error reading pipe");
         goto done;
     }
     fclose (f);
-    if (!(ret = malloc (NI_MAXSERV))) {
-        msg ("out of memory");
+    if (waitpid (pid, &status, 0) < 0) {
+        err ("wait");
         goto done;
     }
-    snprintf (ret, NI_MAXSERV, "%d", port); 
+    if (WIFEXITED (status)) {
+        if (WEXITSTATUS (status) != 0) {
+            err ("child exited with %d", WEXITSTATUS (status));
+            goto done;
+        }
+    } else if (WIFSIGNALED (status)) {
+        err ("child killed by signal %d", WTERMSIG (status));
+        goto done;
+    } else if (WIFSTOPPED (status)) {
+        err ("child stopped by signal %d", WSTOPSIG (status));
+        goto done;
+    } else if (WIFCONTINUED (status)) {
+        err ("child continued");
+        goto done;
+    }
+    res = 1;
 done:
-    if (ctl)
-        free (ctl);
-    if (server)
-        free (server);
-    return ret;
+    return res;
+}
+
+/* Interact with diodctl server to determine port number of diod server
+ * and a list of exports, returned in a query_t struct that caller must free.
+ * Mount is cleaned up on exit because it's in a private namespace.
+ */
+static query_t *
+_diodctl_query (char *ip, char *opts, int vopt)
+{
+    char tmppath[] = "/tmp/diodmount.XXXXXX";
+    query_t *res = _alloc_query ();
+    int pfd[2];
+    pid_t pid;
+    char *tmpdir;
+
+    if (pipe (pfd) < 0)
+        err_exit ("pipe");
+    if (!(tmpdir = mkdtemp (tmppath)))
+        err_exit ("failed to create temporary diodctl mount point");
+    switch ((pid = fork())) {
+        case -1:    /* error */
+            err_exit ("fork");
+        case 0:     /* child */
+            close (pfd[0]);
+            close (STDOUT_FILENO);
+            if (dup2 (pfd[1], STDOUT_FILENO) < 0)
+                err_exit ("failed to dup stdout");
+            _unshare ();
+            _diodctl_mount (ip, tmpdir, opts, vopt);
+            _diodctl_getport (tmpdir);
+            _diodctl_listexp (tmpdir);
+            fflush (stdout);
+            _umount (tmpdir);
+            exit (0); 
+        default:    /* parent */
+            close (pfd[1]);
+            if (!_diodctl_query_parent (pfd[0], pid, res)) {
+                _free_query (res);
+                res = NULL;
+            }
+            break; 
+    }
+    if (rmdir (tmpdir) < 0)
+        err_exit ("failed to remove temporary diodctl mount point");
+    if (res == NULL)
+        exit (1);
+    return res;
 }
 
 /* Obtain the IP address for 'name' and write it into 'ip' which is of
@@ -487,7 +726,7 @@ _name2ip (char *name)
         err_exit ("%s has no address", name);
     freeaddrinfo (res);
     if (!(ip = strdup (buf)))
-        err_exit ("out of memory");
+        msg_exit ("out of memory");
     return ip;
 }
 

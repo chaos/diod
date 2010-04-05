@@ -4,11 +4,8 @@ diodmount \- mount diod file systems
 .SH SYNOPSIS
 .B diodmount
 .I "[OPTIONS]"
-.I HOST:/dir
-.I dir
-.LP
-.B diodmount
-.I "--list-exports HOST"
+.I HOST[:/dir]
+.I [target]
 .SH DESCRIPTION
 .B diodmount
 is the mount utility for the distributed I/O daemon.
@@ -16,51 +13,68 @@ is the mount utility for the distributed I/O daemon.
 This command must be run as root.
 .SH OPTIONS
 .TP
-.I "-x, --list-exports HOST"
-List file systems exported by HOST.
+.I "-a, --all"
+Mount all file systems exported by HOST (omit [:/dir]).
+If a target directory argument is specified, it will be prepended to
+the mount points.  Any missing mount points or their parent
+directories will be created with mode 0755.
+.TP
+.I "-U, --unmount-all"
+Unmount all file systems exported by HOST (omit [:/dir]).
+If a target directory argument is specified, it will be prepended to
+the mount points.
 .TP
 .I "-u, --mount-user USER"
-If USER is not root, causes the file system to be mounted so that only
-USER can access it.  Default is to mount as root.
+Start a private server for USER if one is not already running,
+and mount so that only USER can access the file system.
+The default (eqivalent to -u root) is to start a shared server as root
+if one is not already running,
+and mount so that any user can access the file system.
 .TP
 .I "-n, --no-mtab"
 Do not update /etc/mtab.  This may be appropriate, for example, when
 the file system is mounted in a private name space.
+.TP
 .I "-o, --diod-options OPT,[OPT,...]"
 Pass additional 9P mount options when mounting the \fBdiod\fR server.
-Options specified in this way override the options that \fBdiodmount\fR
-sets up internally.
+These options override the ones \fBdiodmount\fR sets up internally.
 .TP
 .I "-O, --diodctl-options OPT,[OPT,...]"
-Pass additional 9P mount when mouting the \fBdiodctl\fR server.
-Options specified in this way override the options that \fBdiodmount\fR
-sets up internally.
+Pass additional 9P mount options when mounting the \fBdiodctl\fR server.
+These options override the ones \fBdiodmount\fR sets up internally.
+.TP
+.I "-v, --verbose"
+Be verbose about what is going on.
 .TP
 .I "-d, --direct"
 Mount the \fBdiod\fR server directly without first mounting \fBdiodctl\fR
 to determine the port.  This must be used in conjunction with
 \fI-o port=PORT\fR.
+.TP
+.I "-f, --fake-mount"
+Do everything but actually perform the diod mount.
 .SH "EXAMPLES"
 .LP
-List the file systems exported by tycho42:
-.nf
-    diodmount -x tycho42
-.fi
-.LP
 Mount /g/g99 from tycho42, so that all users can access it:
+.LP
 .nf
     diodmount tycho42:/g/g99 /g/g99
 .fi
 .LP
-Mount tycho42's diodctl server directly for testing:
+Mount and unmount all file systems exported by tycho42 without updating
+/etc/mtab:
+.LP
 .nf
-    diodmount tycho42:/diodctl /g/g99
+    diodmount -a -n tycho42
+    diodmount -U -n tycho42
 .fi
 .LP
-Mount /p/lcrater1 on tycho[101-164], with a private server for garlick:
+Mount /p/lcrater1 on tycho[101-164] without updating /etc/mtab, starting
+a private server for garlick:
+.LP
 .nf
     pdsh -w tycho[101-164] \\
-        diodmount -u garlick tycho42:/p/lcrater1 /p/lcrater1
+        diodmount -n -u garlick tycho42:/p/lcrater1 /p/lcrater1
 .fi
 .nf
 .SH "SEE ALSO"

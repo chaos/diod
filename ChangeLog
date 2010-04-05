@@ -1,3 +1,18 @@
+2010-04-05 Jim Garlick <garlick@llnl.gov>
+
+	* diodmount/diodmount.c : Mount diodctl in a child process that
+	has unshared its file system namespace.  Don't special-case a mount
+	of /diodctl.  Change options:
+	- Add -a (--mount-all)
+	- Add -U (--unmount-all)
+	- Add -f (--fake-mount)
+	- Drop -x (--list-exports).
+
+	* test/tstat.c : fsid is an expected failure.  Don't print details
+	of the discrepency because if the value changes the test will fail.
+
+	* man/diodmount.8.in : Update to reflect current options.
+
 2010-04-02 Jim Garlick <garlick@llnl.gov>
 
 	* common/diod_conf.c :

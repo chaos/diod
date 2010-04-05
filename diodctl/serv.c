@@ -208,11 +208,11 @@ _wait_pid (void *arg)
             } else if (WIFSIGNALED (status)) {
                 msg ("diod (port %s user %d) killed by signal %d",
                       s->port, s->uid, WTERMSIG (status));
-            } else if (WIFSTOPPED(status)) {
+            } else if (WIFSTOPPED (status)) {
                 msg ("diod (port %s user %d) stopped by signal %d",
-                     s->port, s->uid, WSTOPSIG(status));
+                     s->port, s->uid, WSTOPSIG (status));
                 continue;
-            } else if (WIFCONTINUED(status)) {
+            } else if (WIFCONTINUED (status)) {
                 msg ("diod (port %s user %d) continued",
                      s->port, s->uid);
                 continue;
