@@ -4,8 +4,8 @@ diodmount \- mount diod file systems
 .SH SYNOPSIS
 .B diodmount
 .I "[OPTIONS]"
-.I HOST[:/dir]
-.I [target]
+.I HOST[:aname]
+.I [dir]
 .SH DESCRIPTION
 .B diodmount
 is the mount utility for the distributed I/O daemon, which is an I/O
@@ -20,13 +20,13 @@ This command must be run as root.
 .SH OPTIONS
 .TP
 .I "-a, --all"
-Mount all file systems exported by HOST (omit [:/dir]).
-If a target directory argument is specified, it will be prepended to
+Mount all file systems exported by HOST (omit aname path).
+If a directory argument is specified, it will be prepended to
 the mount points.
 .TP
 .I "-U, --unmount-all"
-Unmount all file systems exported by HOST (omit [:/dir]).
-If a target directory argument is specified, it will be prepended to
+Unmount all file systems exported by HOST (omit aname path).
+If a directory argument is specified, it will be prepended to
 the mount points.
 .TP
 .I "-u, --mount-user USER"
@@ -59,8 +59,7 @@ Be verbose about what is going on.
 .TP
 .I "-d, --direct"
 Mount the \fBdiod\fR server directly without first mounting \fBdiodctl\fR
-to determine the port.  This must be used in conjunction with
-\fI-o port=PORT\fR.
+to determine the port.  This must be used with \fI-o port=PORT\fR.
 .SH "EXAMPLES"
 .LP
 Mount /g/g99 from tycho42, so that all users can access it:

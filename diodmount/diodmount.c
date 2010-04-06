@@ -245,29 +245,27 @@ main (int argc, char *argv[])
             _update_mtab_entries (device, dir, ctl->exports, MNTOPT_DEFAULTS);
         _free_query (ctl);
 
-    /* Mount one file system directly.
-     * User needs to specify the port with -o port=N.
+    /* Mount one file system, obtaining port number from diodctl.
+     * If -d option, skip diodctl and hope the user specified -o port=N.
      * If -D option, create mount point as needed.
      */
-    } else if (dopt) {
+    } else {
+        query_t *ctl;
+
         _verify_mountpoint (dir, Dopt);
-        _diod_mount (ip, dir, aname, NULL, oopt, vopt, fopt);
+
+        if (!dopt)
+            ctl = _diodctl_query (ip, Oopt, vopt, 1);
+        _diod_mount (ip, dir, aname, dopt ? NULL : ctl->port, oopt, vopt, fopt);
+        if (!dopt)
+            _free_query (ctl);
+
         if (!nopt) {
             if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {
                 _umount (dir);
                 exit (1);
             }
         }
-
-    /* Mount one file system, obtaining port number from diodctl.
-     * If -D option, create mount point as needed.
-     */
-    } else {
-        query_t *ctl = _diodctl_query (ip, Oopt, vopt, 1);
-
-        _verify_mountpoint (dir, Dopt);
-        _diod_mount (ip, dir, aname, ctl->port, oopt, vopt, fopt);
-        _free_query (ctl);
     }
 
     free (ip);

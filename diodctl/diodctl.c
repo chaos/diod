@@ -24,12 +24,12 @@
 /* diodctl.c - super server for diod (runs as root on 9pfs port) */
 
 /* What we do:
- * - serve /diodctl synthetic file system
- * - file 'exports' contains list of I/O node exports
- * - file 'server' contains server ip:port
- * - when an attached user reads 'server', if a diod server is already running
- *   for that user, return ip:port.  If not, spawn it and return ip:port.
- * - reap children when they quit (on last trans shutdown)
+ * - Serve /diodctl synthetic file system
+ * - File 'exports' contains list of I/O node exports
+ * - File 'server' contains server port
+ * - When an attached user reads 'server', if a diod server is already
+ *   running for that user, return port.  If not, spawn it and return port.
+ * - Reap children when they quit (on last trans shutdown)
  */
 
 #if HAVE_CONFIG_H

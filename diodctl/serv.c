@@ -388,6 +388,7 @@ _new_server (Npuser *user)
         msg ("out of memory while accounting for new diod server");
         goto done;
     }
+    msg ("started new server (port %s user %d)", s->port, s->uid);
 done:
     for (i = 0; i < s->nfds; i++)
         close (s->fds[i].fd);

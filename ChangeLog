@@ -1,5 +1,7 @@
 2010-04-06 Jim Garlick <garlick@llnl.gov>
 
+	* diodmount/diodmount.c : Update mtab in single non-direct mount case.
+
 	* diodctl/serv.c : Reap children even if they start DOA.
 
 	* common/diod_sock.c : Fix logic error in diod_sock_tryconnect
