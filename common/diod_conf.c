@@ -385,22 +385,19 @@ diod_conf_read_exports (char *path)
 char *
 diod_conf_write_exports (void)
 {
-    char path[] = "/tmp/exports.XXXXXX";
+    char path[PATH_MAX];
     char *el, *cpy = NULL;
     ListIterator itr = NULL;
     FILE *f;
-    int fd; 
+
+    snprintf (path, sizeof(path), "%s/run/diod/exports", X_LOCALSTATEDIR);
 
     if (config.exports == NULL) {
         msg ("cannot dump empty export list");
         goto done;
     }
-    if ((fd = mkstemp (path)) < 0) {
-        err ("error creating tmpfile");
-        goto done;
-    }
-    if ((f = fdopen (fd, "a")) == NULL) {
-        err ("error fdopening tmpfile");
+    if ((f = fopen (path, "w")) == NULL) {
+        err ("error opening %s", path);
         goto done;
     }
     if ((itr = list_iterator_create (config.exports)) == NULL) {

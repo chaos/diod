@@ -44,6 +44,7 @@
 #endif
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/param.h>
 #include <string.h>
@@ -223,21 +224,32 @@ main(int argc, char **argv)
     exit (0);
 }
 
+/* Create run directory if it doesn't exist and chdir there.
+ * Disassociate from parents controlling tty.  Switch logging to syslog.
+ * Exit on error.
+ */
 static void
 _daemonize (void)
 {
     char rdir[PATH_MAX];
+    struct stat sb;
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
-
-    if (chdir (rdir) < 0 && chdir ("/") < 0)
-        err_exit ("chdir /");
+    if (stat (rdir, &sb) < 0) {
+        if (mkdir (rdir, 0755) < 0)
+            err_exit ("mkdir %s", rdir);
+    } else if (!S_ISDIR (sb.st_mode))
+        msg_exit ("%s is not a directory", rdir);
+    
+    if (chdir (rdir) < 0)
+        err_exit ("chdir %s", rdir);
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
     diod_log_to_syslog();
 }
 
 /* Remove any resource limits that might hamper our (non-root) children.
+ * Exit on error.
  */
 static void 
 _setrlimit (void)

@@ -348,7 +348,7 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
             usleep (1000 * retry_wait_ms);
             list_iterator_reset (itr);
         }
-        while (res == 0 && (hostport = list_next(itr))) {
+        while ((hostport = list_next(itr))) {
             if (!(host = strdup (hostport))) {
                 msg ("out of memory");
                 goto done;
@@ -360,6 +360,8 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
                 port = nport;
             res = _connect_one (host, port);
             free (host);
+            if (res != 0)
+                goto done;
         }
     }
 done:

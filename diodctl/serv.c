@@ -65,7 +65,6 @@ typedef struct {
     int nfds;               /* count of above */
     int ac;
     char **av;
-    char *tmp_exports;      /* temp file containing export list */
 } Server;
 
 typedef struct {
@@ -74,6 +73,7 @@ typedef struct {
 } Serverlist;
 
 static Serverlist *serverlist = NULL;
+static char *exports_file = NULL;
 
 #define BASE_PORT       1942 /* arbitrary non-privileged port */
 #define MAX_PORT        (BASE_PORT + 1024)
@@ -85,8 +85,6 @@ _free_server (Server *s)
 {
     int i;
 
-    if (s->tmp_exports && unlink (s->tmp_exports) < 0)
-        err ("could not unlink tmp exports file: %s", s->tmp_exports);
     if (s->port)
         free (s->port);
     if (s->pid != 0) {
@@ -143,6 +141,7 @@ diodctl_serv_init (void)
         msg_exit ("out of memory");
     if ((err = pthread_mutex_init (&serverlist->lock, NULL)))
         msg_exit ("pthread_mutex_init: %s", strerror (err));
+    exports_file = diod_conf_write_exports ();
 }
 
 /* Return nonzero if s is server for uid.
@@ -172,7 +171,7 @@ _remove_server (Server *s)
         goto done;
     }
     if (!list_find (itr, (ListFindF)_smatch, &s->uid)) {
-        msg ("failed to delete server from list");
+        //msg ("failed to delete server from list");
         goto unlock_and_done;
     }
     s1 = list_remove (itr);
@@ -264,9 +263,7 @@ _build_server_args (Server *s)
 {
     int ret = 0;
 
-    if (_append_arg (s, "diod-%s", s->uid != 0 ? "shared" : "private") < 0)
-        goto done;
-    if (_append_arg (s, "-f") < 0)
+    if (_append_arg (s, "diod-%s", s->uid != 0 ? "private" : "shared") < 0)
         goto done;
     if (_append_arg (s, "-x") < 0)
         goto done;
@@ -282,9 +279,7 @@ _build_server_args (Server *s)
         goto done;
     if (!diod_conf_get_munge () && _append_arg (s, "-m") < 0)
         goto done;
-    if (!(s->tmp_exports = diod_conf_write_exports ()))
-        goto done;
-    if (_append_arg (s, "-E%s", s->tmp_exports) < 0)
+    if (_append_arg (s, "-E%s", exports_file) < 0)
         goto done;
     ret = 1;
 done:
@@ -378,15 +373,15 @@ _new_server (Npuser *user)
             break;
     }
 
-    /* connect (with retries) until server responds */
-    if (!diod_sock_tryconnect (l, s->port, 30, 100)) {
-        msg ("could not connect to new diod server - maybe it didn't start?");
-        goto done;
-    }
     if ((error = pthread_create (&s->wait_thread, NULL, _wait_pid, s))) {
         np_uerror (error);
         errn (error, "could not start thread to wait on new diod server");
         goto done; 
+    }
+    /* connect (with retries) until server responds */
+    if (!diod_sock_tryconnect (l, s->port, 30, 100)) {
+        msg ("could not connect to new diod server - maybe it didn't start?");
+        goto done;
     }
     if (!list_append (serverlist->servers, s)) {
         np_uerror (ENOMEM);

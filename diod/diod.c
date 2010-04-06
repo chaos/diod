@@ -55,14 +55,10 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-static void _daemonize (void);
-static void _setrlimit (void);
-
-#define OPTIONS "fd:l:w:e:E:amxF:u:"
+#define OPTIONS "d:l:w:e:E:amxF:u:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
-    {"foreground",      no_argument,        0, 'f'},
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
@@ -84,7 +80,6 @@ usage()
 {
     fprintf (stderr, 
 "Usage: diod [OPTIONS]\n"
-"   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
@@ -124,9 +119,6 @@ main(int argc, char **argv)
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 'f':   /* --foreground */
-                diod_conf_set_foreground (1);
-                break;
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
@@ -197,12 +189,6 @@ main(int argc, char **argv)
         msg_exit ("no munge support, yet config enables it");
 #endif
 
-    if (geteuid () == 0)
-        _setrlimit ();
-
-    if (!diod_conf_get_foreground ())
-        _daemonize ();
-
     /* drop privileges, unless running for multiple users */
     if (diod_conf_get_runasuid (&uid))
         diod_become_user (NULL, uid, 1);
@@ -226,50 +212,6 @@ main(int argc, char **argv)
     /*NOTREACHED*/
 
     exit (0);
-}
-
-static void
-_daemonize (void)
-{
-    char rdir[PATH_MAX];
-
-    snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
-
-    if (chdir (rdir) < 0 && chdir ("/") < 0)
-        err_exit ("chdir /");
-    if (daemon (1, 0) < 0)
-        err_exit ("daemon");
-    diod_log_to_syslog();
-}
-
-/* Remove any resource limits that might hamper our (non-root) children.
- */
-static void
-_setrlimit (void)
-{
-    struct rlimit r, r2;
-
-    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
-    if (setrlimit (RLIMIT_FSIZE, &r) < 0)
-        err_exit ("setrlimit RLIMIT_FSIZE");
-
-    r.rlim_cur = r.rlim_max = NR_OPEN;
-    r2.rlim_cur = r2.rlim_max = sysconf(_SC_OPEN_MAX);
-    if (setrlimit (RLIMIT_NOFILE, &r) < 0)
-        if (errno != EPERM || setrlimit (RLIMIT_NOFILE, &r2) < 0)
-            err_exit ("setrlimit RLIMIT_NOFILE");
-
-    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
-    if (setrlimit (RLIMIT_LOCKS, &r) < 0)
-        err_exit ("setrlimit RLIMIT_LOCKS");
-
-    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
-    if (setrlimit (RLIMIT_CORE, &r) < 0)
-        err_exit ("setrlimit RLIMIT_CORE");
-
-    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
-    if (setrlimit (RLIMIT_AS, &r) < 0)
-        err_exit ("setrlimit RLIMIT_AS");
 }
 
 /*

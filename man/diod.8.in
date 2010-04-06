@@ -13,11 +13,6 @@ Usually diod is spawned by the \fBdiodctl\fR, but it can be run standalone
 if required.
 .SH OPTIONS
 .TP
-.I "-f, --foreground"
-Do not change working directory to @X_LOCALSTATEDIR@/run,
-drop the controlling terminal, or run in the background.
-Send logs to stderr not syslog.
-.TP
 .I "-d, --debug MASK"
 Set the debug mask.  The bit values are:
 0x1 log decoded 9P protocol messages;

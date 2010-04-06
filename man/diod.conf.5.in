@@ -35,9 +35,9 @@ Set the debug mask.  The bit values are:
 2 log any 9P operation errors.
 .TP
 .I "foreground = 1"
-If set to 1, \fBdiodctl\fR and \fBdiod\fR will run in the foreground,
-in the current working directory.  With this option, \fBdiodctl\fR will
-log to stderr but any \fBdiod\fR children will log to syslog.
+If set to 1, \fBdiodctl\fR will run in the foreground,
+in the current working directory.  With this option, \fBdiodctl\fR
+will log to stderr.
 .TP
 .I "munge = 0"
 Disable munge authentication.  See warning in diod (8).

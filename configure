@@ -5084,7 +5084,7 @@ _ACEOF
 ##
 # Epilogue
 ##
-                                                                                                                                                                                                                                                                                                  ac_config_files="$ac_config_files Makefile common/Makefile liblsd/Makefile man/Makefile man/diod.8 man/diodctl.8 man/diodmount.8 man/diod.conf.5 man/9p-attach.5 man/9p-flush.5 man/9p-flock.5 man/9p-lock.5 man/9p-read.5 man/9p-version.5 man/9p-clunk.5 man/9p-intro.5 man/9p-remove.5 man/9p-walk.5 man/9p-error.5 man/9p-open.5 man/9p-rename.5 man/9p-stat.5 man/9p-statfs.5 scripts/Makefile scripts/diod.init test/Makefile diod/Makefile diodctl/Makefile diodmount/Makefile"
+                                                                                                                                                                                                                                                                                                  ac_config_files="$ac_config_files Makefile common/Makefile liblsd/Makefile man/Makefile man/diod.8 man/diodctl.8 man/diodmount.8 man/diod.conf.5 man/9p-attach.5 man/9p-flush.5 man/9p-flock.5 man/9p-lock.5 man/9p-read.5 man/9p-version.5 man/9p-clunk.5 man/9p-intro.5 man/9p-remove.5 man/9p-walk.5 man/9p-error.5 man/9p-open.5 man/9p-rename.5 man/9p-stat.5 man/9p-statfs.5 scripts/Makefile scripts/diodctl.init test/Makefile diod/Makefile diodctl/Makefile diodmount/Makefile"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -5666,7 +5666,7 @@ do
   "man/9p-stat.5" ) CONFIG_FILES="$CONFIG_FILES man/9p-stat.5" ;;
   "man/9p-statfs.5" ) CONFIG_FILES="$CONFIG_FILES man/9p-statfs.5" ;;
   "scripts/Makefile" ) CONFIG_FILES="$CONFIG_FILES scripts/Makefile" ;;
-  "scripts/diod.init" ) CONFIG_FILES="$CONFIG_FILES scripts/diod.init" ;;
+  "scripts/diodctl.init" ) CONFIG_FILES="$CONFIG_FILES scripts/diodctl.init" ;;
   "test/Makefile" ) CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
   "diod/Makefile" ) CONFIG_FILES="$CONFIG_FILES diod/Makefile" ;;
   "diodctl/Makefile" ) CONFIG_FILES="$CONFIG_FILES diodctl/Makefile" ;;
