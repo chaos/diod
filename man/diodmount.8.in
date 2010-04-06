@@ -8,7 +8,13 @@ diodmount \- mount diod file systems
 .I [target]
 .SH DESCRIPTION
 .B diodmount
-is the mount utility for the distributed I/O daemon.
+is the mount utility for the distributed I/O daemon, which is an I/O
+forwarding service for Linux clusters.
+Usually \fBdiodmount\fR first interacts with the \fBdiodctl\fR superserver,
+which dynamically starts servers and lists exported file systems.
+Then it uses this information to perform one or more \fBdiod\fR mounts.
+All file system interactions are authenticated with the Munge UID 'N' GID
+Emporium.
 .LP
 This command must be run as root.
 .SH OPTIONS
@@ -16,8 +22,7 @@ This command must be run as root.
 .I "-a, --all"
 Mount all file systems exported by HOST (omit [:/dir]).
 If a target directory argument is specified, it will be prepended to
-the mount points.  Any missing mount points or their parent
-directories will be created with mode 0755.
+the mount points.
 .TP
 .I "-U, --unmount-all"
 Unmount all file systems exported by HOST (omit [:/dir]).
@@ -31,9 +36,15 @@ The default (eqivalent to -u root) is to start a shared server as root
 if one is not already running,
 and mount so that any user can access the file system.
 .TP
+.I "-D, --create-directories"
+Recursively create mount point directories as needed, mode 0755.
+.TP
 .I "-n, --no-mtab"
 Do not update /etc/mtab.  This may be appropriate, for example, when
 the file system is mounted in a private name space.
+.TP
+.I "-f, --fake-mount"
+Do everything but actually perform the diod mount/unmount.
 .TP
 .I "-o, --diod-options OPT,[OPT,...]"
 Pass additional 9P mount options when mounting the \fBdiod\fR server.
@@ -50,9 +61,6 @@ Be verbose about what is going on.
 Mount the \fBdiod\fR server directly without first mounting \fBdiodctl\fR
 to determine the port.  This must be used in conjunction with
 \fI-o port=PORT\fR.
-.TP
-.I "-f, --fake-mount"
-Do everything but actually perform the diod mount.
 .SH "EXAMPLES"
 .LP
 Mount /g/g99 from tycho42, so that all users can access it:
@@ -62,10 +70,10 @@ Mount /g/g99 from tycho42, so that all users can access it:
 .fi
 .LP
 Mount and unmount all file systems exported by tycho42 without updating
-/etc/mtab:
+/etc/mtab, creating mount points as needed:
 .LP
 .nf
-    diodmount -a -n tycho42
+    diodmount -a -n -D tycho42
     diodmount -U -n tycho42
 .fi
 .LP

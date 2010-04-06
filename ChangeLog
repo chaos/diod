@@ -3,9 +3,10 @@
 	* diodmount/diodmount.c : Mount diodctl in a child process that
 	has unshared its file system namespace.  Don't special-case a mount
 	of /diodctl.  Change options:
-	- Add -a (--mount-all)
-	- Add -U (--unmount-all)
-	- Add -f (--fake-mount)
+	- Add -a (--mount-all).
+	- Add -U (--unmount-all).
+	- Add -f (--fake-mount).
+	- Add -D (--create-directories).
 	- Drop -x (--list-exports).
 
 	* test/tstat.c : fsid is an expected failure.  Don't print details
