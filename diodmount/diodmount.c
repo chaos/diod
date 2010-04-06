@@ -98,7 +98,7 @@ static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
                                 char *opts, int vopt, int fopt);
 static void  _umount           (const char *target);
 static int   _update_mtab      (char *dev, char *dir, char *opt);
-static void _update_mtab_entries (char *host, List dirs, char *opt);
+static void _update_mtab_entries (char *host, char *root, List dirs, char *opt);
 static void _verify_mountpoint (char *path, int Dopt);
 static void _verify_mountpoints (List dirs, char *root, int Dopt);
 static char *_name2ip          (char *name);
@@ -175,7 +175,7 @@ main (int argc, char *argv[])
             case 'f':   /* --fake-mount */
                 fopt = 1;
                 break;
-            case 'T':   /* --test-opt [hidden test option] */
+            case 'T':   /* --test-opt */
                 opt_test ();
                 exit (0);
             default:
@@ -242,7 +242,7 @@ main (int argc, char *argv[])
         list_iterator_destroy (itr);
 
         if (!nopt)
-            _update_mtab_entries (device, ctl->exports, MNTOPT_DEFAULTS);
+            _update_mtab_entries (device, dir, ctl->exports, MNTOPT_DEFAULTS);
         _free_query (ctl);
 
     /* Mount one file system directly.
@@ -276,6 +276,10 @@ main (int argc, char *argv[])
     exit (0);
 }
 
+/* Create a directory, recursively creating parents as needed.
+ * Return success (0) if the directory already exists, or creation was
+ * successful, (-1) on failure.
+ */
 static int
 _mkdir_p (char *path, mode_t mode)
 {
@@ -302,6 +306,9 @@ _mkdir_p (char *path, mode_t mode)
     return res;
 }
 
+/* Recursively create directory [path] if Dopt is true.
+ * Verify that directory exists, exiting on failure.
+ */
 static void
 _verify_mountpoint (char *path, int Dopt)
 {
@@ -319,6 +326,9 @@ _verify_mountpoint (char *path, int Dopt)
         msg_exit ("%s: not a directory", path);
 }
 
+/* Run a list of directories through _verify_mountpoint ().
+ * If root is non-null, prepend it to the path.
+ */
 static void
 _verify_mountpoints (List dirs, char *root, int Dopt)
 {
@@ -335,6 +345,9 @@ _verify_mountpoints (List dirs, char *root, int Dopt)
     list_iterator_destroy (itr);
 }
 
+/* Add an entry for [dev] mounted on [dir] to /etc/mtab.
+ * Return success (1) or failure (0).
+ */
 static int
 _update_mtab (char *dev, char *dir, char *opt)
 {
@@ -373,22 +386,32 @@ done:
     return ret;
 }
 
+/* Run a list of directories through _update_mtab ().
+ * Mount point path is assumed to be same as that in the "device" (HOST:/dir).
+ * If root is non-null, prepend it to the mount point path.
+ */
 static void
-_update_mtab_entries (char *host, List dirs, char *opt)
+_update_mtab_entries (char *host, char *root, List dirs, char *opt)
 {
     char dev[PATH_MAX + NI_MAXSERV + 1];
+    char path[PATH_MAX];
     ListIterator itr;
     char *el;
 
     if (!(itr = list_iterator_create (dirs)))
         msg_exit ("out of memory");
     while ((el = list_next (itr))) {
+        snprintf (path, sizeof(path), "%s%s", root ? root : "", el);
         snprintf(dev, sizeof (dev), "%s:%s", host, el);
-        (void)_update_mtab (dev, el, opt);
+        (void)_update_mtab (dev, path, opt);
     }
     list_iterator_destroy (itr);
 }
 
+/* Mount 9p file system [source] on [target] with options [data].
+ * Swap effective (user) and real (root) uid's for the duration of mount call.
+ * Exit on error.
+ */
 static void
 _mount (const char *source, const char *target, const void *data)
 {
@@ -402,6 +425,10 @@ _mount (const char *source, const char *target, const void *data)
         err_exit ("failed to restore effective uid to %d", saved_euid);
 }
 
+/* Mount file system [target].
+ * Swap effective (user) and real (root) uid's for the duration of umount call.
+ * Exit on error.
+ */
 static void
 _umount (const char *target)
 {
@@ -415,6 +442,10 @@ _umount (const char *target)
         err_exit ("failed to restore effective uid to %d", saved_euid);
 }
 
+/* Unshare file system name space.
+ * Swap effective (user) and real (root) uid's for the duration of unshare call.
+ * Exit on error.
+ */
 static void
 _unshare (void)
 {
@@ -428,6 +459,10 @@ _unshare (void)
         err_exit ("failed to restore effective uid to %d", saved_euid);
 }
 
+/* Create a munge credential for the effective uid and return it as a string
+ * that must be freed by the caller.
+ * If munge is unavailable, the "credential" is just the user name.
+ */
 static char *
 _create_mungecred (char *payload)
 {
@@ -454,6 +489,12 @@ _create_mungecred (char *payload)
     return mungecred;
 }
 
+/* Mount diod file system specified by [ip], [port], [aname] on [dir].
+ * Default mount options can be overridden by a comma separated list [opts].
+ * If [vopt], say what we're doing before we do it.
+ * If [fopt], don't actually perform the mount.
+ * Exit on error.
+ */
 static void
 _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
              int vopt, int fopt)
@@ -483,6 +524,11 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
     free (options);
 }
 
+/* Mount diodctl file running on [ip] on [dir].
+ * Default mount options can be overridden by a comma separated list [opts].
+ * If [vopt], say what we're doing before we do it.
+ * Exit on error.
+ */
 static void
 _diodctl_mount (char *ip, char *dir, char *opts, int vopt)
 {
@@ -507,7 +553,9 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt)
     free (options);
 }
 
-/* read file to stdout */
+/* Read file [path] to stdout.
+ * Exit on error.
+ */
 static void
 _cat_file (char *path)
 {
@@ -523,7 +571,9 @@ _cat_file (char *path)
     fclose (f);
 }
 
-/* put string [s] to file */
+/* Put string [s] to file.
+ * Exit on error.
+ */
 static void
 _puts_file (char *path, char *s)
 {
@@ -537,39 +587,9 @@ _puts_file (char *path, char *s)
         err_exit ("error writing to %s", path);
 }
 
-/* Print exports on stdout.
+/* Allocate and initialize a query_t struct.
+ * Exit on error.
  */
-static void
-_diodctl_listexp (char *dir)
-{
-    char *exports;
-   
-    if (asprintf (&exports, "%s/exports", dir) < 0)
-        msg_exit ("out of memory");
-    _cat_file (exports);
-    free (exports);
-}
-
-/* Print port for euid's server on stdout.
- */
-static void
-_diodctl_getport (char *dir)
-{
-    char *ctl, *server;
-   
-    /* poke /ctl to trigger creation of new server (if needed) */ 
-    if (asprintf (&ctl, "%s/ctl", dir) < 0)
-        msg_exit ("out of memory");
-    _puts_file (ctl, "new");
-    free (ctl);
-
-    /* read port from /server and cat to stdout */
-    if (asprintf (&server, "%s/server", dir) < 0)
-        msg_exit ("out of memory");
-    _cat_file (server);
-    free (server);
-}
-
 static query_t *
 _alloc_query (void)
 {
@@ -583,6 +603,9 @@ _alloc_query (void)
     return r;
 }
 
+/* Free a query_t struct.
+ * This function always succeedes.
+ */
 static void
 _free_query (query_t *r)
 {
@@ -592,6 +615,8 @@ _free_query (query_t *r)
     free (r);
 }
 
+/* Overwrite any trailing white space in string [s] with nulls.
+ */
 static void
 _delete_trailing_whitespace (char *s)
 {
@@ -607,7 +632,8 @@ _delete_trailing_whitespace (char *s)
 /* Helper for _diodctl_query ().  This is the parent leg of the fork
  * conditional, responsible for reading data from pipe [fd], assigning it
  * to query_t [r], reaping the child [pid], and returning success (1) or 
- * failure (0).  N.B. This function cannot exit directly on error because
+ * failure (0).
+ * N.B. This function cannot exit directly on error because
  * the temporary mount point has to be cleaned up.
  */
 static int
@@ -665,12 +691,14 @@ done:
 
 /* Interact with diodctl server to determine port number of diod server
  * and a list of exports, returned in a query_t struct that caller must free.
- * Mount is cleaned up on exit because it's in a private namespace.
+ * Exit on error.
+ * N.B. mount is always cleaned up because it's in a private namespace.
  */
 static query_t *
 _diodctl_query (char *ip, char *opts, int vopt, int getport)
 {
     char tmppath[] = "/tmp/diodmount.XXXXXX";
+    char path[PATH_MAX];
     query_t *res = _alloc_query ();
     int pfd[2];
     pid_t pid;
@@ -690,9 +718,14 @@ _diodctl_query (char *ip, char *opts, int vopt, int getport)
                 err_exit ("failed to dup stdout");
             _unshare ();
             _diodctl_mount (ip, tmpdir, opts, vopt);
-            if (getport)
-                _diodctl_getport (tmpdir);
-            _diodctl_listexp (tmpdir);
+            if (getport) {
+                snprintf (path, sizeof (path), "%s/ctl", tmpdir);
+                _puts_file (path, "new");
+                snprintf (path, sizeof (path), "%s/server", tmpdir);
+                _cat_file (path);
+            }
+            snprintf (path, sizeof (path), "%s/exports", tmpdir);
+            _cat_file (path);
             fflush (stdout);
             _umount (tmpdir);
             exit (0); 
@@ -711,8 +744,8 @@ _diodctl_query (char *ip, char *opts, int vopt, int getport)
     return res;
 }
 
-/* Obtain the IP address for 'name' and write it into 'ip' which is of
- * size 'len'.
+/* Obtain the IP address for [name] and return it as a string the caller
+ * must free.  Exit on error.
  */
 static char *
 _name2ip (char *name)
@@ -742,9 +775,11 @@ _name2ip (char *name)
     return ip;
 }
 
-/* Given a "device" in host:aname format, parse out the host (converting
- * to ip address for in-kernel v9fs which can't handle hostnames),
- * and the aname.  Exit on error.
+/* Given [device] in host:aname format, parse out the host (converting
+ * to ip address for in-kernel v9fs which can't handle hostnames) and
+ * storing in [ipp], and the aname, storing in [anamep].
+ * Caller must free the resulting strings.
+ * Exit on error.
  */
 static void
 _parse_device (char *device, char **anamep, char **ipp)

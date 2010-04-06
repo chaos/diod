@@ -264,7 +264,7 @@ _build_server_args (Server *s)
 {
     int ret = 0;
 
-    if (_append_arg (s, "diod-%d", s->uid) < 0)
+    if (_append_arg (s, "diod-%s", s->uid != 0 ? "shared" : "private") < 0)
         goto done;
     if (_append_arg (s, "-f") < 0)
         goto done;

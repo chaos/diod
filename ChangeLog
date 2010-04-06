@@ -1,4 +1,12 @@
+2010-04-06 Jim Garlick <garlick@llnl.gov>
+
+	* diodmount/diodmount.c : Add documentation.  Fix diodmount -a to
+	prepend directory to mount paths in /etc/mtab.
+	
 2010-04-05 Jim Garlick <garlick@llnl.gov>
+
+	* diodctl/serv.c : Set diod argv[0] to diod-private or diod-shared
+	rather than diod-<uid>.
 
 	* diodmount/diodmount.c : Mount diodctl in a child process that
 	has unshared its file system namespace.  Don't special-case a mount
