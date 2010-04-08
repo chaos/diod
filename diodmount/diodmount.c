@@ -70,7 +70,7 @@ typedef struct {
     char *port;
 } query_t;
 
-#define OPTIONS "aUu:no:O:TvdfD"
+#define OPTIONS "aUu:no:O:TvdfDj:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -85,13 +85,15 @@ static const struct option longopts[] = {
     {"direct",          no_argument,         0, 'd'},
     {"fake-mount",      no_argument,         0, 'f'},
     {"create-directories", no_argument,      0, 'D'},
+    {"jobid",           required_argument ,  0, 'j'},
     {0, 0, 0, 0},
 };
 #else
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
 
-static query_t *_diodctl_query (char *ip, char *opts, int vopt, int getparent);
+static query_t *_diodctl_query (char *ip, char *opts, int vopt, int getparent,
+                                char *payload);
 static void  _free_query       (query_t *r);
 static void  _parse_device     (char *device, char **anamep, char **ipp);
 static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
@@ -118,6 +120,7 @@ usage (void)
 "   -d,--direct                   mount diod directly (requires -o port=N)\n"
 "   -f,--fake-mount               do everything but the actual diod mount(s)\n"
 "   -D,--create-directories       create mount directories as needed\n"
+"   -j,--jobid STR                set job id string\n"
 );
     exit (1);
 }
@@ -139,6 +142,7 @@ main (int argc, char *argv[])
     char *uopt = NULL;
     char *oopt = NULL;
     char *Oopt = NULL;
+    char *jopt = NULL;
 
     diod_log_init (argv[0]);
 
@@ -178,6 +182,9 @@ main (int argc, char *argv[])
             case 'T':   /* --test-opt */
                 opt_test ();
                 exit (0);
+            case 'j':   /* --jobid STR */
+                jopt = optarg;
+                break;
             default:
                 usage ();
         }
@@ -202,6 +209,12 @@ main (int argc, char *argv[])
         dir = argv[optind++];
         _parse_device (device, &aname, &ip);
     }
+#if !HAVE_LIBMUNGE
+    if (jopt) {
+        msg_exit ("diodmount was built without munge support so --jobid "
+                  "option is disabled");
+    }
+#endif
 
     /* Must start out with effective root id.
      * We drop euid = root but preserve ruid = root for mount, etc.
@@ -218,7 +231,7 @@ main (int argc, char *argv[])
      * FIXME: need code to remove mtab entries on umount.
      */
     if (aopt || Uopt) {
-        query_t *ctl = _diodctl_query (ip, Oopt, vopt, aopt);
+        query_t *ctl = _diodctl_query (ip, Oopt, vopt, aopt, jopt);
         ListIterator itr;
         char *el;
 
@@ -255,7 +268,7 @@ main (int argc, char *argv[])
         _verify_mountpoint (dir, Dopt);
 
         if (!dopt)
-            ctl = _diodctl_query (ip, Oopt, vopt, 1);
+            ctl = _diodctl_query (ip, Oopt, vopt, 1, jopt);
         _diod_mount (ip, dir, aname, dopt ? NULL : ctl->port, oopt, vopt, fopt);
         if (!dopt)
             _free_query (ctl);
@@ -466,7 +479,7 @@ _create_mungecred (char *payload)
 {
     char *mungecred;
 #if HAVE_LIBMUNGE
-    int paylen = payload ? strlen(payload) : 0;
+    int paylen = payload ? strlen(payload) + 1 : 0;
     munge_ctx_t ctx;
     munge_err_t err;
 
@@ -528,12 +541,12 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
  * Exit on error.
  */
 static void
-_diodctl_mount (char *ip, char *dir, char *opts, int vopt)
+_diodctl_mount (char *ip, char *dir, char *opts, int vopt, char *payload)
 {
     Opt o = opt_create ();
     char *options, *cred;
 
-    opt_add (o, "uname=%s", (cred = _create_mungecred (NULL)));
+    opt_add (o, "uname=%s", (cred = _create_mungecred (payload)));
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
     opt_add (o, "debug=0x1"); /* errors */
@@ -693,7 +706,7 @@ done:
  * N.B. mount is always cleaned up because it's in a private namespace.
  */
 static query_t *
-_diodctl_query (char *ip, char *opts, int vopt, int getport)
+_diodctl_query (char *ip, char *opts, int vopt, int getport, char *payload)
 {
     char tmppath[] = "/tmp/diodmount.XXXXXX";
     char path[PATH_MAX];
@@ -715,7 +728,7 @@ _diodctl_query (char *ip, char *opts, int vopt, int getport)
             if (dup2 (pfd[1], STDOUT_FILENO) < 0)
                 err_exit ("failed to dup stdout");
             _unshare ();
-            _diodctl_mount (ip, tmpdir, opts, vopt);
+            _diodctl_mount (ip, tmpdir, opts, vopt, payload);
             if (getport) {
                 snprintf (path, sizeof (path), "%s/ctl", tmpdir);
                 _puts_file (path, "new");

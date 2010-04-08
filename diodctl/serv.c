@@ -57,7 +57,7 @@
 #include "serv.h"
 
 typedef struct {
-    uid_t uid;              /* uid diod child is running as */
+    Npuser *user;           /* user diod child is running as */
     pid_t pid;              /* pid of diod child */
     char *port;             /* port */
     pthread_t wait_thread;  /* thread to call waitpid () on child */
@@ -148,13 +148,13 @@ diodctl_serv_init (void)
  * Suitable for cast to (ListFindF).
  */
 static int
-_smatch (Server *s, uid_t *uid)
+_smatch (Server *s, Npuser *user)
 {
-    return (s->uid == *uid);
+    return (s->user->uid == user->uid);
 }
 
 /* Remove server from the list.
- */
+user-> */
 static int
 _remove_server (Server *s)
 {
@@ -170,7 +170,7 @@ _remove_server (Server *s)
         msg ("failed to lock serverlist");
         goto done;
     }
-    if (!list_find (itr, (ListFindF)_smatch, &s->uid)) {
+    if (!list_find (itr, (ListFindF)_smatch, &s->user)) {
         //msg ("failed to delete server from list");
         goto unlock_and_done;
     }
@@ -203,23 +203,23 @@ _wait_pid (void *arg)
         if (pid == s->pid) {
             if (WIFEXITED (status)) {
                 msg ("diod (port %s user %d) exited with %d",
-                      s->port, s->uid, WEXITSTATUS (status));
+                      s->port, s->user->uid, WEXITSTATUS (status));
             } else if (WIFSIGNALED (status)) {
                 msg ("diod (port %s user %d) killed by signal %d",
-                      s->port, s->uid, WTERMSIG (status));
+                      s->port, s->user->uid, WTERMSIG (status));
             } else if (WIFSTOPPED (status)) {
                 msg ("diod (port %s user %d) stopped by signal %d",
-                     s->port, s->uid, WSTOPSIG (status));
+                     s->port, s->user->uid, WSTOPSIG (status));
                 continue;
             } else if (WIFCONTINUED (status)) {
                 msg ("diod (port %s user %d) continued",
-                     s->port, s->uid);
+                     s->port, s->user->uid);
                 continue;
             }
         }
     } while (pid < 0 && errno == EINTR);
     if (pid < 0)
-        err ("wait for diod (port %s user %d)", s->port, s->uid);
+        err ("wait for diod (port %s user %d)", s->port, s->user->uid);
     else
         s->pid = 0; /* prevent _free_server () from sending signal */
     _remove_server (s);
@@ -263,11 +263,12 @@ _build_server_args (Server *s)
 {
     int ret = 0;
 
-    if (_append_arg (s, "diod-%s", s->uid != 0 ? "private" : "shared") < 0)
+    if (_append_arg (s, "diod-%s", s->user->uid != 0 ? "private"
+                                                     : "shared") < 0)
         goto done;
     if (_append_arg (s, "-x") < 0)
         goto done;
-    if (s->uid != 0 && _append_arg (s, "-u%d", s->uid) < 0)
+    if (s->user->uid != 0 && _append_arg (s, "-u%d", s->user->uid) < 0)
         goto done;
     if (_append_arg (s, "-F%d", s->nfds) < 0)
         goto done;
@@ -353,7 +354,7 @@ _new_server (Npuser *user)
     if (!(s = _alloc_server ()))
         goto done;
 
-    s->uid = user->uid;
+    s->user = user;
 
     if (!_alloc_ports (l, &s->fds, &s->nfds, &s->port)) {
         msg ("failed to allocate diod port for user %d", user->uid);
@@ -390,7 +391,7 @@ _new_server (Npuser *user)
         msg ("out of memory while accounting for new diod server");
         goto done;
     }
-    msg ("started new server (port %s user %d)", s->port, s->uid);
+    msg ("started new server (port %s user %d)", s->port, user->uid);
 done:
     for (i = 0; i < s->nfds; i++)
         close (s->fds[i].fd);
@@ -421,7 +422,7 @@ diodctl_serv_getname (Npuser *user, u64 offset, u32 count, u8* data)
         np_uerror (err);
         goto done;
     }
-    s = list_find_first (serverlist->servers, (ListFindF)_smatch, &user->uid);
+    s = list_find_first (serverlist->servers, (ListFindF)_smatch, user);
     if (s) {
         cpylen = strlen (s->port) - offset;
         if (cpylen > count)
@@ -454,7 +455,7 @@ diodctl_serv_create (Npuser *user)
         goto done;
     }
     /* FIXME: what if found server is listening on wrong ip? */
-    s = list_find_first (serverlist->servers, (ListFindF)_smatch, &user->uid);
+    s = list_find_first (serverlist->servers, (ListFindF)_smatch, user);
     if (!s)
         s = _new_server (user);
 

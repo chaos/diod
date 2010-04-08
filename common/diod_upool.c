@@ -96,14 +96,12 @@ static Npuserpool upool = {
 };
 
 /* Private Duser struct, linked to Npuser->aux.
- * Usage of munge payload here is TBD - maybe the user's batch id for stats?
  */
 #define DUSER_MAGIC 0x3455DDDF
 typedef struct {
     int         magic;
     int         munged;         /* user supplied a valid munge cred */
-    void       *payload;        /* munge payload (if any) */
-    int         paylen;         /* length of payload (if any) */
+    char       *payload;        /* munge payload (if any) */
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
 } Duser;
@@ -179,7 +177,7 @@ _getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 }
 
 static Duser *
-_alloc_duser (struct passwd *pwd, int munged, void *payload, int paylen)
+_alloc_duser (struct passwd *pwd, int munged, char *payload)
 {
     Duser *d = NULL;
 
@@ -188,7 +186,6 @@ _alloc_duser (struct passwd *pwd, int munged, void *payload, int paylen)
     d->magic = DUSER_MAGIC;
     d->munged = munged;
     d->payload = payload;
-    d->paylen = paylen;
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
@@ -235,14 +232,14 @@ diod_become_user (char *name, uid_t uid, int realtoo)
 
 static Npuser *
 _alloc_user (Npuserpool *up, struct passwd *pwd, int munged,
-             void *payload, int paylen)
+             char *payload)
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
-    if (!(u->aux = _alloc_duser (pwd, munged, payload, paylen)))
+    if (!(u->aux = _alloc_duser (pwd, munged, payload)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -292,6 +289,16 @@ diod_user_has_mungecred (Npuser *u)
     assert (d->magic == DUSER_MAGIC);
 
     return d->munged;
+}
+
+char *
+diod_user_get_mungepayload (Npuser *u)
+{
+    Duser *d = u->aux;
+
+    assert (d->magic == DUSER_MAGIC);
+
+    return d->payload;
 }
 
 static int
@@ -344,6 +351,10 @@ diod_uname2user (Npuserpool *up, char *uname)
     if (diod_conf_get_munge () && strncmp (uname, "MUNGE:", 6) == 0) {
         if (_decode_mungecred (uname, &uid, &payload, &paylen) < 0)
             goto done;
+        if (paylen > 0 && ((char *)payload)[paylen - 1] != '\0') {
+            msg ("malformed munge payload");
+            goto done;
+        }
         if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);
             goto done;
@@ -359,7 +370,7 @@ diod_uname2user (Npuserpool *up, char *uname)
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd, munged, payload, paylen)))
+    if (!(u = _alloc_user (up, pwd, munged, (char *)payload)))
         goto done;
     np_user_incref (u);
 done:
@@ -385,7 +396,7 @@ diod_uid2user(Npuserpool *up, u32 uid)
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd, 0, NULL, 0)))
+    if (!(u = _alloc_user (up, pwd, 0, NULL)))
         goto done;
 done:
     np_user_incref (u);

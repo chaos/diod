@@ -1,5 +1,16 @@
 2010-04-08 Jim Garlick <garlick@llnl.gov>
 
+	* diodctl/serv.c : Instead of storing the uid in the server struct,
+	store a pointer to the Npuser so that we can easily get at the
+	munge payload later.
+
+	* common/diod_upool.c : If munge cred includes a payload, store it
+	with the Npuser struct, and allow it to be retrieved with
+	diod_upool_get_mungepayload.
+
+	* diodmount/diodmount.c : Add -j (jobid) option, and embed string
+	in munge payload.
+
 	* test/t20-aread, test/t21-awrite : Tests for atomic I/O.
 
 	* diod/diod.c, diod/ops.c, common/diod_conf.[ch], diodctl/serv.c :
