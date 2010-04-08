@@ -627,10 +627,9 @@ _delete_trailing_whitespace (char *s)
     }
 }
 
-/* Helper for _diodctl_query ().  This is the parent leg of the fork
- * conditional, responsible for reading data from pipe [fd], assigning it
- * to query_t [r], reaping the child [pid], and returning success (1) or 
- * failure (0).
+/* Helper for _diodctl_query ().  This is the parent leg of the fork,
+ * responsible for reading data from pipe [fd], assigning it to query_t [r],
+ * reaping the child [pid], and returning success (1) or failure (0).
  * N.B. This function cannot exit directly on error because
  * the temporary mount point has to be cleaned up.
  */
@@ -689,6 +688,7 @@ done:
 
 /* Interact with diodctl server to determine port number of diod server
  * and a list of exports, returned in a query_t struct that caller must free.
+ * If getport is false, skip port query that triggers server creation.
  * Exit on error.
  * N.B. mount is always cleaned up because it's in a private namespace.
  */

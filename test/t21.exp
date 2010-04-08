@@ -1,0 +1,13 @@
+starting diod with max 1mb atomic transfers
+mounting
+writing file with 1mb transfers and verifying
+4+0 records in
+4+0 records out
+writing file with 2mb transfers and verifying
+2+0 records in
+2+0 records out
+writing file with odd size transfers and verifying
+31+1 records in
+31+1 records out
+unmounting
+waiting for diod to terminate

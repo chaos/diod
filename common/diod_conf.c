@@ -64,6 +64,7 @@ typedef struct {
     List         diodlisten;
     List         diodctllisten;
     List         exports;
+    int          atomic_max_mb;
 } Conf;
 
 static Conf config = {
@@ -78,6 +79,7 @@ static Conf config = {
     .diodlisten     = NULL, /* diod_conf_init initializes */
     .diodctllisten  = NULL, /* diod_conf_init initializes */
     .exports        = NULL,
+    .atomic_max_mb  = 256,
 };
 
 
@@ -447,6 +449,18 @@ diod_conf_validate_exports (void)
     list_iterator_destroy (itr);
 }
 
+void
+diod_conf_set_atomic_max (int megabytes)
+{
+    config.atomic_max_mb = megabytes;
+}
+
+int
+diod_conf_get_atomic_max (void)
+{
+    return config.atomic_max_mb;
+}
+
 #ifdef HAVE_LUA_H
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
@@ -574,6 +588,7 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (path, L, "foreground", &config.foreground);
         _lua_getglobal_int (path, L, "munge", &config.munge);
         _lua_getglobal_int (path, L, "tcpwrappers", &config.tcpwrappers);
+        _lua_getglobal_int (path, L, "atomic_max_mb", &config.tcpwrappers);
         _lua_getglobal_string (path, L, "diodpath", &config.diodpath);
         _lua_getglobal_list_of_strings (path, L, "listen",
                             &config.diodctllisten);

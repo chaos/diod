@@ -55,7 +55,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:amxF:u:"
+#define OPTIONS "d:l:w:e:E:amxF:u:A:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -69,6 +69,7 @@ static const struct option longopts[] = {
     {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
+    {"atomic-max",      required_argument,  0, 'A'},
     {0, 0, 0, 0},
 };
 #else
@@ -90,6 +91,7 @@ usage()
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
+"   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
     );
     exit (1);
 }
@@ -106,6 +108,7 @@ main(int argc, char **argv)
     int nfds = 0;
     uid_t uid;
     List hplist;
+    unsigned long amax;
    
     diod_log_init (argv[0]); 
     if (!isatty (STDERR_FILENO))
@@ -168,6 +171,13 @@ main(int argc, char **argv)
                 if (errno != 0)
                     err_exit ("--runas-uid argument");
                 diod_conf_set_runasuid (uid);
+                break;
+            case 'A':   /* --atomic-max INT */
+                errno = 0;
+                amax = strtoul (optarg, NULL, 10);
+                if (errno != 0)
+                    err_exit ("--atomic-max argument");
+                diod_conf_set_atomic_max (amax);
                 break;
             default:
                 usage();

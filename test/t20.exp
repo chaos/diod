@@ -1,0 +1,16 @@
+starting diod with max 1mb atomic transfers
+mounting
+creating file in regular file system
+4+0 records in
+4+0 records out
+reading file with 1mb transfers
+4+0 records in
+4+0 records out
+reading file with 2mb transfers
+2+0 records in
+2+0 records out
+reading file with odd size transfers
+31+1 records in
+31+1 records out
+unmounting
+waiting for diod to terminate

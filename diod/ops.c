@@ -1325,6 +1325,10 @@ static int
 _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
 {
     Fid *f = fid->aux;
+    u32 atomic_max = (u32)diod_conf_get_atomic_max () * 1024 * 1024;
+
+    if (count > atomic_max)
+        count = atomic_max;
 
     if (!f->rc_data || f->rc_length < count) {
         //if (f->rc_data)
@@ -1420,7 +1424,10 @@ static int
 _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
 {
     Fid *f = fid->aux;
+    u32 atomic_max = (u32)diod_conf_get_atomic_max () * 1024 * 1024;
 
+    if (count > atomic_max)
+        count = atomic_max;
     assert (f->wc_data == NULL);
     if (!(f->wc_data = _malloc (count))) {
         msg ("diod_awrite: out of memory (allocating %d bytes)", count);

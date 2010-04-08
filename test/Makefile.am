@@ -39,7 +39,10 @@ TESTS = \
 	t16-stat \
 	t17-chmod \
 	t18-flock \
-	t19-fcntl
+	t19-fcntl \
+	t20-aread \
+	t21-awrite 
+
 
 $(TESTS): mnt.d exp.d
 

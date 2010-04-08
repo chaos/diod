@@ -1,3 +1,10 @@
+2010-04-08 Jim Garlick <garlick@llnl.gov>
+
+	* test/t20-aread, test/t21-awrite : Tests for atomic I/O.
+
+	* diod/diod.c, diod/ops.c, common/diod_conf.[ch], diodctl/serv.c :
+	Added -A (atomic-max) option to limit max size of atomic transfers.
+
 2010-04-06 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre5
@@ -22,7 +29,7 @@
 	* diodctl/diodctl.c : Create run dir if it doesn't exist.
 
 	* scripts/diodctl.init.in, configure.ac, diod.spec : Rename init
-	script drom diod to diodctl.
+	script from diod to diodctl.
 
 	* diodmount/diodmount.c : Add documentation.  Fix diodmount -a to
 	prepend directory to mount paths in /etc/mtab.

@@ -1,0 +1,35 @@
+#!/bin/bash -e
+
+doit ()
+{
+        echo starting diod with max 1mb atomic transfers
+        $PATH_DIOD -A 1 -l "localhost:2006" -x -m -e $PATH_EXPDIR &
+        sleep 1
+        echo mounting
+        $PATH_DIODMOUNT -d -o uname=root,port=2006 -n localhost:$PATH_EXPDIR \
+                        $PATH_MNTDIR
+
+	echo writing file with 1mb transfers and verifying
+	dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_MNTDIR/a count=4
+	cmp $PATH_EXPDIR/a $PATH_MNTDIR/a
+	echo writing file with 2mb transfers and verifying
+	dd status=noxfer bs=2097152 if=$PATH_EXPDIR/a of=$PATH_MNTDIR/b
+	cmp $PATH_EXPDIR/a $PATH_MNTDIR/a
+	echo writing file with odd size transfers and verifying
+	dd status=noxfer bs=131075 if=$PATH_EXPDIR/a of=$PATH_MNTDIR/b
+	cmp $PATH_EXPDIR/a $PATH_MNTDIR/b
+
+        echo unmounting
+        umount $PATH_MNTDIR
+	rm -f $PATH_EXPDIR/a $PATH_EXPDIR/b
+        echo waiting for diod to terminate
+        wait
+}
+
+
+TEST=$(basename $0 | cut -d- -f1)
+test $(id -u) == 0 || exit 77 #skip if not root
+
+doit >$TEST.out 2>&1
+
+diff $TEST.exp $TEST.out >$TEST.diff
