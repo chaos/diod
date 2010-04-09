@@ -3,7 +3,8 @@ enum {
     DIOD_SOCK_QUIET_EADDRINUSE=2,
 };
 
-int  diod_sock_listen_first_nfds  (struct pollfd **fdsp, int *nfdsp, int nfds);
+int  diod_sock_listen_nfds  (struct pollfd **fdsp, int *nfdsp, int nfds,
+                             int starting);
 
 int  diod_sock_listen_hostport_list (List l, struct pollfd **fdsp, int *nfdsp,
                                      char *nport, int flags);

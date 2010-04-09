@@ -57,7 +57,8 @@
 #include "serv.h"
 
 typedef struct {
-    Npuser *user;           /* user diod child is running as */
+    uid_t uid;              /* uid diod child is running as */
+    char *jobid;            /* jobid of child, if any */
     pid_t pid;              /* pid of diod child */
     char *port;             /* port */
     pthread_t wait_thread;  /* thread to call waitpid () on child */
@@ -101,13 +102,15 @@ _free_server (Server *s)
     }
     for (i = 0; i < s->nfds; i++)
         (void) close (s->fds[i].fd);
+    if (s->jobid)
+        free (s->jobid);
     free (s);
 }
 
 /* Allocate server struct.
  */
 static Server *
-_alloc_server (void)
+_alloc_server (uid_t uid, char *jobid)
 {
     Server *s = NULL;
 
@@ -121,6 +124,11 @@ _alloc_server (void)
         goto done;
     }
     s->av[0] = NULL;
+    s->uid = uid;
+    if (jobid && !(s->jobid = strdup (jobid))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
 done:
     if (np_haserror () && s != NULL)
         _free_server (s);
@@ -144,23 +152,29 @@ diodctl_serv_init (void)
     exports_file = diod_conf_write_exports ();
 }
 
-/* Return nonzero if s is server for uid.
+/* Return nonzero if servers match uid and jobid.
  * Suitable for cast to (ListFindF).
  */
 static int
-_smatch (Server *s, Npuser *user)
+_smatch (Server *s1, Server *s2)
 {
-    return (s->user->uid == user->uid);
+    if (s1->uid != s2->uid)
+        return 0;
+    if (s1->jobid && s2->jobid && strcmp (s1->jobid, s2->jobid) == 0)
+        return 1;
+    if (!s1->jobid && !s2->jobid)
+        return 1;
+    return 0;
 }
 
 /* Remove server from the list.
-user-> */
+ */
 static int
 _remove_server (Server *s)
 {
     ListIterator itr;
     int err;
-    Server *s1;
+    Server *key;
 
     if (!(itr = list_iterator_create (serverlist->servers))) {
         msg ("out of memory");
@@ -170,12 +184,12 @@ _remove_server (Server *s)
         msg ("failed to lock serverlist");
         goto done;
     }
-    if (!list_find (itr, (ListFindF)_smatch, &s->user)) {
-        //msg ("failed to delete server from list");
+    if (!list_find (itr, (ListFindF)_smatch, s)) {
+        /* can happen if startup failed, so keep silent */
         goto unlock_and_done;
     }
-    s1 = list_remove (itr);
-    assert (s1 == s);
+    key = list_remove (itr);
+    assert (key == s);
     _free_server (s);
 unlock_and_done:
     if ((err = pthread_mutex_unlock (&serverlist->lock))) {
@@ -202,24 +216,20 @@ _wait_pid (void *arg)
         pid = waitpid (s->pid, &status, 0);
         if (pid == s->pid) {
             if (WIFEXITED (status)) {
-                msg ("diod (port %s user %d) exited with %d",
-                      s->port, s->user->uid, WEXITSTATUS (status));
+                msg ("%s exited with %d", s->av[0], WEXITSTATUS (status));
             } else if (WIFSIGNALED (status)) {
-                msg ("diod (port %s user %d) killed by signal %d",
-                      s->port, s->user->uid, WTERMSIG (status));
+                msg ("%s killed by signal %d", s->av[0], WTERMSIG (status));
             } else if (WIFSTOPPED (status)) {
-                msg ("diod (port %s user %d) stopped by signal %d",
-                     s->port, s->user->uid, WSTOPSIG (status));
+                msg ("%s stopped by signal %d", s->av[0], WSTOPSIG (status));
                 continue;
             } else if (WIFCONTINUED (status)) {
-                msg ("diod (port %s user %d) continued",
-                     s->port, s->user->uid);
+                msg ("%s continued", s->av[0]);
                 continue;
             }
         }
     } while (pid < 0 && errno == EINTR);
     if (pid < 0)
-        err ("wait for diod (port %s user %d)", s->port, s->user->uid);
+        err ("wait for %s", s->av[0]);
     else
         s->pid = 0; /* prevent _free_server () from sending signal */
     _remove_server (s);
@@ -262,13 +272,19 @@ static int
 _build_server_args (Server *s)
 {
     int ret = 0;
+    int r;
 
-    if (_append_arg (s, "diod-%s", s->user->uid != 0 ? "private"
-                                                     : "shared") < 0)
-        goto done;
+    if (s->uid == 0)
+        r = _append_arg (s, "diod-shared");
+    else if (s->jobid)
+        r = _append_arg (s, "diod-jobid-%s", s->jobid);
+    else
+        r = _append_arg (s, "diod-uid-%lu", (unsigned long)s->uid);
+    if (r < 0)
+            goto done;
     if (_append_arg (s, "-x") < 0)
         goto done;
-    if (s->user->uid != 0 && _append_arg (s, "-u%d", s->user->uid) < 0)
+    if (s->uid != 0 && _append_arg (s, "-u%d", s->uid) < 0)
         goto done;
     if (_append_arg (s, "-F%d", s->nfds) < 0)
         goto done;
@@ -297,13 +313,18 @@ _exec_server (Server *s)
 {
     int i;
 
+    /* skip stdio 0..2, 3..3+nfds duped listen fds, close the rest */
+    
     for (i = 0; i < s->nfds; i++) {
-        (void)close (i);
-        if (dup2 (s->fds[i].fd, i) < 0)
+        (void)close (i + 3);
+        if (dup2 (s->fds[i].fd, i + 3) < 0)
             _exit (1);
         if (close (s->fds[i].fd) < 0)
             _exit (1);
     }
+    /* FIXME: use _SC_OPEN_MAX? */
+    for (i = 0; i < 256; i++)
+        (void)close (i + 3 + s->nfds);
 
     execv (diod_conf_get_diodpath (), s->av);
     _exit (1);
@@ -345,16 +366,14 @@ done:
  * We are holding serverlist->lock.
  */
 static Server *
-_new_server (Npuser *user)
+_new_server (Npuser *user, char *jobid)
 {
     List l = diod_conf_get_diodctllisten ();
     int i, error;
     Server *s = NULL;
 
-    if (!(s = _alloc_server ()))
+    if (!(s = _alloc_server (user->uid, jobid)))
         goto done;
-
-    s->user = user;
 
     if (!_alloc_ports (l, &s->fds, &s->nfds, &s->port)) {
         msg ("failed to allocate diod port for user %d", user->uid);
@@ -367,7 +386,7 @@ _new_server (Npuser *user)
     switch (s->pid = fork ()) {
         case -1:
             np_uerror (errno);
-            err ("fork error while starting diod server");
+            err ("fork error while starting %s", s->av[0]);
             break;
         case 0: /* child */
             _exec_server (s);
@@ -378,20 +397,20 @@ _new_server (Npuser *user)
 
     if ((error = pthread_create (&s->wait_thread, NULL, _wait_pid, s))) {
         np_uerror (error);
-        errn (error, "could not start thread to wait on new diod server");
+        errn (error, "could not start thread to wait on %s", s->av[0]);
         goto done; 
     }
     /* connect (with retries) until server responds */
     if (!diod_sock_tryconnect (l, s->port, 30, 100)) {
-        msg ("could not connect to new diod server - maybe it didn't start?");
+        msg ("could not connect to %s - maybe it didn't start?", s->av[0]);
         goto done;
     }
     if (!list_append (serverlist->servers, s)) {
         np_uerror (ENOMEM);
-        msg ("out of memory while accounting for new diod server");
+        msg ("out of memory while accounting for %s", s->av[0]);
         goto done;
     }
-    msg ("started new server (port %s user %d)", s->port, user->uid);
+    msg ("started %s", s->av[0]);
 done:
     for (i = 0; i < s->nfds; i++)
         close (s->fds[i].fd);
@@ -412,17 +431,21 @@ done:
  * and server port changes in between reads.
  */
 int
-diodctl_serv_getname (Npuser *user, u64 offset, u32 count, u8* data)
+diodctl_serv_getname (Npuser *user, char *jobid, u64 offset, u32 count,
+                      u8* data)
 {
     int cpylen = 0;
-    Server *s;
+    Server *s, *key;
     int err;
 
+    if (!(key = _alloc_server (user->uid, jobid)))
+        goto done;
     if ((err = pthread_mutex_lock (&serverlist->lock))) {
         np_uerror (err);
         goto done;
     }
-    s = list_find_first (serverlist->servers, (ListFindF)_smatch, user);
+    s = list_find_first (serverlist->servers, (ListFindF)_smatch, key);
+    free (key);
     if (s) {
         cpylen = strlen (s->port) - offset;
         if (cpylen > count)
@@ -444,20 +467,23 @@ done:
  * This backs the write handler for 'ctl'.
  */
 int
-diodctl_serv_create (Npuser *user)
+diodctl_serv_create (Npuser *user, char *jobid)
 {
     int err;
     int ret = 0;
-    Server *s;
+    Server *s, *key;
 
+    if (!(key = _alloc_server (user->uid, jobid)))
+        goto done;
     if ((err = pthread_mutex_lock (&serverlist->lock))) {
         np_uerror (err);
         goto done;
     }
     /* FIXME: what if found server is listening on wrong ip? */
-    s = list_find_first (serverlist->servers, (ListFindF)_smatch, user);
+    s = list_find_first (serverlist->servers, (ListFindF)_smatch, key);
+    free (key);
     if (!s)
-        s = _new_server (user);
+        s = _new_server (user, jobid);
 
     if ((err = pthread_mutex_unlock (&serverlist->lock))) {
         np_uerror (err);

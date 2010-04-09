@@ -101,7 +101,7 @@ static Npuserpool upool = {
 typedef struct {
     int         magic;
     int         munged;         /* user supplied a valid munge cred */
-    char       *payload;        /* munge payload (if any) */
+    char       *jobid;          /* munge payload (if any) */
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
 } Duser;
@@ -143,8 +143,8 @@ done:
 static void
 _free_duser (Duser *d)
 {
-    if (d->payload)
-        free (d->payload);
+    if (d->jobid)
+        free (d->jobid);
     free (d);
 }
 
@@ -177,7 +177,7 @@ _getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 }
 
 static Duser *
-_alloc_duser (struct passwd *pwd, int munged, char *payload)
+_alloc_duser (struct passwd *pwd, int munged, char *jobid)
 {
     Duser *d = NULL;
 
@@ -185,7 +185,7 @@ _alloc_duser (struct passwd *pwd, int munged, char *payload)
         goto done;
     d->magic = DUSER_MAGIC;
     d->munged = munged;
-    d->payload = payload;
+    d->jobid = jobid;
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
@@ -207,12 +207,19 @@ diod_become_user (char *name, uid_t uid, int realtoo)
     char buf[PASSWD_BUFSIZE];
     int nsg;
     gid_t sg[NGROUPS_MAX];
+    char *endptr;
 
     if (name) {
+        errno = 0;
+        uid = strtoul (name, &endptr, 10);
+        if (errno == 0 && *name != '\0' && *endptr == '\0')
+            name = NULL;
+    }
+    if (name) {
         if ((err = getpwnam_r (name, &pw, buf, sizeof(buf), &pwd)) != 0)
-            errn_exit (err, "error looking up uid %d", uid);
+            errn_exit (err, "error looking up user %s", name);
         if (!pwd)
-            msg_exit ("error looking up uid %d", uid);
+            msg_exit ("error looking up user %s", name);
     } else {
         if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0)
             errn_exit (err, "error looking up uid %d", uid);
@@ -231,15 +238,14 @@ diod_become_user (char *name, uid_t uid, int realtoo)
 
 
 static Npuser *
-_alloc_user (Npuserpool *up, struct passwd *pwd, int munged,
-             char *payload)
+_alloc_user (Npuserpool *up, struct passwd *pwd, int munged, char *jobid)
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
-    if (!(u->aux = _alloc_duser (pwd, munged, payload)))
+    if (!(u->aux = _alloc_duser (pwd, munged, jobid)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -282,23 +288,24 @@ diod_udestroy (Npuserpool *up, Npuser *u)
 }
 
 int
-diod_user_has_mungecred (Npuser *u)
+diod_user_get_authinfo (Npuser *u, int *authenticated, char **jobidp)
 {
     Duser *d = u->aux;
+    char *cpy = NULL;
+    int res = 0;
 
     assert (d->magic == DUSER_MAGIC);
 
-    return d->munged;
-}
-
-char *
-diod_user_get_mungepayload (Npuser *u)
-{
-    Duser *d = u->aux;
-
-    assert (d->magic == DUSER_MAGIC);
-
-    return d->payload;
+    if (d->munged && jobidp) {
+        if (d->jobid && !(cpy = strdup (d->jobid))) {
+            res = -1;
+            goto done;
+        }
+        *jobidp = cpy;
+    }
+    *authenticated = d->munged;
+done:
+    return res;
 }
 
 static int

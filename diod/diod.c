@@ -209,7 +209,7 @@ main(int argc, char **argv)
     if (!srv)
         msg_exit ("out of memory");
     if (Fopt) {
-        if (!diod_sock_listen_first_nfds (&fds, &nfds, Fopt))
+        if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
             msg_exit ("failed to set up listen ports");
     } else {
         hplist = diod_conf_get_diodlisten ();

@@ -96,8 +96,16 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
      * By the time we get here, invalid munge creds have already been rejected.
      */
     if (diod_conf_get_munge ()) {
-        if (diod_user_has_mungecred (fid->user)) {
-            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
+        char *jobid;
+        int authenticated;
+
+        if (diod_user_get_authinfo (fid->user, &authenticated, &jobid) < 0) {
+            np_uerror (ENOMEM);
+            msg ("diodctl_attach: out of memory");
+            goto done;
+        }
+        if (authenticated) {
+            diod_trans_set_authuser (fid->conn->trans, fid->user->uid, jobid);
         } else {
             if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);
@@ -181,8 +189,9 @@ static int
 _server_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
+    char *jobid = diod_trans_get_jobid (fid->conn->trans);
 
-    return diodctl_serv_getname (fid->user, offset, count, data);
+    return diodctl_serv_getname (fid->user, jobid, offset, count, data);
 }
 
 /* Handle a write to the 'ctl' file.
@@ -192,9 +201,10 @@ static int
 _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
+    char *jobid = diod_trans_get_jobid (fid->conn->trans);
     int ret = 0;
 
-    if (diodctl_serv_create (fid->user))
+    if (diodctl_serv_create (fid->user, jobid))
         ret = count;
     return ret;
 }

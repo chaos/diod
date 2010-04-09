@@ -50,6 +50,7 @@ typedef struct {
     int              magic;
     int              authenticated;
     uid_t            authuser;
+    char            *jobid;
 } DTrans;
 
 #define DIOD_TRANS_MAGIC    0xf00fbaaa
@@ -64,24 +65,21 @@ diod_trans_create (int fd, char *host, char *ip, char *svc)
     Nptrans *npt;
     DTrans *dt;
 
-    dt = malloc (sizeof(*dt));
-    if (!dt)
+    if (!(dt = malloc (sizeof(*dt))))
         return NULL;
     dt->magic = DIOD_TRANS_MAGIC;
     dt->fd = fd;
     dt->authenticated = 0;
-    dt->host = strdup (host);
-    if (!dt->host) {
+    dt->jobid = NULL;
+    if (!(dt->host = strdup (host))) {
         diod_trans_destroy (dt);
         return NULL;
     }
-    dt->ip = strdup (ip);
-    if (!dt->ip) {
+    if (!(dt->ip = strdup (ip))) {
         diod_trans_destroy (dt);
         return NULL;
     }
-    dt->svc = strdup (svc);
-    if (!dt->svc) {
+    if (!(dt->svc = strdup (svc))) {
         diod_trans_destroy (dt);
         return NULL;
     }
@@ -111,6 +109,8 @@ diod_trans_destroy (void *a)
         free (dt->ip);
     if (dt->svc)
         free (dt->svc);
+    if (dt->jobid)
+        free (dt->jobid);
 
     free (dt);
 }
@@ -166,7 +166,7 @@ diod_trans_get_svc (Nptrans *trans)
 }
 
 void
-diod_trans_set_authuser (Nptrans *trans, uid_t uid)
+diod_trans_set_authuser (Nptrans *trans, uid_t uid, char *jobid)
 {
     DTrans *dt = trans->aux;
 
@@ -174,6 +174,8 @@ diod_trans_set_authuser (Nptrans *trans, uid_t uid)
 
     dt->authuser = uid;
     dt->authenticated = 1;
+    dt->jobid = jobid;
+            
 }
 
 int
@@ -190,6 +192,16 @@ diod_trans_get_authuser (Nptrans *trans, uid_t *uidp)
     }
 
     return ret;
+}
+
+char *
+diod_trans_get_jobid (Nptrans *trans)
+{
+    DTrans *dt = trans->aux;
+
+    assert (dt->magic == DIOD_TRANS_MAGIC);
+
+    return dt->jobid;
 }
 
 /*

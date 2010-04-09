@@ -60,6 +60,13 @@ Be verbose about what is going on.
 .I "-d, --direct"
 Mount the \fBdiod\fR server directly without first mounting \fBdiodctl\fR
 to determine the port.  This must be used with \fI-o port=PORT\fR.
+.TP
+.I "-j, --jobid STRING"
+Pass a jobid or other arbitrary string to the \fBdiodctl\fR server.
+The server uses the uid plus this string, if specified, as a unique key
+to look up an existing \fBdiod\fR server that can handle the mount request.
+This is intended for a batch cluster environment where one 
+I/O forwarding server per job is desired, not the default of one per user.
 .SH "EXAMPLES"
 .LP
 Mount /g/g99 from tycho42, so that all users can access it:

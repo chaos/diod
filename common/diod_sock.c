@@ -178,12 +178,12 @@ done:
     return ret;
 }
 
-/* Listen on the first nfds file descriptors, which are assumed to be
+/* Listen on the first [nfds] fds after [starting], which are assumed to be
  * open and bound to appropriate addresses.
  * Return 0 on failure, nonzero on success.
  */
 int
-diod_sock_listen_first_nfds (struct pollfd **fdsp, int *nfdsp, int nfds)
+diod_sock_listen_nfds (struct pollfd **fdsp, int *nfdsp, int nfds, int starting)
 {
     struct pollfd *fds;
     int i;
@@ -194,7 +194,7 @@ diod_sock_listen_first_nfds (struct pollfd **fdsp, int *nfdsp, int nfds)
         goto done;
     }
     for (i = 0; i < nfds; i++)
-        fds[i].fd = i;
+        fds[i].fd = starting + i;
     *nfdsp = nfds;
     *fdsp = fds;
 

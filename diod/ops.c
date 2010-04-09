@@ -577,8 +577,11 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
      * By the time we get here, invalid munge creds have already been rejected.
      */
     if (diod_conf_get_munge ()) {
-        if (diod_user_has_mungecred (fid->user)) {
-            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
+        int authenticated;
+
+        (void) diod_user_get_authinfo (fid->user, &authenticated, NULL);
+        if (authenticated) {
+            diod_trans_set_authuser (fid->conn->trans, fid->user->uid, NULL);
         } else {
             if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);

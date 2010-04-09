@@ -236,9 +236,10 @@ service_restart ()
 #   running should be considered successful.
 ##
   if $0 status >/dev/null 2>&1; then
-    $0 stop && $0 start
+    service_stop
+    service_start
   else
-    $0 start
+    service_start
   fi
 
   case $SYSTEM in

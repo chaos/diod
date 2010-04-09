@@ -1,12 +1,28 @@
-2010-04-08 Jim Garlick <garlick@llnl.gov>
+2010-04-09 Jim Garlick <garlick@llnl.gov>
 
-	* diodctl/serv.c : Instead of storing the uid in the server struct,
-	store a pointer to the Npuser so that we can easily get at the
-	munge payload later.
+	* diodctl/serv.c, diod/diod.c, common/diod_sock.c : Fix bug where
+	diodctl's listen socket remained open in its children, preventing
+	it from being independently restarted.
+
+	* scripts/diodctl.init.in : In service_restart, call service_stop
+	and service_start directly instead of $0 stop && $0 start.
+	For some reason $0 start did not work in this context.
+
+	* diodctl/serv.c : Use jobid in addition to uid to identify servers.
+	Set name of child diod to descriptive name like diod-shared or
+	diod-jobid-%s or diod-uid-%d.
+
+	* diodctl/ops.c : Pass jobid, stored in transport, into
+	diodctl_serv_create () and diodctl_serv_getname ().
+
+	* common/diod_trans.c : Store jobid with munge info in transport.
+	Access with diod_trans_set_authuser() and diod_trans_get_jobid().
+
+2010-04-08 Jim Garlick <garlick@llnl.gov>
 
 	* common/diod_upool.c : If munge cred includes a payload, store it
 	with the Npuser struct, and allow it to be retrieved with
-	diod_upool_get_mungepayload.
+	diod_user_get_authinfo.
 
 	* diodmount/diodmount.c : Add -j (jobid) option, and embed string
 	in munge payload.

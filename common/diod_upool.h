@@ -22,10 +22,9 @@
  *****************************************************************************/
 
 int diod_switch_user (Npuser *u);
-int diod_user_has_mungecred (Npuser *u);
-char *diod_user_get_mungepayload (Npuser *u);
+char *diod_user_get_jobid (Npuser *u);
 int diod_switch_user (Npuser *u);
 void diod_become_user (char *name, uid_t uid, int realtoo);
-
+int diod_user_get_authinfo (Npuser *u, int *authenticated, char **jobidp);
 
 extern Npuserpool *diod_upool;
