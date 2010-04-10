@@ -302,7 +302,7 @@ _connect_one (char *host, char *port)
     hints.ai_socktype = SOCK_STREAM;
 
     if ((error = getaddrinfo (host, port, &hints, &res)) != 0) {
-        msg ("getaddrinfo %s:%s", host, port, gai_strerror (error));
+        msg ("getaddrinfo %s:%s: %s", host, port, gai_strerror (error));
         goto done;
     }
     if (!res) {

@@ -1,5 +1,9 @@
 2010-04-09 Jim Garlick <garlick@llnl.gov>
 
+	* common/diod_sock.c : Fix a msg () format error.
+
+	* common/diod_log.h : Identify printf-like functions to gcc.
+
 	* diodctl/serv.c, diod/diod.c, common/diod_sock.c : Fix bug where
 	diodctl's listen socket remained open in its children, preventing
 	it from being independently restarted.

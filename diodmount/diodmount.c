@@ -109,7 +109,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"   diodmount [OPTIONS] device [directory]\n"
+"Usage: diodmount [OPTIONS] device [directory]\n"
 "   -a,--all                      mount all exported file systems\n"
 "   -U,--unmount-all              unmount all exported file systems\n"
 "   -u,--mount-user USER          set up the mount so only USER can use it\n"

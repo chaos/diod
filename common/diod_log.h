@@ -25,12 +25,18 @@ void diod_log_init (char *p);
 void diod_log_fini (void);
 void diod_log_to_syslog (void);
 
-void err_exit (const char *fmt, ...);
-void err (const char *fmt, ...);
-void errn_exit (int errnum, const char *fmt, ...);
-void errn (int errnum, const char *fmt, ...);
-void msg_exit (const char *fmt, ...);
-void msg (const char *fmt, ...);
+void err_exit (const char *fmt, ...)
+        __attribute__ ((format (printf, 1, 2)));
+void err (const char *fmt, ...)
+        __attribute__ ((format (printf, 1, 2)));
+void errn_exit (int errnum, const char *fmt, ...)
+        __attribute__ ((format (printf, 2, 3)));
+void errn (int errnum, const char *fmt, ...)
+        __attribute__ ((format (printf, 2, 3)));
+void msg_exit (const char *fmt, ...)
+        __attribute__ ((format (printf, 1, 2)));
+void msg (const char *fmt, ...)
+        __attribute__ ((format (printf, 1, 2)));
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
