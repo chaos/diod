@@ -74,3 +74,14 @@ t15-fsync
 
 19-fcntl
 	Simple test to exercise POSIX advisory record locks.
+
+t20-aread
+	Read a 4MB file with 1MB I/O's with debugging on.
+
+t21-awrite
+	Write a 4MB file with 1MB I/O's with debugging on.
+
+t22-append
+	Append to a file.  I added this test because I was momentarily
+	freaked out by a pwrite at offset 0 during an append, but it turns
+	out this is OK when the device is opened in append mode.

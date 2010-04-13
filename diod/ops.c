@@ -1347,7 +1347,7 @@ _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset,
         return -1;
     } 
     if (debug)
-        msg ("aread:   read %d bytes at offset %llu", count, 
+        msg ("aread:   read %d bytes at offset %llu", f->rc_length, 
              (unsigned long long)offset);
     return _cache_read (fid, buf, rsize, offset, debug);
 }
@@ -1658,7 +1658,8 @@ done:
 #if 0
 /* Tlock - lock/unlock/test posix advisory record lock 
  * FIXME: implement blocking requests without thread pool deadlock
- * FIXME: host file system thinks all requests are coming from same pid.
+ * FIXME: host file system thinks all requests are coming from same pid, thus
+ * treats a conflicting request as an "upgrade".  Very bad.
  */
 Npfcall*
 diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
@@ -1819,7 +1820,7 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
             optxt = "LOCK_UN";
             break;
         default:
-            np_uerror (EIO);
+            np_uerror (EINVAL);
             msg ("diod_lock: incorrect lock type 0x%x", flck->type);
             goto done;
     }

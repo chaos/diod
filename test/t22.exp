@@ -11,12 +11,12 @@ diod: awrite: directly wrote 3 bytes at offset 0
 verifying
 diod: aread: rsize 65503 count 2097152 offset 0
 diod: aread:  allocated 2097152 byte cache
-diod: aread:   read 2097152 bytes at offset 0
+diod: aread:   read 4099 bytes at offset 0
 diod: aread:   read 4099 bytes from cache
 diod: aread:   freed 4099 byte cache
 diod: aread: rsize 65503 count 2093053 offset 4099
 diod: aread:  allocated 2093053 byte cache
-diod: aread:   read 2093053 bytes at offset 4099
+diod: aread:   read 0 bytes at offset 4099
 diod: aread:   read 0 bytes from cache
 diod: aread:   freed 0 byte cache
 size is 4099

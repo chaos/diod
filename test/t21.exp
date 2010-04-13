@@ -301,7 +301,7 @@ diod: aread:   read 528 bytes from cache
 diod: aread:   freed 1048576 byte cache
 diod: aread: rsize 65503 count 2097152 offset 4194304
 diod: aread:  allocated 1048576 byte cache
-diod: aread:   read 1048576 bytes at offset 4194304
+diod: aread:   read 0 bytes at offset 4194304
 diod: aread:   read 0 bytes from cache
 diod: aread:   freed 0 byte cache
 size is 4194304

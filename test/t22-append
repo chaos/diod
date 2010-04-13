@@ -1,9 +1,5 @@
 #!/bin/bash -e
 
-# Note: I added this test because it freaked me out to see an append
-# pwrite at offset 0.  However as the hexdump shows, this must be correct
-# because we get the desired result.
-
 doit ()
 {
         echo starting diod
