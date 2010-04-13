@@ -55,7 +55,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:amxF:u:A:"
+#define OPTIONS "d:l:w:e:E:amxF:u:A:L:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -70,6 +70,7 @@ static const struct option longopts[] = {
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"atomic-max",      required_argument,  0, 'A'},
+    {"log-to",          required_argument,  0, 'L'},
     {0, 0, 0, 0},
 };
 #else
@@ -92,6 +93,7 @@ usage()
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
 "   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
+"   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
     );
     exit (1);
 }
@@ -111,8 +113,6 @@ main(int argc, char **argv)
     unsigned long amax;
    
     diod_log_init (argv[0]); 
-    if (!isatty (STDERR_FILENO))
-        diod_log_to_syslog();
     diod_conf_init ();
 
     /* Command line overrides defaults.
@@ -178,6 +178,9 @@ main(int argc, char **argv)
                 if (errno != 0)
                     err_exit ("--atomic-max argument");
                 diod_conf_set_atomic_max (amax);
+                break;
+            case 'L':   /* --log-to DEST */
+                diod_log_set_dest (optarg);
                 break;
             default:
                 usage();

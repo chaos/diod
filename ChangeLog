@@ -1,3 +1,20 @@
+2010-04-12 Jim Garlick <garlick@llnl.gov>
+
+	* diod/ops.c : Silence some log messages of dubious value that
+	caused tests to fail.
+
+	* diod/ops.c, t18.exp, t19.exp : Add DEBUG_ADVLOCK messages and
+	update test results.
+
+	* diodctl/serv.c : Start new diod servers with the same logging
+	option as diodctl.
+
+	* diodctl/diodctl.c, diod/diod.c : Add -L (log-dest) option.
+	Don't presume syslog if stderr is not a tty.
+
+	* common/diod_log.[ch] : Add capability to redirect logging to a file,
+	or to different syslog facilities and levels.
+
 2010-04-09 Jim Garlick <garlick@llnl.gov>
 
 	* common/diod_sock.c : Fix a msg () format error.
@@ -13,11 +30,11 @@
 	For some reason $0 start did not work in this context.
 
 	* diodctl/serv.c : Use jobid in addition to uid to identify servers.
-	Set name of child diod to descriptive name like diod-shared or
-	diod-jobid-%s or diod-uid-%d.
+	Set name of child diod to descriptive name like "diod-shared",
+	"diod-jobid-%s", or "diod-uid-%d".
 
 	* diodctl/ops.c : Pass jobid, stored in transport, into
-	diodctl_serv_create () and diodctl_serv_getname ().
+	diodctl_serv_create() and diodctl_serv_getname().
 
 	* common/diod_trans.c : Store jobid with munge info in transport.
 	Access with diod_trans_set_authuser() and diod_trans_get_jobid().

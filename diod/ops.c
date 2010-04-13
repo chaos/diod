@@ -504,10 +504,8 @@ diod_connclose (Npconn *conn)
     if ((errnum = pthread_mutex_lock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
     conn_count--;
-    if (conn_count == 0 && server_used) {
-        msg ("exiting on last use");
+    if (conn_count == 0 && server_used)
         exit (0);
-    }
     if ((errnum = pthread_mutex_unlock (&conn_lock)))
         errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
 }
@@ -624,10 +622,9 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     _serverused ();
 
 done:
-    msg ("attach user %s path %.*s host %s(%s): %s",
-         fid->user->uname, aname->len, aname->str, host, ip,
-         np_haserror () ? "DENIED" : "ALLOWED");
     if (np_haserror ()) {
+        msg ("attach user %s path %.*s host %s(%s): DENIED",
+             fid->user->uname, aname->len, aname->str, host, ip);
         if (f)
             _fidfree (f);
     }
@@ -1570,16 +1567,15 @@ done:
 Npfcall*
 diod_flock (Npfid *fid, u8 cmd)
 {
+    int debug = (diod_conf_get_debuglevel () & DEBUG_ADVLOCK);
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    int op;
+    int op, n;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_flock: error switching user");
         goto done;
     }
-    if (!(cmd & P9_FLOCK_NB) && (cmd & 3) != P9_FLOCK_UN)
-        msg ("diod_flock: warning: blocking operations not implemented yet");
     switch (cmd & 3) {
         case P9_FLOCK_SH:
             op = LOCK_SH;
@@ -1595,10 +1591,13 @@ diod_flock (Npfid *fid, u8 cmd)
             msg ("diod_flock: incorrect cmd value received (0x%x)", cmd);
             goto done;
     }
-    if (flock (f->fd, op | LOCK_NB) < 0) {
+    n = flock (f->fd, op | LOCK_NB);
+    if (n < 0)
         np_uerror (errno);
+    if (debug)
+        err ("flock 0x%x", op | LOCK_NB);
+    if (n < 0)
         goto done;
-    }
     if (!(ret = np_create_rflock())) {
         np_uerror (ENOMEM);
         msg ("diod_flock: out of memory");
@@ -1621,16 +1620,15 @@ done:
 Npfcall*
 diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
 {
+    int debug = (diod_conf_get_debuglevel () & DEBUG_ADVLOCK);
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    int op;
+    int op, n;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_lock: error switching user");
         goto done;
     }
-    if (cmd == P9_LOCK_SETLKW && flck->type != P9_LOCK_UNLCK)
-        msg ("diod_lock: warning: blocking operations not implemented yet");
     if ((flck->start != 0 || flck->end != INT_LIMIT(off_t))) {
         np_uerror (EIO);
         msg ("diod_lock: record locking not implemented yet");
@@ -1658,28 +1656,37 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
                 msg ("diod_lock: cannot GETLCK a type of UNLCK");
                 goto done;
             }
-            if (flock (f->fd, op | LOCK_NB) < 0) {
-                if (errno != EACCES && errno != EAGAIN) {
-                    np_uerror (errno);
-                    goto done;
-                }
+            n = flock (f->fd, op | LOCK_NB);
+            if (n < 0 && errno != EACCES && errno != EAGAIN)
+                np_uerror (errno);
+            if (debug)
+                err ("flock 0x%x", op | LOCK_NB);
+            if (n < 0) {
                 flck->type = (op == LOCK_EX ? P9_LOCK_WRLCK : P9_LOCK_RDLCK);
+                goto done;
             } else {
-                if (flock (f->fd, LOCK_UN) < 0) {
+                n = flock (f->fd, LOCK_UN);
+                if (n < 0)
                     np_uerror (errno);
+                if (debug)
+                    err ("flock 0x%x", op | LOCK_NB);
+                if (n < 0)
                     goto done;
-                }
                 flck->type = P9_LOCK_UNLCK;
             }
             break;
         case P9_LOCK_SETLK:
         case P9_LOCK_SETLKW:
-            if (flock (f->fd, op | LOCK_NB) < 0) {
+            n = flock (f->fd, op | LOCK_NB);
+            if (n < 0) {
                 if (errno == EAGAIN) /* don't trigger a retry in client vfs */
                     errno = EACCES;
                 np_uerror (errno); 
-                goto done;
             }
+            if (debug)
+                err ("flock 0x%x", op | LOCK_NB);
+            if (n < 0)
+                goto done;
             break;
         default:
             np_uerror (EIO);

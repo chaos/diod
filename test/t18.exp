@@ -2,13 +2,21 @@ starting diod
 mounting
 1024+0 records in
 1024+0 records out
+diod: flock 0x6: Success
 tflock: fd: blocking exclusive request succeeded
+diod: flock 0x6: Resource temporarily unavailable
 tflock: fd2: exclusive request failed: Resource temporarily unavailable
+diod: flock 0x5: No such file or directory
 tflock: fd: shared request (downgrade) succeeded
+diod: flock 0x5: Success
 tflock: fd2: shared request succeeded
+diod: flock 0x6: Resource temporarily unavailable
 tflock: fd2: exclusive request failed: Resource temporarily unavailable
+diod: flock 0xc: Success
 tflock: fd: unlock succeeded
+diod: flock 0x6: Success
 tflock: fd2: exclusive request succeeded
+diod: flock 0xc: Success
 tflock: fd2: unlock succeeded
 tflock: cleaning up
 unmounting

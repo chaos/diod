@@ -64,14 +64,14 @@
 #include "ops.h"
 #include "serv.h"
 
-static void          _daemonize (void);
+static void          _daemonize (char *Lopt);
 static void          _setrlimit (void); 
 
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:e:amD:"
+#define OPTIONS "fd:l:w:c:e:amD:L:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -84,6 +84,7 @@ static const struct option longopts[] = {
     {"allowany",        no_argument,        0, 'a'},
     {"no-munge-auth",   no_argument,        0, 'm'},
     {"diod-path",       required_argument,  0, 'D'},
+    {"log-dest",        required_argument,  0, 'L'},
     {0, 0, 0, 0},
 };
 #else
@@ -104,6 +105,7 @@ usage()
 "   -a,--allowany          disable TCP wrappers checks\n"
 "   -m,--no-munge-auth     do not require munge authentication\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
+"   -L,--log-dest DEST     log to DEST, can be syslog, stderr, or file\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -116,13 +118,12 @@ main(int argc, char **argv)
     int eopt = 0;
     int lopt = 0;
     char *copt = NULL;
+    char *Lopt = NULL;
     struct pollfd *fds = NULL;
     int nfds = 0;
     List hplist;
    
     diod_log_init (argv[0]); 
-    if (!isatty (STDERR_FILENO))
-        diod_log_to_syslog();
     diod_conf_init ();
 
     /* config file overrides defaults */
@@ -183,6 +184,10 @@ main(int argc, char **argv)
             case 'D':   /* --diod-path PATH */
                 diod_conf_set_diodpath (optarg);
                 break;
+            case 'L':   /* --log-to DEST */
+                diod_log_set_dest (optarg);
+                Lopt = optarg;
+                break;
             default:
                 usage();
         }
@@ -206,7 +211,7 @@ main(int argc, char **argv)
     _setrlimit ();
 
     if (!diod_conf_get_foreground ())
-        _daemonize ();
+        _daemonize (Lopt);
 
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
@@ -229,7 +234,7 @@ main(int argc, char **argv)
  * Exit on error.
  */
 static void
-_daemonize (void)
+_daemonize (char *Lopt)
 {
     char rdir[PATH_MAX];
     struct stat sb;
@@ -245,7 +250,8 @@ _daemonize (void)
         err_exit ("chdir %s", rdir);
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
-    diod_log_to_syslog();
+    if (Lopt == NULL)
+        diod_log_set_dest ("syslog");
 }
 
 /* Remove any resource limits that might hamper our (non-root) children.

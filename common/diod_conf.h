@@ -21,6 +21,13 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+enum {
+    //DEBUG_9P_TRACE  = 0x01,
+    //DEBUG_9P_ERRORS = 0x02,
+    DEBUG_ATOMIC    = 0x04,
+    DEBUG_ADVLOCK   = 0x08,
+};
+
 void	diod_conf_init (void);
 void    diod_conf_init_config_file (char *path);
 

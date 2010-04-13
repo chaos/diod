@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 #if HAVE_LUA_H
 #include <lua.h>
 #include <lauxlib.h>

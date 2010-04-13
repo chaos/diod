@@ -438,7 +438,6 @@ enum {
 	NPFS_PROTO_LEGACY=0,
 	NPFS_PROTO_2000U=1,
 	NPFS_PROTO_2000L=2,
-	NPFS_PROTO_2000H=3,
 };
 
 struct Npsrv {
@@ -760,12 +759,10 @@ int np_mount(char *mntpt, int mntflags, char *opts);
 static inline int np_conn_extend (Npconn *conn)
 {
  	return conn->proto_version == NPFS_PROTO_2000U
-	    || conn->proto_version == NPFS_PROTO_2000L
-	    || conn->proto_version == NPFS_PROTO_2000H;
+	    || conn->proto_version == NPFS_PROTO_2000L;
 }
 static inline int np_srv_extend (Npsrv *srv)
 {
  	return srv->proto_version == NPFS_PROTO_2000U
-	    || srv->proto_version == NPFS_PROTO_2000L
-	    || srv->proto_version == NPFS_PROTO_2000H;
+	    || srv->proto_version == NPFS_PROTO_2000L;
 }

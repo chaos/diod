@@ -27,38 +27,179 @@
 #include "config.h"
 #endif
 
+#include <limits.h>
+#include <ctype.h>
 #include <libgen.h>
 #include <syslog.h>
-#include <stdio.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "diod_log.h"
 
 static char *prog = NULL;
 
-typedef enum { DEST_STDERR, DEST_SYSLOG } dest_t;
-static dest_t dest = DEST_STDERR;
+typedef struct {
+    char *s;
+    int n;
+} match_t;
+
+static match_t facility[] = {
+    { "daemon", LOG_DAEMON },
+    { "local0", LOG_LOCAL0 },
+    { "local1", LOG_LOCAL1 },
+    { "local2", LOG_LOCAL2 },
+    { "local3", LOG_LOCAL3 },
+    { "local4", LOG_LOCAL4 },
+    { "local5", LOG_LOCAL5 },
+    { "local6", LOG_LOCAL6 },
+    { "local7", LOG_LOCAL7 },
+    { "user",   LOG_USER },
+    { NULL,     0},
+};
+
+static match_t level[] = {
+    { "emerg",  LOG_EMERG },
+    { "alert",  LOG_ALERT },
+    { "crit",   LOG_CRIT },
+    { "err",    LOG_ERR },
+    { "warning", LOG_WARNING },
+    { "notice", LOG_NOTICE },
+    { "info",   LOG_INFO },
+    { "debug",  LOG_DEBUG },
+    { NULL,     0},
+};
+
+typedef enum { DEST_LOGF, DEST_SYSLOG } dest_t;
+
+static dest_t dest = DEST_LOGF;
+
+static char *filename = NULL;
+static FILE *logf = NULL;
+
+static int syslog_facility = LOG_DAEMON;
+static int syslog_level = LOG_ERR;
+
+static int
+_match (char *s, match_t *m)
+{
+    int i;
+
+    for (i = 0; m[i].s != NULL; i++)
+        if (!strcmp (m[i].s, s))
+            return m[i].n;
+    return -1;
+}
+
+static char *
+_rmatch (int n, match_t *m)
+{
+    int i;
+
+    for (i = 0; m[i].s != NULL; i++)
+        if (m[i].n == n)
+            return m[i].s;
+    return NULL;
+}
 
 void
 diod_log_init (char *p)
 {
     prog = basename (p);
-    openlog (prog, LOG_NDELAY | LOG_PID, LOG_DAEMON);
+    logf = stderr;
+    openlog (prog, LOG_NDELAY | LOG_PID, syslog_facility);
 }
 
 void
 diod_log_fini (void)
 {
     closelog ();
+    if (logf != stdout && logf != stderr && logf != NULL)
+        fclose (logf);
+}
+
+static void
+_set_syslog_facility (char *s)
+{
+    int n = _match (s, facility);
+
+    if (n < 0)
+        msg_exit ("unknown syslog facility: %s", s);
+    syslog_facility = n;
+    closelog ();
+    openlog (prog, LOG_NDELAY | LOG_PID, syslog_facility);
+}
+
+static void
+_set_syslog_level (char *s)
+{
+    int n = _match (s, level);
+
+    if (n < 0)
+        msg_exit ("unknown syslog level : %s", s);
+    syslog_level = n;
 }
 
 void
-diod_log_to_syslog (void)
+diod_log_set_dest (char *s)
 {
-    dest = DEST_SYSLOG;
+    char *fstr = NULL, *lstr = NULL;
+    int len = strlen (s);
+    FILE *f;
+    int n;
+
+    if (strcmp (s, "syslog") == 0) {
+        dest = DEST_SYSLOG;
+    } else if (strncmp (s, "syslog:", 7) == 0) {
+        if (!(fstr = malloc (len + 1)) || !(lstr = malloc (len + 1)))
+            msg_exit ("out of memory");
+        if ((n = sscanf (s, "syslog:%s:%s", fstr, lstr)) != 1 && n != 2)
+            msg_exit ("specify syslog DEST as syslog[:facility[:level]]");
+        if (fstr)
+            _set_syslog_facility (fstr);
+        if (lstr)
+            _set_syslog_level (lstr);
+        dest = DEST_SYSLOG;
+    } else {
+        if (strcmp (s, "stderr") == 0)
+            logf = stderr;
+        else if (strcmp (s, "stdout") == 0)
+            logf = stdout;
+        else if ((f = fopen (s, "a"))) {
+            if (logf != stdout && logf != stderr && logf != NULL)
+                fclose (logf);
+            logf = f;
+            filename = s;
+        } else
+            err_exit ("could not open %s for writing", s);
+        dest = DEST_LOGF;
+    }
+}
+
+char *
+diod_log_get_dest (void)
+{
+    int len = PATH_MAX + 1;
+    char *res = malloc (len);
+
+    if (!res)
+        goto done;
+    switch (dest) {
+        case DEST_SYSLOG:
+            snprintf (res, PATH_MAX + 1, "syslog:%s:%s",
+                      _rmatch (syslog_facility, facility),
+                      _rmatch (syslog_level, level));
+            break;
+        case DEST_LOGF:
+            snprintf (res, len, "%s", logf == stdout ? "stdout" :
+                                      logf == stderr ? "stderr" : 
+                                      logf == NULL   ? "unknown" : filename);
+            break;
+    }
+done:
+    return res;
 }
 
 static void
@@ -71,11 +212,12 @@ _verr (int errnum, const char *fmt, va_list ap)
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {
-        case DEST_STDERR:
-            fprintf (stderr, "%s: %s: %s\n", prog, buf, errbuf);
+        case DEST_LOGF:
+            fprintf (logf, "%s: %s: %s\n", prog, buf, errbuf);
+            fflush (logf);
             break;
         case DEST_SYSLOG:
-            syslog (LOG_ERR, "%s: %s", buf, errbuf);
+            syslog (syslog_level, "%s: %s", buf, errbuf);
             break;
     }
 }
@@ -87,11 +229,12 @@ _vlog (const char *fmt, va_list ap)
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {
-        case DEST_STDERR:
-            fprintf (stderr, "%s: %s\n", prog, buf);
+        case DEST_LOGF:
+            fprintf (logf, "%s: %s\n", prog, buf);
+            fflush (logf);
             break;
         case DEST_SYSLOG:
-            syslog (LOG_ERR, "%s", buf);
+            syslog (syslog_level, "%s", buf);
             break;
     }
 }

@@ -273,6 +273,7 @@ _build_server_args (Server *s)
 {
     int ret = 0;
     int r;
+    char *dest = NULL;
 
     if (s->uid == 0)
         r = _append_arg (s, "diod-shared");
@@ -300,8 +301,16 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-E%s", exports_file) < 0)
         goto done;
+    if (!(dest = diod_log_get_dest ())) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    if (_append_arg (s, "-L%s", dest) < 0)
+        goto done;
     ret = 1;
 done:
+    if (dest)
+        free (dest);
     return ret;
 }
 
