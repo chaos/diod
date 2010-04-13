@@ -26,7 +26,7 @@ static int
 _flock (int fd, int cmd)
 {
     struct flock l;
-    int op = (cmd & LOCK_NB) ? F_SETLKW : F_SETLK;
+    int op = (cmd & LOCK_NB) ? F_SETLK : F_SETLKW;
 
     if (cmd & LOCK_SH)
         l.l_type = F_RDLCK;
@@ -46,6 +46,8 @@ main (int argc, char *argv[])
 {
     int fd = -1;
     int fd2 = -1;
+    pid_t pid;
+    int status;
 
     diod_log_init (argv[0]);
 
@@ -62,41 +64,37 @@ main (int argc, char *argv[])
         goto done;
     }
 
-    /* N.B. blocking attempt may fail due to incomplete diod implementation */
     if (_flock (fd, LOCK_EX) < 0) {
-        err ("fd: blocking exclusive request failed");
-        if (_flock (fd, LOCK_EX | LOCK_NB) < 0) {
-            err ("fd: nonblocking exclusive request failed");
-            goto done;
-        } else 
-            msg ("fd: nonblocking exclusive request succeeded");
+        err ("fd: blocking exclusive request failed, aborting");
+        goto done;
     } else
         msg ("fd: blocking exclusive request succeeded");
 
+    /* different fd, same process - should succeed */
     if (_flock (fd2, LOCK_EX | LOCK_NB) < 0) {
-        err ("fd2: exclusive request failed");
-    } else {
-        msg ("fd2: exclusive request succeeded, aborting");
-        goto done; 
-    }
-
-    if (_flock (fd, LOCK_SH | LOCK_NB) < 0) {
-        err ("fd: shared request (downgrade) failed, aborting");
-        goto done; 
+        err ("fd2: exclusive request failed, this is incorrect behavior!");
     } else
-        msg ("fd: shared request (downgrade) succeeded");
+        msg ("fd2: exclusive request succeeded");
 
-    if (_flock (fd2, LOCK_SH | LOCK_NB) < 0) {
-        err ("fd2: shared request failed, aborting");
-        goto done; 
-    } else
-        msg ("fd2: shared request succeeded");
-
-    if (_flock (fd2, LOCK_EX | LOCK_NB) < 0) {
-        err ("fd2: exclusive request (upgrade) failed");
-    } else  {
-        msg ("fd2: exclusive request (upgrade) succeeded, aborting");
-        goto done; 
+    /* different process - should fail */
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            if (_flock (fd2, LOCK_EX | LOCK_NB) < 0) {
+                err ("fd2(child): exclusive request failed");
+                exit (0);
+            }
+            msg_exit ("fd2(child): exclusive request succeeded, aborting");
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                goto done;
+            msg ("child exited normally");
+            break;
     }
 
     if (_flock (fd, LOCK_UN) < 0) {
@@ -104,6 +102,26 @@ main (int argc, char *argv[])
         goto done;
     } else
         msg ("fd: unlock succeeded");
+
+    /* different process - should succeed */
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            if (_flock (fd2, LOCK_EX | LOCK_NB) < 0)
+                err_exit ("fd2(child): exclusive request failed, aborting");
+            msg ("fd2(child): exclusive request succeeded");
+            exit (0);
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                goto done;
+            msg ("child exited normally");
+            break;
+    }
 
     if (_flock (fd2, LOCK_EX | LOCK_NB) < 0) {
         err ("fd2: exclusive request failed, aborting");

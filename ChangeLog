@@ -1,10 +1,21 @@
+2010-04-13 Jim Garlick <garlick@llnl.gov>
+
+	* diod/ops.c, test/t20*, test/t21* : Add debug output for
+	DEBUG_ATOMIC in diod_awrite and diod_aread implementation,
+	then test for it in tests.  Add test for appending to a file.
+	Change cache offsets from u32 to u64.
+
+	* diod/ops.c, test/tfcntl2.c, test/t19* : Add debug output for
+	DEBUG_ADVLOCK in diod_lock implementation, then test for it in tests.
+	Include aborted attempt to implement diod_lock "natively".
+
+	* diod/ops.c, test/tflock.c, test/t18* : Add debug output for
+	DEBUG_ADVLOCK in diod_flock, then test for it in tests.
+
 2010-04-12 Jim Garlick <garlick@llnl.gov>
 
 	* diod/ops.c : Silence some log messages of dubious value that
 	caused tests to fail.
-
-	* diod/ops.c, t18.exp, t19.exp : Add DEBUG_ADVLOCK messages and
-	update test results.
 
 	* diodctl/serv.c : Start new diod servers with the same logging
 	option as diodctl.

@@ -92,11 +92,11 @@ typedef struct {
     int              diroffset;
     struct stat      stat;
     void            *rc_data;
-    u32              rc_offset;
+    u64              rc_offset;
     u32              rc_length;
     u32              rc_pos;
     void            *wc_data;
-    u32              wc_offset;
+    u64              wc_offset;
     u32              wc_length;
     u32              wc_pos;
 } Fid;
@@ -138,12 +138,6 @@ static u32       _read_dir      (Npfid *fid, u8* buf, u64 offset, u32 count);
 
 static int  _create_special     (Npfid *fid, char *path, u32 perm,
                                  Npstr *extension);
-static int  _cache_write_behind (Npfid *fid, void *buf, u32 count,
-                                 u32 rsize, u64 offset);
-static int  _cache_write        (Npfid *fid, void *buf, u32 rsize, u64 offset);
-static int  _cache_read_ahead   (Npfid *fid, void *buf, u32 count,
-                                 u32 rsize, u64 offset);
-static int  _cache_read         (Npfid *fid, void *buf, u32 rsize, u64 offset);
 
 
 static pthread_mutex_t  conn_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -1299,7 +1293,7 @@ diod_flush(Npreq *req)
 
 /* helper for diod_aread */
 static int
-_cache_read (Npfid *fid, void *buf, u32 rsize, u64 offset)
+_cache_read (Npfid *fid, void *buf, u32 rsize, u64 offset, int debug)
 {
     Fid *f = fid->aux;
     int ret = 0;
@@ -1310,11 +1304,15 @@ _cache_read (Npfid *fid, void *buf, u32 rsize, u64 offset)
             if (ret > rsize)
                 ret = rsize;
             memcpy (buf, f->rc_data + f->rc_pos, ret);
+            if (debug)
+                msg ("aread:   read %d bytes from cache", ret);
             f->rc_pos += ret;
         }
         if (ret == 0 || f->rc_pos == f->rc_length) {
             free (f->rc_data);
             f->rc_data = NULL;
+            if (debug)
+                msg ("aread:   freed %u byte cache", f->rc_length);
         }
     }
     return ret;
@@ -1322,7 +1320,8 @@ _cache_read (Npfid *fid, void *buf, u32 rsize, u64 offset)
 
 /* helper for diod_aread */
 static int
-_cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
+_cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset,
+                   int debug)
 {
     Fid *f = fid->aux;
     u32 atomic_max = (u32)diod_conf_get_atomic_max () * 1024 * 1024;
@@ -1331,13 +1330,13 @@ _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
         count = atomic_max;
 
     if (!f->rc_data || f->rc_length < count) {
-        //if (f->rc_data)
-        //   free(f->rc_data);
         assert (f->rc_data == NULL);
         if (!(f->rc_data = _malloc (count))) {
             msg ("diod_aread: out of memory (allocating %d bytes)", count);
             return -1;
         }
+        if (debug)
+            msg ("aread:  allocated %u byte cache", count);
     }
     f->rc_length = _pread (fid, f->rc_data, count, offset);
     f->rc_offset = offset;
@@ -1347,7 +1346,10 @@ _cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
         f->rc_data = NULL;
         return -1;
     } 
-    return _cache_read (fid, buf, rsize, offset);
+    if (debug)
+        msg ("aread:   read %d bytes at offset %llu", count, 
+             (unsigned long long)offset);
+    return _cache_read (fid, buf, rsize, offset, debug);
 }
 
 /* Taread - atomic read
@@ -1356,6 +1358,7 @@ Npfcall*
 diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
             Npreq *req)
 {
+    int debug = (diod_conf_get_debuglevel () & DEBUG_ATOMIC);
     int n;
     Npfcall *ret = NULL;
 
@@ -1368,12 +1371,19 @@ diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
         msg ("diod_aread: out of memory");
         goto done;
     }
-    n = _cache_read (fid, ret->data, rsize, offset);
+    if (debug)
+        msg ("aread: rsize %u count %u offset %llu", rsize, count,
+             (unsigned long long)offset);
+    n = _cache_read (fid, ret->data, rsize, offset, debug);
     if (n == 0) {
         if (count > rsize)
-            n = _cache_read_ahead (fid, ret->data, count, rsize, offset);
-        else
+            n = _cache_read_ahead (fid, ret->data, count, rsize, offset, debug);
+        else {
             n = _pread (fid, ret->data, rsize, offset);
+            if (debug)
+                msg ("aread: directly read %d bytes at offset %llu", n,
+                     (unsigned long long)offset);
+        }
     }
     if (np_haserror ()) {
         if (ret) {
@@ -1388,7 +1398,7 @@ done:
 
 /* helper for diod_awrite */
 static int
-_cache_write (Npfid *fid, void *buf, u32 rsize, u64 offset)
+_cache_write (Npfid *fid, void *buf, u32 rsize, u64 offset, int debug)
 {
     Fid *f = fid->aux;
     int ret = 0, i = 0, n;
@@ -1399,6 +1409,8 @@ _cache_write (Npfid *fid, void *buf, u32 rsize, u64 offset)
             if (ret > rsize)
                 ret = rsize;
             memcpy (f->wc_data + f->wc_pos, buf, ret);
+            if (debug)
+                msg ("awrite:   cached %d bytes", ret);
             f->wc_pos += ret;
         }
         if (f->wc_pos == f->wc_length) {
@@ -1410,9 +1422,15 @@ _cache_write (Npfid *fid, void *buf, u32 rsize, u64 offset)
                     f->wc_data = NULL;
                     return -1;
                 }
+                if (debug)
+                    msg ("awrite:   wrote %d bytes at offset %llu",
+                         f->wc_pos - i,
+                         (unsigned long long)f->wc_offset + i);
                 i += n;
             }
             free (f->wc_data);
+            if (debug)
+                msg ("awrite:   freed %u byte cache", f->wc_length);
             f->wc_data = NULL;
         }
     }
@@ -1421,7 +1439,8 @@ _cache_write (Npfid *fid, void *buf, u32 rsize, u64 offset)
 
 /* helper for diod_awrite */
 static int
-_cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
+_cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset,
+                     int debug)
 {
     Fid *f = fid->aux;
     u32 atomic_max = (u32)diod_conf_get_atomic_max () * 1024 * 1024;
@@ -1433,11 +1452,13 @@ _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
         msg ("diod_awrite: out of memory (allocating %d bytes)", count);
         return -1;
     }
+    if (debug)
+        msg ("awrite:  allocated %u byte cache", count);
     f->wc_length = count;
     f->wc_offset = offset;
     f->wc_pos = 0;
 
-    return _cache_write (fid, buf, rsize, offset);
+    return _cache_write (fid, buf, rsize, offset, debug);
 }
 
 /* Tawrite - atomic write
@@ -1445,6 +1466,7 @@ _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset)
 Npfcall*
 diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
 {
+    int debug = (diod_conf_get_debuglevel () & DEBUG_ATOMIC);
     int n;
     Npfcall *ret = NULL;
 
@@ -1452,14 +1474,20 @@ diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
         msg ("diod_awrite: error switching user");
         goto done;
     }
-    n = _cache_write (fid, data, rsize, offset);
+    if (debug)
+        msg ("awrite: rsize %u count %u offset %llu", rsize, count,
+             (unsigned long long)offset);
+    n = _cache_write (fid, data, rsize, offset, debug);
     if (n == 0) {
         if (count > rsize)
-            n = _cache_write_behind (fid, data, count, rsize, offset);
+            n = _cache_write_behind (fid, data, count, rsize, offset, debug);
         else {
             n = _pwrite (fid, data, rsize, offset);
             if (n < 0)
                 goto done;
+            if (debug)
+                msg ("awrite: directly wrote %d bytes at offset %llu", n,
+                     (unsigned long long)offset);
         }
     }
 
@@ -1570,34 +1598,44 @@ diod_flock (Npfid *fid, u8 cmd)
     int debug = (diod_conf_get_debuglevel () & DEBUG_ADVLOCK);
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    int op, n;
+    int op;
+    char *optxt = NULL;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_flock: error switching user");
         goto done;
     }
+         
     switch (cmd & 3) {
         case P9_FLOCK_SH:
-            op = LOCK_SH;
+            if (debug && !(cmd & P9_FLOCK_NB))
+                msg ("diod_flock: adding LOCK_NB to request");
+            op = LOCK_SH | LOCK_NB;
+            optxt = "LOCK_SH | LOCK_NB";
             break;
         case P9_FLOCK_EX:
-            op = LOCK_EX;
+            if (debug && !(cmd & P9_FLOCK_NB))
+                msg ("diod_flock: adding LOCK_NB to request");
+            op = LOCK_EX | LOCK_NB;
+            optxt = "LOCK_EX | LOCK_NB";
             break;
         case P9_FLOCK_UN:
             op = LOCK_UN;
+            optxt = "LOCK_UN";
             break;
         default:
             np_uerror (EIO);
             msg ("diod_flock: incorrect cmd value received (0x%x)", cmd);
             goto done;
     }
-    n = flock (f->fd, op | LOCK_NB);
-    if (n < 0)
+    if (flock (f->fd, op) < 0) {
         np_uerror (errno);
-    if (debug)
-        err ("flock 0x%x", op | LOCK_NB);
-    if (n < 0)
+        if (debug)
+            err ("flock %s", optxt);
         goto done;
+    }
+    if (debug)
+        msg ("flock %s: Success", optxt);
     if (!(ret = np_create_rflock())) {
         np_uerror (ENOMEM);
         msg ("diod_flock: out of memory");
@@ -1607,14 +1645,141 @@ done:
     return ret;
 }
 
+/* N.B. Following are two very deficient fcntl advisory record locking 
+ * implementations.  Really we need to implement a "lock manager" that
+ * can arbitrate competing requests for locks that we hold without sending
+ * them all through to the file system.
+ */
+
 #ifndef INT_LIMIT
 #define INT_LIMIT(x) (~((x)1 << (sizeof(x)*8 - 1)))
 #endif
 
+#if 0
+/* Tlock - lock/unlock/test posix advisory record lock 
+ * FIXME: implement blocking requests without thread pool deadlock
+ * FIXME: host file system thinks all requests are coming from same pid.
+ */
+Npfcall*
+diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
+{
+    int debug = (diod_conf_get_debuglevel () & DEBUG_ADVLOCK);
+    Fid *f = fid->aux;
+    Npfcall *ret = NULL;
+    struct flock fl, flcpy;
+    int op;
+    char *optxt, *typetxt;
+    u8 type;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_lock: error switching user");
+        goto done;
+    }
+    if (flck->start > flck->end) {
+        msg ("diod_lock: invalid record: [%llu:%llu]",
+              (unsigned long long)flck->start, (unsigned long long)flck->end);
+        np_uerror (EINVAL);
+        goto done;
+    }
+    switch (flck->type) {
+        case P9_LOCK_RDLCK:
+            fl.l_type = F_RDLCK;
+            typetxt = "F_RDLCK";
+            break;
+        case P9_LOCK_WRLCK:
+            fl.l_type = F_WRLCK;
+            typetxt = "F_WRLCK";
+            break;
+        case P9_LOCK_UNLCK:
+            fl.l_type = F_UNLCK;
+            typetxt = "F_UNLCK";
+            break;
+        default:
+            np_uerror (EIO);
+            msg ("diod_lock: incorrect lock type (0x%x)", flck->type);
+            goto done;
+    }
+    fl.l_whence = SEEK_SET;
+    fl.l_start = flck->start;
+    if ((flck->end == INT_LIMIT(off_t)))
+        fl.l_len = 0; /* lock to the EOF, no matter how large the file grows */
+    else
+        fl.l_len = flck->end - flck->start;
+    switch (cmd) {
+        case P9_LOCK_GETLK:
+            op = F_GETLK;
+            optxt = "F_GETLK";
+            break;
+        case P9_LOCK_SETLK:
+            op = F_SETLK;
+            optxt = "F_SETLK";
+            break;
+        case P9_LOCK_SETLKW:
+            if (debug)
+                msg ("diod_lock: converting SETLKW to SETLK");
+            op = F_SETLK;
+            optxt = "F_SETLK";
+            break;
+        default:
+            msg ("diod_lock: invalid cmd value 0x%x", cmd);
+            np_uerror (EIO);
+            goto done;
+    }
+
+    memcpy (&flcpy, &fl, sizeof (fl));
+    if (fcntl (f->fd, op, &fl) < 0) {
+        np_uerror (errno);
+        if (debug)
+            err ("lock %s %s start=%llu len=%llu", optxt, typetxt,
+                 (unsigned long long)flcpy.l_start,
+                 (unsigned long long)flcpy.l_len);
+        goto done;
+    }
+    if (debug)
+        msg ("lock %s %s start=%llu len=%llu: Success", optxt, typetxt,
+             (unsigned long long)flcpy.l_start,
+             (unsigned long long)flcpy.l_len);
+
+    switch (fl.l_type) {
+        case F_RDLCK:
+            type = P9_LOCK_RDLCK;
+            break;
+        case F_WRLCK:
+            type = P9_LOCK_WRLCK;
+            break;
+        case F_UNLCK:
+            type = P9_LOCK_UNLCK;
+            break;
+        default:
+            np_uerror (EINVAL);
+            msg ("diod_lock: fcntl returned invalid l_type 0x%x", fl.l_type);
+            goto done;
+    }
+    if (fl.l_whence != SEEK_SET) {
+        msg ("diod_lock: fcntl returned invalid l_whence 0x%x\n", fl.l_whence);
+        np_uerror (EINVAL);
+        goto done;
+    }
+    if (fl.l_len < 0) {
+        msg ("diod_lock: fcntl returned invalid length %lld\n",
+             (long long int)fl.l_len);
+        np_uerror (EINVAL);
+        goto done;
+    }
+    if (!(ret = np_create_rlock(type, fl.l_pid, fl.l_start,
+                                fl.l_len == 0 ? INT_LIMIT (off_t)
+                                              : fl.l_start + fl.l_len))) {
+        np_uerror (ENOMEM);
+        msg ("diod_lock: out of memory");
+        goto done;
+    }
+done:
+    return ret;
+}
+#else
 /* Tlock - lock/unlock/test posix advisory record lock 
  * FIXME: implement blocking requests without thread pool deadlock
  * FIXME: implement record locking
- * FIXME: implement in terms of fcntl locks
  * N.B. This temporary implementation is in terms of flock.
  */
 Npfcall*
@@ -1623,74 +1788,82 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
     int debug = (diod_conf_get_debuglevel () & DEBUG_ADVLOCK);
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    int op, n;
+    int op;
+    char *optxt = NULL;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_lock: error switching user");
         goto done;
     }
     if ((flck->start != 0 || flck->end != INT_LIMIT(off_t))) {
-        np_uerror (EIO);
+        np_uerror (EINVAL);
         msg ("diod_lock: record locking not implemented yet");
+        goto done;
+    }
+    if (flck->type == P9_LOCK_UNLCK && cmd == P9_LOCK_GETLK) {
+        np_uerror (EINVAL);
+        msg ("diod_lock: cannot GETLCK a type of UNLCK");
         goto done;
     }
     switch (flck->type) {
         case P9_LOCK_RDLCK:
-            op = LOCK_SH;
+            op = LOCK_SH | LOCK_NB;
+            optxt = "LOCK_SH | LOCK_NB";
             break;
         case P9_LOCK_WRLCK:
-            op = LOCK_EX;
+            op = LOCK_EX | LOCK_NB;
+            optxt = "LOCK_EX | LOCK_NB";
             break;
         case P9_LOCK_UNLCK:
             op = LOCK_UN;
+            optxt = "LOCK_UN";
             break;
         default:
             np_uerror (EIO);
-            msg ("diod_lock: incorrect lock type (0x%x)", flck->type);
+            msg ("diod_lock: incorrect lock type 0x%x", flck->type);
             goto done;
     }
     switch (cmd) {
-        case P9_LOCK_GETLK:
-            if (op == LOCK_UN) {
-                np_uerror (EINVAL);
-                msg ("diod_lock: cannot GETLCK a type of UNLCK");
-                goto done;
-            }
-            n = flock (f->fd, op | LOCK_NB);
-            if (n < 0 && errno != EACCES && errno != EAGAIN)
-                np_uerror (errno);
-            if (debug)
-                err ("flock 0x%x", op | LOCK_NB);
-            if (n < 0) {
-                flck->type = (op == LOCK_EX ? P9_LOCK_WRLCK : P9_LOCK_RDLCK);
-                goto done;
-            } else {
-                n = flock (f->fd, LOCK_UN);
-                if (n < 0)
+        case P9_LOCK_GETLK: /* emulate with "catch and release" */
+            if (flock (f->fd, op | LOCK_NB) < 0) {
+                if (errno != EACCES && errno != EAGAIN) {
                     np_uerror (errno);
-                if (debug)
-                    err ("flock 0x%x", op | LOCK_NB);
-                if (n < 0)
+                    if (debug)
+                        err ("flock %s", optxt);
                     goto done;
+                }
+                if (debug)
+                    err ("flock %s", optxt);
+                flck->type = (op == LOCK_EX ? P9_LOCK_WRLCK : P9_LOCK_RDLCK);
+            } else {
+                if (flock (f->fd, LOCK_UN) < 0) {
+                    np_uerror (errno);
+                    if (debug)
+                        err ("flock LOCK_UN");
+                    goto done;
+                }
+                if (debug)
+                    msg ("flock LOCK_UN: Success");
                 flck->type = P9_LOCK_UNLCK;
             }
             break;
-        case P9_LOCK_SETLK:
         case P9_LOCK_SETLKW:
-            n = flock (f->fd, op | LOCK_NB);
-            if (n < 0) {
-                if (errno == EAGAIN) /* don't trigger a retry in client vfs */
-                    errno = EACCES;
+            if (debug && op != LOCK_UN)
+                msg ("diod_lock: converting SETLKW to SETLK");
+            /* fall through */
+        case P9_LOCK_SETLK:
+            if (flock (f->fd, op) < 0) {
                 np_uerror (errno); 
+                if (debug)
+                    err ("flock %s", optxt);
+                goto done;
             }
             if (debug)
-                err ("flock 0x%x", op | LOCK_NB);
-            if (n < 0)
-                goto done;
+                msg ("flock %s: Success", optxt);
             break;
         default:
-            np_uerror (EIO);
-            msg ("diod_lock: incorrect cmd value received (0x%x)", cmd);
+            np_uerror (EINVAL);
+            msg ("diod_lock: invalid cmd value 0x%x", cmd);
             goto done;
     }
     if (!(ret = np_create_rlock(flck->type, flck->pid, 0, 0))) {
@@ -1701,6 +1874,7 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
 done:
     return ret;
 }
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

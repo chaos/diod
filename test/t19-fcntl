@@ -9,7 +9,10 @@ doit ()
 	$PATH_DIODMOUNT -d -o uname=root,port=2006,version=9p2000.L \
 			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
 
-	dd if=/dev/zero of=$PATH_MNTDIR/a count=1024 status=noxfer
+	dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
+	echo testing host file system
+	./tfcntl2 $PATH_EXPDIR/a
+	echo testing diod file system
 	./tfcntl2 $PATH_MNTDIR/a
 	rm -f $PATH_MNTDIR/a
 	echo unmounting

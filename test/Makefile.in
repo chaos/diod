@@ -307,7 +307,8 @@ TESTS = \
 	t18-flock \
 	t19-fcntl \
 	t20-aread \
-	t21-awrite 
+	t21-awrite \
+	t22-append
 
 CLEANFILES = *.out *.diff
 AM_CFLAGS = @GCCWARN@

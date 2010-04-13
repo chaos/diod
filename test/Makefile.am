@@ -41,7 +41,8 @@ TESTS = \
 	t18-flock \
 	t19-fcntl \
 	t20-aread \
-	t21-awrite 
+	t21-awrite \
+	t22-append
 
 
 $(TESTS): mnt.d exp.d

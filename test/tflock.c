@@ -43,15 +43,10 @@ main (int argc, char *argv[])
         goto done;
     }
 
-    /* N.B. blocking attempt may fail due to incomplete diod implementation */
     if (flock (fd, LOCK_EX) < 0) {
-        err ("fd: blocking exclusive request failed");
-        if (flock (fd, LOCK_EX | LOCK_NB) < 0) {
-            err ("fd: nonblocking exclusive request failed");
-            goto done;
-        } else 
-            msg ("fd: nonblocking exclusive request succeeded");
-    } else
+        err ("fd: blocking exclusive request failed, aborting");
+        goto done;
+    } else 
         msg ("fd: blocking exclusive request succeeded");
 
     if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
