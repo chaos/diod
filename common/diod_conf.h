@@ -75,6 +75,9 @@ void    diod_conf_read_exports (char *path);
 void    diod_conf_set_atomic_max (int megabytes);
 int     diod_conf_get_atomic_max (void);
 
+void    diod_conf_set_statslog (char *path);
+FILE   *diod_conf_get_statslog (void);
+
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */

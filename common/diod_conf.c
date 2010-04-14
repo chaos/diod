@@ -66,6 +66,7 @@ typedef struct {
     List         diodctllisten;
     List         exports;
     int          atomic_max_mb;
+    FILE        *statslog;
 } Conf;
 
 static Conf config = {
@@ -81,6 +82,7 @@ static Conf config = {
     .diodctllisten  = NULL, /* diod_conf_init initializes */
     .exports        = NULL,
     .atomic_max_mb  = 256,
+    .statslog       = NULL,
 };
 
 
@@ -323,6 +325,21 @@ done:
     if (itr)
         list_iterator_destroy (itr);
     return ret;
+}
+
+void
+diod_conf_set_statslog (char *path)
+{
+    if (config.statslog)
+        fclose (config.statslog);
+    if (!(config.statslog = fopen (path, "a")))
+        err_exit ("error opening %s", path);
+}
+
+FILE *
+diod_conf_get_statslog (void)
+{
+    return config.statslog;
 }
 
 static void

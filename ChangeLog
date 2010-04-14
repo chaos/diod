@@ -1,5 +1,9 @@
 2010-04-13 Jim Garlick <garlick@llnl.gov>
 
+	* diod/diod.c, common/diod_conf.[ch] : Add -s statsfile option.
+
+	* dopd/ops.c : Log EIO on read or write.
+
 	* diod/ops.c, test/t20*, test/t21* : Add debug output for
 	DEBUG_ATOMIC in diod_awrite and diod_aread implementation,
 	then test for it in tests.  Add test for appending to a file.

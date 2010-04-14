@@ -55,7 +55,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:amxF:u:A:L:"
+#define OPTIONS "d:l:w:e:E:amxF:u:A:L:s:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -71,6 +71,7 @@ static const struct option longopts[] = {
     {"runas-uid",       required_argument,  0, 'u'},
     {"atomic-max",      required_argument,  0, 'A'},
     {"log-to",          required_argument,  0, 'L'},
+    {"stats",           required_argument,  0, 's'},
     {0, 0, 0, 0},
 };
 #else
@@ -94,6 +95,7 @@ usage()
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
 "   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
+"   -s,--stats FILE        log detailed I/O stats to FILE\n"
     );
     exit (1);
 }
@@ -181,6 +183,9 @@ main(int argc, char **argv)
                 break;
             case 'L':   /* --log-to DEST */
                 diod_log_set_dest (optarg);
+                break;
+            case 's':   /* --stats PATH */
+                diod_conf_set_statslog (optarg);
                 break;
             default:
                 usage();

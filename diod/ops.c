@@ -72,6 +72,7 @@
 #include <fcntl.h>
 #include <utime.h>
 #include <assert.h>
+#include <stdarg.h>
 
 #include "npfs.h"
 #include "list.h"
@@ -248,6 +249,8 @@ _pread (Npfid *fid, void *buf, size_t count, off_t offset)
 
     if ((n = pread (f->fd, buf, count, offset)) < 0)
         np_uerror (errno);
+    if (errno == EIO)
+        err ("read %s", f->path);
 
     return n;
 }
@@ -263,6 +266,8 @@ _pwrite (Npfid *fid, void *buf, size_t count, off_t offset)
 
     if ((n = pwrite (f->fd, buf, count, offset)) < 0)
         np_uerror (errno);
+    if (errno == EIO)
+        err ("write %s", f->path);
 
     return n;
 }
@@ -496,12 +501,12 @@ diod_connclose (Npconn *conn)
     if (!diod_conf_get_exit_on_lastuse ())
         return;
     if ((errnum = pthread_mutex_lock (&conn_lock)))
-        errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
+        errn_exit (errnum, "diod_connclose: could not take conn_lock mutex");
     conn_count--;
     if (conn_count == 0 && server_used)
         exit (0);
     if ((errnum = pthread_mutex_unlock (&conn_lock)))
-        errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
+        errn_exit (errnum, "diod_connclose: could not drop conn_lock mutex");
 }
 
 void
@@ -526,10 +531,10 @@ _serverused (void)
     if (!diod_conf_get_exit_on_lastuse ())
         return;
     if ((errnum = pthread_mutex_lock (&conn_lock)))
-        errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
+        errn_exit (errnum, "_serverused: could not take conn_lock mutex");
     server_used = 1; 
     if ((errnum = pthread_mutex_unlock (&conn_lock)))
-        errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
+        errn_exit (errnum, "_serverused: could not drop conn_lock mutex");
 }
 
 /* Tattach - announce a new user, and associate her fid with the root dir.
