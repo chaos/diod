@@ -310,7 +310,7 @@ TESTS = \
 	t21-awrite \
 	t22-append
 
-CLEANFILES = *.out *.diff
+CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
         -I../npfs/include -I../liblsd -I../common

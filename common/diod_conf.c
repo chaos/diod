@@ -332,7 +332,7 @@ diod_conf_set_statslog (char *path)
 {
     if (config.statslog)
         fclose (config.statslog);
-    if (!(config.statslog = fopen (path, "a")))
+    if (!(config.statslog = fopen (path, "w")))
         err_exit ("error opening %s", path);
 }
 

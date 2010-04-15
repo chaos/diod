@@ -68,6 +68,7 @@
 #include <sys/statfs.h>
 #include <sys/statvfs.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <utime.h>
@@ -92,6 +93,7 @@ typedef struct {
     struct dirent   *dirent;
     int              diroffset;
     struct stat      stat;
+    /* atomic I/O */
     void            *rc_data;
     u64              rc_offset;
     u32              rc_length;
@@ -100,6 +102,12 @@ typedef struct {
     u64              wc_offset;
     u32              wc_length;
     u32              wc_pos;
+    /* stats */
+    u64              write_ops;
+    u64              write_bytes;
+    u64              read_ops;
+    u64              read_bytes;
+    struct timeval   birth;
 } Fid;
 
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
@@ -247,11 +255,14 @@ _pread (Npfid *fid, void *buf, size_t count, off_t offset)
     Fid *f = fid->aux;
     ssize_t n;
 
-    if ((n = pread (f->fd, buf, count, offset)) < 0)
+    if ((n = pread (f->fd, buf, count, offset)) < 0) {
         np_uerror (errno);
-    if (errno == EIO)
-        err ("read %s", f->path);
-
+        if (errno == EIO)
+            err ("read %s", f->path);
+    } else {
+        f->read_ops++;
+        f->read_bytes += n;
+    }
     return n;
 }
 
@@ -264,11 +275,14 @@ _pwrite (Npfid *fid, void *buf, size_t count, off_t offset)
     Fid *f = fid->aux;
     ssize_t n;
 
-    if ((n = pwrite (f->fd, buf, count, offset)) < 0)
+    if ((n = pwrite (f->fd, buf, count, offset)) < 0) {
         np_uerror (errno);
-    if (errno == EIO)
-        err ("write %s", f->path);
-
+        if (errno == EIO)
+            err ("write %s", f->path);
+    } else {
+        f->write_ops++;
+        f->write_bytes += n;
+    }
     return n;
 }
 
@@ -290,6 +304,15 @@ _fidalloc (void)
         f->dirent = NULL;
         f->rc_data = NULL;
         f->wc_data = NULL;
+        f->read_ops = 0;
+        f->read_bytes = 0;
+        f->write_ops = 0;
+        f->write_bytes = 0;
+        if (gettimeofday (&f->birth, NULL) < 0) {
+            np_uerror (errno);
+            free (f);
+            f = NULL;
+        }
     }
   
     return f;
@@ -315,13 +338,36 @@ _fidfree (Fid *f)
     }
 }
 
+static void
+_dumpstats (Fid *f)
+{
+    FILE *lf = diod_conf_get_statslog ();
+    struct timeval death;
+
+    if (lf && f->read_bytes + f->write_bytes > 0) {
+        if (gettimeofday (&death, NULL) == 0) {
+            fprintf (lf, "%s:%llu:%llu:%llu:%llu:%lf\n", f->path,
+                     (unsigned long long)f->read_ops,
+                     (unsigned long long)f->read_bytes,
+                     (unsigned long long)f->write_ops,
+                     (unsigned long long)f->write_bytes,
+                     (double)death.tv_sec + 10E-6*(double)death.tv_usec -
+                    ((double)f->birth.tv_sec + 10E-6*(double)f->birth.tv_usec));
+            fflush (lf);
+        }
+    }
+}
+
 /* This is a courtesy callback from npfs to let us know that
  * the fid we are parasitically attached to is being destroyed.
  */
 void
 diod_fiddestroy (Npfid *fid)
 {
-    _fidfree ((Fid *)fid->aux);
+    Fid *f = fid->aux;
+
+    _dumpstats (f);
+    _fidfree (f);
     fid->aux = NULL;
 }
 
@@ -1192,7 +1238,7 @@ diod_wstat(Npfid *fid, Npstat *st)
 
         if (!p)
             p = f->path + strlen(f->path);
-        if (!(npath = malloc(st->name.len + (p - f->path) + 2))) {
+        if (!(npath = _malloc(st->name.len + (p - f->path) + 2))) {
             msg ("diod_wstat: out of memory");
             goto done;
         }

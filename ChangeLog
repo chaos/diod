@@ -1,3 +1,10 @@
+2010-04-15 Jim Garlick <garlick@llnl.gov>
+
+	* tests/* : Add -s option to diod command lines.
+
+	* diod/diod.c : Add a simple stats implementation that tracks 
+	read/write iops and byte counts, and fid longevity.
+
 2010-04-13 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c, common/diod_conf.[ch] : Add -s statsfile option.

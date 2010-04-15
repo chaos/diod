@@ -50,7 +50,7 @@ $(TESTS): mnt.d exp.d
 mnt.d exp.d:
 	mkdir -p $@
 
-CLEANFILES = *.out *.diff
+CLEANFILES = *.out *.diff *.stats
 
 AM_CFLAGS = @GCCWARN@
 
