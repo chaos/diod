@@ -1,0 +1,28 @@
+1.0-pre6:
+	Add diod -s filename option to capture I/O stats.
+	Log any I/O errors to syslog, other minor logging changes.
+	Incremental improvements to test suite.
+	Add -L <log-dest> option to diod and diodctl.	
+	Fix bugs in diodctl init script and diodctl that broke restart.
+	Set proctitle in diod instances to reflect usage.
+	Add -j <jobid> to diodmount and support per-job server instances.
+	Add -A <atomic-max> option to diod.
+
+1.0-pre5:
+        Diod is always started by diodctl.
+        Simplify options on all commands.
+        Fix some silly bugs.
+
+1.0-pre4:
+        Diodmount should always mount with debug=1 (show errors)
+        Diodmount should drop datacheck option (it is implied now)
+        Diodmount should  mount 9p2000.L not .H
+        Add advisory locking implementation to diod.
+        Fold 9p2000.H changes into 9p2000.L.
+
+1.0-pre3:
+        Add diodmount --verbose option, mount with -o datacheck.
+        Drop readahead option
+
+1.0-pre2:
+        Fix some silly bugs in 1.0-pre1.
