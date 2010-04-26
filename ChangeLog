@@ -1,3 +1,11 @@
+2010-04-20 Jim Garlick <garlick@llnl.gov>
+
+	* test/t19*, test/tfcntl2.c : Clean up fcntl locking test.
+
+2010-04-19 Jim Garlick <garlick@llnl.gov>
+
+	* common/diod_log.c : Fix bug parsing syslog facility:level.
+
 2010-04-19 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre6

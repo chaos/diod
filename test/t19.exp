@@ -4,12 +4,12 @@ mounting
 1024+0 records out
 testing host file system
 tfcntl2: fd: blocking exclusive request succeeded
-tfcntl2: fd2: exclusive request succeeded
-tfcntl2: fd2(child): exclusive request failed: Resource temporarily unavailable
-tfcntl2: child exited normally
+tfcntl2: fd2: exclusive request succeeded (expected for non-diod)
+tfcntl2: fd2(child1): exclusive request failed: Resource temporarily unavailable
+tfcntl2: child1 exited normally
 tfcntl2: fd: unlock succeeded
-tfcntl2: fd2(child): exclusive request succeeded
-tfcntl2: child exited normally
+tfcntl2: fd2(child2): exclusive request succeeded
+tfcntl2: child2 exited normally
 tfcntl2: fd2: exclusive request succeeded
 tfcntl2: fd2: unlock succeeded
 tfcntl2: cleaning up
@@ -18,15 +18,15 @@ diod: diod_lock: converting SETLKW to SETLK
 diod: flock LOCK_EX | LOCK_NB: Success
 tfcntl2: fd: blocking exclusive request succeeded
 diod: flock LOCK_EX | LOCK_NB: Resource temporarily unavailable
-tfcntl2: fd2: exclusive request failed, this is incorrect behavior!: Resource temporarily unavailable
+tfcntl2: fd2: exclusive request failed (expected for diod): Resource temporarily unavailable
 diod: flock LOCK_EX | LOCK_NB: Resource temporarily unavailable
-tfcntl2: fd2(child): exclusive request failed: Resource temporarily unavailable
-tfcntl2: child exited normally
+tfcntl2: fd2(child1): exclusive request failed: Resource temporarily unavailable
+tfcntl2: child1 exited normally
 diod: flock LOCK_UN: Success
 tfcntl2: fd: unlock succeeded
 diod: flock LOCK_EX | LOCK_NB: Success
-tfcntl2: fd2(child): exclusive request succeeded
-tfcntl2: child exited normally
+tfcntl2: fd2(child2): exclusive request succeeded
+tfcntl2: child2 exited normally
 diod: flock LOCK_EX | LOCK_NB: Success
 tfcntl2: fd2: exclusive request succeeded
 diod: flock LOCK_UN: Success

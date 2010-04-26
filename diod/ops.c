@@ -55,7 +55,7 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#define _XOPEN_SOURCE 600   /* pread/pwrite/posix_fadvise */
+#define _XOPEN_SOURCE 600   /* pread/pwrite */
 #define _BSD_SOURCE         /* makedev */
 #include <stdlib.h>
 #include <unistd.h>
@@ -1682,11 +1682,11 @@ diod_flock (Npfid *fid, u8 cmd)
     if (flock (f->fd, op) < 0) {
         np_uerror (errno);
         if (debug)
-            err ("flock %s", optxt);
+            err ("flock fid %d (fd=%d) %s", fid->fid, f->fd, optxt);
         goto done;
     }
     if (debug)
-        msg ("flock %s: Success", optxt);
+        msg ("flock fid %d (fd=%d) %s: Success", fid->fid, f->fd, optxt);
     if (!(ret = np_create_rflock())) {
         np_uerror (ENOMEM);
         msg ("diod_flock: out of memory");
@@ -1881,21 +1881,21 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
                 if (errno != EACCES && errno != EAGAIN) {
                     np_uerror (errno);
                     if (debug)
-                        err ("flock %s", optxt);
+                        err ("flock fid %d %s", fid->fid, optxt);
                     goto done;
                 }
                 if (debug)
-                    err ("flock %s", optxt);
+                    err ("flock fid %d %s", fid->fid, optxt);
                 flck->type = (op == LOCK_EX ? P9_LOCK_WRLCK : P9_LOCK_RDLCK);
             } else {
                 if (flock (f->fd, LOCK_UN) < 0) {
                     np_uerror (errno);
                     if (debug)
-                        err ("flock LOCK_UN");
+                        err ("flock fid %d LOCK_UN", fid->fid);
                     goto done;
                 }
                 if (debug)
-                    msg ("flock LOCK_UN: Success");
+                    msg ("flock fid %d LOCK_UN: Success", fid->fid);
                 flck->type = P9_LOCK_UNLCK;
             }
             break;
@@ -1907,11 +1907,11 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
             if (flock (f->fd, op) < 0) {
                 np_uerror (errno); 
                 if (debug)
-                    err ("flock %s", optxt);
+                    err ("flock fid %d %s", fid->fid, optxt);
                 goto done;
             }
             if (debug)
-                msg ("flock %s: Success", optxt);
+                msg ("flock fid %d (fd=%d) %s: Success", fid->fid, f->fd, optxt);
             break;
         default:
             np_uerror (EINVAL);

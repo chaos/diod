@@ -31,74 +31,61 @@ main (int argc, char *argv[])
     diod_log_init (argv[0]);
 
     if (argc != 2) {
-        msg ("Usage: tflock file");
+        fprintf (stderr, "Usage: tflock file");
         exit (1);
     }
-    if ((fd = open (argv[1], O_RDWR)) < 0) {
-        err ("open %s", argv[1]);
-        goto done;
-    }
-    if ((fd2 = open (argv[1], O_RDWR)) < 0) {
-        err ("open %s", argv[1]);
-        goto done;
-    }
 
-    if (flock (fd, LOCK_EX) < 0) {
-        err ("fd: blocking exclusive request failed, aborting");
-        goto done;
-    } else 
-        msg ("fd: blocking exclusive request succeeded");
+    /* Try to write-lock a file twice on different fd's in the same process.
+     * The second one should fail.
+     */
+    if ((fd = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd: open");
+    if (flock (fd, LOCK_EX) < 0)
+        err_exit ("fd: write-lock failed, aborting");
+    msg ("fd: write-locked");
+
+    if ((fd2 = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd2: open");
+    if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
+        err ("fd2: second write-lock failed");
+    else
+        msg_exit ("fd2: write-locked twice, aborting");
+
+    /* Downgrade the original write-lock to a read-lock and try again
+     * with a read-lock on the second fd.  This time it should succeed.
+     */
+    if (flock (fd, LOCK_SH | LOCK_NB) < 0)
+        err_exit ("fd: read-lock (downgrade) failed, aborting");
+    msg ("fd: read-locked (downgrade)");
+    if (flock (fd2, LOCK_SH | LOCK_NB) < 0)
+        err_exit ("fd2: read-lock failed, aborting");
+    msg ("fd2: read-locked");
+
+    /* Try to upgrade the second fd to a write-lock.  With the
+     * first fd still holding the read-lock.  This should fail.
+     */
 
     if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
-        err ("fd2: exclusive request failed");
-    else {
-        msg ("fd2: exclusive request succeeded, aborting");
-        goto done; 
-    }
+        err ("fd2: write-lock failed");
+    else
+        msg_exit ("fd2: write-locked with a read lock held, aborting");
 
-    if (flock (fd, LOCK_SH | LOCK_NB) < 0) {
-        err ("fd: shared request (downgrade) failed, aborting");
-        goto done; 
-    } else
-        msg ("fd: shared request (downgrade) succeeded");
-
-    if (flock (fd2, LOCK_SH | LOCK_NB) < 0) {
-        err ("fd2: shared request failed, aborting");
-        goto done; 
-    } else
-        msg ("fd2: shared request succeeded");
-
+    /* Unlock the original read-lock and try again.  This time it should
+     * succeed.
+     */
+    if (flock (fd, LOCK_UN) < 0)
+        err_exit ("fd: unlock failed, aborting");
+    msg ("fd: unlocked");
     if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
-        err ("fd2: exclusive request failed");
-    else {
-        msg ("fd2: exclusive request succeeded, aborting");
-        goto done; 
-    }
+        err_exit ("fd2: write-lock failed, aborting");
+    msg ("fd2: write-locked");
+    if (flock (fd2, LOCK_UN) < 0)
+        err_exit ("fd2: unlock failed, aborting");
+    msg ("fd2: unlocked");
 
-    if (flock (fd, LOCK_UN) < 0) {
-        err ("fd: unlock failed, aborting");
-        goto done;
-    } else
-        msg ("fd: unlock succeeded");
-
-    if (flock (fd2, LOCK_EX | LOCK_NB) < 0) {
-        err ("fd2: exclusive request failed, aborting");
-        goto done;
-    } else
-        msg ("fd2: exclusive request succeeded");
-
-    if (flock (fd2, LOCK_UN) < 0) {
-        err ("fd2: unlock failed, aborting");
-        goto done;
-    } else
-        msg ("fd2: unlock succeeded");
-
-done:
-    msg ("cleaning up");
-    if (fd >= 0 && close (fd) < 0)
-        err_exit ("close");
-    if (fd2 >= 0 && close (fd2) < 0)
-        err_exit ("close");
+    msg ("success!");
     exit (0);
 }
 

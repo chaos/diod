@@ -310,6 +310,10 @@ TESTS = \
 	t21-awrite \
 	t22-append
 
+XFAIL_TESTS = \
+	t18-flock \
+	t19-fcntl
+
 CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \

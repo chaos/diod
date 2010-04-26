@@ -51,6 +51,15 @@ allocated ports to \fBdiod\fR.
 .I "-u, --runas-uid UID"
 Causes the server to drop root permission and run as UID.
 Only that user will be allowed to attach.
+.TP
+.I "-s, --stats PATH"
+Write I/O statistics to PATH as each file is closed.
+Each line represents one file I/O session and is of the form:
+.nf
+
+path:read-ops:read-bytes:write-ops:write-bytes:time-seconds
+
+.fi
 .SH "LOGGING"
 \fBdiod\fR logs all messages to the LOG_DAEMON syslog facility
 at LOG_ERR severity.

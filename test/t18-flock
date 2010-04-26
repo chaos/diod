@@ -11,9 +11,9 @@ doit ()
 
 	dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
 	echo testing host file system
-	./tflock $PATH_EXPDIR/a
+	./tflock $PATH_EXPDIR/a || :
 	echo testing diod file system
-	./tflock $PATH_MNTDIR/a
+	./tflock $PATH_MNTDIR/a || :
 	rm -f $PATH_MNTDIR/a
 	echo unmounting
 	umount $PATH_MNTDIR

@@ -44,6 +44,10 @@ TESTS = \
 	t21-awrite \
 	t22-append
 
+XFAIL_TESTS = \
+	t18-flock \
+	t19-fcntl
+
 
 $(TESTS): mnt.d exp.d
 

@@ -46,7 +46,7 @@ typedef struct {
     int n;
 } match_t;
 
-static match_t facility[] = {
+static match_t facility_tab[] = {
     { "daemon", LOG_DAEMON },
     { "local0", LOG_LOCAL0 },
     { "local1", LOG_LOCAL1 },
@@ -60,7 +60,7 @@ static match_t facility[] = {
     { NULL,     0},
 };
 
-static match_t level[] = {
+static match_t level_tab[] = {
     { "emerg",  LOG_EMERG },
     { "alert",  LOG_ALERT },
     { "crit",   LOG_CRIT },
@@ -123,7 +123,7 @@ diod_log_fini (void)
 static void
 _set_syslog_facility (char *s)
 {
-    int n = _match (s, facility);
+    int n = _match (s, facility_tab);
 
     if (n < 0)
         msg_exit ("unknown syslog facility: %s", s);
@@ -135,32 +135,30 @@ _set_syslog_facility (char *s)
 static void
 _set_syslog_level (char *s)
 {
-    int n = _match (s, level);
+    int n = _match (s, level_tab);
 
     if (n < 0)
-        msg_exit ("unknown syslog level : %s", s);
+        msg_exit ("unknown syslog level: %s", s);
     syslog_level = n;
 }
 
 void
 diod_log_set_dest (char *s)
 {
-    char *fstr = NULL, *lstr = NULL;
-    int len = strlen (s);
+    char *fac, *lev;
     FILE *f;
-    int n;
 
     if (strcmp (s, "syslog") == 0) {
         dest = DEST_SYSLOG;
     } else if (strncmp (s, "syslog:", 7) == 0) {
-        if (!(fstr = malloc (len + 1)) || !(lstr = malloc (len + 1)))
+        if (!(fac = strdup (s + 7)))
             msg_exit ("out of memory");
-        if ((n = sscanf (s, "syslog:%s:%s", fstr, lstr)) != 1 && n != 2)
-            msg_exit ("specify syslog DEST as syslog[:facility[:level]]");
-        if (fstr)
-            _set_syslog_facility (fstr);
-        if (lstr)
-            _set_syslog_level (lstr);
+        if ((lev = strchr (fac, ':')))
+            *lev++ = '\0';
+        _set_syslog_facility (fac);
+        if (lev)
+            _set_syslog_level (lev);
+        free (fac);
         dest = DEST_SYSLOG;
     } else {
         if (strcmp (s, "stderr") == 0)
@@ -189,8 +187,8 @@ diod_log_get_dest (void)
     switch (dest) {
         case DEST_SYSLOG:
             snprintf (res, PATH_MAX + 1, "syslog:%s:%s",
-                      _rmatch (syslog_facility, facility),
-                      _rmatch (syslog_level, level));
+                      _rmatch (syslog_facility, facility_tab),
+                      _rmatch (syslog_level, level_tab));
             break;
         case DEST_LOGF:
             snprintf (res, len, "%s", logf == stdout ? "stdout" :
