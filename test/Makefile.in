@@ -39,7 +39,8 @@ target_triplet = @target@
 check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsuppgrp$(EXEEXT) tfcntl$(EXEEXT) \
 	tstatfs$(EXEEXT) trename$(EXEEXT) tstat$(EXEEXT) \
-	tflock$(EXEEXT) tfcntl2$(EXEEXT) tconfig$(EXEEXT)
+	tflock$(EXEEXT) tflock2$(EXEEXT) tfcntl2$(EXEEXT) \
+	tfcntl3$(EXEEXT) tconfig$(EXEEXT)
 subdir = test
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -79,10 +80,26 @@ tfcntl2_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+tfcntl3_SOURCES = tfcntl3.c
+tfcntl3_OBJECTS = tfcntl3.$(OBJEXT)
+tfcntl3_LDADD = $(LDADD)
+tfcntl3_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
+	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tflock_OBJECTS = tflock.$(OBJEXT) $(am__objects_1)
 tflock_OBJECTS = $(am_tflock_OBJECTS)
 tflock_LDADD = $(LDADD)
 tflock_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
+	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+tflock2_SOURCES = tflock2.c
+tflock2_OBJECTS = tflock2.$(OBJEXT)
+tflock2_LDADD = $(LDADD)
+tflock2_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
 	$(top_builddir)/npfs/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -150,14 +167,16 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c $(tflock_SOURCES) \
-	$(trename_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
-	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
-DIST_SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c $(tflock_SOURCES) \
-	$(trename_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
-	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
+SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(trename_SOURCES) \
+	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
+	$(tsetuid_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
+DIST_SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(trename_SOURCES) \
+	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
+	$(tsetuid_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -304,15 +323,18 @@ TESTS = \
 	t15-fsync \
 	t16-stat \
 	t17-chmod \
-	t18-flock \
-	t19-fcntl \
+	t18-flock-twoproc \
+	t19-fcntl-twoproc \
 	t20-aread \
 	t21-awrite \
-	t22-append
+	t22-append \
+	t23-fcntl-oneproc \
+	t24-flock-oneproc
 
 XFAIL_TESTS = \
-	t18-flock \
-	t19-fcntl
+	t18-flock-twoproc \
+	t19-fcntl-twoproc \
+	t23-fcntl-oneproc
 
 CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
@@ -381,9 +403,15 @@ tfcntl$(EXEEXT): $(tfcntl_OBJECTS) $(tfcntl_DEPENDENCIES)
 tfcntl2$(EXEEXT): $(tfcntl2_OBJECTS) $(tfcntl2_DEPENDENCIES) 
 	@rm -f tfcntl2$(EXEEXT)
 	$(LINK) $(tfcntl2_LDFLAGS) $(tfcntl2_OBJECTS) $(tfcntl2_LDADD) $(LIBS)
+tfcntl3$(EXEEXT): $(tfcntl3_OBJECTS) $(tfcntl3_DEPENDENCIES) 
+	@rm -f tfcntl3$(EXEEXT)
+	$(LINK) $(tfcntl3_LDFLAGS) $(tfcntl3_OBJECTS) $(tfcntl3_LDADD) $(LIBS)
 tflock$(EXEEXT): $(tflock_OBJECTS) $(tflock_DEPENDENCIES) 
 	@rm -f tflock$(EXEEXT)
 	$(LINK) $(tflock_LDFLAGS) $(tflock_OBJECTS) $(tflock_LDADD) $(LIBS)
+tflock2$(EXEEXT): $(tflock2_OBJECTS) $(tflock2_DEPENDENCIES) 
+	@rm -f tflock2$(EXEEXT)
+	$(LINK) $(tflock2_LDFLAGS) $(tflock2_OBJECTS) $(tflock2_LDADD) $(LIBS)
 trename$(EXEEXT): $(trename_OBJECTS) $(trename_DEPENDENCIES) 
 	@rm -f trename$(EXEEXT)
 	$(LINK) $(trename_LDFLAGS) $(trename_OBJECTS) $(trename_LDADD) $(LIBS)
@@ -415,7 +443,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trename.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuidsupp.Po@am__quote@
@@ -676,6 +706,7 @@ uninstall-am: uninstall-info-am
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-info-am
 
+	t24-flock-oneproc
 
 $(TESTS): mnt.d exp.d
 

@@ -1,8 +1,5 @@
 /* tfcntl.c - pthreads contending for fcntl locks are like one process */
 
-/* Conclusion: fcntl locks must be handled by proxy processes, not threads.
- */
-
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>

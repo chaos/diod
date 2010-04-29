@@ -1,4 +1,4 @@
-/* tflock.c - test BSD adsvisory file locks */
+/* tflock.c - test BSD advisory file locks with multiple processes */
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -21,71 +21,125 @@
 
 #include "test.h"
 
-
 int
 main (int argc, char *argv[])
 {
     int fd = -1;
     int fd2 = -1;
+    pid_t pid;
+    int status;
 
     diod_log_init (argv[0]);
 
     if (argc != 2) {
-        fprintf (stderr, "Usage: tflock file");
+        msg ("Usage: tflock file");
         exit (1);
     }
 
-    /* Try to write-lock a file twice on different fd's in the same process.
-     * The second one should fail.
-     */
+    msg ("1. Conflicting write locks cannot be held by two processes");
     if ((fd = open (argv[1], O_RDWR)) < 0)
         err_exit ("open %s", argv[1]);
     msg ("fd: open");
-    if (flock (fd, LOCK_EX) < 0)
+    if (flock (fd, LOCK_EX | LOCK_NB) < 0)
         err_exit ("fd: write-lock failed, aborting");
     msg ("fd: write-locked");
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            msg ("child forked");
+            if ((fd2 = open (argv[1], O_RDWR)) < 0)
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            if (flock (fd2, LOCK_EX | LOCK_NB) < 0) {
+                err ("fd2: write-lock failed");
+                exit (0);
+            }
+            msg_exit ("fd2: write-locked");
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
+            break;
+    }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
 
-    if ((fd2 = open (argv[1], O_RDWR)) < 0)
+    msg ("2. Conflicting read and write locks cannot be held by two processes");
+    if ((fd = open (argv[1], O_RDWR)) < 0)
         err_exit ("open %s", argv[1]);
-    msg ("fd2: open");
-    if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
-        err ("fd2: second write-lock failed");
-    else
-        msg_exit ("fd2: write-locked twice, aborting");
+    msg ("fd: open");
+    if (flock (fd, LOCK_EX | LOCK_NB) < 0)
+        err_exit ("fd: write-lock failed, aborting");
+    msg ("fd: write-locked");
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            msg ("child forked");
+            if ((fd2 = open (argv[1], O_RDWR)) < 0)
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            if (flock (fd2, LOCK_SH | LOCK_NB) < 0) {
+                err ("fd2: read-lock failed");
+                exit (0);
+            }
+            msg_exit ("fd2: read-locked");
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
+            break;
+    }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
 
-    /* Downgrade the original write-lock to a read-lock and try again
-     * with a read-lock on the second fd.  This time it should succeed.
-     */
+    msg ("3. Conflicting read locks CAN be held by two processes");
+    if ((fd = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd: open");
     if (flock (fd, LOCK_SH | LOCK_NB) < 0)
-        err_exit ("fd: read-lock (downgrade) failed, aborting");
-    msg ("fd: read-locked (downgrade)");
-    if (flock (fd2, LOCK_SH | LOCK_NB) < 0)
-        err_exit ("fd2: read-lock failed, aborting");
-    msg ("fd2: read-locked");
+        err_exit ("fd: read-lock failed, aborting");
+    msg ("fd: read-locked");
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            msg ("child forked");
+            if ((fd2 = open (argv[1], O_RDWR)) < 0)
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            if (flock (fd, LOCK_SH | LOCK_NB) < 0)
+                err_exit ("fd2: read-lock failed");
+            msg ("fd2: read-locked");
+            exit (0);
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
+            break;
+    }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
 
-    /* Try to upgrade the second fd to a write-lock.  With the
-     * first fd still holding the read-lock.  This should fail.
-     */
-
-    if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
-        err ("fd2: write-lock failed");
-    else
-        msg_exit ("fd2: write-locked with a read lock held, aborting");
-
-    /* Unlock the original read-lock and try again.  This time it should
-     * succeed.
-     */
-    if (flock (fd, LOCK_UN) < 0)
-        err_exit ("fd: unlock failed, aborting");
-    msg ("fd: unlocked");
-    if (flock (fd2, LOCK_EX | LOCK_NB) < 0)
-        err_exit ("fd2: write-lock failed, aborting");
-    msg ("fd2: write-locked");
-    if (flock (fd2, LOCK_UN) < 0)
-        err_exit ("fd2: unlock failed, aborting");
-    msg ("fd2: unlocked");
-
-    msg ("success!");
     exit (0);
 }
 

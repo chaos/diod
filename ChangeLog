@@ -1,3 +1,7 @@
+2010-04-29 Jim Garlick <garlick@llnl.gov>
+
+	* test/* : Rework fcntl/flock advisory locking tests.
+
 2010-04-20 Jim Garlick <garlick@llnl.gov>
 
 	* test/t19*, test/tfcntl2.c : Clean up fcntl locking test.

@@ -1,4 +1,4 @@
-/* tfcntl2.c - test POSIX adsvisory record locks */
+/* tfcntl2.c - test POSIX adsvisory record locks with multiple processes */
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -20,14 +20,12 @@
 
 #include "test.h"
 
-#if 0
 static const struct flock sf_rdlock = {
     .l_type = F_RDLCK,
     .l_whence = SEEK_SET,
     .l_start = 0,
     .l_len = 0
 };
-#endif
 static const struct flock sf_wrlock = {
     .l_type = F_WRLCK,
     .l_whence = SEEK_SET,
@@ -57,33 +55,7 @@ main (int argc, char *argv[])
         exit (1);
     }
 
-    /* Try to take a write-lock on the same file from two fd's in the
-     * same process.  The second one should succeed.
-     */
-    if ((fd = open (argv[1], O_RDWR)) < 0)
-        err_exit ("open %s", argv[1]);
-    msg ("fd: open");
-    fl = sf_wrlock;
-    if (fcntl (fd, F_SETLKW, &fl) < 0)
-        err_exit ("fd: blocking write-lock failed, aborting");
-    msg ("fd: write-locked");
-    if ((fd2 = open (argv[1], O_RDWR)) < 0)
-        err_exit ("open %s", argv[1]);
-    msg ("fd2: open");
-    fl = sf_wrlock;
-    if (fcntl (fd2, F_SETLK, &fl) < 0)
-        err_exit ("fd2: write-lock failed");
-    msg ("fd2: write-locked");
-    if (close (fd2) < 0)
-        err_exit ("close fd2");
-    msg ("fd2: close");
-    if (close (fd) < 0)
-        err_exit ("close fd");
-    msg ("fd: close");
-   
-    /* Try to take a write-lock on the same file from two fd's in
-     * different processes.  The second one should fail.
-     */ 
+    msg ("1. Conflicting write locks cannot be held by two processes");
     if ((fd = open (argv[1], O_RDWR)) < 0)
         err_exit ("open %s", argv[1]);
     msg ("fd: open");
@@ -95,66 +67,180 @@ main (int argc, char *argv[])
         case -1:
             err_exit ("fork");
         case 0: /* child */
+            msg ("child forked");
             if ((fd2 = open (argv[1], O_RDWR)) < 0)
                 err_exit ("fd2 open %s", argv[1]);
-            msg ("fd2(child1): open");
+            msg ("fd2: open (child)");
             fl = sf_wrlock;
             if (fcntl (fd2, F_SETLK, &fl) < 0) {
-                err ("fd2(child1): write-lock failed");
+                err ("fd2: write-lock failed");
                 exit (0);
             }
-            msg_exit ("fd2(child1): write-locked");
+            msg_exit ("fd2: write-locked");
         default: /* parent */
             if (waitpid (pid, &status, 0) < 0)
                 err_exit ("waitpid");
             if (!WIFEXITED (status))
-                msg_exit ("child1 terminated without exit");
+                msg_exit ("child terminated without exit");
             if (WEXITSTATUS (status) != 0)
-                msg_exit ("child1 exited with %d, aborting",
+                msg_exit ("child exited with %d, aborting",
                           WEXITSTATUS (status));
-            msg ("child1 exited normally");
+            msg ("child exited normally");
             break;
     }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
 
-    /* Drop the lock in one process and try to take it in the other.
-     * Obviously this should work.
-     */
-    fl = sf_unlock;
+    msg ("2. Conflicting read and write locks cannot be held by two processes");
+    if ((fd = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd: open");
+    fl = sf_wrlock;
     if (fcntl (fd, F_SETLK, &fl) < 0)
-        err_exit ("fd: unlock failed");
-    msg ("fd: unlocked");
+        err_exit ("fd: write-lock failed, aborting");
+    msg ("fd: write-locked");
     switch (pid = fork ()) {
         case -1:
             err_exit ("fork");
         case 0: /* child */
+            msg ("child forked");
             if ((fd2 = open (argv[1], O_RDWR)) < 0)
-                err_exit ("open %s", argv[1]);
-            msg ("fd2(child2): open");
-            fl = sf_wrlock;
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            fl = sf_rdlock;
+            if (fcntl (fd2, F_SETLK, &fl) < 0) {
+                err ("fd2: read-lock failed");
+                exit (0);
+            }
+            msg_exit ("fd2: read-locked");
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
+            break;
+    }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
+
+    msg ("3. Conflicting read locks CAN be held by two processes");
+    if ((fd = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd: open");
+    fl = sf_rdlock;
+    if (fcntl (fd, F_SETLK, &fl) < 0)
+        err_exit ("fd: read-lock failed, aborting");
+    msg ("fd: read-locked");
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            msg ("child forked");
+            if ((fd2 = open (argv[1], O_RDWR)) < 0)
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            fl = sf_rdlock;
             if (fcntl (fd2, F_SETLK, &fl) < 0)
-                err_exit ("fd2(child2): write-lock failed (UNEXPECTED)");
-            msg ("fd2(child2): write-locked");
+                err_exit ("fd2: read-lock failed");
+            msg ("fd2: read-locked");
             exit (0);
         default: /* parent */
             if (waitpid (pid, &status, 0) < 0)
                 err_exit ("waitpid");
             if (!WIFEXITED (status))
-                msg_exit ("child2 terminated without exit");
+                msg_exit ("child terminated without exit");
             if (WEXITSTATUS (status) != 0)
-                msg_exit ("child2 exited with %d", WEXITSTATUS (status));
-            msg ("child2 exited normally");
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
             break;
     }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
 
-    /* After implicit unlock in the child (due to exit == clunk), lock
-     * again in the parent.  
-     */
+    msg ("4. Non-conflicting write locks CAN be held by two processes");
+    if ((fd = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd: open");
     fl = sf_wrlock;
-    if (fcntl (fd, F_SETLKW, &fl) < 0)
-        err_exit ("fd: write-lock failed, aborting");
-    msg ("fd: write-locked");
+    fl.l_len = 1;
+    if (fcntl (fd, F_SETLK, &fl) < 0)
+        err_exit ("fd: write-lock 1 byte failed, aborting");
+    msg ("fd: write-locked 1 byte");
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            msg ("child forked");
+            if ((fd2 = open (argv[1], O_RDWR)) < 0)
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            fl = sf_wrlock;
+            fl.l_start = 1;
+            if (fcntl (fd2, F_SETLK, &fl) < 0)
+                err_exit ("fd2: write-lock rest of file failed");
+            msg ("fd2: write-locked rest of file");
+            exit (0);
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
+            break;
+    }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
 
-    msg ("success!");
+    msg ("5. Non-conflicting read and write locks CAN be held by two processes");
+    if ((fd = open (argv[1], O_RDWR)) < 0)
+        err_exit ("open %s", argv[1]);
+    msg ("fd: open");
+    fl = sf_wrlock;
+    fl.l_len = 1;
+    if (fcntl (fd, F_SETLK, &fl) < 0)
+        err_exit ("fd: write-lock 1 byte failed, aborting");
+    msg ("fd: write-locked 1 byte");
+    switch (pid = fork ()) {
+        case -1:
+            err_exit ("fork");
+        case 0: /* child */
+            msg ("child forked");
+            if ((fd2 = open (argv[1], O_RDWR)) < 0)
+                err_exit ("fd2 open %s", argv[1]);
+            msg ("fd2: open (child)");
+            fl = sf_rdlock;
+            fl.l_start = 1;
+            if (fcntl (fd2, F_SETLK, &fl) < 0)
+                err_exit ("fd2: read-lock rest of file failed");
+            msg ("fd2: read-locked rest of file");
+            exit (0);
+        default: /* parent */
+            if (waitpid (pid, &status, 0) < 0)
+                err_exit ("waitpid");
+            if (!WIFEXITED (status))
+                msg_exit ("child terminated without exit");
+            if (WEXITSTATUS (status) != 0)
+                msg_exit ("child exited with %d, aborting",
+                          WEXITSTATUS (status));
+            msg ("child exited normally");
+            break;
+    }
+    if (close (fd) < 0)
+        err_exit ("close fd");
+    msg ("fd: closed");
+
     exit (0);
 }
 

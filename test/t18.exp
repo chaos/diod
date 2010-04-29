@@ -3,33 +3,40 @@ mounting
 1024+0 records in
 1024+0 records out
 testing host file system
-tflock: fd: blocking exclusive request succeeded
-tflock: fd2: exclusive request failed: Resource temporarily unavailable
-tflock: fd: shared request (downgrade) succeeded
-tflock: fd2: shared request succeeded
-tflock: fd2: exclusive request failed: Resource temporarily unavailable
-tflock: fd: unlock succeeded
-tflock: fd2: exclusive request succeeded
-tflock: fd2: unlock succeeded
-tflock: cleaning up
+tflock: 1. Conflicting write locks cannot be held by two processes
+tflock: fd: open
+tflock: fd: write-locked
+tflock: child forked
+tflock: fd2: open (child)
+tflock: fd2: write-lock failed: Resource temporarily unavailable
+tflock: child exited normally
+tflock: fd: closed
+tflock: 2. Conflicting read and write locks cannot be held by two processes
+tflock: fd: open
+tflock: fd: write-locked
+tflock: child forked
+tflock: fd2: open (child)
+tflock: fd2: read-lock failed: Resource temporarily unavailable
+tflock: child exited normally
+tflock: fd: closed
+tflock: 3. Conflicting read locks CAN be held by two processes
+tflock: fd: open
+tflock: fd: read-locked
+tflock: child forked
+tflock: fd2: open (child)
+tflock: fd2: read-locked
+tflock: child exited normally
+tflock: fd: closed
 testing diod file system
-diod: diod_flock: adding LOCK_NB to request
-diod: flock LOCK_EX | LOCK_NB: Success
-tflock: fd: blocking exclusive request succeeded
-diod: flock LOCK_EX | LOCK_NB: Resource temporarily unavailable
-tflock: fd2: exclusive request failed: Resource temporarily unavailable
-diod: flock LOCK_SH | LOCK_NB: Success
-tflock: fd: shared request (downgrade) succeeded
-diod: flock LOCK_SH | LOCK_NB: Success
-tflock: fd2: shared request succeeded
-diod: flock LOCK_EX | LOCK_NB: Resource temporarily unavailable
-tflock: fd2: exclusive request failed: Resource temporarily unavailable
-diod: flock LOCK_UN: Success
-tflock: fd: unlock succeeded
-diod: flock LOCK_EX | LOCK_NB: Success
-tflock: fd2: exclusive request succeeded
-diod: flock LOCK_UN: Success
-tflock: fd2: unlock succeeded
-tflock: cleaning up
+tflock: 1. Conflicting write locks cannot be held by two processes
+tflock: fd: open
+diod: flock fid 3 (fd=7) LOCK_EX | LOCK_NB: Success
+tflock: fd: write-locked
+tflock: child forked
+tflock: fd2: open (child)
+diod: flock fid 4 (fd=8) LOCK_EX | LOCK_NB: Success
+tflock: fd2: write-locked
+tflock: child exited with 1, aborting
 unmounting
 waiting for diod to terminate
+THIS IS NOT RIGHT

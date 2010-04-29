@@ -8,7 +8,9 @@ check_PROGRAMS = \
 	trename \
 	tstat \
 	tflock \
+	tflock2 \
 	tfcntl2 \
+	tfcntl3 \
 	tconfig
 
 TESTS_ENVIRONMENT = env
@@ -38,15 +40,19 @@ TESTS = \
 	t15-fsync \
 	t16-stat \
 	t17-chmod \
-	t18-flock \
-	t19-fcntl \
+	t18-flock-twoproc \
+	t19-fcntl-twoproc \
 	t20-aread \
 	t21-awrite \
-	t22-append
+	t22-append \
+	t23-fcntl-oneproc \
+	t24-flock-oneproc
 
 XFAIL_TESTS = \
-	t18-flock \
-	t19-fcntl
+	t18-flock-twoproc \
+	t19-fcntl-twoproc \
+	t23-fcntl-oneproc
+	t24-flock-oneproc
 
 
 $(TESTS): mnt.d exp.d

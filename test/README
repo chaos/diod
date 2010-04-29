@@ -69,11 +69,13 @@ t15-fsync
 	Set all the mode bits (7777) on a file and directory on server
 	and verify that they are reflected in client stat, the do the reverse.
 
-18-flock
-	Simple test to exercise BSD advisory file locks.
+18-flock-twoproc
+	Simple test to check that BSD advisory file locks are properly
+	arbitrated between two processes.
 
-19-fcntl
-	Simple test to exercise POSIX advisory record locks.
+19-fcntl-twoproc
+	Simple test to check that POSIX advisory record locks are properly
+	arbitrated between two processes.
 
 t20-aread
 	Read a 4MB file with 1MB I/O's with debugging on.
@@ -85,3 +87,11 @@ t22-append
 	Append to a file.  I added this test because I was momentarily
 	freaked out by a pwrite at offset 0 during an append, but it turns
 	out this is OK when the device is opened in append mode.
+
+t23-fcntl-oneproc
+	Simple test to check that POSIX advisory record locks are handled
+	as advertised within one process.
+
+t24-flock-oneproc
+	Simple test to check that BSD advisory file locks are handled
+	as advertised within one process.

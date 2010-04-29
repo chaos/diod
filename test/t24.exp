@@ -1,0 +1,13 @@
+starting diod
+mounting
+1024+0 records in
+1024+0 records out
+testing host file system
+second flock succeeded - FAIL
+testing diod file system
+diod: flock fid 3 (fd=7) LOCK_EX | LOCK_NB: Success
+diod: flock fid 4 (fd=8) LOCK_EX | LOCK_NB: Success
+second flock succeeded - FAIL
+THIS IS WRONG
+unmounting
+waiting for diod to terminate
