@@ -1,0 +1,29 @@
+#!/bin/bash -e
+
+doit ()
+{
+	echo starting diod
+	$PATH_DIOD -s $1 -d 0x08 -l "localhost:2006" -x -m -e $PATH_EXPDIR &
+	sleep 1
+	echo mounting
+	$PATH_DIODMOUNT -d -o uname=root,port=2006,version=9p2000.L \
+			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
+
+	dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
+	echo testing host file system
+	./tfcntl3 $PATH_EXPDIR/a || :
+	echo testing diod file system
+	./tfcntl3 $PATH_MNTDIR/a || :
+	rm -f $PATH_MNTDIR/a
+	echo unmounting
+	umount $PATH_MNTDIR
+	echo waiting for diod to terminate
+	wait
+}
+
+TEST=$(basename $0 | cut -d- -f1)
+test $(id -u) == 0 || exit 77 #skip if not root
+
+doit $TEST.stats >$TEST.out 2>&1
+
+diff $TEST.exp $TEST.out >$TEST.diff
