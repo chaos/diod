@@ -1,3 +1,9 @@
+1.0-pre7:
+        Fix -L parsing bug that prevented diodctl from starting diod when
+        not in debug mode.
+        Drop diodmount -U option.
+        Improved fcntl/flock testing in 'make check'.
+
 1.0-pre6:
 	Add diod -s filename option to capture I/O stats.
 	Log any I/O errors to syslog, other minor logging changes.

@@ -9,7 +9,7 @@ diodctl \- distributed I/O daemon superserver
 dynamically starts \fBdiod\fR servers when requested by \fBdiodmount\fR.
 It can also supply a list of exported file systems.
 .LP
-Configuration is read from the diod.conf (5) config file.
+Configuration is read from the diodctl.conf (5) config file.
 Some configuration can be overridden on the command line, as described below.
 .SH OPTIONS
 .TP
@@ -54,8 +54,8 @@ at LOG_ERR severity.
 .SH "FILES"
 @X_SBINDIR@/diodctl
 .br
-@X_SYSCONFDIR@/diod.conf
+@X_SYSCONFDIR@/diodctl.conf
 .br
 @X_LOCALSTATEDIR@/run/diodctl.pid
 .SH "SEE ALSO"
-diod (8), diodmount (8), diod.conf (5), hosts_access (5)
+diod (8), diodmount (8), diodctl.conf (5), hosts_access (5)

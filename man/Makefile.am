@@ -3,7 +3,6 @@ man8_MANS = \
 	diodctl.8 \
 	diodmount.8
 man5_MANS = \
-	diod.conf.5 \
 	9p-attach.5 \
 	9p-clunk.5 \
 	9p-error.5 \
@@ -19,6 +18,6 @@ man5_MANS = \
 	9p-statfs.5 \
 	9p-version.5 \
 	9p-walk.5 \
-	diod.conf.5
+	diodctl.conf.5
 
 EXTRA_DIST = $(man8_MANS) $(man5_MANS)

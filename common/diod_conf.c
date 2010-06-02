@@ -586,7 +586,7 @@ diod_conf_init_config_file (char *path)
     static char buf[PATH_MAX];
 
     if (!path) {
-        snprintf (buf, sizeof (buf), "%s/diod.conf", X_SYSCONFDIR);
+        snprintf (buf, sizeof (buf), "%s/diodctl.conf", X_SYSCONFDIR);
         if (access (buf, R_OK) == 0)
             path = buf;  /* missing default config file is not fatal */
     }
