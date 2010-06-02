@@ -1,5 +1,7 @@
 2010-06-02 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre7
+
 	* test/t09-mount-9P2000, test/tstatfs.c : Fix spontaneous test failure
 	per issue #3.
 
