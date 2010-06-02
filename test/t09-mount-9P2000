@@ -9,7 +9,7 @@ doit ()
 	$PATH_DIODMOUNT -d -o uname=root,port=2006,version=9p2000 \
 			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
 	echo running statfs comparison
-	./tstatfs $PATH_EXPDIR $PATH_MNTDIR || :  # should fail 
+	./tstatfs $PATH_EXPDIR $PATH_MNTDIR ffree || :  # should fail 
 
 	echo unmounting
 	umount $PATH_MNTDIR

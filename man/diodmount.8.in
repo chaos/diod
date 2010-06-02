@@ -13,8 +13,7 @@ forwarding service for Linux clusters.
 Usually \fBdiodmount\fR first interacts with the \fBdiodctl\fR superserver,
 which dynamically starts servers and lists exported file systems.
 Then it uses this information to perform one or more \fBdiod\fR mounts.
-All file system interactions are authenticated with the Munge UID 'N' GID
-Emporium.
+All file system interactions are authenticated with MUNGE.
 .LP
 This command must be run as root.
 .SH OPTIONS
