@@ -3,6 +3,8 @@
 	* test/t09-mount-9P2000, test/tstatfs.c : Fix spontaneous test failure
 	per issue #3.
 
+	* diodmount/diodmount.c, man/diodmount.8.in : Remove -U option.
+
 2010-05-27 Jim Garlick <garlick@llnl.gov>
 
 	* test/t23-fcntl-oneproc : Add test I forgot to check in.

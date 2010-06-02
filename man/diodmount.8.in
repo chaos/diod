@@ -23,11 +23,6 @@ Mount all file systems exported by HOST (omit aname path).
 If a directory argument is specified, it will be prepended to
 the mount points.
 .TP
-.I "-U, --unmount-all"
-Unmount all file systems exported by HOST (omit aname path).
-If a directory argument is specified, it will be prepended to
-the mount points.
-.TP
 .I "-u, --mount-user USER"
 Start a private server for USER if one is not already running,
 and mount so that only USER can access the file system.

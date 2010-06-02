@@ -70,12 +70,11 @@ typedef struct {
     char *port;
 } query_t;
 
-#define OPTIONS "aUu:no:O:TvdfDj:"
+#define OPTIONS "au:no:O:TvdfDj:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"all",             no_argument,         0, 'a'},
-    {"unmount-all",     no_argument,         0, 'U'},
     {"mount-user",      required_argument,   0, 'u'},
     {"no-mtab",         no_argument,         0, 'n'},
     {"diod-options",    required_argument,   0, 'o'},
@@ -111,7 +110,6 @@ usage (void)
     fprintf (stderr,
 "Usage: diodmount [OPTIONS] device [directory]\n"
 "   -a,--all                      mount all exported file systems\n"
-"   -U,--unmount-all              unmount all exported file systems\n"
 "   -u,--mount-user USER          set up the mount so only USER can use it\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
@@ -133,7 +131,6 @@ main (int argc, char *argv[])
     char *device;
     int c;
     int aopt = 0;
-    int Uopt = 0;
     int nopt = 0;
     int vopt = 0;
     int dopt = 0;
@@ -154,9 +151,6 @@ main (int argc, char *argv[])
                 break;
             case 'D':   /* --create-directories */
                 Dopt = 1;
-                break;
-            case 'U':   /* --unmount-all */
-                Uopt = 1;
                 break;
             case 'u':   /* --mount-user USER */
                 uopt = optarg;
@@ -191,11 +185,7 @@ main (int argc, char *argv[])
     }
     if (aopt && dopt)
         msg_exit ("--all and --direct are incompatible options");
-    if (Uopt && (aopt||uopt||oopt||dopt||fopt))
-        msg_exit ("--unmount-all cannot be used with -a -u -o -d or -f");
-    if (Uopt && !nopt)
-        msg_exit ("--unmount-all requires -n option for now");
-    if (aopt || Uopt) {/* Usage: diodmount [options] -a hostname [dir] */
+    if (aopt) {/* Usage: diodmount [options] -a hostname [dir] */
         if (optind != argc - 1 && optind != argc - 2)
             usage ();
         device = argv[optind++];
@@ -227,10 +217,8 @@ main (int argc, char *argv[])
     /* Mount everything, obtaining port number and exports from diodctl.
      * If directory is specified, use as the root for mount points, else /.
      * If -D option, create mount points as needed.
-     * If -U option, unmount instead of mount.
-     * FIXME: need code to remove mtab entries on umount.
      */
-    if (aopt || Uopt) {
+    if (aopt) {
         query_t *ctl = _diodctl_query (ip, Oopt, vopt, aopt, jopt);
         ListIterator itr;
         char *el;
@@ -243,14 +231,7 @@ main (int argc, char *argv[])
             char path[PATH_MAX];
 
             snprintf (path, sizeof (path), "%s%s", dir ? dir : "", el);
-            if (aopt)
-                _diod_mount (ip, path, el, ctl->port, oopt, vopt, fopt);
-            else if (Uopt) {
-                if (vopt)
-                    msg ("umount %s", path); 
-                if (!fopt && umount (path) < 0)
-                    err ("error unmounting %s", path);
-            }
+            _diod_mount (ip, path, el, ctl->port, oopt, vopt, fopt);
         }
         list_iterator_destroy (itr);
 
