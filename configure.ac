@@ -73,7 +73,7 @@ AC_CONFIG_FILES( \
   man/diod.8 \
   man/diodctl.8 \
   man/diodmount.8 \
-  man/diod.conf.5 \
+  man/diodctl.conf.5 \
   man/9p-attach.5 \
   man/9p-flush.5 \
   man/9p-flock.5 \

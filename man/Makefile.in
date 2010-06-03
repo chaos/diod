@@ -46,7 +46,7 @@ DIST_COMMON = $(srcdir)/9p-attach.5.in $(srcdir)/9p-clunk.5.in \
 	$(srcdir)/9p-statfs.5.in $(srcdir)/9p-version.5.in \
 	$(srcdir)/9p-walk.5.in $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/diod.8.in \
-	$(srcdir)/diod.conf.5.in $(srcdir)/diodctl.8.in \
+	$(srcdir)/diodctl.8.in $(srcdir)/diodctl.conf.5.in \
 	$(srcdir)/diodmount.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
@@ -58,7 +58,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diod.8 diodctl.8 diodmount.8 diod.conf.5 \
+CONFIG_CLEAN_FILES = diod.8 diodctl.8 diodmount.8 diodctl.conf.5 \
 	9p-attach.5 9p-flush.5 9p-flock.5 9p-lock.5 9p-read.5 \
 	9p-version.5 9p-clunk.5 9p-intro.5 9p-remove.5 9p-walk.5 \
 	9p-error.5 9p-open.5 9p-rename.5 9p-stat.5 9p-statfs.5
@@ -194,7 +194,6 @@ man8_MANS = \
 	diodmount.8
 
 man5_MANS = \
-	diod.conf.5 \
 	9p-attach.5 \
 	9p-clunk.5 \
 	9p-error.5 \
@@ -210,7 +209,7 @@ man5_MANS = \
 	9p-statfs.5 \
 	9p-version.5 \
 	9p-walk.5 \
-	diod.conf.5
+	diodctl.conf.5
 
 EXTRA_DIST = $(man8_MANS) $(man5_MANS)
 all: all-am
@@ -251,7 +250,7 @@ diodctl.8: $(top_builddir)/config.status $(srcdir)/diodctl.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 diodmount.8: $(top_builddir)/config.status $(srcdir)/diodmount.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-diod.conf.5: $(top_builddir)/config.status $(srcdir)/diod.conf.5.in
+diodctl.conf.5: $(top_builddir)/config.status $(srcdir)/diodctl.conf.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 9p-attach.5: $(top_builddir)/config.status $(srcdir)/9p-attach.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@

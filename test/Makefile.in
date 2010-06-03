@@ -40,7 +40,7 @@ check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsuppgrp$(EXEEXT) tfcntl$(EXEEXT) \
 	tstatfs$(EXEEXT) trename$(EXEEXT) tstat$(EXEEXT) \
 	tflock$(EXEEXT) tflock2$(EXEEXT) tfcntl2$(EXEEXT) \
-	tfcntl3$(EXEEXT) tconfig$(EXEEXT)
+	tfcntl3$(EXEEXT) tconfig$(EXEEXT) tfsgid$(EXEEXT)
 subdir = test
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -100,6 +100,14 @@ tflock2_SOURCES = tflock2.c
 tflock2_OBJECTS = tflock2.$(OBJEXT)
 tflock2_LDADD = $(LDADD)
 tflock2_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
+	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_tfsgid_OBJECTS = tfsgid.$(OBJEXT) $(am__objects_1)
+tfsgid_OBJECTS = $(am_tfsgid_OBJECTS)
+tfsgid_LDADD = $(LDADD)
+tfsgid_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
 	$(top_builddir)/npfs/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -168,15 +176,15 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c tfcntl3.c \
-	$(tflock_SOURCES) tflock2.c $(trename_SOURCES) \
-	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
-	$(tsetuid_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
-	$(tsuppgrp_SOURCES)
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
+	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
 DIST_SOURCES = tconfig.c $(tfcntl_SOURCES) tfcntl2.c tfcntl3.c \
-	$(tflock_SOURCES) tflock2.c $(trename_SOURCES) \
-	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
-	$(tsetuid_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
-	$(tsuppgrp_SOURCES)
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) $(tstat_SOURCES) \
+	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -329,12 +337,15 @@ TESTS = \
 	t21-awrite \
 	t22-append \
 	t23-fcntl-oneproc \
-	t24-flock-oneproc
+	t24-flock-oneproc \
+	t25-create-gid
 
 XFAIL_TESTS = \
 	t18-flock-twoproc \
 	t19-fcntl-twoproc \
-	t23-fcntl-oneproc
+	t23-fcntl-oneproc \
+	t24-flock-oneproc \
+	t25-create-gid
 
 CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
@@ -358,6 +369,7 @@ tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
+tfsgid_SOURCES = tfsgid.c $(common_sources)
 all: all-am
 
 .SUFFIXES:
@@ -412,6 +424,9 @@ tflock$(EXEEXT): $(tflock_OBJECTS) $(tflock_DEPENDENCIES)
 tflock2$(EXEEXT): $(tflock2_OBJECTS) $(tflock2_DEPENDENCIES) 
 	@rm -f tflock2$(EXEEXT)
 	$(LINK) $(tflock2_LDFLAGS) $(tflock2_OBJECTS) $(tflock2_LDADD) $(LIBS)
+tfsgid$(EXEEXT): $(tfsgid_OBJECTS) $(tfsgid_DEPENDENCIES) 
+	@rm -f tfsgid$(EXEEXT)
+	$(LINK) $(tfsgid_LDFLAGS) $(tfsgid_OBJECTS) $(tfsgid_LDADD) $(LIBS)
 trename$(EXEEXT): $(trename_OBJECTS) $(trename_DEPENDENCIES) 
 	@rm -f trename$(EXEEXT)
 	$(LINK) $(trename_LDFLAGS) $(trename_OBJECTS) $(trename_LDADD) $(LIBS)
@@ -446,6 +461,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfsgid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trename.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuidsupp.Po@am__quote@
@@ -706,7 +722,6 @@ uninstall-am: uninstall-info-am
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am uninstall-info-am
 
-	t24-flock-oneproc
 
 $(TESTS): mnt.d exp.d
 

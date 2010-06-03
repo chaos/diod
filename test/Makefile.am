@@ -11,7 +11,8 @@ check_PROGRAMS = \
 	tflock2 \
 	tfcntl2 \
 	tfcntl3 \
-	tconfig
+	tconfig \
+	tfsgid
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
@@ -46,13 +47,15 @@ TESTS = \
 	t21-awrite \
 	t22-append \
 	t23-fcntl-oneproc \
-	t24-flock-oneproc
+	t24-flock-oneproc \
+	t25-create-gid
 
 XFAIL_TESTS = \
 	t18-flock-twoproc \
 	t19-fcntl-twoproc \
-	t23-fcntl-oneproc
-	t24-flock-oneproc
+	t23-fcntl-oneproc \
+	t24-flock-oneproc \
+	t25-create-gid
 
 
 $(TESTS): mnt.d exp.d
@@ -85,6 +88,7 @@ tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
+tfsgid_SOURCES = tfsgid.c $(common_sources)
 
 clean: clean-am
 	-rmdir mnt.d
