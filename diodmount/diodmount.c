@@ -59,6 +59,10 @@
 #include <pwd.h>
 #include <libgen.h>
 
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
+
 #include "npfs.h"
 #include "list.h"
 #include "diod_log.h"
