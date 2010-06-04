@@ -1,0 +1,8 @@
+starting diod
+mounting
+creating file with mode 0:0
+chgrp to gid 42
+before: 0
+after: 42
+unmounting
+waiting for diod to terminate

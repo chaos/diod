@@ -95,3 +95,10 @@ t23-fcntl-oneproc
 t24-flock-oneproc
 	Simple test to check that BSD advisory file locks are handled
 	as advertised within one process.
+
+t25-create-gid
+	Verify that files are created with the users effective gid.
+	Verify that files created in a setgid directory have the parent gid.
+
+t26-chgrp
+	Verify that chgrp works.

@@ -48,14 +48,14 @@ TESTS = \
 	t22-append \
 	t23-fcntl-oneproc \
 	t24-flock-oneproc \
-	t25-create-gid
+	t25-create-gid \
+	t26-chgrp
 
 XFAIL_TESTS = \
 	t18-flock-twoproc \
 	t19-fcntl-twoproc \
 	t23-fcntl-oneproc \
-	t24-flock-oneproc \
-	t25-create-gid
+	t24-flock-oneproc
 
 
 $(TESTS): mnt.d exp.d

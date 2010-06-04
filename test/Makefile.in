@@ -338,7 +338,8 @@ TESTS = \
 	t22-append \
 	t23-fcntl-oneproc \
 	t24-flock-oneproc \
-	t25-create-gid
+	t25-create-gid \
+	t26-chgrp
 
 XFAIL_TESTS = \
 	t18-flock-twoproc \

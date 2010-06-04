@@ -1295,10 +1295,10 @@ diod_wstat(Npfid *fid, Npstat *st)
         }
     }
 
-    /* chown */
+    /* chgrp */
     if (st->n_uid != (u32)~0 || st->n_gid != (u32)~0) {
         uid_t uid = st->n_uid != (u32)~0 ? st->n_uid : -1;
-        gid_t gid = st->n_gid != (u32)~0 ? st->n_uid : -1;
+        gid_t gid = st->n_gid != (u32)~0 ? st->n_gid : -1;
 
         if (chown(f->path, uid, gid) < 0) {
             np_uerror(errno);

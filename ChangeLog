@@ -1,5 +1,11 @@
 2010-06-03 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre8
+
+	* test/t26* : Add test to verify that chgrp works.
+
+	* diod/ops.c : Fix bug in wstat that broke chgrp.
+
 	* test/t25*, test/tfsgid.c : Add test to verify that files are created
 	with the appropriate gid.
 
