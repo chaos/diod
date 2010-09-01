@@ -1,5 +1,7 @@
 2010-09-01 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre10
+
 	* npfs/libnpfs/fcall.c : Revert gcc-4.4 warning fixes.
 
 2010-06-04 Jim Garlick <garlick@llnl.gov>
