@@ -231,8 +231,7 @@ _accept_one (Npsrv *srv, int fd, int wrap)
         return;
     }
     if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            host, sizeof(host), NULL, 0,
-                            NI_NAMEREQD))) {
+                            host, sizeof(host), NULL, 0, 0))) {
         msg ("getnameinfo: %s", gai_strerror(res));
         close (fd);
         return;
