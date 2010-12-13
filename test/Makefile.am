@@ -68,11 +68,11 @@ CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
-        -I../npfs/include -I../liblsd -I../common
+        -I../libnpfs -I../liblsd -I../libdiod
 
 
-LDADD = $(top_builddir)/common/libdiod.a \
-        $(top_builddir)/npfs/libnpfs/libnpfs.a \
+LDADD = $(top_builddir)/libdiod/libdiod.a \
+        $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 

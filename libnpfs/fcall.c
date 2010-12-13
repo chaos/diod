@@ -845,7 +845,7 @@ Npfcall *
 np_rename(Npreq *req, Npfcall *tc)
 {
 	Npconn *conn;
-	Npfid *fid, *newdirfid;
+	Npfid *fid, *newdirfid = NULL;
 	Npfcall *rc;
 
 	rc = NULL;

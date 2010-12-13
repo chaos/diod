@@ -130,7 +130,7 @@ np_srv_start(Npsrv *srv)
 void
 np_srv_shutdown(Npsrv *srv, int shutconns)
 {
-	Npconn *conn, *conn1;
+	Npconn *conn = NULL, *conn1;
 
 	pthread_mutex_lock(&srv->lock);
 	srv->shuttingdown = 1;
@@ -491,7 +491,7 @@ static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
 	int min_msize = IOHDRSZ;
-	int proto_ver;
+	int proto_ver = NPFS_PROTO_2000L;
 	char *ver = NULL;
 	Npfcall *rc = NULL;
 

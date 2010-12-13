@@ -57,8 +57,8 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_diodmount_OBJECTS = diodmount.$(OBJEXT) opt.$(OBJEXT)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
 am__DEPENDENCIES_1 =
-diodmount_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+diodmount_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -194,11 +194,11 @@ target_os = @target_os@
 target_vendor = @target_vendor@
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
-	-I../npfs/include -I../liblsd -I../common
+	-I../libnpfs -I../liblsd -I../libdiod
 
 diodmount_LDADD = \
-	$(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 

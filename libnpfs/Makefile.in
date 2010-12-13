@@ -37,8 +37,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-sbin_PROGRAMS = diod$(EXEEXT)
-subdir = diod
+subdir = libnpfs
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
@@ -51,17 +50,17 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
-am__installdirs = "$(DESTDIR)$(sbindir)"
-sbinPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
-PROGRAMS = $(sbin_PROGRAMS)
-am_diod_OBJECTS = diod.$(OBJEXT) ops.$(OBJEXT)
-diod_OBJECTS = $(am_diod_OBJECTS)
-am__DEPENDENCIES_1 =
-diod_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpfs/libnpfs.a \
-	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+LIBRARIES = $(noinst_LIBRARIES)
+AR = ar
+ARFLAGS = cru
+libnpfs_a_AR = $(AR) $(ARFLAGS)
+libnpfs_a_LIBADD =
+am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
+	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) file.$(OBJEXT) \
+	fmt.$(OBJEXT) np.$(OBJEXT) pipesrv.$(OBJEXT) rdmasrv.$(OBJEXT) \
+	rdmatrans.$(OBJEXT) srv.$(OBJEXT) trans.$(OBJEXT) \
+	user.$(OBJEXT)
+libnpfs_a_OBJECTS = $(am_libnpfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -69,8 +68,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diod_SOURCES)
-DIST_SOURCES = $(diod_SOURCES)
+SOURCES = $(libnpfs_a_SOURCES)
+DIST_SOURCES = $(libnpfs_a_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -193,19 +192,25 @@ target_cpu = @target_cpu@
 target_os = @target_os@
 target_vendor = @target_vendor@
 AM_CFLAGS = @GCCWARN@
-AM_CPPFLAGS = \
-	-I../libnpfs -I../liblsd -I../libdiod
-
-diod_LDADD = \
-	$(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpfs/libnpfs.a \
-	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
-
-diod_SOURCES = \
-	diod.c \
-	ops.c \
-	ops.h
+AM_CPPFLAGS = 
+noinst_LIBRARIES = libnpfs.a
+libnpfs_a_SOURCES = \
+	conn.c \
+	error.c \
+	fcall.c \
+	fdtrans.c \
+	fidpool.c \
+	file.c \
+	fmt.c \
+	np.c \
+	pipesrv.c \
+	rdmasrv.c \
+	rdmatrans.c \
+	srv.c \
+	trans.c \
+	user.c \
+	npfs.h \
+	npfsimpl.h
 
 all: all-am
 
@@ -220,9 +225,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  diod/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu  libnpfs/Makefile'; \
 	cd $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu  diod/Makefile
+	  $(AUTOMAKE) --gnu  libnpfs/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -240,32 +245,13 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
-install-sbinPROGRAMS: $(sbin_PROGRAMS)
-	@$(NORMAL_INSTALL)
-	test -z "$(sbindir)" || $(mkdir_p) "$(DESTDIR)$(sbindir)"
-	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
-	  p1=`echo $$p|sed 's/$(EXEEXT)$$//'`; \
-	  if test -f $$p \
-	  ; then \
-	    f=`echo "$$p1" | sed 's,^.*/,,;$(transform);s/$$/$(EXEEXT)/'`; \
-	   echo " $(INSTALL_PROGRAM_ENV) $(sbinPROGRAMS_INSTALL) '$$p' '$(DESTDIR)$(sbindir)/$$f'"; \
-	   $(INSTALL_PROGRAM_ENV) $(sbinPROGRAMS_INSTALL) "$$p" "$(DESTDIR)$(sbindir)/$$f" || exit 1; \
-	  else :; fi; \
-	done
 
-uninstall-sbinPROGRAMS:
-	@$(NORMAL_UNINSTALL)
-	@list='$(sbin_PROGRAMS)'; for p in $$list; do \
-	  f=`echo "$$p" | sed 's,^.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/'`; \
-	  echo " rm -f '$(DESTDIR)$(sbindir)/$$f'"; \
-	  rm -f "$(DESTDIR)$(sbindir)/$$f"; \
-	done
-
-clean-sbinPROGRAMS:
-	-test -z "$(sbin_PROGRAMS)" || rm -f $(sbin_PROGRAMS)
-diod$(EXEEXT): $(diod_OBJECTS) $(diod_DEPENDENCIES) 
-	@rm -f diod$(EXEEXT)
-	$(LINK) $(diod_LDFLAGS) $(diod_OBJECTS) $(diod_LDADD) $(LIBS)
+clean-noinstLIBRARIES:
+	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
+libnpfs.a: $(libnpfs_a_OBJECTS) $(libnpfs_a_DEPENDENCIES) 
+	-rm -f libnpfs.a
+	$(libnpfs_a_AR) libnpfs.a $(libnpfs_a_OBJECTS) $(libnpfs_a_LIBADD)
+	$(RANLIB) libnpfs.a
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -273,8 +259,20 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ops.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conn.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fcall.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fdtrans.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fidpool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/file.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fmt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/np.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pipesrv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rdmasrv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rdmatrans.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/srv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trans.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/user.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	if $(COMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
@@ -368,11 +366,8 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(PROGRAMS)
+all-am: Makefile $(LIBRARIES)
 installdirs:
-	for dir in "$(DESTDIR)$(sbindir)"; do \
-	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
-	done
 install: install-am
 install-exec: install-exec-am
 install-data: install-data-am
@@ -399,7 +394,7 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-sbinPROGRAMS mostlyclean-am
+clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -419,7 +414,7 @@ info-am:
 
 install-data-am:
 
-install-exec-am: install-sbinPROGRAMS
+install-exec-am:
 
 install-info: install-info-am
 
@@ -444,18 +439,18 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-info-am uninstall-sbinPROGRAMS
+uninstall-am: uninstall-info-am
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-sbinPROGRAMS ctags distclean distclean-compile \
+	clean-noinstLIBRARIES ctags distclean distclean-compile \
 	distclean-generic distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
 	install-data-am install-exec install-exec-am install-info \
-	install-info-am install-man install-sbinPROGRAMS install-strip \
-	installcheck installcheck-am installdirs maintainer-clean \
+	install-info-am install-man install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
-	uninstall-am uninstall-info-am uninstall-sbinPROGRAMS
+	uninstall-am uninstall-info-am
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

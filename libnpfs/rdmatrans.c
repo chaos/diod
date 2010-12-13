@@ -68,7 +68,7 @@ np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize)
 {
 	int i, ret;
 	u8 *p;
-	struct Nptrans *trans;
+	struct Nptrans *trans = NULL;
 	struct Rdmatrans *rdma;
 	struct ibv_qp_init_attr qp_attr;
 	struct rdma_conn_param cparam;
@@ -351,7 +351,7 @@ again:
 static void
 rdma_post_recv(struct Rdmatrans *rdma, Rdmactx *rctx)
 {
-	int n, rc;
+	int n;
 	struct ibv_sge sge;
 	struct ibv_recv_wr wr, *bad_wr;
 
@@ -369,6 +369,6 @@ rdma_post_recv(struct Rdmatrans *rdma, Rdmactx *rctx)
 	n = ibv_post_recv(rdma->qp, &wr, &bad_wr);
 	if (n) {
 		np_uerror(n);
-		fprintf(stderr, "Error %d posting recv\n", rc);
+		fprintf(stderr, "Error posting recv\n");
 	}
 }

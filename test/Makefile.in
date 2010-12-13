@@ -58,8 +58,8 @@ tconfig_SOURCES = tconfig.c
 tconfig_OBJECTS = tconfig.$(OBJEXT)
 tconfig_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-tconfig_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tconfig_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -67,104 +67,104 @@ am__objects_1 =
 am_tfcntl_OBJECTS = tfcntl.$(OBJEXT) $(am__objects_1)
 tfcntl_OBJECTS = $(am_tfcntl_OBJECTS)
 tfcntl_LDADD = $(LDADD)
-tfcntl_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tfcntl_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 tfcntl2_SOURCES = tfcntl2.c
 tfcntl2_OBJECTS = tfcntl2.$(OBJEXT)
 tfcntl2_LDADD = $(LDADD)
-tfcntl2_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tfcntl2_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 tfcntl3_SOURCES = tfcntl3.c
 tfcntl3_OBJECTS = tfcntl3.$(OBJEXT)
 tfcntl3_LDADD = $(LDADD)
-tfcntl3_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tfcntl3_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tflock_OBJECTS = tflock.$(OBJEXT) $(am__objects_1)
 tflock_OBJECTS = $(am_tflock_OBJECTS)
 tflock_LDADD = $(LDADD)
-tflock_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tflock_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 tflock2_SOURCES = tflock2.c
 tflock2_OBJECTS = tflock2.$(OBJEXT)
 tflock2_LDADD = $(LDADD)
-tflock2_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tflock2_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tfsgid_OBJECTS = tfsgid.$(OBJEXT) $(am__objects_1)
 tfsgid_OBJECTS = $(am_tfsgid_OBJECTS)
 tfsgid_LDADD = $(LDADD)
-tfsgid_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tfsgid_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_trename_OBJECTS = trename.$(OBJEXT) $(am__objects_1)
 trename_OBJECTS = $(am_trename_OBJECTS)
 trename_LDADD = $(LDADD)
-trename_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+trename_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetfsuid_OBJECTS = tsetfsuid.$(OBJEXT) $(am__objects_1)
 tsetfsuid_OBJECTS = $(am_tsetfsuid_OBJECTS)
 tsetfsuid_LDADD = $(LDADD)
-tsetfsuid_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tsetfsuid_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetfsuidsupp_OBJECTS = tsetfsuidsupp.$(OBJEXT) $(am__objects_1)
 tsetfsuidsupp_OBJECTS = $(am_tsetfsuidsupp_OBJECTS)
 tsetfsuidsupp_LDADD = $(LDADD)
-tsetfsuidsupp_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tsetfsuidsupp_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetuid_OBJECTS = tsetuid.$(OBJEXT) $(am__objects_1)
 tsetuid_OBJECTS = $(am_tsetuid_OBJECTS)
 tsetuid_LDADD = $(LDADD)
-tsetuid_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tsetuid_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tstat_OBJECTS = tstat.$(OBJEXT) $(am__objects_1)
 tstat_OBJECTS = $(am_tstat_OBJECTS)
 tstat_LDADD = $(LDADD)
-tstat_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tstat_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tstatfs_OBJECTS = tstatfs.$(OBJEXT) $(am__objects_1)
 tstatfs_OBJECTS = $(am_tstatfs_OBJECTS)
 tstatfs_LDADD = $(LDADD)
-tstatfs_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tstatfs_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsuppgrp_OBJECTS = tsuppgrp.$(OBJEXT) $(am__objects_1)
 tsuppgrp_OBJECTS = $(am_tsuppgrp_OBJECTS)
 tsuppgrp_LDADD = $(LDADD)
-tsuppgrp_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+tsuppgrp_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -345,16 +345,15 @@ XFAIL_TESTS = \
 	t18-flock-twoproc \
 	t19-fcntl-twoproc \
 	t23-fcntl-oneproc \
-	t24-flock-oneproc \
-	t25-create-gid
+	t24-flock-oneproc
 
 CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
-        -I../npfs/include -I../liblsd -I../common
+        -I../libnpfs -I../liblsd -I../libdiod
 
-LDADD = $(top_builddir)/common/libdiod.a \
-        $(top_builddir)/npfs/libnpfs/libnpfs.a \
+LDADD = $(top_builddir)/libdiod/libdiod.a \
+        $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 

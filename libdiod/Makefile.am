@@ -1,7 +1,7 @@
 AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
-	-I../npfs/include -I../liblsd
+	-I../libnpfs -I../liblsd
 
 noinst_LIBRARIES = libdiod.a
 

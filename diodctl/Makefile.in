@@ -57,8 +57,8 @@ PROGRAMS = $(sbin_PROGRAMS)
 am_diodctl_OBJECTS = diodctl.$(OBJEXT) ops.$(OBJEXT) serv.$(OBJEXT)
 diodctl_OBJECTS = $(am_diodctl_OBJECTS)
 am__DEPENDENCIES_1 =
-diodctl_DEPENDENCIES = $(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+diodctl_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
@@ -194,18 +194,20 @@ target_os = @target_os@
 target_vendor = @target_vendor@
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
-	-I../npfs/include -I../liblsd -I../common
+	-I../libnpfs -I../liblsd -I../libdiod
 
 diodctl_LDADD = \
-	$(top_builddir)/common/libdiod.a \
-	$(top_builddir)/npfs/libnpfs/libnpfs.a \
+	$(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 diodctl_SOURCES = \
 	diodctl.c \
 	ops.c \
-	serv.c
+	ops.h \
+	serv.c \
+	serv.h
 
 all: all-am
 
