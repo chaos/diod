@@ -1,7 +1,3 @@
-man8_MANS = \
-	diod.8 \
-	diodctl.8 \
-	diodmount.8
 man5_MANS = \
 	9p-attach.5 \
 	9p-clunk.5 \

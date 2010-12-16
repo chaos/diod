@@ -15,3 +15,6 @@ diodmount_SOURCES = \
 	diodmount.c \
 	opt.c \
 	opt.h
+
+man8_MANS = \
+        diodmount.8

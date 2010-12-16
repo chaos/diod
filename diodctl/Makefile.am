@@ -17,4 +17,6 @@ diodctl_SOURCES = \
 	ops.h \
 	serv.c \
 	serv.h
-	
+
+man8_MANS = \
+        diodctl.8

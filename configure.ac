@@ -73,9 +73,9 @@ AC_CONFIG_FILES( \
   liblsd/Makefile \
   libnpfs/Makefile \
   man/Makefile \
-  man/diod.8 \
-  man/diodctl.8 \
-  man/diodmount.8 \
+  diod/diod.8 \
+  diodctl/diodctl.8 \
+  diodmount/diodmount.8 \
   man/diodctl.conf.5 \
   man/9p-attach.5 \
   man/9p-flush.5 \

@@ -14,8 +14,6 @@ libnpfs_a_SOURCES = \
 	fmt.c \
 	np.c \
 	pipesrv.c \
-	rdmasrv.c \
-	rdmatrans.c \
 	srv.c \
 	trans.c \
 	user.c \

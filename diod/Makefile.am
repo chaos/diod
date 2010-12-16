@@ -15,3 +15,6 @@ diod_SOURCES = \
 	diod.c \
 	ops.c \
 	ops.h
+
+man8_MANS = \
+        diod.8

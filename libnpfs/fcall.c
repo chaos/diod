@@ -167,7 +167,7 @@ np_attach(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 	} else {
-		if (!afid->type&Qtauth) {
+		if (!(afid->type & Qtauth)) {
 			np_werror(Ebadusefid, EIO);
 			goto done;
 		}
@@ -291,7 +291,7 @@ np_walk(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (!fid->type&Qtdir) {
+	if (!(fid->type & Qtdir)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
@@ -336,7 +336,7 @@ np_walk(Npreq *req, Npfcall *tc)
 		newfid->type = wqids[i].type;
 		i++;
 
-		if (i<(tc->nwname) && !newfid->type&Qtdir)
+		if (i<(tc->nwname) && !(newfid->type & Qtdir))
 			break;
 	}
 
@@ -409,7 +409,7 @@ np_create(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (!fid->type&Qtdir) {
+	if (!(fid->type & Qtdir)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
@@ -663,8 +663,12 @@ np_wstat(Npreq *req, Npfcall *tc)
                 goto done;
         }
 
-	if ((fid->type&Qtdir && !stat->mode&Dmdir)
-	|| (!fid->type&Qtdir&&stat->mode&Dmdir)) {
+	if ((fid->type & Qtdir) && !(stat->mode & Dmdir)) {
+		np_werror(Edirchange, EPERM);
+		goto done;
+	}
+
+	if (!(fid->type & Qtdir) && (stat->mode & Dmdir)) {
 		np_werror(Edirchange, EPERM);
 		goto done;
 	}
