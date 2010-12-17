@@ -291,16 +291,20 @@ np_walk(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
+#if 0
+	/* FIXME: this test used to lack parens and always fail.
+   	 * After I fixed it, it succeeds walking a mount point.
+   	 * Disabled like before for now. --jg
+ 	 */
 	if (!(fid->type & Qtdir)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
-
+#endif
 	if (fid->omode != (u16) ~0) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-
 	if (tc->nwname > MAXWELEM) {
 		np_werror(Etoomanywnames, EIO);
 		goto done;
