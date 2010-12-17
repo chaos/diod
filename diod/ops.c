@@ -128,14 +128,18 @@ void         diod_fiddestroy(Npfid *fid);
 void         diod_connclose(Npconn *conn);
 void         diod_connopen (Npconn *conn);
 
+#if HAVE_LARGEIO
 Npfcall     *diod_aread  (Npfid *fid, u8 datacheck, u64 offset, u32 count,
                           u32 rsize, Npreq *req);
 Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
                           u8 *data, Npreq *req);
+#endif
+#if HAVE_DOTL
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 Npfcall     *diod_flock  (Npfid *fid, u8 cmd);
 Npfcall     *diod_lock   (Npfid *fid, u8 cmd, Nplock *flck);
+#endif
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
 static u32       _umode2npmode  (mode_t umode);
@@ -178,13 +182,16 @@ diod_register_ops (Npsrv *srv)
     srv->debugprintf = msg;
     srv->connclose = diod_connclose;
     srv->connopen = diod_connopen;
-
-    srv->statfs = diod_statfs;
-    srv->rename = diod_rename;
+#if HAVE_LARGEIO
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
+#endif
+#if HAVE_DOTL
+    srv->statfs = diod_statfs;
+    srv->rename = diod_rename;
     srv->plock = diod_lock;
     srv->flock = diod_flock;
+#endif
 }
 
 /* Update stat info contained in fid.
@@ -594,7 +601,7 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     Fid *f = NULL;
     int err;
     Npqid qid;
-    uid_t auid, runasuid;
+    uid_t runasuid;
 
     if (nafid) {    /* 9P Tauth not supported */
         np_werror (Enoauth, EIO);
@@ -613,6 +620,7 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
         msg ("diod_attach: attach rejected from unauthorized user");
         goto done;
     }
+#if HAVE_MUNGE
     /* Munge authentication involves the upool and trans layers:
      * - we ask the upool layer if the user now attaching has a munge cred
      * - we stash the uid of the last successful munge auth in the trans layer
@@ -626,6 +634,8 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
         if (authenticated) {
             diod_trans_set_authuser (fid->conn->trans, fid->user->uid, NULL);
         } else {
+            uid_t auid;
+
             if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);
                 msg ("diod_attach: attach rejected from unauthenticated user");
@@ -638,6 +648,7 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
             }
         }
     }
+#endif
     if (!(f = _fidalloc ())) {
         msg ("diod_attach: out of memory");
         goto done;
@@ -1342,6 +1353,7 @@ diod_flush(Npreq *req)
     return;
 }
 
+#if HAVE_LARGEIO
 /* helper for diod_aread */
 static int
 _cache_read (Npfid *fid, void *buf, u32 rsize, u64 offset, int debug)
@@ -1551,7 +1563,9 @@ diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
 done:
     return ret;
 }
+#endif
 
+#if HAVE_DOTL
 /* Tstatfs - read file system  information (9P2000.L)
  * N.B. must call statfs() and statvfs() as
  * only statvfs provides (unsigned long) f_fsid
@@ -1926,6 +1940,7 @@ diod_lock (Npfid *fid, u8 cmd, Nplock *flck)
 done:
     return ret;
 }
+#endif
 #endif
 
 /*

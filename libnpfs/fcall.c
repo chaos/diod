@@ -20,6 +20,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -407,10 +410,12 @@ np_create(Npreq *req, Npfcall *tc)
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
+#if 0
 	if (!(fid->type & Qtdir)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
+#endif
 	if (tc->perm&Dmdir && tc->mode!=Oread) {
 		np_werror(Eperm, EPERM);
 		goto done;
@@ -659,6 +664,7 @@ np_wstat(Npreq *req, Npfcall *tc)
                 np_werror(Eperm, EPERM);
                 goto done;
         }
+#if 0
 	if ((fid->type & Qtdir) && !(stat->mode & Dmdir)) {
 		np_werror(Edirchange, EPERM);
 		goto done;
@@ -667,12 +673,14 @@ np_wstat(Npreq *req, Npfcall *tc)
 		np_werror(Edirchange, EPERM);
 		goto done;
 	}
+#endif
 	rc = (*conn->srv->wstat)(fid, &tc->stat);
 done:
 //	np_fid_decref(fid);
 	return rc;
 }
 
+#if HAVE_LARGEIO
 Npfcall *
 np_aread(Npreq *req, Npfcall *tc)
 {
@@ -764,7 +772,9 @@ np_awrite(Npreq *req, Npfcall *tc)
 done:
 	return rc;
 }
+#endif
 
+#if HAVE_DOTL
 Npfcall *
 np_statfs(Npreq *req, Npfcall *tc)
 {
@@ -870,3 +880,4 @@ done:
 //	np_fid_decref(fid);
 	return rc;
 }
+#endif

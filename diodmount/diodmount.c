@@ -52,7 +52,7 @@
 #include <errno.h>
 #include <mntent.h>
 #include <ctype.h>
-#if HAVE_LIBMUNGE
+#if HAVE_MUNGE
 #define GPL_LICENSED 1
 #include <munge.h>
 #endif
@@ -88,7 +88,9 @@ static const struct option longopts[] = {
     {"direct",          no_argument,         0, 'd'},
     {"fake-mount",      no_argument,         0, 'f'},
     {"create-directories", no_argument,      0, 'D'},
+#if HAVE_MUNGE
     {"jobid",           required_argument ,  0, 'j'},
+#endif
     {0, 0, 0, 0},
 };
 #else
@@ -122,7 +124,9 @@ usage (void)
 "   -d,--direct                   mount diod directly (requires -o port=N)\n"
 "   -f,--fake-mount               do everything but the actual diod mount(s)\n"
 "   -D,--create-directories       create mount directories as needed\n"
+#if HAVE_MUNGE
 "   -j,--jobid STR                set job id string\n"
+#endif
 );
     exit (1);
 }
@@ -180,9 +184,11 @@ main (int argc, char *argv[])
             case 'T':   /* --test-opt */
                 opt_test ();
                 exit (0);
+#if HAVE_MUNGE
             case 'j':   /* --jobid STR */
                 jopt = optarg;
                 break;
+#endif
             default:
                 usage ();
         }
@@ -203,12 +209,6 @@ main (int argc, char *argv[])
         dir = argv[optind++];
         _parse_device (device, &aname, &ip);
     }
-#if !HAVE_LIBMUNGE
-    if (jopt) {
-        msg_exit ("diodmount was built without munge support so --jobid "
-                  "option is disabled");
-    }
-#endif
 
     /* Must start out with effective root id.
      * We drop euid = root but preserve ruid = root for mount, etc.
@@ -455,15 +455,14 @@ _unshare (void)
         err_exit ("failed to restore effective uid to %d", saved_euid);
 }
 
+#if HAVE_MUNGE
 /* Create a munge credential for the effective uid and return it as a string
  * that must be freed by the caller.
- * If munge is unavailable, the "credential" is just the user name.
  */
 static char *
 _create_mungecred (char *payload)
 {
     char *mungecred;
-#if HAVE_LIBMUNGE
     int paylen = payload ? strlen(payload) + 1 : 0;
     munge_ctx_t ctx;
     munge_err_t err;
@@ -474,16 +473,22 @@ _create_mungecred (char *payload)
     if (err != EMUNGE_SUCCESS)
         msg_exit ("munge_encode: %s", munge_strerror (err));
     munge_ctx_destroy (ctx);
+    return mungecred;
+}
 #else
+static char *
+_create_user (void)
+{
     struct passwd *pwd;
+    char *u;
 
     if (!(pwd = getpwuid (geteuid ())))
         msg_exit ("could not look up uid %d", geteuid ());
-    if (!(mungecred = strdup (pwd->pw_name)))
+    if (!(u = strdup (pwd->pw_name)))
         msg_exit ("out of memory");
-#endif
-    return mungecred;
+    return u;
 }
+#endif
 
 /* Mount diod file system specified by [ip], [port], [aname] on [dir].
  * Default mount options can be overridden by a comma separated list [opts].
@@ -497,13 +502,21 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
 {
     Opt o = opt_create ();
     char *options, *cred;
-
-    opt_add (o, "uname=%s", (cred = _create_mungecred (NULL)));
+#if HAVE_MUNGE
+    cred = _create_mungecred (NULL);
+#else
+    cred = _create_user ();
+#endif
+    opt_add (o, "uname=%s", cred);
     if (port)
         opt_add (o, "port=%s", port);
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
+#if HAVE_DOTL
     opt_add (o, "version=9p2000.L");
+#else
+    opt_add (o, "version=9p2000.u");
+#endif
     opt_add (o, "debug=0x1"); /* errors */
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
@@ -526,12 +539,20 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
  * Exit on error.
  */
 static void
+#if HAVE_MUNGE
 _diodctl_mount (char *ip, char *dir, char *opts, int vopt, char *payload)
+#else
+_diodctl_mount (char *ip, char *dir, char *opts, int vopt)
+#endif
 {
     Opt o = opt_create ();
     char *options, *cred;
-
-    opt_add (o, "uname=%s", (cred = _create_mungecred (payload)));
+#if HAVE_MUNGE
+    cred = _create_mungecred (payload);
+#else
+    cred = _create_user ();
+#endif
+    opt_add (o, "uname=%s", cred);
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
     opt_add (o, "debug=0x1"); /* errors */
@@ -713,7 +734,11 @@ _diodctl_query (char *ip, char *opts, int vopt, int getport, char *payload)
             if (dup2 (pfd[1], STDOUT_FILENO) < 0)
                 err_exit ("failed to dup stdout");
             _unshare ();
+#if HAVE_MUNGE
             _diodctl_mount (ip, tmpdir, opts, vopt, payload);
+#else
+            _diodctl_mount (ip, tmpdir, opts, vopt);
+#endif
             if (getport) {
                 snprintf (path, sizeof (path), "%s/ctl", tmpdir);
                 _puts_file (path, "new");

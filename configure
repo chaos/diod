@@ -639,7 +639,13 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+LARGEIO_FALSE
+LARGEIO_TRUE
+MUNGE_FALSE
+MUNGE_TRUE
 LIBMUNGE
+DOTL_FALSE
+DOTL_TRUE
 LIBLUA
 LIBZ
 LIBWRAP
@@ -769,6 +775,9 @@ ac_user_opts='
 enable_option_checking
 enable_maintainer_mode
 enable_dependency_tracking
+enable_dotl
+enable_munge
+enable_largeio
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1414,6 +1423,9 @@ Optional Features:
 			  (and sometimes confusing) to the casual installer
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
+  --enable-dotl           Build to use 9P2000.L protocol
+  --enable-munge          Build to use MUNGE authentication
+  --enable-largeio        Build to use large I/O protocol extensions
 
 Some influential environment variables:
   CC          C compiler command
@@ -5958,6 +5970,189 @@ fi
 
 
 
+##
+# Check for package feature enablement
+##
+
+  # Check whether --enable-dotl was given.
+if test "${enable_dotl+set}" = set; then
+  enableval=$enable_dotl; enable_dotl=$enableval
+else
+  enable_dotl=no
+fi
+
+  if test x$enable_dotl == xyes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_DOTL 1
+_ACEOF
+
+  fi
+   if test x$enable_dotl == xyes; then
+  DOTL_TRUE=
+  DOTL_FALSE='#'
+else
+  DOTL_TRUE='#'
+  DOTL_FALSE=
+fi
+
+
+
+  # Check whether --enable-munge was given.
+if test "${enable_munge+set}" = set; then
+  enableval=$enable_munge; enable_munge=$enableval
+else
+  enable_munge=no
+fi
+
+  if test x$enable_munge == xyes; then
+
+for ac_header in munge.h
+do
+as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  { $as_echo "$as_me:$LINENO: checking for $ac_header" >&5
+$as_echo_n "checking for $ac_header... " >&6; }
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  $as_echo_n "(cached) " >&6
+fi
+ac_res=`eval 'as_val=${'$as_ac_Header'}
+		 $as_echo "$as_val"'`
+	       { $as_echo "$as_me:$LINENO: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+else
+  # Is the header compilable?
+{ $as_echo "$as_me:$LINENO: checking $ac_header usability" >&5
+$as_echo_n "checking $ac_header usability... " >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <$ac_header>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_header_compiler=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_header_compiler=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+$as_echo "$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ $as_echo "$as_me:$LINENO: checking $ac_header presence" >&5
+$as_echo_n "checking $ac_header presence... " >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <$ac_header>
+_ACEOF
+if { (ac_try="$ac_cpp conftest.$ac_ext"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_cpp conftest.$ac_ext") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null && {
+	 test -z "$ac_c_preproc_warn_flag$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       }; then
+  ac_header_preproc=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+
+rm -f conftest.err conftest.$ac_ext
+{ $as_echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+$as_echo "$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
+$as_echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the compiler's result" >&5
+$as_echo "$as_me: WARNING: $ac_header: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
+$as_echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header:     check for missing prerequisite headers?" >&5
+$as_echo "$as_me: WARNING: $ac_header:     check for missing prerequisite headers?" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header: see the Autoconf documentation" >&5
+$as_echo "$as_me: WARNING: $ac_header: see the Autoconf documentation" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&5
+$as_echo "$as_me: WARNING: $ac_header:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
+$as_echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: $ac_header: in the future, the compiler will take precedence" >&5
+$as_echo "$as_me: WARNING: $ac_header: in the future, the compiler will take precedence" >&2;}
+
+    ;;
+esac
+{ $as_echo "$as_me:$LINENO: checking for $ac_header" >&5
+$as_echo_n "checking for $ac_header... " >&6; }
+if { as_var=$as_ac_Header; eval "test \"\${$as_var+set}\" = set"; }; then
+  $as_echo_n "(cached) " >&6
+else
+  eval "$as_ac_Header=\$ac_header_preproc"
+fi
+ac_res=`eval 'as_val=${'$as_ac_Header'}
+		 $as_echo "$as_val"'`
+	       { $as_echo "$as_me:$LINENO: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+
+fi
+as_val=`eval 'as_val=${'$as_ac_Header'}
+		 $as_echo "$as_val"'`
+   if test "x$as_val" = x""yes; then
+  cat >>confdefs.h <<_ACEOF
+#define `$as_echo "HAVE_$ac_header" | $as_tr_cpp` 1
+_ACEOF
+
+fi
+
+done
+
+
   { $as_echo "$as_me:$LINENO: checking for munge_ctx_create in default libs" >&5
 $as_echo_n "checking for munge_ctx_create in default libs... " >&6; }
 if test "${x_ac_cv_lib_none_munge_ctx_create+set}" = set; then
@@ -6104,6 +6299,50 @@ _ACEOF
 fi
 
 
+fi
+
+
+    if test x$ac_cv_header_munge_h != xyes; then
+      { { $as_echo "$as_me:$LINENO: error: Please install munge or configure --disable-munge" >&5
+$as_echo "$as_me: error: Please install munge or configure --disable-munge" >&2;}
+   { (exit 1); exit 1; }; }
+    fi
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_MUNGE 1
+_ACEOF
+
+  fi
+   if test x$enable_munge == xyes; then
+  MUNGE_TRUE=
+  MUNGE_FALSE='#'
+else
+  MUNGE_TRUE='#'
+  MUNGE_FALSE=
+fi
+
+
+
+  # Check whether --enable-largeio was given.
+if test "${enable_largeio+set}" = set; then
+  enableval=$enable_largeio; enable_largeio=$enableval
+else
+  enable_largeio=no
+fi
+
+  if test x$enable_largeio == xyes; then
+
+cat >>confdefs.h <<\_ACEOF
+#define HAVE_LARGEIO 1
+_ACEOF
+
+  fi
+   if test x$enable_largeio == xyes; then
+  LARGEIO_TRUE=
+  LARGEIO_FALSE='#'
+else
+  LARGEIO_TRUE='#'
+  LARGEIO_FALSE=
 fi
 
 
@@ -6255,6 +6494,27 @@ Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+if test -z "${DOTL_TRUE}" && test -z "${DOTL_FALSE}"; then
+  { { $as_echo "$as_me:$LINENO: error: conditional \"DOTL\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+$as_echo "$as_me: error: conditional \"DOTL\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${MUNGE_TRUE}" && test -z "${MUNGE_FALSE}"; then
+  { { $as_echo "$as_me:$LINENO: error: conditional \"MUNGE\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+$as_echo "$as_me: error: conditional \"MUNGE\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${LARGEIO_TRUE}" && test -z "${LARGEIO_FALSE}"; then
+  { { $as_echo "$as_me:$LINENO: error: conditional \"LARGEIO\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+$as_echo "$as_me: error: conditional \"LARGEIO\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
 
 : ${CONFIG_STATUS=./config.status}
 ac_write_fail=0

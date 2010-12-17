@@ -3,6 +3,9 @@
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
 
+/* Define if using 9P2000.L protocol */
+#undef HAVE_DOTL
+
 /* Define to 1 if you have the <getopt.h> header file. */
 #undef HAVE_GETOPT_H
 
@@ -11,6 +14,9 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define if using large I/O protocol extensions */
+#undef HAVE_LARGEIO
 
 /* Define to 1 if you have the `lua' library (-llua). */
 #undef HAVE_LIBLUA
@@ -26,6 +32,12 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define if using MUNGE authentication */
+#undef HAVE_MUNGE
+
+/* Define to 1 if you have the <munge.h> header file. */
+#undef HAVE_MUNGE_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H

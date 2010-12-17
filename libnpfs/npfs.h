@@ -89,7 +89,7 @@ typedef struct Npflock Npflock;
 
 /* message types */
 enum {
-	/* 9P2000.L */
+#if HAVE_DOTL
 	Tstatfs         = 8,
 	Rstatfs,
 	Trename         = 20,
@@ -98,11 +98,13 @@ enum {
 	Rlock,
 	Tflock          = 54,
 	Rflock,
+#endif
+#if HAVE_LARGEIO
 	Taread          = 80,
 	Raread,
 	Tawrite         = 82,
 	Rawrite,
-	/* 9P2000 */
+#endif
 	Tversion	= 100,
 	Rversion,
 	Tauth		= 102,
@@ -133,6 +135,7 @@ enum {
 	Rwstat,
 };
 
+#if HAVE_DOTL
 /* lock cmd values */
 enum {
 	P9_LOCK_GETLK = 0x00,
@@ -154,13 +157,15 @@ enum {
 	P9_FLOCK_UN = 0x03,
 	P9_FLOCK_NB = 0x04,
 };
+#endif
 
+#if HAVE_LARGEIO
 /* datacheck values */
 enum {
 	P9_CHECK_NONE = 0,
 	P9_CHECK_ADLER32 = 1,
 };
-
+#endif 
 
 /* modes */
 enum {
@@ -271,6 +276,7 @@ struct Npwstat {
 	u32 		n_muid;		/* 9p2000.u extensions */
 };
 
+#if HAVE_DOTL
 struct Npstatfs {
 	u32		type;
 	u32		bsize;
@@ -289,6 +295,7 @@ struct Nplock {
 	u64		start;
 	u64		end;
 };
+#endif
 
 struct Npfcall {
 	u32		size;
@@ -323,17 +330,18 @@ struct Npfcall {
 	u32		ecode;			/* Rerror */
 	Npstr		extension;		/* Tcreate */
 	u32		n_uname;
-
-	/* 9P2000.L extensions */
+#if HAVE_LARGEIO
 	u32		rsize;			/* Taread, Tawrite */
 	u8		datacheck;		/* Taread, Tawrite */
 	u32		check;			/* Raread, Tawrite */
+#endif
+#if HAVE_DOTL
 	u8		cmd;			/* Tlock, Tflock */
 	Npstatfs	statfs;			/* Rstatfs */
 	Nplock		lock;			/* Tlock,Rlock */
 	u32		newdirfid;		/* Trename */
 	Npstr		newname;		/* Trename */
-
+#endif
 	Npfcall*	next;
 };
 
@@ -437,7 +445,9 @@ enum {
 enum {
 	NPFS_PROTO_LEGACY=0,
 	NPFS_PROTO_2000U=1,
+#if HAVE_DOTL
 	NPFS_PROTO_2000L=2,
+#endif
 };
 
 struct Npsrv {
@@ -474,16 +484,18 @@ struct Npsrv {
 	Npfcall*	(*remove)(Npfid *fid);
 	Npfcall*	(*stat)(Npfid *fid);
 	Npfcall*	(*wstat)(Npfid *fid, Npstat *stat);
-
+#if HAVE_LARGEIO
 	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
 				 u32 count, u32 rsize, Npreq *req);
 	Npfcall*	(*awrite)(Npfid *fid, u64 offset, u32 count,
 				  u32 rsize, u8 *data, Npreq *req);
+#endif
+#if HAVE_DOTL
 	Npfcall*	(*statfs)(Npfid *fid);
 	Npfcall*	(*plock)(Npfid *fid, u8 cmd, Nplock *flck);
 	Npfcall*	(*flock)(Npfid *fid, u8 cmd);
 	Npfcall*	(*rename)(Npfid *fid, Npfid *newdirfid, Npstr *newname);
-
+#endif
 	/* implementation specific */
 	pthread_mutex_t	lock;
 	pthread_cond_t	reqcond;
@@ -683,10 +695,13 @@ Npfcall *np_create_twstat(u32 fid, Npwstat *wstat, int dotu);
 Npfcall *np_create_rwstat(void);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
+#if HAVE_LARGEIO
 Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize);
 Npfcall *np_create_raread(u32 count);
 Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize, u8 *data);
 Npfcall *np_create_rawrite(u32 count);
+#endif
+#if HAVE_DOTL
 Npfcall *np_create_tstatfs(u32 fid);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen);
 Npfcall *np_create_tlock(u32 fid, u8 cmd, u8 type, u64 pid, u64 start, u64 end);
@@ -695,6 +710,7 @@ Npfcall *np_create_tflock(u32 fid, u8 op);
 Npfcall *np_create_rflock(void);
 Npfcall *np_create_trename(u32 fid, u32 newdirfid, char *newname);
 Npfcall *np_create_rrename(void);
+#endif
 void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
 
 int np_printstat(FILE *f, Npstat *st, int dotu);
@@ -758,11 +774,25 @@ int np_mount(char *mntpt, int mntflags, char *opts);
 
 static inline int np_conn_extend (Npconn *conn)
 {
- 	return conn->proto_version == NPFS_PROTO_2000U
-	    || conn->proto_version == NPFS_PROTO_2000L;
+	switch (conn->proto_version) {
+		case NPFS_PROTO_2000U:
+			return 1;
+#if HAVE_DOTL
+		case NPFS_PROTO_2000L:
+			return 1;
+#endif
+	}
+	return 0;
 }
 static inline int np_srv_extend (Npsrv *srv)
 {
- 	return srv->proto_version == NPFS_PROTO_2000U
-	    || srv->proto_version == NPFS_PROTO_2000L;
+	switch (srv->proto_version) {
+		case NPFS_PROTO_2000U:
+			return 1;
+#if HAVE_DOTL
+		case NPFS_PROTO_2000L:
+			return 1;
+#endif
+	}
+	return 0;
 }

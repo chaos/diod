@@ -77,7 +77,6 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     Npfile *root = (Npfile *)fid->conn->srv->treeaux;
     Npfcall *ret = NULL;
     Npfilefid *f;
-    uid_t auid;
 
     if (nafid) {    /* 9P Tauth not supported */
         np_werror (Enoauth, EIO);
@@ -89,6 +88,7 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
         msg ("diodctl_attach: mount attempt for aname other than /diodctl");
         goto done;
     }
+#if HAVE_MUNGE
     /* Munge authentication involves the upool and trans layers:
      * - we ask the upool layer if the user now attaching has a munge cred
      * - we stash the uid of the last successful munge auth in the trans layer
@@ -107,6 +107,8 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
         if (authenticated) {
             diod_trans_set_authuser (fid->conn->trans, fid->user->uid, jobid);
         } else {
+            uid_t auid;
+
             if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
                 np_uerror (EPERM);
                 msg ("diodctl_attach: attach rejected from unauthenticated user");
@@ -119,6 +121,7 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
             }
         }
     }
+#endif
     if (!npfile_checkperm (root, fid->user, 4)) {
         np_uerror (EPERM);
         msg ("diodctl_attach: root file mode denies access for user");
@@ -189,8 +192,10 @@ static int
 _server_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
-    char *jobid = diod_trans_get_jobid (fid->conn->trans);
-
+    char *jobid = NULL;
+#if HAVE_MUNGE
+    jobid = diod_trans_get_jobid (fid->conn->trans);
+#endif
     return diodctl_serv_getname (fid->user, jobid, offset, count, data);
 }
 
@@ -201,9 +206,11 @@ static int
 _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
-    char *jobid = diod_trans_get_jobid (fid->conn->trans);
+    char *jobid = NULL;
     int ret = 0;
-
+#if HAVE_MUNGE
+    jobid = diod_trans_get_jobid (fid->conn->trans);
+#endif
     if (diodctl_serv_create (fid->user, jobid))
         ret = count;
     return ret;

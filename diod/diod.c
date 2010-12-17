@@ -55,7 +55,8 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:amxF:u:A:L:s:"
+#define OPTIONS "d:l:w:e:E:axF:u:A:L:s:m"
+
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -65,7 +66,9 @@ static const struct option longopts[] = {
     {"export",          required_argument,  0, 'e'},
     {"export-file",     required_argument,  0, 'E'},
     {"allowany",        no_argument,        0, 'a'},
+#if HAVE_MUNGE
     {"no-munge-auth",   no_argument,        0, 'm'},
+#endif
     {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
@@ -88,7 +91,9 @@ usage()
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
+#if HAVE_MUNGE
 "   -m,--no-munge-auth     do not require munge authentication\n"
+#endif
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
@@ -158,9 +163,11 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 diod_conf_set_tcpwrappers (0);
                 break;
+#if HAVE_MUNGE
             case 'm':   /* --no-munge-auth */
                 diod_conf_set_munge (0);
                 break;
+#endif
             case 'x':   /* --exit-on-lastuse */
                 diod_conf_set_exit_on_lastuse (1);
                 break;
@@ -201,10 +208,6 @@ main(int argc, char **argv)
 #if ! HAVE_TCP_WRAPPERS
     if (diod_conf_get_tcpwrappers ())
         msg_exit ("no TCP wrapper support, yet config enables it");
-#endif
-#if ! HAVE_LIBMUNGE
-    if (diod_conf_get_munge ())
-        msg_exit ("no munge support, yet config enables it");
 #endif
 
     /* drop privileges, unless running for multiple users */

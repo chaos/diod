@@ -20,6 +20,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -1021,6 +1024,7 @@ np_create_rwstat(void)
 	return np_post_check(fc, bufp);
 }
 
+#if HAVE_LARGEIO
 Npfcall *
 np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize)
 {
@@ -1145,7 +1149,9 @@ np_create_rawrite(u32 count)
 
 	return np_post_check(fc, bufp);
 }
+#endif
 
+#if HAVE_DOTL
 Npfcall *
 np_create_tstatfs(u32 fid)
 {
@@ -1315,6 +1321,7 @@ np_create_rrename(void)
 
 	return np_post_check(fc, bufp);
 }
+#endif
 
 int
 np_deserialize(Npfcall *fc, u8 *data, int dotu)
@@ -1476,7 +1483,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		buf_get_int16(bufp);
 		buf_get_stat(bufp, &fc->stat, dotu);
 		break;
-
+#if HAVE_LARGEIO
 	case Taread:
 		fc->fid = buf_get_int32(bufp);
 		fc->datacheck = buf_get_int8(bufp);
@@ -1502,7 +1509,8 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 	case Rawrite:
 		fc->count = buf_get_int32(bufp);
 		break;
-
+#endif
+#if HAVE_DOTL
 	case Tstatfs:
 		fc->fid = buf_get_int32(bufp);
 		break;
@@ -1547,7 +1555,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		break;
 	case Rrename:
 		break;
-
+#endif
 	}
 
 	if (buf_check_overflow(bufp))

@@ -82,7 +82,9 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
     {"allowany",        no_argument,        0, 'a'},
+#if HAVE_MUNGE
     {"no-munge-auth",   no_argument,        0, 'm'},
+#endif
     {"diod-path",       required_argument,  0, 'D'},
     {"log-dest",        required_argument,  0, 'L'},
     {0, 0, 0, 0},
@@ -103,7 +105,9 @@ usage()
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
+#if HAVE_MUNGE
 "   -m,--no-munge-auth     do not require munge authentication\n"
+#endif
 "   -D,--diod-path PATH    set path to diod executable\n"
 "   -L,--log-dest DEST     log to DEST, can be syslog, stderr, or file\n"
 "Note: command line overrides config file\n");
@@ -178,9 +182,11 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 diod_conf_set_tcpwrappers (0);
                 break;
+#if HAVE_MUNGE
             case 'm':   /* --no-munge-auth */
                 diod_conf_set_munge (0);
                 break;
+#endif
             case 'D':   /* --diod-path PATH */
                 diod_conf_set_diodpath (optarg);
                 break;
@@ -200,10 +206,6 @@ main(int argc, char **argv)
 #if ! HAVE_TCP_WRAPPERS
     if (diod_conf_get_tcpwrappers ())
         msg_exit ("no TCP wrapper support but config enables it");
-#endif
-#if ! HAVE_LIBMUNGE
-    if (diod_conf_get_munge ())
-        msg_exit ("no munge support but config enables it");
 #endif
 
     if (geteuid () != 0)

@@ -56,7 +56,7 @@
 #include <grp.h>
 #include <errno.h>
 #include <assert.h>
-#if HAVE_LIBMUNGE
+#if HAVE_MUNGE
 #define GPL_LICENSED 1
 #include <munge.h>
 #endif
@@ -100,8 +100,10 @@ static Npuserpool upool = {
 #define DUSER_MAGIC 0x3455DDDF
 typedef struct {
     int         magic;
+#if HAVE_MUNGE
     int         munged;         /* user supplied a valid munge cred */
     char       *jobid;          /* munge payload (if any) */
+#endif
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
 } Duser;
@@ -143,8 +145,10 @@ done:
 static void
 _free_duser (Duser *d)
 {
+#if HAVE_MUNGE
     if (d->jobid)
         free (d->jobid);
+#endif
     free (d);
 }
 
@@ -177,15 +181,21 @@ _getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 }
 
 static Duser *
+#if HAVE_MUNGE
 _alloc_duser (struct passwd *pwd, int munged, char *jobid)
+#else
+_alloc_duser (struct passwd *pwd)
+#endif
 {
     Duser *d = NULL;
 
     if (!(d = np_malloc (sizeof (*d))))
         goto done;
     d->magic = DUSER_MAGIC;
+#if HAVE_MUNGE
     d->munged = munged;
     d->jobid = jobid;
+#endif
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
@@ -238,14 +248,22 @@ diod_become_user (char *name, uid_t uid, int realtoo)
 
 
 static Npuser *
+#if HAVE_MUNGE
 _alloc_user (Npuserpool *up, struct passwd *pwd, int munged, char *jobid)
+#else
+_alloc_user (Npuserpool *up, struct passwd *pwd)
+#endif
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
+#if HAVE_MUNGE
     if (!(u->aux = _alloc_duser (pwd, munged, jobid)))
+#else
+    if (!(u->aux = _alloc_duser (pwd)))
+#endif
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -287,6 +305,7 @@ diod_udestroy (Npuserpool *up, Npuser *u)
     /* caller frees u */
 }
 
+#if HAVE_MUNGE
 int
 diod_user_get_authinfo (Npuser *u, int *authenticated, char **jobidp)
 {
@@ -312,7 +331,6 @@ static int
 _decode_mungecred (char *uname, uid_t *uidp, void **pp, int *lp)
 {
     int ret = -1;
-#if HAVE_LIBMUNGE
     munge_ctx_t ctx;
     munge_err_t err;
     uid_t uid;
@@ -334,11 +352,9 @@ _decode_mungecred (char *uname, uid_t *uidp, void **pp, int *lp)
     ret = 0;
     *uidp = uid;
 done:
-#else
-    np_uerror (EPERM);
-#endif
     return ret;
 }
+#endif
 
 /* N.B. This (or diod_uid2user) is called when handling a 9P attach message.
  * Also called when building a pseudo file system as in diodctl/ops.c.
@@ -350,12 +366,14 @@ diod_uname2user (Npuserpool *up, char *uname)
     int err;
     struct passwd pw, *pwd = NULL;
     char buf[PASSWD_BUFSIZE];
-    uid_t uid;
-    int munged = 0;
-    void *payload = NULL;
-    int paylen = 0;
+#if HAVE_MUNGE
 
     if (diod_conf_get_munge () && strncmp (uname, "MUNGE:", 6) == 0) {
+        uid_t uid;
+        int munged = 0;
+        void *payload = NULL;
+        int paylen = 0;
+
         if (_decode_mungecred (uname, &uid, &payload, &paylen) < 0)
             goto done;
         if (paylen > 0 && ((char *)payload)[paylen - 1] != '\0') {
@@ -368,16 +386,23 @@ diod_uname2user (Npuserpool *up, char *uname)
         }
         munged = 1;
     } else {
+#endif
         if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);
             goto done;
         }
+#if HAVE_MUNGE
     }
+#endif
     if (!pwd) {
         np_uerror (ESRCH);
         goto done;
     }
+#if HAVE_MUNGE
     if (!(u = _alloc_user (up, pwd, munged, (char *)payload)))
+#else
+    if (!(u = _alloc_user (up, pwd)))
+#endif
         goto done;
     np_user_incref (u);
 done:
@@ -403,7 +428,11 @@ diod_uid2user(Npuserpool *up, u32 uid)
         np_uerror (ESRCH);
         goto done;
     }
+#if HAVE_MUNGE
     if (!(u = _alloc_user (up, pwd, 0, NULL)))
+#else
+    if (!(u = _alloc_user (up, pwd)))
+#endif
         goto done;
 done:
     np_user_incref (u);

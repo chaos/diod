@@ -20,6 +20,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -326,7 +329,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case Rwstat:
 		n += snprintf(s+n,len-n, "Rwstat tag %u", tag);
 		break;
-
+#if HAVE_LARGEIO
 	case Taread:
 		n += snprintf(s+n,len-n, "Taread tag %u fid %d datacheck %d offset %llu count %u rsize %u", 
 			tag, fid, fc->datacheck, (unsigned long long)fc->offset,
@@ -346,7 +349,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case Rawrite:
 		n += snprintf(s+n,len-n, "Rawrite tag %u count %u", tag, fc->count);
 		break;
-		
+#endif
+#if HAVE_DOTL
 	case Tstatfs:
 		n += snprintf(s+n,len-n, "Tstatfs tag %u fid %d", tag, fid);
 		break;
@@ -397,7 +401,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case Rrename:
 		n += snprintf(s+n,len-n, "Rrename tag %u", tag);
 		break;
-
+#endif
 	default:
 		n += snprintf(s+n,len-n, "unknown type %d", type);
 		break;

@@ -20,6 +20,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -52,13 +55,16 @@ static Npfcall* np_default_clunk(Npfid *);
 static Npfcall* np_default_remove(Npfid *);
 static Npfcall* np_default_stat(Npfid *);
 static Npfcall* np_default_wstat(Npfid *, Npstat *);
-
+#if HAVE_LARGEIO
 static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
 static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
+#endif
+#if HAVE_DOTL
 static Npfcall* np_default_statfs(Npfid *);
 static Npfcall* np_default_lock(Npfid *, u8, Nplock *);
 static Npfcall* np_default_flock(Npfid *, u8);
 static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
+#endif
 
 Npsrv*
 np_srv_create(int nwthread)
@@ -70,7 +76,11 @@ np_srv_create(int nwthread)
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
+#if HAVE_DOTL
 	srv->proto_version = NPFS_PROTO_2000L;
+#else
+	srv->proto_version = NPFS_PROTO_2000U;
+#endif
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
 	srv->shuttingdown = 0;
@@ -97,14 +107,16 @@ np_srv_create(int nwthread)
 	srv->stat = np_default_stat;
 	srv->wstat = np_default_wstat;
 	srv->upool = NULL;
-
+#if HAVE_LARGEIO
 	srv->aread = np_default_aread;
 	srv->awrite = np_default_awrite;
+#endif
+#if HAVE_DOTL
 	srv->statfs = np_default_statfs;
 	srv->plock = np_default_lock;
 	srv->flock = np_default_flock;
 	srv->rename = np_default_rename;
-
+#endif
 	srv->conns = NULL;
 	srv->reqs_first = NULL;
 	srv->reqs_last = NULL;
@@ -298,6 +310,7 @@ np_process_request(Npreq *req)
 
 	np_werror(NULL, 0);
 	switch (tc->type) {
+#if HAVE_DOTL
 		case Tstatfs:
 			rc = np_statfs(req, tc);
 			op = "statfs";
@@ -314,6 +327,8 @@ np_process_request(Npreq *req)
 			rc = np_flock(req, tc);
 			op = "flock";
 			break;
+#endif
+#if HAVE_LARGEIO
 		case Taread:
 			rc = np_aread(req, tc);
 			op = "aread";
@@ -322,6 +337,7 @@ np_process_request(Npreq *req)
 			rc = np_awrite(req, tc);
 			op = "awrite";
 			break;
+#endif
 		case Tversion:
 			rc = np_version(req, tc);
 			op = "version";
@@ -491,7 +507,11 @@ static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
 	int min_msize = IOHDRSZ;
+#if HAVE_DOTL
 	int proto_ver = NPFS_PROTO_2000L;
+#else
+	int proto_ver = NPFS_PROTO_2000U;
+#endif
 	char *ver = NULL;
 	Npfcall *rc = NULL;
 
@@ -502,18 +522,25 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 		ver = NPFS_PROTO_LEGACY;
 		ver = "9P2000";
 	} else if (!np_strcmp(version, "9P2000.u")) {
-		if (conn->proto_version == NPFS_PROTO_2000U
-		 || conn->proto_version == NPFS_PROTO_2000L) {
-			proto_ver = NPFS_PROTO_2000U;
-			ver = "9P2000.u";
-		} else
-			np_werror("unsupported 9P version", EIO);
+		switch (conn->proto_version) {
+			case NPFS_PROTO_2000U:
+#if HAVE_DOTL
+			case NPFS_PROTO_2000L:
+#endif
+				proto_ver = NPFS_PROTO_2000U;
+				ver = "9P2000.u";
+				break;
+			default:
+				np_werror("unsupported 9P version", EIO);
+		}
+#if HAVE_DOTL
 	} else if (!np_strcmp(version, "9P2000.L")) {
 		if (conn->proto_version == NPFS_PROTO_2000L) {
 			proto_ver = NPFS_PROTO_2000L;
 			ver = "9P2000.L";
 		} else
 			np_werror("unsupported 9P version", EIO);
+#endif
 	} else
 		np_werror("unsupported 9P version", EIO);
 
@@ -610,6 +637,7 @@ np_default_wstat(Npfid *fid, Npstat *stat)
 	return NULL;
 }
 
+#if HAVE_LARGEIO
 static Npfcall*
 np_default_aread(Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize, Npreq *req)
 {
@@ -623,7 +651,8 @@ np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq 
 	np_werror(Enotimpl, ENOSYS);
 	return NULL;
 }
-
+#endif
+#if HAVE_DOTL
 static Npfcall*
 np_default_statfs(Npfid *fid)
 {
@@ -651,6 +680,7 @@ np_default_rename(Npfid *fid, Npfid *newdirfid, Npstr *newname)
 	np_werror(Enotimpl, ENOSYS);
 	return NULL;
 }
+#endif
 
 Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {
 	Npreq *req;
