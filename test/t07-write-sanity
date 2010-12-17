@@ -2,6 +2,7 @@
 
 doit ()
 {
+	local rc=0
         echo starting diod
         $PATH_DIOD -l "localhost:2006" -x -m -e $PATH_EXPDIR &
         sleep 1
@@ -10,16 +11,21 @@ doit ()
                         $PATH_MNTDIR
 
         echo creating file in diod file system
-        dd status=noxfer if=/dev/zero of=$PATH_MNTDIR/a count=128
+        if ! dd status=noxfer if=/dev/zero of=$PATH_MNTDIR/a count=128; then
+		rc=1
+	fi
 
         echo comparing file in regular and diod file systems
-        cmp $PATH_EXPDIR/a $PATH_MNTDIR/a
+        if ! cmp $PATH_EXPDIR/a $PATH_MNTDIR/a; then
+		rc=1
+	fi
 
         echo unmounting
         umount $PATH_MNTDIR
 	rm -f $PATH_EXPDIR/a
         echo waiting for diod to terminate
         wait
+	exit $rc
 }
 
 

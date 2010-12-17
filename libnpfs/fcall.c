@@ -292,10 +292,6 @@ np_walk(Npreq *req, Npfcall *tc)
 
 	req->fid = fid;
 #if 0
-	/* FIXME: this test used to lack parens and always fail.
-   	 * After I fixed it, it succeeds walking a mount point.
-   	 * Disabled like before for now. --jg
- 	 */
 	if (!(fid->type & Qtdir)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
@@ -339,7 +335,6 @@ np_walk(Npreq *req, Npfcall *tc)
 
 		newfid->type = wqids[i].type;
 		i++;
-
 		if (i<(tc->nwname) && !(newfid->type & Qtdir))
 			break;
 	}
@@ -412,12 +407,10 @@ np_create(Npreq *req, Npfcall *tc)
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-
 	if (!(fid->type & Qtdir)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
-
 	if (tc->perm&Dmdir && tc->mode!=Oread) {
 		np_werror(Eperm, EPERM);
 		goto done;
@@ -666,17 +659,14 @@ np_wstat(Npreq *req, Npfcall *tc)
                 np_werror(Eperm, EPERM);
                 goto done;
         }
-
 	if ((fid->type & Qtdir) && !(stat->mode & Dmdir)) {
 		np_werror(Edirchange, EPERM);
 		goto done;
 	}
-
 	if (!(fid->type & Qtdir) && (stat->mode & Dmdir)) {
 		np_werror(Edirchange, EPERM);
 		goto done;
 	}
-
 	rc = (*conn->srv->wstat)(fid, &tc->stat);
 done:
 //	np_fid_decref(fid);

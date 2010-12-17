@@ -2,6 +2,8 @@
 
 doit ()
 {
+	local rc=0
+
 	echo starting diod
 	$PATH_DIOD -s $1 -l "localhost:2006" -x -m -e $PATH_EXPDIR &
 	sleep 1
@@ -11,25 +13,39 @@ doit ()
 
 	echo "creating files"
 	mkdir $PATH_MNTDIR/b
-	dd if=/dev/zero of=$PATH_MNTDIR/b/a count=1024 status=noxfer
+	if ! dd if=/dev/zero of=$PATH_MNTDIR/b/a count=1024 status=noxfer; then
+		rc=1
+	fi
 
 	echo "comparing stat(2) results for file"
-	./tstat $PATH_MNTDIR/b/a $PATH_EXPDIR/b/a
+	if ! ./tstat $PATH_MNTDIR/b/a $PATH_EXPDIR/b/a; then
+		rc=1
+	fi
 	echo "comparing stat(2) results for hard link"
-	ln $PATH_EXPDIR/b/a $PATH_EXPDIR/b/c
-	./tstat $PATH_MNTDIR/b/c $PATH_EXPDIR/b/c
+	if ! ln $PATH_EXPDIR/b/a $PATH_EXPDIR/b/c; then
+		rc=1
+	fi
+	if ! ./tstat $PATH_MNTDIR/b/c $PATH_EXPDIR/b/c; then
+		rc=1
+	fi
 
 	echo "comparing stat(2) results for directory"
-	./tstat $PATH_MNTDIR/b $PATH_EXPDIR/b
+	if ! ./tstat $PATH_MNTDIR/b $PATH_EXPDIR/b; then
+		rc=1
+	fi
 
 	echo "removing files"
 	rm -f $PATH_MNTDIR/b/a $PATH_MNTDIR/b/c
-	rmdir $PATH_MNTDIR/b
+	if ! rmdir $PATH_MNTDIR/b; then
+		rc=1
+	fi
 
 	echo unmounting
 	umount $PATH_MNTDIR
 	echo waiting for diod to terminate
 	wait
+
+	return $rc
 }
 
 TEST=$(basename $0 | cut -d- -f1)
