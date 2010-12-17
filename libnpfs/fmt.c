@@ -117,7 +117,7 @@ np_printstat(FILE *f, Npstat *st, int dotu)
 	char s[256];
 
 	np_snprintstat(s, sizeof(s), st, dotu);
-	return fprintf (f, s);
+	return fprintf (f, "%s", s);
 }
 
 int
@@ -146,7 +146,7 @@ np_dump(FILE *f, u8 *data, int datalen)
 	char s[256];
 	
 	np_sndump(s, sizeof(s), data, datalen);
-	return fprintf (f, s);
+	return fprintf (f, "%s", s);
 }
 
 static int
@@ -413,5 +413,5 @@ np_printfcall(FILE *f, Npfcall *fc, int dotu)
 
 	np_snprintfcall (s, sizeof(s), fc, dotu);
 
-	return fprintf (f, s);
+	return fprintf (f, "%s", s);
 }
