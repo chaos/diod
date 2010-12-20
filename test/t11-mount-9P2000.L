@@ -3,11 +3,11 @@
 doit ()
 {
 	echo starting diod
-	$PATH_DIOD -s $1 -l "localhost:2006" -x -e $PATH_EXPDIR &
+	$PATH_DIOD -s $1 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
 	sleep 1
 	echo mounting
 	$PATH_DIODMOUNT -d -o uname=root,port=2006,version=9p2000.L \
-			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
+			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
 
 	echo unmounting
 	umount $PATH_MNTDIR

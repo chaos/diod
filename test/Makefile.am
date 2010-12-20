@@ -59,6 +59,7 @@ XFAIL_TESTS = \
 if ! DOTL
 XFAIL_TESTS += \
 	t11-mount-9P2000.L \
+	t13-rename-across-dirs \
 	t14-statfs \
 	t18-flock-twoproc \
 	t19-fcntl-twoproc \

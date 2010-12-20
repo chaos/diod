@@ -4,10 +4,10 @@ doit ()
 {
 	local rc=0
         echo starting diod
-        $PATH_DIOD -l "localhost:2006" -x -e $PATH_EXPDIR &
+        $PATH_DIOD -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
         sleep 1
         echo mounting
-        $PATH_DIODMOUNT -d -o uname=root,port=2006 -n localhost:$PATH_EXPDIR \
+        $PATH_DIODMOUNT -d -o uname=root,port=2006 -n 127.0.0.1:$PATH_EXPDIR \
                         $PATH_MNTDIR
 
         echo creating file in diod file system

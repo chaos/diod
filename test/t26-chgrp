@@ -3,11 +3,11 @@
 doit ()
 {
 	echo starting diod
-	$PATH_DIOD -s $1 -d 0x08 -l "localhost:2006" -x -e $PATH_EXPDIR &
+	$PATH_DIOD -s $1 -d 0x08 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
 	sleep 1
 	echo mounting
 	$PATH_DIODMOUNT -d -o uname=root,port=2006 \
-			-n localhost:$PATH_EXPDIR $PATH_MNTDIR
+			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
 
 	echo creating file with mode 0:0
 	touch $PATH_EXPDIR/a
