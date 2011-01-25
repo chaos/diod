@@ -41,6 +41,7 @@ check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tfcntl3$(EXEEXT) tconfig$(EXEEXT) tfsgid$(EXEEXT)
 @DOTL_FALSE@am__append_1 = \
 @DOTL_FALSE@	t11-mount-9P2000.L \
+@DOTL_FALSE@	t13-rename-across-dirs \
 @DOTL_FALSE@	t14-statfs \
 @DOTL_FALSE@	t18-flock-twoproc \
 @DOTL_FALSE@	t19-fcntl-twoproc \
