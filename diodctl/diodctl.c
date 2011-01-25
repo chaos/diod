@@ -82,9 +82,7 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
     {"allowany",        no_argument,        0, 'a'},
-#if HAVE_MUNGE
     {"no-munge-auth",   no_argument,        0, 'm'},
-#endif
     {"diod-path",       required_argument,  0, 'D'},
     {"log-dest",        required_argument,  0, 'L'},
     {0, 0, 0, 0},
@@ -182,11 +180,9 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 diod_conf_set_tcpwrappers (0);
                 break;
-#if HAVE_MUNGE
             case 'm':   /* --no-munge-auth */
                 diod_conf_set_munge (0);
                 break;
-#endif
             case 'D':   /* --diod-path PATH */
                 diod_conf_set_diodpath (optarg);
                 break;

@@ -39,6 +39,7 @@ Override TCP wrappers checks and allow any client to connect.
 .TP
 .I "-m, --no-munge-auth"
 This option allows users to attach without security credentials.
+It only is relevant if \fBdiod\fR was built with \fI--enable-munge\fR.
 .TP
 .I "-x, --exit-on-lastuse"
 Exit when the last connection drops, if clients have successfully attached.
@@ -48,9 +49,16 @@ Listen for connection on file descriptors zero through N.
 This is the mechanism that \fBdiodctl\fR uses to pass dynamically
 allocated ports to \fBdiod\fR.
 .TP
+.I "-S, --runas-self"
+Only allow the user that invoked the \fBdiod\fR server to attach.
+The server runs with uid, gid, and supplementary groups
+inherited from the invoking user.
+.TP
 .I "-u, --runas-uid UID"
-Causes the server to drop root permission and run as UID.
-Only that user will be allowed to attach.
+Only allow user UID to attach.
+If UID invoked \fBdiod\fR, behavior is identical to \fI--runas-self\fR.
+Otherwise, the server will sets uid, gid, and supplementary groups to
+those of UID.  In the latter case the server must have been invoked by root.
 .TP
 .I "-s, --stats PATH"
 Write I/O statistics to PATH as each file is closed.

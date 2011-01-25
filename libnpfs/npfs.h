@@ -82,83 +82,6 @@ typedef struct Npdirops Npdirops;
 typedef struct Nppoll Nppoll;
 typedef struct Npollfd Npollfd;
 
-typedef struct Npstatfs Npstatfs;
-typedef struct Nprename Nprename;
-typedef struct Nplock Nplock;
-typedef struct Npflock Npflock;
-
-/* message types */
-enum {
-#if HAVE_DOTL
-	Tstatfs         = 8,
-	Rstatfs,
-	Trename         = 20,
-	Rrename,
-	Tlock           = 52,
-	Rlock,
-	Tflock          = 54,
-	Rflock,
-#endif
-#if HAVE_LARGEIO
-	Taread          = 80,
-	Raread,
-	Tawrite         = 82,
-	Rawrite,
-#endif
-	Tversion	= 100,
-	Rversion,
-	Tauth		= 102,
-	Rauth,
-	Tattach		= 104,
-	Rattach,
-	Terror		= 106,
-	Rerror,
-	Tflush		= 108,
-	Rflush,
-	Twalk		= 110,
-	Rwalk,
-	Topen		= 112,
-	Ropen,
-	Tcreate		= 114,
-	Rcreate,
-	Tread		= 116,
-	Rread,
-	Twrite		= 118,
-	Rwrite,
-	Tclunk		= 120,
-	Rclunk,
-	Tremove		= 122,
-	Rremove,
-	Tstat		= 124,
-	Rstat,
-	Twstat		= 126,
-	Rwstat,
-};
-
-#if HAVE_DOTL
-/* lock cmd values */
-enum {
-	P9_LOCK_GETLK = 0x00,
-	P9_LOCK_SETLK = 0x01,
-	P9_LOCK_SETLKW = 0x02,
-};
-
-/* lock type values */
-enum {
-	P9_LOCK_RDLCK = 0x00,
-	P9_LOCK_WRLCK = 0x01,
-	P9_LOCK_UNLCK = 0x02,
-};
-
-/* flock op values */
-enum {
-	P9_FLOCK_SH = 0x01,
-	P9_FLOCK_EX = 0x02,
-	P9_FLOCK_UN = 0x03,
-	P9_FLOCK_NB = 0x04,
-};
-#endif
-
 #if HAVE_LARGEIO
 /* datacheck values */
 enum {
@@ -253,7 +176,7 @@ struct Npstat {
 	u32 		n_muid;
 };
  
-/* file metadata (stat) structure used to create Twstat message
+/* file metadata (stat) structure used to create P9_TWSTAT message
    It is similar to Npstat, but the strings don't point to 
    the same memory block and should be freed separately
 */
@@ -276,27 +199,6 @@ struct Npwstat {
 	u32 		n_muid;		/* 9p2000.u extensions */
 };
 
-#if HAVE_DOTL
-struct Npstatfs {
-	u32		type;
-	u32		bsize;
-	u64		blocks;
-	u64		bfree;
-	u64		bavail;
-	u64		files;
-	u64		ffree;
-	u64		fsid;
-	u32		namelen;
-};
-
-struct Nplock {
-	u8		type;
-	u64		pid;
-	u64		start;
-	u64		end;
-};
-#endif
-
 struct Npfcall {
 	u32		size;
 	u8		type;
@@ -304,44 +206,37 @@ struct Npfcall {
 	u8*		pkt;
 
 	u32		fid;
-	u32		msize;			/* Tversion, Rversion */
-	Npstr		version;		/* Tversion, Rversion */
-	u32		afid;			/* Tauth, Tattach */
-	Npstr		uname;			/* Tauth, Tattach */
-	Npstr		aname;			/* Tauth, Tattach */
-	Npqid		qid;			/* Rauth, Rattach, Ropen, Rcreate */
-	Npstr		ename;			/* Rerror */
-	u16		oldtag;			/* Tflush */
-	u32		newfid;			/* Twalk */
-	u16		nwname;			/* Twalk */
-	Npstr		wnames[MAXWELEM];	/* Twalk */
-	u16		nwqid;			/* Rwalk */
-	Npqid		wqids[MAXWELEM];	/* Rwalk */
-	u8		mode;			/* Topen, Tcreate */
-	u32		iounit;			/* Ropen, Rcreate */
-	Npstr		name;			/* Tcreate */
-	u32		perm;			/* Tcreate */
-	u64		offset;			/* Tread, Twrite */
-	u32		count;			/* Tread, Rread, Twrite, Rwrite */
-	u8*		data;			/* Rread, Twrite */
-	Npstat		stat;			/* Rstat, Twstat */
+	u32		msize;			/* P9_TVERSION, P9_RVERSION */
+	Npstr		version;		/* P9_TVERSION, P9_RVERSION */
+	u32		afid;			/* P9_TAUTH, P9_TATTACH */
+	Npstr		uname;			/* P9_TAUTH, P9_TATTACH */
+	Npstr		aname;			/* P9_TAUTH, P9_TATTACH */
+	Npqid		qid;			/* P9_RAUTH, P9_RATTACH, P9_ROPEN, P9_RCREATE */
+	Npstr		ename;			/* P9_RERROR */
+	u16		oldtag;			/* P9_TFLUSH */
+	u32		newfid;			/* P9_TWALK */
+	u16		nwname;			/* P9_TWALK */
+	Npstr		wnames[MAXWELEM];	/* P9_TWALK */
+	u16		nwqid;			/* P9_RWALK */
+	Npqid		wqids[MAXWELEM];	/* P9_RWALK */
+	u8		mode;			/* P9_TOPEN, P9_TCREATE */
+	u32		iounit;			/* P9_ROPEN, P9_RCREATE */
+	Npstr		name;			/* P9_TCREATE */
+	u32		perm;			/* P9_TCREATE */
+	u64		offset;			/* P9_TREAD, P9_TWRITE */
+	u32		count;			/* P9_TREAD, P9_RREAD, P9_TWRITE, P9_RWRITE */
+	u8*		data;			/* P9_RREAD, P9_TWRITE */
+	Npstat		stat;			/* P9_RSTAT, P9_TWSTAT */
 
 	/* 9P2000.u extensions */
-	u32		ecode;			/* Rerror */
-	Npstr		extension;		/* Tcreate */
+	u32		ecode;			/* P9_RERROR */
+	Npstr		extension;		/* P9_TCREATE */
 	u32		n_uname;
-#if HAVE_LARGEIO
-	u32		rsize;			/* Taread, Tawrite */
-	u8		datacheck;		/* Taread, Tawrite */
-	u32		check;			/* Raread, Tawrite */
-#endif
-#if HAVE_DOTL
-	u8		cmd;			/* Tlock, Tflock */
-	Npstatfs	statfs;			/* Rstatfs */
-	Nplock		lock;			/* Tlock,Rlock */
-	u32		newdirfid;		/* Trename */
-	Npstr		newname;		/* Trename */
-#endif
+	/* BEGIN largeio */
+	u32		rsize;			/* P9_TAREAD, P9_TAWRITE */
+	u8		datacheck;		/* P9_TAREAD, P9_TAWRITE */
+	u32		check;			/* P9_RAREAD, P9_TAWRITE */
+	/* END largeio */
 	Npfcall*	next;
 };
 

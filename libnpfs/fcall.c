@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <zlib.h>
 #include "npfs.h"
+#include "9p.h"
 #include "npfsimpl.h"
 
 char *Eunknownfid = "unknown fid";
@@ -258,7 +259,7 @@ np_flush(Npreq *req, Npfcall *tc)
 		creq = creq->next;
 	}
 
-	// if not found, return Rflush
+	// if not found, return P9_RFLUSH
 	if (!creq)
 		ret = np_create_rflush();
 
@@ -429,7 +430,7 @@ np_create(Npreq *req, Npfcall *tc)
 
 	rc = (*conn->srv->create)(fid, &tc->name, tc->perm, tc->mode, 
 		&tc->extension);
-	if (rc && rc->type == Rcreate) {
+	if (rc && rc->type == P9_RCREATE) {
 		fid->omode = tc->mode;
 		fid->type = rc->qid.type;
 	}
@@ -576,14 +577,14 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 	if (fid->omode!=(u16)~0 && fid->omode==Orclose) {
 		rc = (*conn->srv->remove)(fid);
-		if (rc->type == Rerror)
+		if (rc->type == P9_RERROR)
 			goto done;
 		free(rc);
 		rc = np_create_rclunk();
 	} else
 		rc = (*conn->srv->clunk)(fid);
 
-	if (rc && rc->type == Rclunk)
+	if (rc && rc->type == P9_RCLUNK)
 		np_fid_decref(fid);
 
 done:
@@ -608,7 +609,7 @@ np_remove(Npreq *req, Npfcall *tc)
 
 	req->fid = fid;
 	rc = (*conn->srv->remove)(fid);
-	if (rc && rc->type == Rremove)
+	if (rc && rc->type == P9_RREMOVE)
 		np_fid_decref(fid);
 
 done:

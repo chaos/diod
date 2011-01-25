@@ -43,7 +43,7 @@ Override TCP wrappers checks and allow any client to connect.
 .TP
 .I "-m, --no-munge-auth"
 Allow users to attach without security credentials.
-This option is intended for testing only.
+It is only relevant if \fBdiod\fR was built with \fI--enable-munge\fR.
 .TP
 .I "-D, --diod-path PATH"
 Override the default path to the \fBdiod\fR server executable.

@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <zlib.h>
 #include "npfs.h"
+#include "9p.h"
 #include "npfsimpl.h"
 
 struct cbuf {
@@ -414,7 +415,7 @@ np_create_tversion(u32 msize, char *version)
 
 	bufp = &buffer;
 	size = 4 + 2 + strlen(version); /* msize[4] version[s] */
-	fc = np_create_common(bufp, size, Tversion);
+	fc = np_create_common(bufp, size, P9_TVERSION);
 	if (!fc)
 		return NULL;
 
@@ -434,7 +435,7 @@ np_create_rversion(u32 msize, char *version)
 
 	bufp = &buffer;
 	size = 4 + 2 + strlen(version); /* msize[4] version[s] */
-	fc = np_create_common(bufp, size, Rversion);
+	fc = np_create_common(bufp, size, P9_RVERSION);
 	if (!fc)
 		return NULL;
 
@@ -460,7 +461,7 @@ np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname, int dotu)
 	if (aname)
 		size += strlen(aname);
 
-	fc = np_create_common(bufp, size, Tauth);
+	fc = np_create_common(bufp, size, P9_TAUTH);
 	if (!fc)
 		return NULL;
 
@@ -483,7 +484,7 @@ np_create_rauth(Npqid *aqid)
 
 	bufp = &buffer;
 	size = 13; /* aqid[13] */
-	fc = np_create_common(bufp, size, Rauth);
+	fc = np_create_common(bufp, size, P9_RAUTH);
 	if (!fc)
 		return NULL;
 
@@ -504,7 +505,7 @@ np_create_rerror(char *ename, int ecode, int dotu)
 	if (dotu)
 		size += 4; /* ecode[4] */
 
-	fc = np_create_common(bufp, size, Rerror);
+	fc = np_create_common(bufp, size, P9_RERROR);
 	if (!fc)
 		return NULL;
 
@@ -525,7 +526,7 @@ np_create_rerror1(Npstr *ename, int ecode, int dotu)
 
 	bufp = &buffer;
 	size = 2 + ename->len + (dotu?4:0); /* ename[s] ecode[4] */
-	fc = np_create_common(bufp, size, Rerror);
+	fc = np_create_common(bufp, size, P9_RERROR);
 	if (!fc)
 		return NULL;
 
@@ -548,7 +549,7 @@ np_create_tflush(u16 oldtag)
 
 	bufp = &buffer;
 	size = 2;
-	fc = np_create_common(bufp, size, Tflush);
+	fc = np_create_common(bufp, size, P9_TFLUSH);
 	if (!fc)
 		return NULL;
 
@@ -566,7 +567,7 @@ np_create_rflush(void)
 
 	bufp = &buffer;
 	size = 0;
-	fc = np_create_common(bufp, size, Rflush);
+	fc = np_create_common(bufp, size, P9_RFLUSH);
 	if (!fc)
 		return NULL;
 
@@ -592,7 +593,7 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname, int 
 	if (dotu)
 		size += 4; /* n_uname[4] */
 
-	fc = np_create_common(bufp, size, Tattach);
+	fc = np_create_common(bufp, size, P9_TATTACH);
 	if (!fc)
 		return NULL;
 
@@ -615,7 +616,7 @@ np_create_rattach(Npqid *qid)
 
 	bufp = &buffer;
 	size = 13; /* qid[13] */
-	fc = np_create_common(bufp, size, Rattach);
+	fc = np_create_common(bufp, size, P9_RATTACH);
 	if (!fc)
 		return NULL;
 
@@ -641,7 +642,7 @@ np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
 	for(i = 0; i < nwname; i++)
 		size += strlen(wnames[i]);
 
-	fc = np_create_common(bufp, size, Twalk);
+	fc = np_create_common(bufp, size, P9_TWALK);
 	if (!fc)
 		return NULL;
 
@@ -669,7 +670,7 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 
 	bufp = &buffer;
 	size = 2 + nwqid*13; /* nwqid[2] nwqid*wqid[13] */
-	fc = np_create_common(bufp, size, Rwalk);
+	fc = np_create_common(bufp, size, P9_RWALK);
 	if (!fc)
 		return NULL;
 
@@ -691,7 +692,7 @@ np_create_topen(u32 fid, u8 mode)
 
 	bufp = &buffer;
 	size = 4 + 1; /* fid[4] mode[1] */
-	fc = np_create_common(bufp, size, Topen);
+	fc = np_create_common(bufp, size, P9_TOPEN);
 	if (!fc)
 		return NULL;
 
@@ -711,7 +712,7 @@ np_create_ropen(Npqid *qid, u32 iounit)
 
 	bufp = &buffer;
 	size = 13 + 4; /* qid[13] iounit[4] */
-	fc = np_create_common(bufp, size, Ropen);
+	fc = np_create_common(bufp, size, P9_ROPEN);
 	if (!fc)
 		return NULL;
 
@@ -731,7 +732,7 @@ np_create_tcreate(u32 fid, char *name, u32 perm, u8 mode)
 
 	bufp = &buffer;
 	size = 4 + 2 + strlen(name) + 4 + 1; /* fid[4] name[s] perm[4] mode[1] */
-	fc = np_create_common(bufp, size, Tcreate);
+	fc = np_create_common(bufp, size, P9_TCREATE);
 	if (!fc)
 		return NULL;
 
@@ -753,7 +754,7 @@ np_create_rcreate(Npqid *qid, u32 iounit)
 
 	bufp = &buffer;
 	size = 13 + 4; /* qid[13] iounit[4] */
-	fc = np_create_common(bufp, size, Rcreate);
+	fc = np_create_common(bufp, size, P9_RCREATE);
 	if (!fc)
 		return NULL;
 
@@ -773,7 +774,7 @@ np_create_tread(u32 fid, u64 offset, u32 count)
 
 	bufp = &buffer;
 	size = 4 + 8 + 4; /* fid[4] offset[8] count[4] */
-	fc = np_create_common(bufp, size, Tread);
+	fc = np_create_common(bufp, size, P9_TREAD);
 	if (!fc)
 		return NULL;
 
@@ -794,7 +795,7 @@ np_alloc_rread(u32 count)
 
 	bufp = &buffer;
 	size = 4 + count; /* count[4] data[count] */
-	fc = np_create_common(bufp, size, Rread);
+	fc = np_create_common(bufp, size, P9_RREAD);
 	if (!fc)
 		return NULL;
 
@@ -845,7 +846,7 @@ np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
 
 	bufp = &buffer;
 	size = 4 + 8 + 4 + count; /* fid[4] offset[8] count[4] data[count] */
-	fc = np_create_common(bufp, size, Twrite);
+	fc = np_create_common(bufp, size, P9_TWRITE);
 	if (!fc)
 		return NULL;
 
@@ -870,7 +871,7 @@ np_create_rwrite(u32 count)
 
 	bufp = &buffer;
 	size = 4; /* count[4] */
-	fc = np_create_common(bufp, size, Rwrite);
+	fc = np_create_common(bufp, size, P9_RWRITE);
 	if (!fc)
 		return NULL;
 
@@ -889,7 +890,7 @@ np_create_tclunk(u32 fid)
 
 	bufp = &buffer;
 	size = 4;	/* fid[4] */
-	fc = np_create_common(bufp, size, Tclunk);
+	fc = np_create_common(bufp, size, P9_TCLUNK);
 	if (!fc)
 		return NULL;
 
@@ -907,7 +908,7 @@ np_create_rclunk(void)
 
 	bufp = &buffer;
 	size = 0;
-	fc = np_create_common(bufp, size, Rclunk);
+	fc = np_create_common(bufp, size, P9_RCLUNK);
 	if (!fc)
 		return NULL;
 
@@ -924,7 +925,7 @@ np_create_tremove(u32 fid)
 
 	bufp = &buffer;
 	size = 4;	/* fid[4] */
-	fc = np_create_common(bufp, size, Tremove);
+	fc = np_create_common(bufp, size, P9_TREMOVE);
 	if (!fc)
 		return NULL;
 
@@ -941,7 +942,7 @@ np_create_rremove(void)
 
 	bufp = &buffer;
 	size = 0;
-	fc = np_create_common(bufp, size, Rremove);
+	fc = np_create_common(bufp, size, P9_RREMOVE);
 
 	return np_post_check(fc, bufp);
 }
@@ -956,7 +957,7 @@ np_create_tstat(u32 fid)
 
 	bufp = &buffer;
 	size = 4;	/* fid[4] */
-	fc = np_create_common(bufp, size, Tstat);
+	fc = np_create_common(bufp, size, P9_TSTAT);
 	if (!fc)
 		return NULL;
 
@@ -976,7 +977,7 @@ np_create_rstat(Npwstat *wstat, int dotu)
 
 	statsz = size_wstat(wstat, dotu);
 	size = 2 + 2 + statsz; /* stat[n] */
-	fc = np_create_common(bufp, size, Rstat);
+	fc = np_create_common(bufp, size, P9_RSTAT);
 	if (!fc)
 		return NULL;
 
@@ -998,7 +999,7 @@ np_create_twstat(u32 fid, Npwstat *wstat, int dotu)
 
 	statsz = size_wstat(wstat, dotu);
 	size = 4 + 2 + 2 + statsz; /* fid[4] stat[n] */
-	fc = np_create_common(bufp, size, Twstat);
+	fc = np_create_common(bufp, size, P9_TWSTAT);
 	if (!fc)
 		return NULL;
 
@@ -1019,7 +1020,7 @@ np_create_rwstat(void)
 
 	bufp = &buffer;
 	size = 0;
-	fc = np_create_common(bufp, size, Rwstat);
+	fc = np_create_common(bufp, size, P9_RWSTAT);
 
 	return np_post_check(fc, bufp);
 }
@@ -1036,7 +1037,7 @@ np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize)
 	bufp = &buffer;
 	size = 4 + 1 + 8 + 4	/* fid[4] datacheck[1] offset[8] count[4] */
 	     + 4;		/*   rsize[4] */
-	fc = np_create_common(bufp, size, Taread);
+	fc = np_create_common(bufp, size, P9_TAREAD);
 	if (!fc)
 		return NULL;
 
@@ -1065,7 +1066,7 @@ np_create_raread(u32 count)
 
 	bufp = &buffer;
 	size = 4 + count + 4; /* count[4] data[count] check[4] */
-	fc = np_create_common(bufp, size, Raread);
+	fc = np_create_common(bufp, size, P9_RAREAD);
 	if (!fc)
 		return NULL;
 
@@ -1114,7 +1115,7 @@ np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
 	bufp = &buffer;
 	size = 4 + 1 + 8 + 4	/* fid[4] datacheck[1] offset[8] count[4] */
 	     + 4 + rsize; 	/*   rsize[4] data[rsize] */
-	fc = np_create_common(bufp, size, Tawrite);
+	fc = np_create_common(bufp, size, P9_TAWRITE);
 	if (!fc)
 		return NULL;
 
@@ -1141,7 +1142,7 @@ np_create_rawrite(u32 count)
 
 	bufp = &buffer;
 	size = 4; /* count[4] */
-	fc = np_create_common(bufp, size, Rawrite);
+	fc = np_create_common(bufp, size, P9_RAWRITE);
 	if (!fc)
 		return NULL;
 
@@ -1162,7 +1163,7 @@ np_create_tstatfs(u32 fid)
 
 	bufp = &buffer;
 	size = 4; /* fid[4] */
-	fc = np_create_common(bufp, size, Tstatfs);
+	fc = np_create_common(bufp, size, P9_TSTATFS);
 	if (!fc)
 		return NULL;
 
@@ -1182,7 +1183,7 @@ np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 fi
 	bufp = &buffer;
 	size = 4 + 4 + 8 + 8 /* type[4] bsize[4] blocks[8] bfree[8] bavail[8] */
          + 8 + 8 + 8 + 8 + 4;/* bavail[8] files[8] ffree[8] fsid[8] namelen[4]*/
-	fc = np_create_common(bufp, size, Rstatfs);
+	fc = np_create_common(bufp, size, P9_RSTATFS);
 	if (!fc)
 		return NULL;
 
@@ -1211,7 +1212,7 @@ np_create_tlock(u32 fid, u8 cmd, u8 type, u64 pid,
 	bufp = &buffer;
 	size = 4 + 1 + 1 	/* fid[4] cmd[1] type[1]  */
 		 + 8 + 8 + 8;	/* pid[8] start[8] end[8] */
-	fc = np_create_common(bufp, size, Tlock);
+	fc = np_create_common(bufp, size, P9_TLOCK);
 	if (!fc)
 		return NULL;
 
@@ -1235,7 +1236,7 @@ np_create_rlock(u8 type, u64 pid, u64 start, u64 end)
 
         bufp = &buffer;
 	size = 1 + 8 + 8 + 8; /* type[1] pid[8] start[8] end[8] */
-        fc = np_create_common(bufp, size, Rlock);
+        fc = np_create_common(bufp, size, P9_RLOCK);
         if (!fc)
                 return NULL;
 
@@ -1294,7 +1295,7 @@ np_create_trename(u32 fid, u32 newdirfid, char *newname)
 
 	bufp = &buffer;
 	size = 4 + 4 + 2 + strlen(newname); /* fid[4] newdirfid[4] newname[s] */
-	fc = np_create_common(bufp, size, Trename);
+	fc = np_create_common(bufp, size, P9_TRENAME);
 	if (!fc)
 		return NULL;
 
@@ -1315,7 +1316,7 @@ np_create_rrename(void)
 
 	bufp = &buffer;
 	size = 0;
-	fc = np_create_common(bufp, size, Rrename);
+	fc = np_create_common(bufp, size, P9_RRENAME);
 	if (!fc)
 		return NULL;
 
@@ -1346,17 +1347,17 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 	default:
 		goto error;
 
-	case Tversion:
+	case P9_TVERSION:
 		fc->msize = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->version);
 		break;
 
-	case Rversion:
+	case P9_RVERSION:
 		fc->msize = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->version);
 		break;
 
-	case Tauth:
+	case P9_TAUTH:
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
@@ -1366,15 +1367,15 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 			fc->n_uname = ~0;
 		break;
 
-	case Rauth:
+	case P9_RAUTH:
 		buf_get_qid(bufp, &fc->qid);
 		break;
 
-	case Tflush:
+	case P9_TFLUSH:
 		fc->oldtag = buf_get_int16(bufp);
 		break;
 
-	case Tattach:
+	case P9_TATTACH:
 		fc->fid = buf_get_int32(bufp);
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
@@ -1385,11 +1386,11 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 			fc->n_uname = ~0;
 		break;
 
-	case Rattach:
+	case P9_RATTACH:
 		buf_get_qid(bufp, &fc->qid);
 		break;
 
-	case Rerror:
+	case P9_RERROR:
 		buf_get_str(bufp, &fc->ename);
 		if (dotu)
 			fc->ecode = buf_get_int32(bufp);
@@ -1397,7 +1398,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 			fc->ecode = ~0;
 		break;
 
-	case Twalk:
+	case P9_TWALK:
 		fc->fid = buf_get_int32(bufp);
 		fc->newfid = buf_get_int32(bufp);
 		fc->nwname = buf_get_int16(bufp);
@@ -1409,7 +1410,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		}
 		break;
 
-	case Rwalk:
+	case P9_RWALK:
 		fc->nwqid = buf_get_int16(bufp);
 		if (fc->nwqid > MAXWELEM)
 			goto error;
@@ -1417,18 +1418,18 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 			buf_get_qid(bufp, &fc->wqids[i]);
 		break;
 
-	case Topen:
+	case P9_TOPEN:
 		fc->fid = buf_get_int32(bufp);
 		fc->mode = buf_get_int8(bufp);
 		break;
 
-	case Ropen:
-	case Rcreate:
+	case P9_ROPEN:
+	case P9_RCREATE:
 		buf_get_qid(bufp, &fc->qid);
 		fc->iounit = buf_get_int32(bufp);
 		break;
 
-	case Tcreate:
+	case P9_TCREATE:
 		fc->fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->name);
 		fc->perm = buf_get_int32(bufp);
@@ -1439,65 +1440,65 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 			np_strzero(&fc->extension);
 		break;
 
-	case Tread:
+	case P9_TREAD:
 		fc->fid = buf_get_int32(bufp);
 		fc->offset = buf_get_int64(bufp);
 		fc->count = buf_get_int32(bufp);
 		break;
 
-	case Rread:
+	case P9_RREAD:
 		fc->count = buf_get_int32(bufp);
 		fc->data = buf_alloc(bufp, fc->count);
 		break;
 
-	case Twrite:
+	case P9_TWRITE:
 		fc->fid = buf_get_int32(bufp);
 		fc->offset = buf_get_int64(bufp);
 		fc->count = buf_get_int32(bufp);
 		fc->data = buf_alloc(bufp, fc->count);
 		break;
 
-	case Rwrite:
+	case P9_RWRITE:
 		fc->count = buf_get_int32(bufp);
 		break;
 
-	case Tclunk:
-	case Tremove:
-	case Tstat:
+	case P9_TCLUNK:
+	case P9_TREMOVE:
+	case P9_TSTAT:
 		fc->fid = buf_get_int32(bufp);
 		break;
 
-	case Rflush:
-	case Rclunk:
-	case Rremove:
-	case Rwstat:
+	case P9_RFLUSH:
+	case P9_RCLUNK:
+	case P9_RREMOVE:
+	case P9_RWSTAT:
 		break;
 
-	case Rstat:
+	case P9_RSTAT:
 		buf_get_int16(bufp);
 		buf_get_stat(bufp, &fc->stat, dotu);
 		break;
 
-	case Twstat:
+	case P9_TWSTAT:
 		fc->fid = buf_get_int32(bufp);
 		buf_get_int16(bufp);
 		buf_get_stat(bufp, &fc->stat, dotu);
 		break;
 #if HAVE_LARGEIO
-	case Taread:
+	case P9_TAREAD:
 		fc->fid = buf_get_int32(bufp);
 		fc->datacheck = buf_get_int8(bufp);
 		fc->offset = buf_get_int64(bufp);
 		fc->count = buf_get_int32(bufp);
 		fc->rsize = buf_get_int32(bufp);
 		break;
-	case Raread:
+	case P9_RAREAD:
 		fc->count = buf_get_int32(bufp);
 		fc->data = buf_alloc(bufp, fc->count);
 		fc->check = buf_get_int32(bufp);
 		break;
 
-	case Tawrite:
+	case P9_TAWRITE:
 		fc->fid = buf_get_int32(bufp);
 		fc->datacheck = buf_get_int8(bufp);
 		fc->offset = buf_get_int64(bufp);
@@ -1506,15 +1507,15 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->data = buf_alloc(bufp, fc->rsize);
 		fc->check = buf_get_int32(bufp);
 		break;
-	case Rawrite:
+	case P9_RAWRITE:
 		fc->count = buf_get_int32(bufp);
 		break;
 #endif
 #if HAVE_DOTL
-	case Tstatfs:
+	case P9_TSTATFS:
 		fc->fid = buf_get_int32(bufp);
 		break;
-	case Rstatfs:
+	case P9_RSTATFS:
 		fc->statfs.type = buf_get_int32(bufp);
 		fc->statfs.bsize = buf_get_int32(bufp);
 		fc->statfs.blocks = buf_get_int64(bufp);
@@ -1526,7 +1527,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->statfs.namelen = buf_get_int32(bufp);
 		break;
 
-	case Tlock:
+	case P9_TLOCK:
 		fc->fid = buf_get_int32(bufp);
 		fc->cmd = buf_get_int8(bufp);
 		fc->lock.type = buf_get_int8(bufp);
@@ -1534,7 +1535,7 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->lock.start = buf_get_int64(bufp);
 		fc->lock.end = buf_get_int64(bufp);
 		break;
-	case Rlock:
+	case P9_RLOCK:
 		fc->lock.type = buf_get_int8(bufp);
 		fc->lock.pid = buf_get_int64(bufp);
 		fc->lock.start = buf_get_int64(bufp);
@@ -1548,12 +1549,12 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 	case Rflock:
 		break;
 
-	case Trename:
+	case P9_TRENAME:
 		fc->fid = buf_get_int32(bufp);
 		fc->newdirfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->newname);
 		break;
-	case Rrename:
+	case P9_RRENAME:
 		break;
 #endif
 	}

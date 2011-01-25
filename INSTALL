@@ -1,3 +1,29 @@
+Here are some diod conifguration options that may be useful:
+
+  --enable-munge          Build to use MUNGE authentication
+
+Without munge support enabled, authorization is based on source
+IP address and is therefore spoofable.  Munge provides authentication
+based on a shared private key.  You can get munge from
+  http://code.google.com/p/munge/
+or grab your distro's package.
+
+  --enable-dotl           Build to use 9P2000.L protocol
+
+The 9P2000.L protocol extensions are under development at IBM.
+Until they are finalized, the diod implementation is speculative
+and may lag upstream devleopment.  Unless you have a compatible
+v9fs client, leave this off for now.
+
+  --enable-largeio        Build to use large I/O protocol extensions
+
+This is a protocol extension for large atomic I/O's that greatly
+improves performance over 9P2000.u and is needed in order to preserve
+atomicity in large I/O requests.  However it's diod-specific and it
+requires support in your v9fs client so it's off by default.
+
+Generic autoconf installation instructions follow.
+
 Installation Instructions
 *************************
 

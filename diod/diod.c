@@ -55,7 +55,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:axF:u:A:L:s:m"
+#define OPTIONS "d:l:w:e:E:axF:u:A:L:s:mS"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -66,12 +66,11 @@ static const struct option longopts[] = {
     {"export",          required_argument,  0, 'e'},
     {"export-file",     required_argument,  0, 'E'},
     {"allowany",        no_argument,        0, 'a'},
-#if HAVE_MUNGE
     {"no-munge-auth",   no_argument,        0, 'm'},
-#endif
     {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
+    {"runas-self",      no_argument,        0, 'S'},
     {"atomic-max",      required_argument,  0, 'A'},
     {"log-to",          required_argument,  0, 'L'},
     {"stats",           required_argument,  0, 's'},
@@ -97,6 +96,7 @@ usage()
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
+"   -S,--runas-self        only allow user running diod to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
 "   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
@@ -118,6 +118,7 @@ main(int argc, char **argv)
     uid_t uid;
     List hplist;
     unsigned long amax;
+    char *end;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
@@ -163,11 +164,9 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 diod_conf_set_tcpwrappers (0);
                 break;
-#if HAVE_MUNGE
             case 'm':   /* --no-munge-auth */
                 diod_conf_set_munge (0);
                 break;
-#endif
             case 'x':   /* --exit-on-lastuse */
                 diod_conf_set_exit_on_lastuse (1);
                 break;
@@ -176,16 +175,23 @@ main(int argc, char **argv)
                 break;
             case 'u':   /* --runas-uid UID */
                 errno = 0;
-                uid = strtoul (optarg, NULL, 10);
+                uid = strtoul (optarg, &end, 10);
                 if (errno != 0)
-                    err_exit ("--runas-uid argument");
+                    err_exit ("error parsing --runas-uid argument");
+                if (*end != '\0')
+                    msg_exit ("error parsing --runas-uid argument");
                 diod_conf_set_runasuid (uid);
+                break;
+            case 'S':   /* --runas-self */
+                diod_conf_set_runasuid (geteuid ());
                 break;
             case 'A':   /* --atomic-max INT */
                 errno = 0;
-                amax = strtoul (optarg, NULL, 10);
+                amax = strtoul (optarg, &end, 10);
                 if (errno != 0)
-                    err_exit ("--atomic-max argument");
+                    err_exit ("error parsing --atomic-max argument");
+                if (*end != '\0')
+                    msg_exit ("error parsing --atomic-max argument");
                 diod_conf_set_atomic_max (amax);
                 break;
             case 'L':   /* --log-to DEST */
@@ -211,10 +217,11 @@ main(int argc, char **argv)
 #endif
 
     /* drop privileges, unless running for multiple users */
-    if (diod_conf_get_runasuid (&uid))
-        diod_become_user (NULL, uid, 1);
-    else if (geteuid () != 0)
-        msg_exit ("if not running as root, you must specify --runas-uid");
+    if (diod_conf_get_runasuid (&uid)) {
+        if (uid != geteuid ())
+            diod_become_user (NULL, uid, 1);
+    } else if (geteuid () != 0)
+        msg_exit ("if not running as root, you must specify --runas-self or --runas-uid");
 
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)

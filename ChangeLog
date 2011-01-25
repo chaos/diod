@@ -1,3 +1,21 @@
+2011-01-24 Jim Garlick <garlick@llnl.gov>
+
+	* libnpfs/* : Bulk sed of new 9p.h opcode names.
+
+	* libnpfs/9p.h, libnpfs/npfs.h : Import 9p.h from v9fs and remove
+	duplicate opcode definitions from npfs.h.
+
+	* diod/diod.c : Add --runas-user option.
+
+	* diod/diod.c, diod/diod.8.in, diodctl/diodctl.c, diodctl/diodctl.8.in :
+	Allow -m option to be supplied weven without --enable-munge.
+
+	* libdiod/diod_conf.h : Include proto for get/set_munge unconditionally.
+
+2010-12-17 Jim Garlick <garlick@llnl.gov>
+
+	* : Add --enable-dotl, --enable-munge, and --enable-largeio.
+
 2010-12-13 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs : Renamed from npfs/libnpfs.  Integrated with automake.

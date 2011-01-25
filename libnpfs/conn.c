@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "npfs.h"
+#include "9p.h"
 #include "npfsimpl.h"
 
 extern int printfcall(FILE *f, Npfcall *fc, int dotu);
@@ -223,7 +224,7 @@ np_conn_reset(Npconn *conn, u32 msize, int proto_version)
 	n = 0;
 	req = conn->srv->workreqs;
 	while (req != NULL) {
-		if (req->conn == conn && (msize==0 || req->tcall->type != Tversion)) 
+		if (req->conn == conn && (msize==0 || req->tcall->type != P9_TVERSION)) 
 			n++;
 
 		req = req->next;
@@ -233,7 +234,7 @@ np_conn_reset(Npconn *conn, u32 msize, int proto_version)
 	n = 0;
 	req = conn->srv->workreqs;
 	while (req != NULL) {
-		if (req->conn == conn && (msize==0 || req->tcall->type != Tversion))
+		if (req->conn == conn && (msize==0 || req->tcall->type != P9_TVERSION))
 			reqs[n++] = np_req_ref(req);
 		req = req->next;
 	}
@@ -270,7 +271,7 @@ np_conn_reset(Npconn *conn, u32 msize, int proto_version)
 	pthread_mutex_lock(&srv->lock);
 	while (1) {
 		for(req = srv->workreqs; req != NULL; req = req->next)
-			if (req->conn == conn && (msize==0 || req->tcall->type != Tversion))
+			if (req->conn == conn && (msize==0 || req->tcall->type != P9_TVERSION))
 				break;
 
 		if (req == NULL)

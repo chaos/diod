@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <assert.h>
 #include "npfs.h"
+#include "9p.h"
 #include "npfsimpl.h"
 
 struct Reqpool {
@@ -311,15 +312,15 @@ np_process_request(Npreq *req)
 	np_werror(NULL, 0);
 	switch (tc->type) {
 #if HAVE_DOTL
-		case Tstatfs:
+		case P9_TSTATFS:
 			rc = np_statfs(req, tc);
 			op = "statfs";
 			break;
-		case Trename:
+		case P9_TRENAME:
 			rc = np_rename(req, tc);
 			op = "rename";
 			break;
-		case Tlock:
+		case P9_TLOCK:
 			rc = np_lock(req, tc);
 			op = "lock";
 			break;
@@ -329,64 +330,64 @@ np_process_request(Npreq *req)
 			break;
 #endif
 #if HAVE_LARGEIO
-		case Taread:
+		case P9_TAREAD:
 			rc = np_aread(req, tc);
 			op = "aread";
 			break;
-		case Tawrite:
+		case P9_TAWRITE:
 			rc = np_awrite(req, tc);
 			op = "awrite";
 			break;
 #endif
-		case Tversion:
+		case P9_TVERSION:
 			rc = np_version(req, tc);
 			op = "version";
 			break;
-		case Tauth:
+		case P9_TAUTH:
 			rc = np_auth(req, tc);
 			op = "auth";
 			break;
-		case Tattach:
+		case P9_TATTACH:
 			rc = np_attach(req, tc);
 			op = "attach";
 			break;
-		case Tflush:
+		case P9_TFLUSH:
 			rc = np_flush(req, tc);
 			op = "flush";
 			break;
-		case Twalk:
+		case P9_TWALK:
 			rc = np_walk(req, tc);
 			op = "walk";
 			break;
-		case Topen:
+		case P9_TOPEN:
 			rc = np_open(req, tc);
 			op = "open";
 			break;
-		case Tcreate:
+		case P9_TCREATE:
 			rc = np_create(req, tc);
 			op = "create";
 			break;
-		case Tread:
+		case P9_TREAD:
 			rc = np_read(req, tc);
 			op = "read";
 			break;
-		case Twrite:
+		case P9_TWRITE:
 			rc = np_write(req, tc);
 			op = "write";
 			break;
-		case Tclunk:
+		case P9_TCLUNK:
 			rc = np_clunk(req, tc);
 			op = "clunk";
 			break;
-		case Tremove:
+		case P9_TREMOVE:
 			rc = np_remove(req, tc);
 			op = "remove";
 			break;
-		case Tstat:
+		case P9_TSTAT:
 			rc = np_stat(req, tc);
 			op = "stat";
 			break;
-		case Twstat:
+		case P9_TWSTAT:
 			rc = np_wstat(req, tc);
 			op = "wstat";
 			break;
@@ -471,7 +472,7 @@ np_respond(Npreq *req, Npfcall *rc)
 	pthread_mutex_lock(&req->lock);
 	req->rcall = rc;
 	if (req->rcall) {
-		if (req->rcall->type==Rread && req->fid->type&Qtdir)
+		if (req->rcall->type==P9_RREAD && req->fid->type&Qtdir)
 			req->fid->diroffset = req->tcall->offset + req->rcall->count;
 
 		np_set_tag(req->rcall, req->tag);

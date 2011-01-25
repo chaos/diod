@@ -43,10 +43,8 @@ void    diod_conf_set_foreground (int i);
 int     diod_conf_get_tcpwrappers (void);
 void    diod_conf_set_tcpwrappers (int i);
 
-#if HAVE_MUNGE
 int     diod_conf_get_munge (void);
 void    diod_conf_set_munge (int i);
-#endif
 
 int     diod_conf_get_exit_on_lastuse (void);
 void    diod_conf_set_exit_on_lastuse (int i);

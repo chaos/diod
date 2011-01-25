@@ -40,7 +40,8 @@ in the current working directory.  With this option, \fBdiodctl\fR
 will log to stderr.
 .TP
 .I "munge = 0"
-Disable munge authentication.  See warning in diod (8).
+Disable munge authentication.
+This only applies if \fRdiod\fR was built with \fI--enable-munge\fR.
 .TP
 .I "tcpwrappers = 0"
 Disable TCP wrapper checks.
