@@ -11,6 +11,7 @@ libnpfs_a_SOURCES = \
 	fdtrans.c \
 	fidpool.c \
 	file.c \
+	npfile.h \
 	fmt.c \
 	np.c \
 	pipesrv.c \

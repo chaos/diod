@@ -389,24 +389,24 @@ _omode2uflags (u8 mode)
     int ret = 0;
 
     switch (mode & 3) {
-        case Oread:
+        case P9_OREAD:
             ret = O_RDONLY;
             break;
-        case Ordwr:
+        case P9_ORDWR:
             ret = O_RDWR;
             break;
-        case Owrite:
+        case P9_OWRITE:
             ret = O_WRONLY;
             break;
-        case Oexec:
+        case P9_OEXEC:
             ret = O_RDONLY;
             break;
     }
-    if (mode & Otrunc)
+    if (mode & P9_OTRUNC)
         ret |= O_TRUNC;
-    if (mode & Oappend)
+    if (mode & P9_OAPPEND)
         ret |= O_APPEND;
-    if (mode & Oexcl)
+    if (mode & P9_OEXCL)
         ret |= O_EXCL;
 
     return ret;
@@ -426,9 +426,9 @@ _ustat2qid (struct stat *st, Npqid *qid)
     qid->version = st->st_mtime ^ (st->st_size << 8);
     qid->type = 0;
     if (S_ISDIR(st->st_mode))
-        qid->type |= Qtdir;
+        qid->type |= P9_QTDIR;
     if (S_ISLNK(st->st_mode))
-        qid->type |= Qtsymlink;
+        qid->type |= P9_QTSYMLINK;
 }
 
 /* Convert UNIX file mode bits to 9P file mode bits.
@@ -439,23 +439,23 @@ _umode2npmode (mode_t umode)
     u32 ret = umode & 0777;
 
     if (S_ISDIR (umode))
-        ret |= Dmdir;
+        ret |= P9_DMDIR;
 
     /* dotu */
     if (S_ISLNK (umode))
-        ret |= Dmsymlink;
+        ret |= P9_DMSYMLINK;
     if (S_ISSOCK (umode))
-        ret |= Dmsocket;
+        ret |= P9_DMSOCKET;
     if (S_ISFIFO (umode))
-        ret |= Dmnamedpipe;
+        ret |= P9_DMNAMEDPIPE;
     if (S_ISBLK (umode))
-        ret |= Dmdevice;
+        ret |= P9_DMDEVICE;
     if (S_ISCHR (umode))
-        ret |= Dmdevice;
+        ret |= P9_DMDEVICE;
     if (umode & S_ISUID)
-        ret |= Dmsetuid;
+        ret |= P9_DMSETUID;
     if (umode & S_ISGID)
-        ret |= Dmsetgid;
+        ret |= P9_DMSETGID;
 
     return ret;
 }
@@ -467,17 +467,17 @@ _np2umode (u32 mode, Npstr *extension)
 {
     mode_t ret = mode & 0777;
 
-    if (mode & Dmdir)
+    if (mode & P9_DMDIR)
         ret |= S_IFDIR;
 
     /* dotu */
-    if (mode & Dmsymlink)
+    if (mode & P9_DMSYMLINK)
         ret |= S_IFLNK;
-    if (mode & Dmsocket)
+    if (mode & P9_DMSOCKET)
         ret |= S_IFSOCK;
-    if (mode & Dmnamedpipe)
+    if (mode & P9_DMNAMEDPIPE)
         ret |= S_IFIFO;
-    if (mode & Dmdevice) {
+    if (mode & P9_DMDEVICE) {
         if (extension && extension->str[0] == 'c')
             ret |= S_IFCHR;
         else
@@ -486,9 +486,9 @@ _np2umode (u32 mode, Npstr *extension)
 
     if (!(ret&~0777))
         ret |= S_IFREG;
-    if (mode & Dmsetuid)
+    if (mode & P9_DMSETUID)
         ret |= S_ISUID;
-    if (mode & Dmsetgid)
+    if (mode & P9_DMSETGID)
         ret |= S_ISGID;
 
     return ret;
@@ -520,12 +520,12 @@ _ustat2npwstat(char *path, struct stat *st, Npwstat *wstat)
     wstat->n_uid = st->st_uid;
     wstat->n_gid = st->st_gid;
 
-    if (wstat->mode & Dmsymlink) {
+    if (wstat->mode & P9_DMSYMLINK) {
         err = readlink (path, ext, sizeof(ext) - 1);
         if (err < 0)
             err = 0;
         ext[err] = '\0';
-    } else if (wstat->mode & Dmdevice) {
+    } else if (wstat->mode & P9_DMDEVICE) {
         snprintf (ext, sizeof(ext), "%c %u %u", 
             S_ISCHR (st->st_mode)?'c':'b',
             major (st->st_rdev), minor (st->st_rdev));
@@ -908,7 +908,7 @@ _create_special (Npfid *fid, char *path, u32 perm, Npstr *extension)
     char *ext = NULL;
     int ret = -1;
 
-    if (!(perm & Dmnamedpipe) && !extension->len) {
+    if (!(perm & P9_DMNAMEDPIPE) && !extension->len) {
         np_werror (Enoextension, EIO);
         msg ("diod_create: empty extension for named pipe");
         goto done;
@@ -917,25 +917,25 @@ _create_special (Npfid *fid, char *path, u32 perm, Npstr *extension)
     umode = _np2umode (perm, extension);
     if (!(ext = _p9strdup (extension)))
         goto done;
-    if (perm & Dmsymlink) {
+    if (perm & P9_DMSYMLINK) {
         if (symlink (ext, path) < 0) {
             np_uerror (errno);
             goto done;
         }
-    } else if (perm & Dmlink) {
+    } else if (perm & P9_DMLINK) {
         if (_link (fid, path, ext) < 0)
             goto done;
-    } else if (perm & Dmdevice) {
+    } else if (perm & P9_DMDEVICE) {
         if (_mknod (path, ext, perm) < 0)
             goto done;
-    } else if (perm & Dmnamedpipe) {
+    } else if (perm & P9_DMNAMEDPIPE) {
         if (mknod (path, S_IFIFO | (umode & 0777), 0) < 0) {
             np_uerror (errno);
             goto done;
         }
     }
     f->omode = 0;
-    if (!(perm & Dmsymlink)) {
+    if (!(perm & P9_DMSYMLINK)) {
         if (chmod (path, umode) < 0) {
             np_uerror (errno);
             goto done;
@@ -976,7 +976,7 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     memmove (npath + n + 1, name->str, name->len);
     npath[n + name->len + 1] = '\0';
 
-    if (perm & Dmdir) {
+    if (perm & P9_DMDIR) {
         if (mkdir (npath, perm & 0777) < 0) {
             np_uerror (errno);
             goto done;
@@ -992,7 +992,7 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
             remove (npath);
             goto done;
         }
-    } else if (perm & (Dmnamedpipe|Dmsymlink|Dmlink|Dmdevice)) {
+    } else if (perm & (P9_DMNAMEDPIPE|P9_DMSYMLINK|P9_DMLINK|P9_DMDEVICE)) {
         if (_create_special (fid, npath, perm, extension) < 0)
             goto done;
 
@@ -1275,7 +1275,7 @@ diod_wstat(Npfid *fid, Npstat *st)
     if (st->mode != (u32)~0) {
         mode_t umode = _np2umode(st->mode, &st->extension);
 
-        if ((st->mode & Dmdir) && !S_ISDIR(f->stat.st_mode)) {
+        if ((st->mode & P9_DMDIR) && !S_ISDIR(f->stat.st_mode)) {
             np_werror(Edirchange, EIO);
             msg ("diod_wstat: Dmdir chmod on non-directory");
             goto done;

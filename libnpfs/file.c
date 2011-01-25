@@ -34,6 +34,7 @@
 #include <time.h>
 #include "9p.h"
 #include "npfs.h"
+#include "npfile.h"
 #include "npfsimpl.h"
 
 static void npfile_incref_nolock(Npfile *f);
@@ -45,7 +46,7 @@ npfile_alloc(Npfile *parent, char *name, u32 mode, u64 qpath,
 	Npfile *f;
 
 	f = malloc(sizeof(*f));
-//	if (mode & Dmdir) 
+//	if (mode & P9_DMDIR) 
 //		fprintf(stderr, "npfile_alloc %p %s\n", f, name);
 	pthread_mutex_init(&f->lock, NULL);
 	f->refcount = 0;
@@ -85,7 +86,7 @@ npfile_alloc(Npfile *parent, char *name, u32 mode, u64 qpath,
 static void
 npfile_incref_nolock(Npfile *f)
 {
-//	if (f->mode & Dmdir)
+//	if (f->mode & P9_DMDIR)
 //		fprintf(stderr, "npfile_incref %p %d callers %p, %p\n", f, f->refcount+1, __builtin_return_address(1),
 //			__builtin_return_address(2));
 	assert(f->refcount >= 0);
@@ -116,7 +117,7 @@ npfile_decrefimpl(Npfile *f, int lock)
 	if (lock)
 		pthread_mutex_lock(&f->lock);
 
-//	if (f->mode & Dmdir)
+//	if (f->mode & P9_DMDIR)
 //		fprintf(stderr, "npfile_decrefimpl %p %d callers %p, %p\n", f, f->refcount-1, __builtin_return_address(1),
 //			__builtin_return_address(2));
 
@@ -127,7 +128,7 @@ npfile_decrefimpl(Npfile *f, int lock)
 	ret = --f->refcount;
 	if (!ret) {
 		if (f->ops) {
-			if (f->mode & Dmdir) {
+			if (f->mode & P9_DMDIR) {
 				dops = f->ops;
 				if (dops->destroy)
 					(*dops->destroy)(f);
@@ -168,7 +169,7 @@ npfile_ref(Npfile *file, Npfilefid *fid)
 	Npdirops *dops;
 
 	if (file->ops) {
-		if (file->mode & Dmdir) {
+		if (file->mode & P9_DMDIR) {
 			dops = file->ops;
 			if (dops->ref)
 				(*dops->ref)(file, fid);
@@ -187,7 +188,7 @@ npfile_unref(Npfile *file, Npfilefid *fid)
 	Npdirops *dops;
 
 	if (file->ops) {
-		if (file->mode & Dmdir) {
+		if (file->mode & P9_DMDIR) {
 			dops = file->ops;
 			if (dops->unref)
 				(*dops->unref)(file, fid);
@@ -349,7 +350,7 @@ npfile_fiddestroy(Npfid *fid)
 
 	file = f->file;
 	if (f->omode != ~0) {
-		if (!(file->mode&Dmdir)) {
+		if (!(file->mode & P9_DMDIR)) {
 			fops = file->ops;
 			if (fops->closefid)
 				(*fops->closefid)(f);
@@ -432,24 +433,24 @@ mode2perm(int mode)
 
 	m = 0;
 	switch (mode & 3) {
-	case Oread:
+	case P9_OREAD:
 		m = 4;
 		break;
 
-	case Owrite:
+	case P9_OWRITE:
 		m = 2;
 		break;
 
-	case Ordwr:
+	case P9_ORDWR:
 		m = 6;
 		break;
 
-	case Oexec:
+	case P9_OEXEC:
 		m = 1;
 		break;
 	}
 
-	if (mode & Otrunc)
+	if (mode & P9_OTRUNC)
 		m |= 2;
 
 	return m;
@@ -475,7 +476,7 @@ npfile_open(Npfid *fid, u8 mode)
 		return NULL;
 	}
 
-	if (mode & Oexcl) {
+	if (mode & P9_OEXCL) {
 		if (file->excl) {
 			np_werror(Eopen, EPERM);
 			pthread_mutex_unlock(&file->lock);
@@ -486,13 +487,13 @@ npfile_open(Npfid *fid, u8 mode)
 	}
 	pthread_mutex_unlock(&file->lock);
 
-	if (file->mode & Dmdir) {
+	if (file->mode & P9_DMDIR) {
 		f->diroffset = 0;
 		f->dirent = NULL;
 	} else {
 		fops = file->ops;
 
-		if (mode & Otrunc) {
+		if (mode & P9_OTRUNC) {
 			if (!fops->wstat) {
 				np_werror(Eperm, EPERM);
 				goto done;
@@ -512,7 +513,7 @@ npfile_open(Npfid *fid, u8 mode)
 	ret = np_create_ropen(&file->qid, 0);
 
 done:
-	if (!ret && mode&Oexcl) {
+	if (!ret && mode & P9_OEXCL) {
 		pthread_mutex_lock(&file->lock);
 		file->excl = 1;
 		pthread_mutex_unlock(&file->lock);
@@ -557,10 +558,10 @@ npfile_create(Npfid *fid, Npstr* name, u32 perm, u8 mode, Npstr* extension)
 	if (!npfile_checkperm(dir, fid->user, 2))
 		goto done;
 
-	if (perm & Dmsymlink)
+	if (perm & P9_DMSYMLINK)
 		perm |= 0777;
 
-	if (perm & Dmdir)
+	if (perm & P9_DMDIR)
 		perm &= ~0777 | (dir->mode & 0777);
 	else 
 		perm &= ~0666 | (dir->mode & 0666);
@@ -590,10 +591,10 @@ npfile_create(Npfid *fid, Npstr* name, u32 perm, u8 mode, Npstr* extension)
 	f->file = file;
 	f->omode = mode;
 
-	if (mode & Oexcl)
+	if (mode & P9_OEXCL)
 		file->excl = 1;
 
-	if (file->mode & Dmdir) {
+	if (file->mode & P9_DMDIR) {
 		f->diroffset = 0;
 		f->dirent = NULL;
 	} else {
@@ -626,7 +627,7 @@ npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	f = fid->aux;
 	ret = np_alloc_rread(count);
 	file = f->file;
-	if (file->mode & Dmdir) {
+	if (file->mode & P9_DMDIR) {
 		pthread_mutex_lock(&file->lock);
 		dops = file->ops;
 		if (!dops->first || !dops->next) {
@@ -699,7 +700,7 @@ npfile_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 	ret = NULL;
 	f = fid->aux;
 	file = f->file;
-	if (f->omode & Oappend)
+	if (f->omode & P9_OAPPEND)
 		offset = file->length;
 
 	fops = file->ops;
@@ -746,7 +747,7 @@ npfile_remove(Npfid *fid)
 	f = fid->aux;
 	file = f->file;
 	pthread_mutex_lock(&file->lock);
-	if (file->mode&Dmdir) {
+	if (file->mode & P9_DMDIR) {
 		dops = file->ops;
 		if (!dops->first) {
 			np_werror(Eperm, EPERM);
@@ -839,7 +840,7 @@ npfile_wstat(Npfid *fid, Npstat *stat)
 	}
 #endif
 
-	if (file->mode & Dmdir) {
+	if (file->mode & P9_DMDIR) {
 		dops = file->ops;
 		if (!dops->wstat) {
 			np_werror(Eperm, EPERM);

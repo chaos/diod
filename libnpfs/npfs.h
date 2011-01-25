@@ -21,10 +21,10 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-typedef struct Npstr Npstr;
-typedef struct Npqid Npqid;
+typedef struct p9_str Npstr;
+typedef struct p9_qid Npqid;
 typedef struct Npstat Npstat;
-typedef struct Npwstat Npwstat;
+typedef struct p9_wstat Npwstat;
 typedef struct Npfcall Npfcall;
 typedef struct Npfid Npfid;
 typedef struct Npfidpool Npfidpool;
@@ -38,12 +38,6 @@ typedef struct Npsrv Npsrv;
 typedef struct Npuser Npuser;
 typedef struct Npgroup Npgroup;
 typedef struct Npuserpool Npuserpool;
-typedef struct Npfile Npfile;
-typedef struct Npfilefid Npfilefid;
-typedef struct Npfileops Npfileops;
-typedef struct Npdirops Npdirops;
-typedef struct Nppoll Nppoll;
-typedef struct Npollfd Npollfd;
 
 #if HAVE_LARGEIO
 /* datacheck values */
@@ -53,70 +47,12 @@ enum {
 };
 #endif 
 
-/* modes */
-enum {
-	Oread		= 0x00,
-	Owrite		= 0x01,
-	Ordwr		= 0x02,
-	Oexec		= 0x03,
-	Oexcl		= 0x04,
-	Otrunc		= 0x10,
-	Orexec		= 0x20,
-	Orclose		= 0x40,
-	Oappend		= 0x80,
-
-	Ouspecial	= 0x100,	/* internal use */
-};
-
-/* permissions */
-enum {
-	Dmdir		= 0x80000000,
-	Dmappend	= 0x40000000,
-	Dmexcl		= 0x20000000,
-	Dmmount		= 0x10000000,
-	Dmauth		= 0x08000000,
-	Dmtmp		= 0x04000000,
-	Dmsymlink	= 0x02000000,
-	Dmlink		= 0x01000000,
-
-	/* 9P2000.u extensions */
-	Dmdevice	= 0x00800000,
-	Dmnamedpipe	= 0x00200000,
-	Dmsocket	= 0x00100000,
-	Dmsetuid	= 0x00080000,
-	Dmsetgid	= 0x00040000,
-};
-
-/* qid.types */
-enum {
-	Qtdir		= 0x80,
-	Qtappend	= 0x40,
-	Qtexcl		= 0x20,
-	Qtmount		= 0x10,
-	Qtauth		= 0x08,
-	Qttmp		= 0x04,
-	Qtsymlink	= 0x02,
-	Qtlink		= 0x01,
-	Qtfile		= 0x00,
-};
-
 #define NOTAG		(u16)(~0)
 #define NOFID		(u32)(~0)
 #define MAXWELEM	16
 #define IOHDRSZ		24
 #define AIOHDRSZ       (IOHDRSZ+4+1+4)
 #define FID_HTABLE_SIZE 64
-
-struct Npstr {
-	u16		len;
-	char*		str;
-};
-
-struct Npqid {
-	u8		type;
-	u32		version;
-	u64		path;
-};
 
 struct Npstat {
 	u16 		size;
@@ -133,40 +69,22 @@ struct Npstat {
 	Npstr		muid;
 
 	/* 9P2000.u extensions */
-	Npstr		extension;
+	Npstr		extension;	/* XXX a char * in p9_wstat */
 	u32 		n_uid;
 	u32 		n_gid;
 	u32 		n_muid;
 };
  
-/* file metadata (stat) structure used to create P9_TWSTAT message
-   It is similar to Npstat, but the strings don't point to 
-   the same memory block and should be freed separately
-*/
-struct Npwstat {
-	u16 		size;
-	u16 		type;
-	u32 		dev;
-	Npqid		qid;
-	u32 		mode;
-	u32 		atime;
-	u32 		mtime;
-	u64 		length;
-	char*		name;
-	char*		uid;
-	char*		gid;
-	char*		muid;
-	char*		extension;	/* 9p2000.u extensions */
-	u32 		n_uid;		/* 9p2000.u extensions */
-	u32 		n_gid;		/* 9p2000.u extensions */
-	u32 		n_muid;		/* 9p2000.u extensions */
-};
-
 struct Npfcall {
 	u32		size;
 	u8		type;
 	u16		tag;
 	u8*		pkt;
+
+	union {
+		struct p9_tstatfs tstatfs;
+		struct p9_rstatfs rstatfs;
+	} u;
 
 	u32		fid;
 	u32		msize;			/* P9_TVERSION, P9_RVERSION */
@@ -402,68 +320,6 @@ struct Npuserpool {
 	void		(*gdestroy)(Npuserpool *, Npgroup *g);
 };
 
-struct Npfile {
-	pthread_mutex_t	lock;
-	int		refcount;
-	Npfile*		parent;
-	Npqid		qid;
-	u32		mode;
-	u32		atime;
-	u32		mtime;
-	u64		length;
-	char*		name;
-	Npuser*		uid;
-	Npgroup*	gid;
-	Npuser*		muid;
-	char*		extension;
-	int		excl;
-	void*		ops;
-	void*		aux;
-
-	/* not used -- provided for user's convenience */
-	Npfile*		next;
-	Npfile*		prev;
-	Npfile*		dirfirst;
-	Npfile*		dirlast;
-};
-
-struct Npfileops {
-	void		(*ref)(Npfile *, Npfilefid *);
-	void		(*unref)(Npfile *, Npfilefid *);
-	int		(*read)(Npfilefid* file, u64 offset, u32 count, 
-				u8 *data, Npreq *req);
-	int		(*write)(Npfilefid* file, u64 offset, u32 count, 
-				u8 *data, Npreq *req);
-	int		(*wstat)(Npfile*, Npstat*);
-	void		(*destroy)(Npfile*);
-	int		(*openfid)(Npfilefid *);
-	void		(*closefid)(Npfilefid *);
-};
-
-struct Npdirops {
-	void		(*ref)(Npfile *, Npfilefid *);
-	void		(*unref)(Npfile *, Npfilefid *);
-	Npfile*		(*create)(Npfile *dir, char *name, u32 perm, 
-				Npuser *uid, Npgroup *gid, char *extension);
-	Npfile*		(*first)(Npfile *dir);
-	Npfile*		(*next)(Npfile *dir, Npfile *prevchild);
-	int		(*wstat)(Npfile*, Npstat*);
-	int		(*remove)(Npfile *dir, Npfile *file);
-	void		(*destroy)(Npfile*);
-	Npfilefid*	(*allocfid)(Npfile *);
-	void		(*destroyfid)(Npfilefid *);
-};
-
-struct Npfilefid {
-	pthread_mutex_t	lock;
-	Npfid*		fid;
-	Npfile*		file;
-	int		omode;
-	void*		aux;
-	u64		diroffset;
-	Npfile*		dirent;
-};
-
 extern char *Eunknownfid;
 extern char *Ennomem;
 extern char *Enoauth;
@@ -605,30 +461,7 @@ int np_haserror(void);
 void np_uerror(int ecode);
 void np_suerror(char *s, int ecode);
 
-Npfile* npfile_alloc(Npfile *parent, char *name, u32 mode, u64 qpath, 
-	void *ops, void *aux);
-void npfile_incref(Npfile *);
-int npfile_decref(Npfile *);
-Npfile *npfile_find(Npfile *, char *);
-int npfile_checkperm(Npfile *file, Npuser *user, int perm);
-void npfile_init_srv(Npsrv *, Npfile *);
-
-Npfilefid* npfile_fidalloc(Npfile *file, Npfid *fid); /* added jg */
-void npfile_fiddestroy(Npfid *fid);
-Npfcall *npfile_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
-int npfile_clone(Npfid *fid, Npfid *newfid);
-int npfile_walk(Npfid *fid, Npstr *wname, Npqid *wqid);
-Npfcall *npfile_open(Npfid *fid, u8 mode);
-Npfcall *npfile_create(Npfid *fid, Npstr* name, u32 perm, u8 mode, Npstr* extension);
-Npfcall *npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req);
-Npfcall *npfile_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req);
-Npfcall *npfile_clunk(Npfid *fid);
-Npfcall *npfile_remove(Npfid *fid);
-Npfcall *npfile_stat(Npfid *fid);
-Npfcall *npfile_wstat(Npfid *fid, Npstat *stat);
-
 void *np_malloc(int);
-int np_mount(char *mntpt, int mntflags, char *opts);
 
 static inline int np_conn_extend (Npconn *conn)
 {

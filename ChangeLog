@@ -1,9 +1,11 @@
 2011-01-24 Jim Garlick <garlick@llnl.gov>
 
-	* libnpfs/* : Bulk sed of new 9p.h opcode names.
+	* libnpfs/npfile.h : Split out from npfs.h.
+
+	* : Bulk substition of new 9p.h names for constants, etc.
 
 	* libnpfs/9p.h, libnpfs/npfs.h : Import 9p.h from v9fs and remove
-	duplicate opcode definitions from npfs.h.
+	duplicate definitions from npfs.h.
 
 	* diod/diod.c : Add --runas-user option.
 

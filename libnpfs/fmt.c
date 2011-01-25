@@ -39,23 +39,23 @@ np_printperm(char *s, int len, int perm)
 	char b[10];
 
 	n = 0;
-	if (perm & Dmdir)
+	if (perm & P9_DMDIR)
 		b[n++] = 'd';
-	if (perm & Dmappend)
+	if (perm & P9_DMAPPEND)
 		b[n++] = 'a';
-	if (perm & Dmauth)
+	if (perm & P9_DMAUTH)
 		b[n++] = 'A';
-	if (perm & Dmexcl)
+	if (perm & P9_DMEXCL)
 		b[n++] = 'l';
-	if (perm & Dmtmp)
+	if (perm & P9_DMTMP)
 		b[n++] = 't';
-	if (perm & Dmdevice)
+	if (perm & P9_DMDEVICE)
 		b[n++] = 'D';
-	if (perm & Dmsocket)
+	if (perm & P9_DMSOCKET)
 		b[n++] = 'S';
-	if (perm & Dmnamedpipe)
+	if (perm & P9_DMNAMEDPIPE)
 		b[n++] = 'P';
-        if (perm & Dmsymlink)
+        if (perm & P9_DMSYMLINK)
                 b[n++] = 'L';
         b[n] = '\0';
 
@@ -69,17 +69,17 @@ np_printqid(char *s, int len, Npqid *q)
 	char buf[10];
 
 	n = 0;
-	if (q->type & Qtdir)
+	if (q->type & P9_QTDIR)
 		buf[n++] = 'd';
-	if (q->type & Qtappend)
+	if (q->type & P9_QTAPPEND)
 		buf[n++] = 'a';
-	if (q->type & Qtauth)
+	if (q->type & P9_QTAUTH)
 		buf[n++] = 'A';
-	if (q->type & Qtexcl)
+	if (q->type & P9_QTEXCL)
 		buf[n++] = 'l';
-	if (q->type & Qttmp)
+	if (q->type & P9_QTTMP)
 		buf[n++] = 't';
-	if (q->type & Qtsymlink)
+	if (q->type & P9_QTSYMLINK)
 		buf[n++] = 'L';
 	buf[n] = '\0';
 

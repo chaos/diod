@@ -46,6 +46,8 @@
 
 #include "9p.h"
 #include "npfs.h"
+#include "npfile.h"
+
 #include "list.h"
 
 #include "diod_log.h"
@@ -256,7 +258,7 @@ _ctl_root_create (void)
 
     if (!(tmpstr = strdup ("")))
         msg_exit ("out of memory");
-    if (!(root = npfile_alloc (NULL, tmpstr, 0555|Dmdir, 0, &root_ops, NULL)))
+    if (!(root = npfile_alloc (NULL, tmpstr, 0555|P9_DMDIR, 0, &root_ops, NULL)))
         msg_exit ("out of memory");
     root->parent = root;
     npfile_incref(root);

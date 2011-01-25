@@ -474,7 +474,7 @@ np_respond(Npreq *req, Npfcall *rc)
 	pthread_mutex_lock(&req->lock);
 	req->rcall = rc;
 	if (req->rcall) {
-		if (req->rcall->type==P9_RREAD && req->fid->type&Qtdir)
+		if (req->rcall->type==P9_RREAD && req->fid->type & P9_QTDIR)
 			req->fid->diroffset = req->tcall->offset + req->rcall->count;
 
 		np_set_tag(req->rcall, req->tag);

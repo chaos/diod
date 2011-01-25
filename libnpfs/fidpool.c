@@ -62,9 +62,9 @@ np_fidpool_destroy(Npfidpool *pool)
 		while (f != NULL) {
 			ff = f->next;
 			srv = f->conn->srv;
-			if (f->type&Qtauth && srv->auth && srv->auth->clunk)
+			if (f->type & P9_QTAUTH && srv->auth && srv->auth->clunk)
 				(*srv->auth->clunk)(f);
-			else if (!(f->type&Qtauth) && srv->fiddestroy)
+			else if (!(f->type & P9_QTAUTH) && srv->fiddestroy)
 				(*srv->fiddestroy)(f);
 			free(f);
 			f = ff;
@@ -187,9 +187,9 @@ np_fid_destroy(Npfid *fid)
 
 	pthread_mutex_unlock(&fp->lock);
 
-	if (fid->type & Qtauth && srv->auth && srv->auth->clunk)
+	if (fid->type & P9_QTAUTH && srv->auth && srv->auth->clunk)
 		(*srv->auth->clunk)(fid);
-	else if (!(fid->type&Qtauth) && srv->fiddestroy)
+	else if (!(fid->type & P9_QTAUTH) && srv->fiddestroy)
 		(*srv->fiddestroy)(fid);
 
 	if (fid->user)

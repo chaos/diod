@@ -28,6 +28,7 @@
  * - stripped out kernel function prototypes
  * - stripped out kernel debug macros
  * - added stdint types
+ * - change P9_OEXCL to be what npfs.h had so it fits in a u8
  */
 
 #ifndef NET_9P_H
@@ -161,12 +162,10 @@ enum p9_msg_t {
 	P9_RLINK,
 	P9_TMKDIR = 72,
 	P9_RMKDIR,
-	/* BEGIN diod ext */
-	P9_TAREAD = 80,
+	P9_TAREAD = 80,		/* diod ext */
 	P9_RAREAD,
-	P9_TAWRITE = 82,
+	P9_TAWRITE = 82,	/* diod ext */
 	P9_RAWRITE,
-	/* END diod ext */
 	P9_TVERSION = 100,
 	P9_RVERSION,
 	P9_TAUTH = 102,
@@ -228,7 +227,8 @@ enum p9_open_mode_t {
 	P9_OREXEC = 0x20,
 	P9_ORCLOSE = 0x40,
 	P9_OAPPEND = 0x80,
-	P9_OEXCL = 0x1000,
+	//P9_OEXCL = 0x1000,
+	P9_OEXCL = 0x4,
 };
 
 /**

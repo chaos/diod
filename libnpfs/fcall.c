@@ -120,14 +120,14 @@ np_auth(Npreq *req, Npfcall *tc)
 		aname = NULL;
 
 	afid->user = user;
-	afid->type = Qtauth;
+	afid->type = P9_QTAUTH;
 	if (srv->auth && srv->auth->startauth)
 		n = (*srv->auth->startauth)(afid, aname, &aqid);
 	else
 		n = 0;
 
 	if (n) {
-		assert((aqid.type & Qtauth) != 0);
+		assert((aqid.type & P9_QTAUTH) != 0);
 		rc = np_create_rauth(&aqid);
 	} else
 		np_werror(Enoauth, EIO);
@@ -173,7 +173,7 @@ np_attach(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 	} else {
-		if (!(afid->type & Qtauth)) {
+		if (!(afid->type & P9_QTAUTH)) {
 			np_werror(Ebadusefid, EIO);
 			goto done;
 		}
@@ -298,7 +298,7 @@ np_walk(Npreq *req, Npfcall *tc)
 
 	req->fid = fid;
 #if 0
-	if (!(fid->type & Qtdir)) {
+	if (!(fid->type & P9_QTDIR)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
@@ -341,7 +341,7 @@ np_walk(Npreq *req, Npfcall *tc)
 
 		newfid->type = wqids[i].type;
 		i++;
-		if (i<(tc->nwname) && !(newfid->type & Qtdir))
+		if (i<(tc->nwname) && !(newfid->type & P9_QTDIR))
 			break;
 	}
 
@@ -380,7 +380,7 @@ np_open(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->type&Qtdir && tc->mode != Oread) {
+	if (fid->type & P9_QTDIR && tc->mode != P9_OREAD) {
 		np_werror(Eperm, EPERM);
 		goto done;
 	}
@@ -414,18 +414,19 @@ np_create(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 #if 0
-	if (!(fid->type & Qtdir)) {
+	if (!(fid->type & P9_QTDIR)) {
 		np_werror(Enotdir, ENOTDIR);
 		goto done;
 	}
 #endif
-	if (tc->perm&Dmdir && tc->mode!=Oread) {
+	if (tc->perm & P9_DMDIR && tc->mode != P9_OREAD) {
 		np_werror(Eperm, EPERM);
 		goto done;
 	}
 
-	if (tc->perm&(Dmnamedpipe|Dmsymlink|Dmlink|Dmdevice|Dmsocket)
-					&& !np_conn_extend(fid->conn)) {
+	if (tc->perm & (P9_DMNAMEDPIPE | P9_DMSYMLINK | P9_DMLINK 
+				       | P9_DMDEVICE  |P9_DMSOCKET)
+			&& !np_conn_extend(fid->conn)) {
 		np_werror(Eperm, EPERM);
 		goto done;
 	}
@@ -465,7 +466,7 @@ np_read(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->type&Qtauth) {
+	if (fid->type & P9_QTAUTH) {
 		if (conn->srv->auth) {
 			rc = np_alloc_rread(tc->count);
 			if (!rc)
@@ -484,12 +485,12 @@ np_read(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->omode==(u16)~0 || (fid->omode&3)==Owrite) {
+	if (fid->omode==(u16)~0 || (fid->omode&3)==P9_OWRITE) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
 
-	if (fid->type&Qtdir && tc->offset && tc->offset != fid->diroffset) {
+	if (fid->type & P9_QTDIR && tc->offset && tc->offset != fid->diroffset) {
 		np_werror(Ebadoffset, EIO);
 		goto done;
 	}
@@ -518,7 +519,7 @@ np_write(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (fid->type&Qtauth) {
+	if (fid->type & P9_QTAUTH) {
 		if (conn->srv->auth) {
 			n = conn->srv->auth->write(fid, tc->offset,
 				tc->count, tc->data);
@@ -532,7 +533,7 @@ np_write(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (fid->omode==(u16)~0 || fid->type&Qtdir || (fid->omode&3)==Oread) {
+	if (fid->omode==(u16)~0 || fid->type & P9_QTDIR || (fid->omode&3)==P9_OREAD) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
@@ -566,7 +567,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (fid->type&Qtauth) {
+	if (fid->type & P9_QTAUTH) {
 		if (conn->srv->auth) {
 			n = conn->srv->auth->clunk(fid);
 			if (n)
@@ -577,7 +578,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->omode!=(u16)~0 && fid->omode==Orclose) {
+	if (fid->omode!=(u16)~0 && fid->omode==P9_ORCLOSE) {
 		rc = (*conn->srv->remove)(fid);
 		if (rc->type == P9_RERROR)
 			goto done;
@@ -668,11 +669,11 @@ np_wstat(Npreq *req, Npfcall *tc)
                 goto done;
         }
 #if 0
-	if ((fid->type & Qtdir) && !(stat->mode & Dmdir)) {
+	if ((fid->type & P9_QTDIR) && !(stat->mode & P9_DMDIR)) {
 		np_werror(Edirchange, EPERM);
 		goto done;
 	}
-	if (!(fid->type & Qtdir) && (stat->mode & Dmdir)) {
+	if (!(fid->type & P9_QTDIR) && (stat->mode & P9_DMDIR)) {
 		np_werror(Edirchange, EPERM);
 		goto done;
 	}
@@ -706,17 +707,17 @@ np_aread(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->type&Qtauth) {
+	if (fid->type & P9_QTAUTH) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
 
-	if (fid->omode==(u16)~0 || (fid->omode&3)==Owrite) {
+	if (fid->omode==(u16)~0 || (fid->omode&3)==P9_OWRITE) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
 
-	if (fid->type&Qtdir && tc->offset && tc->offset != fid->diroffset) {
+	if (fid->type & P9_QTDIR && tc->offset && tc->offset != fid->diroffset) {
 		np_werror(Ebadoffset, EIO);
 		goto done;
 	}
@@ -745,12 +746,12 @@ np_awrite(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (fid->type&Qtauth) {
+	if (fid->type & P9_QTAUTH) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
 
-	if (fid->omode==(u16)~0 || fid->type&Qtdir || (fid->omode&3)==Oread) {
+	if (fid->omode==(u16)~0 || fid->type & P9_QTDIR || (fid->omode&3)==P9_OREAD) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
