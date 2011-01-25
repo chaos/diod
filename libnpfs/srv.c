@@ -64,8 +64,6 @@ static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
 #endif
 #if HAVE_DOTL
 static Npfcall* np_default_statfs(Npfid *);
-static Npfcall* np_default_lock(Npfid *, u8, Nplock *);
-static Npfcall* np_default_flock(Npfid *, u8);
 static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
 #endif
 
@@ -116,8 +114,6 @@ np_srv_create(int nwthread)
 #endif
 #if HAVE_DOTL
 	srv->statfs = np_default_statfs;
-	srv->plock = np_default_lock;
-	srv->flock = np_default_flock;
 	srv->rename = np_default_rename;
 #endif
 	srv->conns = NULL;
@@ -321,14 +317,6 @@ np_process_request(Npreq *req)
 		case P9_TRENAME:
 			rc = np_rename(req, tc);
 			op = "rename";
-			break;
-		case P9_TLOCK:
-			rc = np_lock(req, tc);
-			op = "lock";
-			break;
-		case Tflock:
-			rc = np_flock(req, tc);
-			op = "flock";
 			break;
 #endif
 #if HAVE_LARGEIO
@@ -658,20 +646,6 @@ np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq 
 #if HAVE_DOTL
 static Npfcall*
 np_default_statfs(Npfid *fid)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_lock(Npfid *fid, u8 cmd, Nplock *lck)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_flock(Npfid *fid, u8 cmd)
 {
 	np_werror(Enotimpl, ENOSYS);
 	return NULL;

@@ -1188,106 +1188,21 @@ np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 fi
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, type,    &fc->statfs.type);
-	buf_put_int32(bufp, bsize,   &fc->statfs.bsize);
-	buf_put_int64(bufp, blocks,  &fc->statfs.blocks);
-	buf_put_int64(bufp, bfree,   &fc->statfs.bfree);
-	buf_put_int64(bufp, bavail,  &fc->statfs.bavail);
-	buf_put_int64(bufp, files,   &fc->statfs.files);
-	buf_put_int64(bufp, ffree,   &fc->statfs.ffree);
-	buf_put_int64(bufp, fsid,    &fc->statfs.fsid);
-	buf_put_int32(bufp, namelen, &fc->statfs.namelen);
+	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);
+	buf_put_int32(bufp, bsize,   &fc->u.rstatfs.bsize);
+	buf_put_int64(bufp, blocks,  &fc->u.rstatfs.blocks);
+	buf_put_int64(bufp, bfree,   &fc->u.rstatfs.bfree);
+	buf_put_int64(bufp, bavail,  &fc->u.rstatfs.bavail);
+	buf_put_int64(bufp, files,   &fc->u.rstatfs.files);
+	buf_put_int64(bufp, ffree,   &fc->u.rstatfs.ffree);
+	buf_put_int64(bufp, fsid,    &fc->u.rstatfs.fsid);
+	buf_put_int32(bufp, namelen, &fc->u.rstatfs.namelen);
 
 	return np_post_check(fc, bufp);
 }
 
 Npfcall *
-np_create_tlock(u32 fid, u8 cmd, u8 type, u64 pid,
-                u64 start, u64 end)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 4 + 1 + 1 	/* fid[4] cmd[1] type[1]  */
-		 + 8 + 8 + 8;	/* pid[8] start[8] end[8] */
-	fc = np_create_common(bufp, size, P9_TLOCK);
-	if (!fc)
-		return NULL;
-
-	buf_put_int32(bufp, fid,     &fc->fid);
-	buf_put_int8(bufp,  cmd,     &fc->cmd);
-	buf_put_int8(bufp,  type,    &fc->lock.type);
-	buf_put_int64(bufp, pid,     &fc->lock.pid);
-	buf_put_int64(bufp, start,   &fc->lock.start);
-	buf_put_int64(bufp, end,     &fc->lock.end);
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_rlock(u8 type, u64 pid, u64 start, u64 end)
-{
-        int size;
-        Npfcall *fc;
-        struct cbuf buffer;
-        struct cbuf *bufp;
-
-        bufp = &buffer;
-	size = 1 + 8 + 8 + 8; /* type[1] pid[8] start[8] end[8] */
-        fc = np_create_common(bufp, size, P9_RLOCK);
-        if (!fc)
-                return NULL;
-
-	buf_put_int8(bufp,  type,    &fc->lock.type);
-        buf_put_int64(bufp, pid,     &fc->lock.pid);
-        buf_put_int64(bufp, start,   &fc->lock.start);
-        buf_put_int64(bufp, end,     &fc->lock.end);
-
-        return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_tflock(u32 fid, u8 cmd)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 4 + 1; /* fid[4] cmd[1] */
-	fc = np_create_common(bufp, size, Tflock);
-	if (!fc)
-		return NULL;
-
-	buf_put_int32(bufp, fid, &fc->fid);
-	buf_put_int8(bufp, cmd, &fc->cmd);
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_rflock(void)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, Rflock);
-	if (!fc)
-		return NULL;
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_trename(u32 fid, u32 newdirfid, char *newname)
+np_create_trename(u32 fid, u32 newdirfid, char *name)
 {
 	int size;
 	Npfcall *fc;
@@ -1300,9 +1215,9 @@ np_create_trename(u32 fid, u32 newdirfid, char *newname)
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, fid, &fc->fid);
-	buf_put_int32(bufp, newdirfid, &fc->newdirfid);
-	buf_put_str(bufp, newname, &fc->newname);
+	buf_put_int32(bufp, fid, &fc->u.trename.fid);
+	buf_put_int32(bufp, newdirfid, &fc->u.trename.newdirfid);
+	buf_put_str(bufp, name, &fc->u.trename.name);
 
 	return np_post_check(fc, bufp);
 }
@@ -1517,43 +1432,21 @@ np_deserialize(Npfcall *fc, u8 *data, int dotu)
 		fc->fid = buf_get_int32(bufp);
 		break;
 	case P9_RSTATFS:
-		fc->statfs.type = buf_get_int32(bufp);
-		fc->statfs.bsize = buf_get_int32(bufp);
-		fc->statfs.blocks = buf_get_int64(bufp);
-		fc->statfs.bfree = buf_get_int64(bufp);
-		fc->statfs.bavail = buf_get_int64(bufp);
-		fc->statfs.files = buf_get_int64(bufp);
-		fc->statfs.ffree = buf_get_int64(bufp);
-		fc->statfs.fsid = buf_get_int64(bufp);
-		fc->statfs.namelen = buf_get_int32(bufp);
-		break;
-
-	case P9_TLOCK:
-		fc->fid = buf_get_int32(bufp);
-		fc->cmd = buf_get_int8(bufp);
-		fc->lock.type = buf_get_int8(bufp);
-		fc->lock.pid = buf_get_int64(bufp);
-		fc->lock.start = buf_get_int64(bufp);
-		fc->lock.end = buf_get_int64(bufp);
-		break;
-	case P9_RLOCK:
-		fc->lock.type = buf_get_int8(bufp);
-		fc->lock.pid = buf_get_int64(bufp);
-		fc->lock.start = buf_get_int64(bufp);
-		fc->lock.end = buf_get_int64(bufp);
-		break;
-
-	case Tflock:
-		fc->fid = buf_get_int32(bufp);
-		fc->cmd = buf_get_int8(bufp);
-		break;
-	case Rflock:
+		fc->u.rstatfs.type = buf_get_int32(bufp);
+		fc->u.rstatfs.bsize = buf_get_int32(bufp);
+		fc->u.rstatfs.blocks = buf_get_int64(bufp);
+		fc->u.rstatfs.bfree = buf_get_int64(bufp);
+		fc->u.rstatfs.bavail = buf_get_int64(bufp);
+		fc->u.rstatfs.files = buf_get_int64(bufp);
+		fc->u.rstatfs.ffree = buf_get_int64(bufp);
+		fc->u.rstatfs.fsid = buf_get_int64(bufp);
+		fc->u.rstatfs.namelen = buf_get_int32(bufp);
 		break;
 
 	case P9_TRENAME:
-		fc->fid = buf_get_int32(bufp);
-		fc->newdirfid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->newname);
+		fc->u.trename.fid = buf_get_int32(bufp);
+		fc->u.trename.newdirfid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.trename.name);
 		break;
 	case P9_RRENAME:
 		break;

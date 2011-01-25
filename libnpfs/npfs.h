@@ -81,11 +81,6 @@ struct Npfcall {
 	u16		tag;
 	u8*		pkt;
 
-	union {
-		struct p9_tstatfs tstatfs;
-		struct p9_rstatfs rstatfs;
-	} u;
-
 	u32		fid;
 	u32		msize;			/* P9_TVERSION, P9_RVERSION */
 	Npstr		version;		/* P9_TVERSION, P9_RVERSION */
@@ -113,11 +108,19 @@ struct Npfcall {
 	u32		ecode;			/* P9_RERROR */
 	Npstr		extension;		/* P9_TCREATE */
 	u32		n_uname;
-	/* BEGIN largeio */
+#if HAVE_LARGEIO
 	u32		rsize;			/* P9_TAREAD, P9_TAWRITE */
 	u8		datacheck;		/* P9_TAREAD, P9_TAWRITE */
 	u32		check;			/* P9_RAREAD, P9_TAWRITE */
-	/* END largeio */
+#endif
+#if HAVE_DOTL
+	union {
+	   struct p9_tstatfs tstatfs;
+	   struct p9_rstatfs rstatfs;
+	   struct p9_trename trename;
+	   struct p9_rrename rrename;
+	} u;
+#endif
 	Npfcall*	next;
 };
 
@@ -268,9 +271,7 @@ struct Npsrv {
 #endif
 #if HAVE_DOTL
 	Npfcall*	(*statfs)(Npfid *fid);
-	Npfcall*	(*plock)(Npfid *fid, u8 cmd, Nplock *flck);
-	Npfcall*	(*flock)(Npfid *fid, u8 cmd);
-	Npfcall*	(*rename)(Npfid *fid, Npfid *newdirfid, Npstr *newname);
+	Npfcall*	(*rename)(Npfid *fid, Npfid *newdirfid, Npstr *name);
 #endif
 	/* implementation specific */
 	pthread_mutex_t	lock;
@@ -418,11 +419,7 @@ Npfcall *np_create_rawrite(u32 count);
 #if HAVE_DOTL
 Npfcall *np_create_tstatfs(u32 fid);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen);
-Npfcall *np_create_tlock(u32 fid, u8 cmd, u8 type, u64 pid, u64 start, u64 end);
-Npfcall *np_create_rlock(u8 type, u64 pid, u64 start, u64 end);
-Npfcall *np_create_tflock(u32 fid, u8 op);
-Npfcall *np_create_rflock(void);
-Npfcall *np_create_trename(u32 fid, u32 newdirfid, char *newname);
+Npfcall *np_create_trename(u32 fid, u32 newdirfid, char *name);
 Npfcall *np_create_rrename(void);
 #endif
 void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);

@@ -351,6 +351,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RWSTAT:
 		n += snprintf(s+n,len-n, "P9_RWSTAT tag %u", tag);
 		break;
+#if HAVE_LARGEIO
 	case P9_TAREAD:
 		n += snprintf(s+n,len-n, "P9_TAREAD.diod tag %u fid %d datacheck %d offset %llu count %u rsize %u", 
 			tag, fid, fc->datacheck, (unsigned long long)fc->offset,
@@ -370,6 +371,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RAWRITE:
 		n += snprintf(s+n,len-n, "P9_RAWRITE.diod tag %u count %u", tag, fc->count);
 		break;
+#endif
 	default:
 		n += snprintf(s+n,len-n, "unknown type %d", type);
 		break;

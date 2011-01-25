@@ -805,55 +805,6 @@ done:
 }
 
 Npfcall *
-np_lock(Npreq *req, Npfcall *tc)
-{
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
-
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
-	if (!fid) {
-		np_werror(Eunknownfid, EIO);
-		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
-
-	rc = (*conn->srv->plock)(fid, tc->cmd, &tc->lock);
-
-done:
-//	np_fid_decref(fid);
-	return rc;
-}
-
-Npfcall *
-np_flock(Npreq *req, Npfcall *tc)
-{
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
-
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
-	if (!fid) {
-		np_werror(Eunknownfid, EIO);
-		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
-
-	rc = (*conn->srv->flock)(fid, tc->cmd);
-done:
-//	np_fid_decref(fid);
-	return rc;
-}
-
-Npfcall *
 np_rename(Npreq *req, Npfcall *tc)
 {
 	Npconn *conn;
@@ -871,14 +822,14 @@ np_rename(Npreq *req, Npfcall *tc)
 
 	req->fid = fid;
 
-	newdirfid = np_fid_find(conn, tc->newdirfid);
+	newdirfid = np_fid_find(conn, tc->u.trename.newdirfid);
 	if (!newdirfid) {
 		np_werror(Eunknownfid, EIO);
 		goto done;
 	} else 
 		np_fid_incref(newdirfid);
 
-	rc = (*conn->srv->rename)(fid, newdirfid, &tc->newname);
+	rc = (*conn->srv->rename)(fid, newdirfid, &tc->u.trename.name);
 done:
 	np_fid_decref(newdirfid);
 //	np_fid_decref(fid);
