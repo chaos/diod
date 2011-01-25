@@ -21,41 +21,14 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#ifdef _WIN32
-  #include <windows.h>
-  #include <winsock2.h>
-  #include "winthread.h"
-  #define inline
-  #define snprintf _snprintf
-  #define vsnprintf _vsnprintf
-  #define strdup _strdup
-  static int close(SOCKET s) { return closesocket(s); }
-  static int read(SOCKET s, char *buf, int len) { return recv(s, buf, len, 0); }
-  static int write(SOCKET s, char *buf, int len) { return send(s, buf, len, 0); }
-  static void sleep(DWORD val) { Sleep(val * 1000); }
+#include <pthread.h>
+#include <sys/types.h>
+#include <stdint.h>
 
-  typedef UINT8  u8;
-  typedef UINT16 u16;
-  typedef UINT32 u32;
-  typedef UINT64 u64;
-  typedef UINT32 uid_t; // XXX
-  typedef UINT32 gid_t;
-  typedef int socklen_t;
-
-  enum {
-	ECONNABORTED = 53,
-  };
-
-#else // !_WIN32
-  #include <pthread.h>
-  #include <sys/types.h>
-  #include <stdint.h>
-
-  typedef uint8_t   u8;
-  typedef uint16_t u16;
-  typedef uint32_t u32;
-  typedef uint64_t u64;
-#endif
+typedef uint8_t   u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
 
 typedef struct Npstr Npstr;

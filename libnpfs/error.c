@@ -143,29 +143,6 @@ np_haserror()
 		return 0;
 }
 
-#ifdef _WIN32
-void
-np_uerror(int ecode)
-{
-	char buf[100];
-
-	// XXX?
-	snprintf(buf, sizeof buf, "error %d\n", ecode);
-	np_werror(buf, ecode);
-}
-
-void
-np_suerror(char *s, int ecode)
-{
-	char buf[512];
-
-	// XXX?
-	snprintf(buf, sizeof buf, "error %d\n", ecode);
-	snprintf(buf, sizeof(buf), "%s: error %d", s, ecode);
-	np_werror(buf, ecode);
-}
-
-#else // !_WIN32
 void
 np_uerror(int ecode)
 {
@@ -185,4 +162,3 @@ np_suerror(char *s, int ecode)
 	snprintf(buf, sizeof(buf), "%s: %s", s, err);
 	np_werror(buf, ecode);
 }
-#endif

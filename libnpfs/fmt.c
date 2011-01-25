@@ -82,11 +82,7 @@ np_printqid(char *s, int len, Npqid *q)
 		buf[n++] = 'L';
 	buf[n] = '\0';
 
-#ifdef _WIN32
-	return snprintf(s, len, " (%.16I64x %x '%s')", (unsigned long long)q->path, q->version, buf);
-#else
 	return snprintf(s, len, " (%.16llx %x '%s')", (unsigned long long)q->path, q->version, buf);
-#endif
 }
 
 int
@@ -101,13 +97,8 @@ np_snprintstat(char *s, int len, Npstat *st, int dotu)
 	n += np_printqid(s + n, len - n, &st->qid);
 	n += snprintf(s + n, len - n, " m ");
 	n += np_printperm(s + n, len - n, st->mode);
-#ifdef _WIN32
-	n += snprintf(s + n, len - n, " at %d mt %d l %I64u t %d d %d",
-		st->atime, st->mtime, (unsigned long long)st->length, st->type, st->dev);
-#else
 	n += snprintf(s + n, len - n, " at %d mt %d l %llu t %d d %d",
 		st->atime, st->mtime, (unsigned long long)st->length, st->type, st->dev);
-#endif
 	if (dotu)
 		n += snprintf(s + n, len - n, " ext '%.*s'", st->extension.len, 
 			st->extension.str);
@@ -307,13 +298,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 		
 	case P9_TREAD:
-#ifdef _WIN32
-		n += snprintf(s+n,len-n, "P9_TREAD tag %u fid %d offset %I64u count %u", 
-			tag, fid, (unsigned long long)fc->offset, fc->count);
-#else
 		n += snprintf(s+n,len-n, "P9_TREAD tag %u fid %d offset %llu count %u", 
 			tag, fid, (unsigned long long)fc->offset, fc->count);
-#endif
 		break;
 		
 	case P9_RREAD:
@@ -322,13 +308,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 		
 	case P9_TWRITE:
-#ifdef _WIN32
-		n += snprintf(s+n,len-n, "P9_TWRITE tag %u fid %d offset %I64u count %u data ",
-			tag, fid, (unsigned long long)fc->offset, fc->count);
-#else
 		n += snprintf(s+n,len-n, "P9_TWRITE tag %u fid %d offset %llu count %u data ",
 			tag, fid, (unsigned long long)fc->offset, fc->count);
-#endif
 		n += np_printdata(s+n,len-n, fc->data, fc->count);
 		break;
 		
