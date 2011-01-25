@@ -26,10 +26,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <netinet/in.h>
 #include <errno.h>
 #include <sys/mount.h>
+#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 

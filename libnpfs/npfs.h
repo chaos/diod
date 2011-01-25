@@ -21,16 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-#include <pthread.h>
-#include <sys/types.h>
-#include <stdint.h>
-
-typedef uint8_t   u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-
 typedef struct Npstr Npstr;
 typedef struct Npqid Npqid;
 typedef struct Npstat Npstat;

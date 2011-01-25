@@ -48,7 +48,9 @@
 #include "config.h"
 #endif
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <pthread.h>
 #include <unistd.h>
 #include <sys/fsuid.h>
 #include <string.h>
@@ -61,6 +63,7 @@
 #include <munge.h>
 #endif
 
+#include "9p.h"
 #include "npfs.h"
 
 #include "list.h"

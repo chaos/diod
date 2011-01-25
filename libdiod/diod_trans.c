@@ -31,11 +31,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 #include <errno.h>
 #include <assert.h>
 #include <pthread.h>
 
 #include "list.h"
+#include "9p.h"
 #include "npfs.h"
 #include "diod_log.h"
 #include "diod_conf.h"

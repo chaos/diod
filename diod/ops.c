@@ -61,6 +61,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include <pthread.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
@@ -75,6 +77,7 @@
 #include <assert.h>
 #include <stdarg.h>
 
+#include "9p.h"
 #include "npfs.h"
 #include "list.h"
 

@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <time.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
 #endif
@@ -42,6 +44,7 @@
 #include <poll.h>
 #include <assert.h>
 
+#include "9p.h"
 #include "npfs.h"
 #include "list.h"
 

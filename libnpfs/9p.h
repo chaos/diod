@@ -24,12 +24,19 @@
  *
  */
 
-/* Copied from 2.6.38-rc2 kernel, stripped out kernel function prototypes
- * and debug macros that don't apply here. -jg
+/* Copied from 2.6.38-rc2 kernel, then changed:
+ * - stripped out kernel function prototypes
+ * - stripped out kernel debug macros
+ * - added stdint types
  */
 
 #ifndef NET_9P_H
 #define NET_9P_H
+
+typedef uint8_t   u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
 /**
  * enum p9_debug_flags - bits for mount time debug parameter

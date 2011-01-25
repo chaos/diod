@@ -35,14 +35,16 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#define _GNU_SOURCE     /* asprintf */
+#define _GNU_SOURCE     /* asprintf, unshare */
 #include <sys/types.h>
+#include <sched.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/mount.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
+#include <stdint.h>
 #include <netdb.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
@@ -63,6 +65,7 @@
 #define PATH_MAX 1024
 #endif
 
+#include "9p.h"
 #include "npfs.h"
 #include "list.h"
 #include "diod_log.h"

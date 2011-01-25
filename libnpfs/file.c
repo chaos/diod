@@ -25,11 +25,14 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
+#include <pthread.h>
 #include <errno.h>
 #include <assert.h>
 #include <limits.h>
 #include <time.h>
+#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 

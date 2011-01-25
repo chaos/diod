@@ -38,6 +38,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <string.h>
+#include <stdint.h>
 #include <syslog.h>
 #include <sys/time.h>
 #if HAVE_TCP_WRAPPERS
@@ -46,6 +47,7 @@
 #include <poll.h>
 #include <assert.h>
 
+#include "9p.h"
 #include "npfs.h"
 #include "list.h"
 

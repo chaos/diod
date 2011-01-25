@@ -28,6 +28,9 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <stdint.h>
+#include <pthread.h>
+#include "9p.h"
 #include "npfs.h"
 
 typedef struct Nperror Nperror;

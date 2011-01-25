@@ -31,6 +31,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <pthread.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
 #endif
@@ -45,6 +47,7 @@
 #include <stdarg.h>
 #include <netdb.h>
 
+#include "9p.h"
 #include "npfs.h"
 #include "list.h"
 

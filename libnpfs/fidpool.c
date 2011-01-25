@@ -26,7 +26,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
+#include <pthread.h>
 #include <errno.h>
+#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 

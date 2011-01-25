@@ -38,6 +38,7 @@
 #define _BSD_SOURCE         /* daemon */
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
@@ -52,6 +53,7 @@
 #include <poll.h>
 #include <assert.h>
 
+#include "9p.h"
 #include "npfs.h"
 #include "list.h"
 
