@@ -7,6 +7,9 @@
 
 	* diod/ops.c, libnpfs/* : Drop early flock/fcntl locking support.
 
+	* libnpfs/np.c : Remove the R* cases from np_deserialize () and
+	the T* create functions for server-side support only.
+
 2011-01-24 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/npfile.h : Split out from npfs.h.

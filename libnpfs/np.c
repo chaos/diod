@@ -925,11 +925,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		buf_get_str(bufp, &fc->version);
 		break;
 
-	case P9_RVERSION:
-		fc->msize = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->version);
-		break;
-
 	case P9_TAUTH:
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
@@ -938,10 +933,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 			fc->n_uname = buf_get_int32(bufp);
 		else
 			fc->n_uname = ~0;
-		break;
-
-	case P9_RAUTH:
-		buf_get_qid(bufp, &fc->qid);
 		break;
 
 	case P9_TFLUSH:
@@ -959,18 +950,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 			fc->n_uname = ~0;
 		break;
 
-	case P9_RATTACH:
-		buf_get_qid(bufp, &fc->qid);
-		break;
-
-	case P9_RERROR:
-		buf_get_str(bufp, &fc->ename);
-		if (extended)
-			fc->ecode = buf_get_int32(bufp);
-		else
-			fc->ecode = ~0;
-		break;
-
 	case P9_TWALK:
 		fc->fid = buf_get_int32(bufp);
 		fc->newfid = buf_get_int32(bufp);
@@ -983,23 +962,9 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		}
 		break;
 
-	case P9_RWALK:
-		fc->nwqid = buf_get_int16(bufp);
-		if (fc->nwqid > MAXWELEM)
-			goto error;
-		for(i = 0; i < fc->nwqid; i++)
-			buf_get_qid(bufp, &fc->wqids[i]);
-		break;
-
 	case P9_TOPEN:
 		fc->fid = buf_get_int32(bufp);
 		fc->mode = buf_get_int8(bufp);
-		break;
-
-	case P9_ROPEN:
-	case P9_RCREATE:
-		buf_get_qid(bufp, &fc->qid);
-		fc->iounit = buf_get_int32(bufp);
 		break;
 
 	case P9_TCREATE:
@@ -1019,11 +984,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->count = buf_get_int32(bufp);
 		break;
 
-	case P9_RREAD:
-		fc->count = buf_get_int32(bufp);
-		fc->data = buf_alloc(bufp, fc->count);
-		break;
-
 	case P9_TWRITE:
 		fc->fid = buf_get_int32(bufp);
 		fc->offset = buf_get_int64(bufp);
@@ -1031,25 +991,10 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->data = buf_alloc(bufp, fc->count);
 		break;
 
-	case P9_RWRITE:
-		fc->count = buf_get_int32(bufp);
-		break;
-
 	case P9_TCLUNK:
 	case P9_TREMOVE:
 	case P9_TSTAT:
 		fc->fid = buf_get_int32(bufp);
-		break;
-
-	case P9_RFLUSH:
-	case P9_RCLUNK:
-	case P9_RREMOVE:
-	case P9_RWSTAT:
-		break;
-
-	case P9_RSTAT:
-		buf_get_int16(bufp);
-		buf_get_stat(bufp, &fc->stat, extended);
 		break;
 
 	case P9_TWSTAT:
@@ -1065,11 +1010,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->count = buf_get_int32(bufp);
 		fc->rsize = buf_get_int32(bufp);
 		break;
-	case P9_RAREAD:
-		fc->count = buf_get_int32(bufp);
-		fc->data = buf_alloc(bufp, fc->count);
-		fc->check = buf_get_int32(bufp);
-		break;
 
 	case P9_TAWRITE:
 		fc->fid = buf_get_int32(bufp);
@@ -1080,36 +1020,21 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->data = buf_alloc(bufp, fc->rsize);
 		fc->check = buf_get_int32(bufp);
 		break;
-	case P9_RAWRITE:
-		fc->count = buf_get_int32(bufp);
-		break;
 #endif
 #if HAVE_DOTL
 	case P9_TGETATTR:
 		fc->u.tgetattr.fid = buf_get_int32(bufp);
 		fc->u.tgetattr.request_mask = buf_get_int64(bufp);
 		break;
+
 	case P9_TSTATFS:
 		fc->u.tstatfs.fid = buf_get_int32(bufp);
-		break;
-	case P9_RSTATFS:
-		fc->u.rstatfs.type = buf_get_int32(bufp);
-		fc->u.rstatfs.bsize = buf_get_int32(bufp);
-		fc->u.rstatfs.blocks = buf_get_int64(bufp);
-		fc->u.rstatfs.bfree = buf_get_int64(bufp);
-		fc->u.rstatfs.bavail = buf_get_int64(bufp);
-		fc->u.rstatfs.files = buf_get_int64(bufp);
-		fc->u.rstatfs.ffree = buf_get_int64(bufp);
-		fc->u.rstatfs.fsid = buf_get_int64(bufp);
-		fc->u.rstatfs.namelen = buf_get_int32(bufp);
 		break;
 
 	case P9_TRENAME:
 		fc->u.trename.fid = buf_get_int32(bufp);
 		fc->u.trename.newdirfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.trename.name);
-		break;
-	case P9_RRENAME:
 		break;
 #endif
 	}
