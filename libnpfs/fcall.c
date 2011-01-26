@@ -780,6 +780,31 @@ done:
 
 #if HAVE_DOTL
 Npfcall *
+np_getattr(Npreq *req, Npfcall *tc)
+{
+	Npconn *conn;
+	Npfid *fid;
+	Npfcall *rc;
+
+	rc = NULL;
+	conn = req->conn;
+	fid = np_fid_find(conn, tc->u.tgetattr.fid);
+	if (!fid) {
+		np_werror(Eunknownfid, EIO);
+		goto done;
+	} else 
+		np_fid_incref(fid);
+
+	req->fid = fid;
+
+	rc = (*conn->srv->getattr)(fid, tc->u.tgetattr.request_mask);
+
+done:
+//	np_fid_decref(fid);
+	return rc;
+}
+
+Npfcall *
 np_statfs(Npreq *req, Npfcall *tc)
 {
 	Npconn *conn;
@@ -788,7 +813,7 @@ np_statfs(Npreq *req, Npfcall *tc)
 
 	rc = NULL;
 	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.tstatfs.fid);
 	if (!fid) {
 		np_werror(Eunknownfid, EIO);
 		goto done;
@@ -813,7 +838,7 @@ np_rename(Npreq *req, Npfcall *tc)
 
 	rc = NULL;
 	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.trename.fid);
 	if (!fid) {
 		np_werror(Eunknownfid, EIO);
 		goto done;

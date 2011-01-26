@@ -63,6 +63,7 @@ static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
 static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
 #endif
 #if HAVE_DOTL
+static Npfcall* np_default_getattr(Npfid *, u64);
 static Npfcall* np_default_statfs(Npfid *);
 static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
 #endif
@@ -78,9 +79,9 @@ np_srv_create(int nwthread)
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
 #if HAVE_DOTL
-	srv->proto_version = NPFS_PROTO_2000L;
+	srv->proto_version = p9_proto_2000L;
 #else
-	srv->proto_version = NPFS_PROTO_2000U;
+	srv->proto_version = p9_proto_2000u;
 #endif
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
@@ -113,6 +114,7 @@ np_srv_create(int nwthread)
 	srv->awrite = np_default_awrite;
 #endif
 #if HAVE_DOTL
+	srv->getattr = np_default_getattr;
 	srv->statfs = np_default_statfs;
 	srv->rename = np_default_rename;
 #endif
@@ -310,6 +312,10 @@ np_process_request(Npreq *req)
 	np_werror(NULL, 0);
 	switch (tc->type) {
 #if HAVE_DOTL
+		case P9_TGETATTR:
+			rc = np_getattr(req, tc);
+			op = "getattr";
+			break;
 		case P9_TSTATFS:
 			rc = np_statfs(req, tc);
 			op = "statfs";
@@ -499,9 +505,9 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 {
 	int min_msize = IOHDRSZ;
 #if HAVE_DOTL
-	int proto_ver = NPFS_PROTO_2000L;
+	int proto_ver = p9_proto_2000L;
 #else
-	int proto_ver = NPFS_PROTO_2000U;
+	int proto_ver = p9_proto_2000u;
 #endif
 	char *ver = NULL;
 	Npfcall *rc = NULL;
@@ -510,15 +516,15 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 		msize = conn->srv->msize;
 
 	if (!np_strcmp(version, "9P2000")) {
-		ver = NPFS_PROTO_LEGACY;
+		ver = p9_proto_legacy;
 		ver = "9P2000";
 	} else if (!np_strcmp(version, "9P2000.u")) {
 		switch (conn->proto_version) {
-			case NPFS_PROTO_2000U:
+			case p9_proto_2000u:
 #if HAVE_DOTL
-			case NPFS_PROTO_2000L:
+			case p9_proto_2000L:
 #endif
-				proto_ver = NPFS_PROTO_2000U;
+				proto_ver = p9_proto_2000u;
 				ver = "9P2000.u";
 				break;
 			default:
@@ -526,8 +532,8 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 		}
 #if HAVE_DOTL
 	} else if (!np_strcmp(version, "9P2000.L")) {
-		if (conn->proto_version == NPFS_PROTO_2000L) {
-			proto_ver = NPFS_PROTO_2000L;
+		if (conn->proto_version == p9_proto_2000L) {
+			proto_ver = p9_proto_2000L;
 			ver = "9P2000.L";
 		} else
 			np_werror("unsupported 9P version", EIO);
@@ -644,6 +650,13 @@ np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq 
 }
 #endif
 #if HAVE_DOTL
+static Npfcall*
+np_default_getattr(Npfid *fid, u64 request_mask)
+{
+	np_werror(Enotimpl, ENOSYS);
+	return NULL;
+}
+
 static Npfcall*
 np_default_statfs(Npfid *fid)
 {

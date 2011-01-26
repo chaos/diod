@@ -29,6 +29,7 @@
  * - stripped out kernel debug macros
  * - added stdint types
  * - change P9_OEXCL to be what npfs.h had so it fits in a u8
+ * - added p9_proto_versions from <net/9p/client.h>
  */
 
 #ifndef NET_9P_H
@@ -38,6 +39,18 @@ typedef uint8_t   u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
+
+/** enum p9_proto_versions - 9P protocol versions
+ * @p9_proto_legacy: 9P Legacy mode, pre-9P2000.u
+ * @p9_proto_2000u: 9P2000.u extension
+ * @p9_proto_2000L: 9P2000.L extension
+ */
+
+enum p9_proto_versions{
+        p9_proto_legacy = 0,
+        p9_proto_2000u = 1,
+        p9_proto_2000L = 2,
+};
 
 /**
  * enum p9_debug_flags - bits for mount time debug parameter
@@ -505,6 +518,15 @@ struct p9_getlock {
 };
 
 /* Structures for Protocol Operations */
+struct p9_tgetattr {
+	u32 fid;
+	u64 request_mask;
+};
+
+struct p9_rgetattr {
+	struct p9_stat_dotl s;
+};
+
 struct p9_tstatfs {
 	u32 fid;
 };

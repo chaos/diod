@@ -1,6 +1,9 @@
 2011-01-25 Jim Garlick <garlick@llnl.gov>
 
 	* diodmount/diodmount.c : Add -x option for setting v9fs debug flags.
+	If no -x, mount with debug=0 since debug flags are persistent.
+
+	* diod/ops.c, libnpfs/* : Add getattr implementation for .L.
 
 	* diod/ops.c, libnpfs/* : Drop early flock/fcntl locking support.
 

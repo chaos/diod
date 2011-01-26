@@ -869,7 +869,7 @@ done:
 void
 npfile_init_srv(Npsrv *srv, Npfile *root)
 {
-	srv->proto_version = NPFS_PROTO_2000U;
+	srv->proto_version = p9_proto_2000u;
 	srv->attach = npfile_attach;
 	srv->clone = npfile_clone;
 	srv->walk = npfile_walk;

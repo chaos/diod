@@ -56,7 +56,7 @@
 #include "config.h"
 #endif
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
-#define _BSD_SOURCE         /* makedev */
+#define _BSD_SOURCE         /* makedev, st_atim etc */
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -138,6 +138,7 @@ Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
                           u8 *data, Npreq *req);
 #endif
 #if HAVE_DOTL
+Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 #endif
@@ -188,8 +189,12 @@ diod_register_ops (Npsrv *srv)
     srv->awrite = diod_awrite;
 #endif
 #if HAVE_DOTL
+    srv->getattr = diod_getattr;
     srv->statfs = diod_statfs;
     srv->rename = diod_rename;
+    srv->proto_version = p9_proto_2000L;
+#else
+    srv->proto_version = p9_proto_2000u;
 #endif
 }
 
@@ -1565,6 +1570,34 @@ done:
 #endif
 
 #if HAVE_DOTL
+Npfcall*
+diod_getattr(Npfid *fid, u64 request_mask)
+{
+    Fid *f = fid->aux;
+    Npfcall *ret = NULL;
+    Npqid qid;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_getattr: error switching user");
+        goto done;
+    }
+    if (_fidstat (f) < 0)
+        goto done;
+    _ustat2qid (&f->stat, &qid);
+    if (!(ret = np_create_rgetattr(request_mask, &qid, f->stat.st_mode,
+            f->stat.st_uid, f->stat.st_gid, f->stat.st_nlink, f->stat.st_rdev,
+            f->stat.st_size, f->stat.st_blksize, f->stat.st_blocks,
+            f->stat.st_atim.tv_sec, f->stat.st_atim.tv_nsec,
+            f->stat.st_mtim.tv_sec, f->stat.st_mtim.tv_nsec,
+            f->stat.st_ctim.tv_sec, f->stat.st_ctim.tv_nsec, 0, 0, 0, 0))) {
+        np_uerror (ENOMEM);
+        msg ("diod_statfs: out of memory");
+        goto done;
+    }
+done:
+    return ret;
+}
+
 /* Tstatfs - read file system  information (9P2000.L)
  * N.B. must call statfs() and statvfs() as
  * only statvfs provides (unsigned long) f_fsid

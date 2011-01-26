@@ -222,8 +222,7 @@ main (int argc, char *argv[])
         dir = argv[optind++];
         _parse_device (device, &aname, &ip);
     }
-    if (xopt)
-        opt_debug = _parse_debug (xopt);
+    opt_debug = _parse_debug (xopt);
 
     /* Must start out with effective root id.
      * We drop euid = root but preserve ruid = root for mount, etc.
@@ -291,37 +290,40 @@ main (int argc, char *argv[])
 static char *
 _parse_debug (char *s)
 {
-    Opt o = opt_create();
+    char *optstr;
+    Opt o;
     int f = 0;
-    char *optstr = malloc(64);
 
-    if (!optstr)
+    if (!(optstr = malloc(64)))
         msg_exit ("out of memory");
+    if (s) {
+        o = opt_create();
 
-    opt_add_cslist (o, s);
-    if (opt_find (o, "error"))
-        f |= P9_DEBUG_ERROR;
-    if (opt_find (o, "9p"))
-        f |= P9_DEBUG_9P;
-    if (opt_find (o, "vfs"))
-        f |= P9_DEBUG_VFS;
-    if (opt_find (o, "conv"))
-        f |= P9_DEBUG_CONV;
-    if (opt_find (o, "mux"))
-        f |= P9_DEBUG_MUX;
-    if (opt_find (o, "trans"))
-        f |= P9_DEBUG_TRANS;
-    if (opt_find (o, "slabs"))
-        f |= P9_DEBUG_SLABS;
-    if (opt_find (o, "fcall"))
-        f |= P9_DEBUG_FCALL;
-    if (opt_find (o, "fid"))
-        f |= P9_DEBUG_FID;
-    if (opt_find (o, "pkt"))
-        f |= P9_DEBUG_PKT;
-    if (opt_find (o, "fsc"))
-        f |= P9_DEBUG_FSC;
-    opt_destroy (o);
+        opt_add_cslist (o, s);
+        if (opt_find (o, "error"))
+            f |= P9_DEBUG_ERROR;
+        if (opt_find (o, "9p"))
+            f |= P9_DEBUG_9P;
+        if (opt_find (o, "vfs"))
+            f |= P9_DEBUG_VFS;
+        if (opt_find (o, "conv"))
+            f |= P9_DEBUG_CONV;
+        if (opt_find (o, "mux"))
+            f |= P9_DEBUG_MUX;
+        if (opt_find (o, "trans"))
+            f |= P9_DEBUG_TRANS;
+        if (opt_find (o, "slabs"))
+            f |= P9_DEBUG_SLABS;
+        if (opt_find (o, "fcall"))
+            f |= P9_DEBUG_FCALL;
+        if (opt_find (o, "fid"))
+            f |= P9_DEBUG_FID;
+        if (opt_find (o, "pkt"))
+            f |= P9_DEBUG_PKT;
+        if (opt_find (o, "fsc"))
+            f |= P9_DEBUG_FSC;
+        opt_destroy (o);
+    }
     snprintf (optstr, 64, "debug=0x%x", f);
 
     return optstr; 

@@ -115,6 +115,8 @@ struct Npfcall {
 #endif
 #if HAVE_DOTL
 	union {
+	   struct p9_tgetattr tgetattr;
+	   struct p9_rgetattr rgetattr;
 	   struct p9_tstatfs tstatfs;
 	   struct p9_rstatfs rstatfs;
 	   struct p9_trename trename;
@@ -221,14 +223,6 @@ enum {
         DEBUG_9P_ERRORS=0x02,
 };
 
-enum {
-	NPFS_PROTO_LEGACY=0,
-	NPFS_PROTO_2000U=1,
-#if HAVE_DOTL
-	NPFS_PROTO_2000L=2,
-#endif
-};
-
 struct Npsrv {
 	u32		msize;
 	int		proto_version;
@@ -270,6 +264,7 @@ struct Npsrv {
 				  u32 rsize, u8 *data, Npreq *req);
 #endif
 #if HAVE_DOTL
+	Npfcall*	(*getattr)(Npfid *fid, u64 request_mask);
 	Npfcall*	(*statfs)(Npfid *fid);
 	Npfcall*	(*rename)(Npfid *fid, Npfid *newdirfid, Npstr *name);
 #endif
@@ -380,46 +375,39 @@ int np_strcmp(Npstr *str, char *cs);
 int np_strncmp(Npstr *str, char *cs, int len);
 
 void np_set_tag(Npfcall *, u16);
-Npfcall *np_create_tversion(u32 msize, char *version);
 Npfcall *np_create_rversion(u32 msize, char *version);
-Npfcall *np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname, int dotu);
 Npfcall *np_create_rauth(Npqid *aqid);
 Npfcall *np_create_rerror(char *ename, int ecode, int dotu);
 Npfcall *np_create_rerror1(Npstr *ename, int ecode, int dotu);
-Npfcall *np_create_tflush(u16 oldtag);
 Npfcall *np_create_rflush(void);
-Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname, int dotu);
 Npfcall *np_create_rattach(Npqid *qid);
-Npfcall *np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames);
 Npfcall *np_create_rwalk(int nwqid, Npqid *wqids);
-Npfcall *np_create_topen(u32 fid, u8 mode);
 Npfcall *np_create_ropen(Npqid *qid, u32 iounit);
-Npfcall *np_create_tcreate(u32 fid, char *name, u32 perm, u8 mode);
 Npfcall *np_create_rcreate(Npqid *qid, u32 iounit);
-Npfcall *np_create_tread(u32 fid, u64 offset, u32 count);
 Npfcall *np_create_rread(u32 count, u8* data);
-Npfcall *np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data);
 Npfcall *np_create_rwrite(u32 count);
-Npfcall *np_create_tclunk(u32 fid);
 Npfcall *np_create_rclunk(void);
-Npfcall *np_create_tremove(u32 fid);
 Npfcall *np_create_rremove(void);
-Npfcall *np_create_tstat(u32 fid);
 Npfcall *np_create_rstat(Npwstat *stat, int dotu);
-Npfcall *np_create_twstat(u32 fid, Npwstat *wstat, int dotu);
 Npfcall *np_create_rwstat(void);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
 #if HAVE_LARGEIO
-Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize);
 Npfcall *np_create_raread(u32 count);
-Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize, u8 *data);
 Npfcall *np_create_rawrite(u32 count);
 #endif
 #if HAVE_DOTL
-Npfcall *np_create_tstatfs(u32 fid);
-Npfcall *np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen);
-Npfcall *np_create_trename(u32 fid, u32 newdirfid, char *name);
+Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
+		u32 st_mode, u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
+                u64 st_size, u64 st_blksize, u64 st_blocks,
+                u64 st_atime_sec, u64 st_atime_nsec,
+                u64 st_mtime_sec, u64 st_mtime_nsec,
+                u64 st_ctime_sec, u64 st_ctime_nsec,
+                u64 st_btime_sec, u64 st_btime_nsec,
+                u64 st_gen, u64 st_data_version);
+Npfcall *np_create_rstatfs(u32 type, u32 bsize,
+		u64 blocks, u64 bfree, u64 bavail,
+		u64 files, u64 ffree, u64 fsid, u32 namelen);
 Npfcall *np_create_rrename(void);
 #endif
 void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
@@ -462,25 +450,11 @@ void *np_malloc(int);
 
 static inline int np_conn_extend (Npconn *conn)
 {
-	switch (conn->proto_version) {
-		case NPFS_PROTO_2000U:
-			return 1;
-#if HAVE_DOTL
-		case NPFS_PROTO_2000L:
-			return 1;
-#endif
-	}
-	return 0;
+	return (conn->proto_version == p9_proto_2000u
+	     || conn->proto_version == p9_proto_2000L);
 }
 static inline int np_srv_extend (Npsrv *srv)
 {
-	switch (srv->proto_version) {
-		case NPFS_PROTO_2000U:
-			return 1;
-#if HAVE_DOTL
-		case NPFS_PROTO_2000L:
-			return 1;
-#endif
-	}
-	return 0;
+	return (srv->proto_version == p9_proto_2000u
+	     || srv->proto_version == p9_proto_2000L);
 }
