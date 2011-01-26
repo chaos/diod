@@ -173,42 +173,112 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	n = 0;
 	switch (type) {
 	case P9_TLERROR:
+		n += snprintf(s+n,len-n, "P9_TLERROR tag %u", tag);
+		break;
 	case P9_RLERROR:
+		n += snprintf(s+n,len-n, "P9_RLERROR tag %u", tag);
+		break;
 	case P9_TSTATFS:
+		n += snprintf(s+n,len-n, "P9_TSTATFS tag %u", tag);
+		break;
 	case P9_RSTATFS:
+		n += snprintf(s+n,len-n, "P9_RSTATFS tag %u", tag);
+		break;
 	case P9_TLOPEN:
+		n += snprintf(s+n,len-n, "P9_TLOPEN tag %u", tag);
+		break;
 	case P9_RLOPEN:
+		n += snprintf(s+n,len-n, "P9_RLOPEN tag %u", tag);
+		break;
 	case P9_TLCREATE:
+		n += snprintf(s+n,len-n, "P9_TLCREATE tag %u", tag);
+		break;
 	case P9_RLCREATE:
+		n += snprintf(s+n,len-n, "P9_RLCREATE tag %u", tag);
+		break;
 	case P9_TSYMLINK:
+		n += snprintf(s+n,len-n, "P9_TSYMLINK tag %u", tag);
+		break;
 	case P9_RSYMLINK:
+		n += snprintf(s+n,len-n, "P9_RSYMLINK tag %u", tag);
+		break;
 	case P9_TMKNOD:
+		n += snprintf(s+n,len-n, "P9_TMKNOD tag %u", tag);
+		break;
 	case P9_RMKNOD:
+		n += snprintf(s+n,len-n, "P9_RMKNOD tag %u", tag);
+		break;
 	case P9_TRENAME:
+		n += snprintf(s+n,len-n, "P9_TRENAME tag %u", tag);
+		break;
 	case P9_RRENAME:
+		n += snprintf(s+n,len-n, "P9_RRENAME tag %u", tag);
+		break;
 	case P9_TREADLINK:
+		n += snprintf(s+n,len-n, "P9_TREADLINK tag %u", tag);
+		break;
 	case P9_RREADLINK:
+		n += snprintf(s+n,len-n, "P9_RREADLINK tag %u", tag);
+		break;
 	case P9_TGETATTR:
+		n += snprintf(s+n,len-n, "P9_TGETATTR tag %u", tag);
+		break;
 	case P9_RGETATTR:
+		n += snprintf(s+n,len-n, "P9_RGETATTR tag %u", tag);
+		break;
 	case P9_TSETATTR:
+		n += snprintf(s+n,len-n, "P9_TSETATTR tag %u", tag);
+		break;
 	case P9_RSETATTR:
+		n += snprintf(s+n,len-n, "P9_RSETATTR tag %u", tag);
+		break;
 	case P9_TXATTRWALK:
+		n += snprintf(s+n,len-n, "P9_TXATTRWALK tag %u", tag);
+		break;
 	case P9_RXATTRWALK:
+		n += snprintf(s+n,len-n, "P9_RXATTRWALK tag %u", tag);
+		break;
 	case P9_TXATTRCREATE:
+		n += snprintf(s+n,len-n, "P9_TXATTRWALKCREATE tag %u", tag);
+		break;
 	case P9_RXATTRCREATE:
+		n += snprintf(s+n,len-n, "P9_RXATTRWALKCREATE tag %u", tag);
+		break;
 	case P9_TREADDIR:
+		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u", tag);
+		break;
 	case P9_RREADDIR:
+		n += snprintf(s+n,len-n, "P9_RREADDIR tag %u", tag);
+		break;
 	case P9_TFSYNC:
+		n += snprintf(s+n,len-n, "P9_TFSYNC tag %u", tag);
+		break;
 	case P9_RFSYNC:
+		n += snprintf(s+n,len-n, "P9_RFSYNC tag %u", tag);
+		break;
 	case P9_TLOCK:
+		n += snprintf(s+n,len-n, "P9_TLOCK tag %u", tag);
+		break;
 	case P9_RLOCK:
+		n += snprintf(s+n,len-n, "P9_RLOCK tag %u", tag);
+		break;
 	case P9_TGETLOCK:
+		n += snprintf(s+n,len-n, "P9_TGETLOCK tag %u", tag);
+		break;
 	case P9_RGETLOCK:
+		n += snprintf(s+n,len-n, "P9_RGETLOCK tag %u", tag);
+		break;
 	case P9_TLINK:
+		n += snprintf(s+n,len-n, "P9_TLINK tag %u", tag);
+		break;
 	case P9_RLINK:
+		n += snprintf(s+n,len-n, "P9_RLINK tag %u", tag);
+		break;
 	case P9_TMKDIR:
+		n += snprintf(s+n,len-n, "P9_TMKDIR tag %u", tag);
+		break;
 	case P9_RMKDIR:
-		n += snprintf(s+n,len-n, "op %d tag %u ...", type, tag);
+		n += snprintf(s+n,len-n, "P9_RMKDIR tag %u", tag);
 		break;
 	case P9_TVERSION:
 		n += snprintf(s+n,len-n, "P9_TVERSION tag %u msize %u version '%.*s'", 

@@ -1,5 +1,9 @@
 2011-01-25 Jim Garlick <garlick@llnl.gov>
 
+	* libnpfs/np.c : Display an error for unhandled ops.
+
+	* libnpfs/fmt.c : Decode all new .L ops, though not yet all args.
+
 	* diodmount/diodmount.c : Add -x option for setting v9fs debug flags.
 	If no -x, mount with debug=0 since debug flags are persistent.
 

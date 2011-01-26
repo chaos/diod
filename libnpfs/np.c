@@ -918,6 +918,8 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 
 	switch (fc->type) {
 	default:
+		fprintf(stderr, "unhandled op: %d\n", fc->type);
+		fflush(stderr);
 		goto error;
 
 	case P9_TVERSION:
