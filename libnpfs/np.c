@@ -387,7 +387,7 @@ np_create_common(struct cbuf *bufp, u32 size, u8 id)
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_put_int8(bufp, id, &fc->type);
-	buf_put_int16(bufp, NOTAG, &fc->tag);
+	buf_put_int16(bufp, P9_NOTAG, &fc->tag);
 
 	return fc;
 }
@@ -534,8 +534,8 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 	struct cbuf buffer;
 	struct cbuf *bufp;
 
-	if (nwqid > MAXWELEM) {
-		fprintf(stderr, "nwqid > MAXWELEM\n");
+	if (nwqid > P9_MAXWELEM) {
+		fprintf(stderr, "nwqid > P9_MAXWELEM\n");
 		return NULL;
 	}
 
@@ -808,6 +808,26 @@ np_create_rawrite(u32 count)
 
 #if HAVE_DOTL
 Npfcall *
+np_create_rlopen(Npqid *qid, u32 iounit)
+{
+	int size;
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp;
+
+	bufp = &buffer;
+	size = sizeof(*qid) + sizeof(u32);
+	fc = np_create_common(bufp, size, P9_RLOPEN);
+	if (!fc)
+		return NULL;
+
+	buf_put_qid(bufp, qid, &fc->u.rlopen.qid);
+	buf_put_int32(bufp, iounit, &fc->u.rlopen.iounit);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid, u32 st_mode,
   		u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
 		u64 st_size, u64 st_blksize, u64 st_blocks,
@@ -850,6 +870,50 @@ np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid, u32 st_mode,
 	buf_put_int64(bufp, st_data_version, &fc->u.rgetattr.s.st_data_version);
 
 	return np_post_check(fc, bufp);
+}
+
+/* srv->readdir () should:
+ * 1) call np_alloc_rreaddir ()
+ * 2) copy up to count bytes of dirent data in datap
+ * 3) call np_set_rreaddir_count () to set actual byte count
+ */
+Npfcall *
+np_alloc_rreaddir(u32 count, u8 **datap)
+{
+	int size;
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp;
+	void *p;
+
+	bufp = &buffer;
+	size = sizeof(u32) + count;
+	fc = np_create_common(bufp, size, P9_RREADDIR);
+	if (!fc)
+		return NULL;
+
+	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
+	p = buf_alloc(bufp, count);
+	*datap = fc->u.rreaddir.data = p;
+
+	return np_post_check(fc, bufp);
+}
+
+void
+np_set_rreaddir_count(Npfcall *fc, u32 count)
+{
+	int size;
+	struct cbuf buffer;
+	struct cbuf *bufp;
+
+	assert(count <= fc->u.rreaddir.count);
+	bufp = &buffer;
+	size = sizeof(u32) + count;
+
+	buf_init(bufp, (char *) fc->pkt, size);
+	buf_put_int32(bufp, size, &fc->size);
+	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
+	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
 }
 
 Npfcall *
@@ -914,7 +978,7 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 	buf_init(bufp, data + 4, fc->size - 4);
 	fc->type = buf_get_int8(bufp);
 	fc->tag = buf_get_int16(bufp);
-	fc->fid = fc->afid = fc->newfid = NOFID;
+	fc->fid = fc->afid = fc->newfid = P9_NOFID;
 
 	switch (fc->type) {
 	default:
@@ -956,7 +1020,7 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->fid = buf_get_int32(bufp);
 		fc->newfid = buf_get_int32(bufp);
 		fc->nwname = buf_get_int16(bufp);
-		if (fc->nwname > MAXWELEM)
+		if (fc->nwname > P9_MAXWELEM)
 			goto error;
 
 		for(i = 0; i < fc->nwname; i++) {
@@ -1012,7 +1076,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->count = buf_get_int32(bufp);
 		fc->rsize = buf_get_int32(bufp);
 		break;
-
 	case P9_TAWRITE:
 		fc->fid = buf_get_int32(bufp);
 		fc->datacheck = buf_get_int8(bufp);
@@ -1024,15 +1087,22 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 #endif
 #if HAVE_DOTL
+	case P9_TLOPEN:
+		fc->u.tlopen.fid = buf_get_int32(bufp);
+		fc->u.tlopen.mode = buf_get_int32(bufp);
+		break;
 	case P9_TGETATTR:
 		fc->u.tgetattr.fid = buf_get_int32(bufp);
 		fc->u.tgetattr.request_mask = buf_get_int64(bufp);
 		break;
-
+	case P9_TREADDIR:
+		fc->u.treaddir.fid = buf_get_int32(bufp);
+		fc->u.treaddir.offset = buf_get_int64(bufp);
+		fc->u.treaddir.count = buf_get_int32(bufp);
+		break;
 	case P9_TSTATFS:
 		fc->u.tstatfs.fid = buf_get_int32(bufp);
 		break;
-
 	case P9_TRENAME:
 		fc->u.trename.fid = buf_get_int32(bufp);
 		fc->u.trename.newdirfid = buf_get_int32(bufp);
@@ -1049,6 +1119,44 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 error:
 	return 0;
 }
+
+#if HAVE_DOTL
+/* put a null terminated string on the wire */
+static void
+buf_put_nstr(struct cbuf *buf, char *s)
+{
+	int slen = strlen (s) + 1;
+	char *dest;
+
+	dest = buf_alloc(buf, slen);
+
+	memmove(dest, s, slen);
+}
+
+int
+np_serialize_p9_dirent(struct p9_dirent *d, u8 *buf, int buflen)
+{
+	struct cbuf buffer;
+	struct cbuf *bufp;
+	int needed;
+
+	needed = sizeof(struct p9_dirent) + strlen(d->d_name) + 1;
+	if (needed > buflen)
+		return 0;
+
+	bufp = &buffer;
+	buf_init(bufp, buf, buflen);
+	buf_put_qid(bufp, &d->qid, NULL);
+	buf_put_int64(bufp, d->d_off, NULL);
+	buf_put_int8(bufp, d->d_type, NULL);
+	buf_put_nstr(bufp, d->d_name);
+	
+	if (buf_check_overflow(bufp))
+		return 0;
+
+	return bufp->p - bufp->sp;
+}
+#endif
 
 int 
 np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int extended)

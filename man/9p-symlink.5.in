@@ -1,0 +1,17 @@
+.TH 9p-symlink 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p symlink \- create a symbolic link
+.SH SYNOPSIS
+.nf
+size[4] Tsymlink tag[2] fid[4] name[s] symtgt[s] gid[4]
+size[4] Rsymlink tag[2] qid[13]
+.fi
+.SH DESCRIPTION
+Create a symbolic link named 'name' pointing to 'symtgt'.
+gid represents the effective group id of the caller.
+The  permissions of a symbolic link are irrelevant hence it is omitted
+from the protocol.
+.SH ORIGIN
+9P2000.L
+.SH SEE ALSO
+9p-intro(5)

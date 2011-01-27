@@ -36,14 +36,20 @@ host_triplet = @host@
 target_triplet = @target@
 subdir = man
 DIST_COMMON = $(srcdir)/9p-attach.5.in $(srcdir)/9p-clunk.5.in \
-	$(srcdir)/9p-error.5.in $(srcdir)/9p-flock.5.in \
-	$(srcdir)/9p-flush.5.in $(srcdir)/9p-intro.5.in \
-	$(srcdir)/9p-lock.5.in $(srcdir)/9p-open.5.in \
-	$(srcdir)/9p-read.5.in $(srcdir)/9p-remove.5.in \
-	$(srcdir)/9p-rename.5.in $(srcdir)/9p-stat.5.in \
-	$(srcdir)/9p-statfs.5.in $(srcdir)/9p-version.5.in \
-	$(srcdir)/9p-walk.5.in $(srcdir)/Makefile.am \
-	$(srcdir)/Makefile.in $(srcdir)/diodctl.conf.5.in
+	$(srcdir)/9p-error.5.in $(srcdir)/9p-flush.5.in \
+	$(srcdir)/9p-fsync.5.in $(srcdir)/9p-getattr.5.in \
+	$(srcdir)/9p-getlock.5.in $(srcdir)/9p-intro.5.in \
+	$(srcdir)/9p-lcreate.5.in $(srcdir)/9p-link.5.in \
+	$(srcdir)/9p-lock.5.in $(srcdir)/9p-lopen.5.in \
+	$(srcdir)/9p-mkdir.5.in $(srcdir)/9p-mknod.5.in \
+	$(srcdir)/9p-open.5.in $(srcdir)/9p-read.5.in \
+	$(srcdir)/9p-readdir.5.in $(srcdir)/9p-readlink.5.in \
+	$(srcdir)/9p-remove.5.in $(srcdir)/9p-rename.5.in \
+	$(srcdir)/9p-setattr.5.in $(srcdir)/9p-stat.5.in \
+	$(srcdir)/9p-statfs.5.in $(srcdir)/9p-symlink.5.in \
+	$(srcdir)/9p-version.5.in $(srcdir)/9p-walk.5.in \
+	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+	$(srcdir)/diodctl.conf.5.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -57,10 +63,12 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodctl.conf.5 9p-attach.5 9p-flush.5 9p-flock.5 \
-	9p-lock.5 9p-read.5 9p-version.5 9p-clunk.5 9p-intro.5 \
-	9p-remove.5 9p-walk.5 9p-error.5 9p-open.5 9p-rename.5 \
-	9p-stat.5 9p-statfs.5
+CONFIG_CLEAN_FILES = diodctl.conf.5 9p-attach.5 9p-flush.5 9p-read.5 \
+	9p-version.5 9p-clunk.5 9p-intro.5 9p-remove.5 9p-walk.5 \
+	9p-error.5 9p-open.5 9p-rename.5 9p-stat.5 9p-statfs.5 \
+	9p-lopen.5 9p-lcreate.5 9p-getattr.5 9p-readdir.5 9p-symlink.5 \
+	9p-mknod.5 9p-readlink.5 9p-setattr.5 9p-fsync.5 9p-mkdir.5 \
+	9p-link.5 9p-getlock.5 9p-lock.5
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -223,10 +231,8 @@ man5_MANS = \
 	9p-attach.5 \
 	9p-clunk.5 \
 	9p-error.5 \
-	9p-flock.5 \
 	9p-flush.5 \
 	9p-intro.5 \
-	9p-lock.5 \
 	9p-open.5 \
 	9p-read.5 \
 	9p-rename.5 \
@@ -235,6 +241,19 @@ man5_MANS = \
 	9p-statfs.5 \
 	9p-version.5 \
 	9p-walk.5 \
+	9p-lopen.5 \
+	9p-lcreate.5 \
+	9p-getattr.5 \
+	9p-readdir.5 \
+	9p-symlink.5 \
+	9p-mknod.5 \
+	9p-readlink.5 \
+	9p-setattr.5 \
+	9p-fsync.5 \
+	9p-mkdir.5 \
+	9p-link.5 \
+	9p-getlock.5 \
+	9p-lock.5 \
 	diodctl.conf.5
 
 EXTRA_DIST = $(man8_MANS) $(man5_MANS)
@@ -277,10 +296,6 @@ diodctl.conf.5: $(top_builddir)/config.status $(srcdir)/diodctl.conf.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 9p-flush.5: $(top_builddir)/config.status $(srcdir)/9p-flush.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-9p-flock.5: $(top_builddir)/config.status $(srcdir)/9p-flock.5.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-9p-lock.5: $(top_builddir)/config.status $(srcdir)/9p-lock.5.in
-	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 9p-read.5: $(top_builddir)/config.status $(srcdir)/9p-read.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 9p-version.5: $(top_builddir)/config.status $(srcdir)/9p-version.5.in
@@ -302,6 +317,32 @@ diodctl.conf.5: $(top_builddir)/config.status $(srcdir)/diodctl.conf.5.in
 9p-stat.5: $(top_builddir)/config.status $(srcdir)/9p-stat.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 9p-statfs.5: $(top_builddir)/config.status $(srcdir)/9p-statfs.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-lopen.5: $(top_builddir)/config.status $(srcdir)/9p-lopen.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-lcreate.5: $(top_builddir)/config.status $(srcdir)/9p-lcreate.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-getattr.5: $(top_builddir)/config.status $(srcdir)/9p-getattr.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-readdir.5: $(top_builddir)/config.status $(srcdir)/9p-readdir.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-symlink.5: $(top_builddir)/config.status $(srcdir)/9p-symlink.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-mknod.5: $(top_builddir)/config.status $(srcdir)/9p-mknod.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-readlink.5: $(top_builddir)/config.status $(srcdir)/9p-readlink.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-setattr.5: $(top_builddir)/config.status $(srcdir)/9p-setattr.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-fsync.5: $(top_builddir)/config.status $(srcdir)/9p-fsync.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-mkdir.5: $(top_builddir)/config.status $(srcdir)/9p-mkdir.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-link.5: $(top_builddir)/config.status $(srcdir)/9p-link.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-getlock.5: $(top_builddir)/config.status $(srcdir)/9p-getlock.5.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+9p-lock.5: $(top_builddir)/config.status $(srcdir)/9p-lock.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-man5: $(man5_MANS)
 	@$(NORMAL_INSTALL)

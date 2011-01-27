@@ -1,0 +1,35 @@
+.TH 9p-lopen 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p getlock \- test POSIX advisory byte range locks
+.SH SYNOPSIS
+.nf
+size[4] TGetlock tag[2] fid[4] getlock[n]
+size[4] RGetlock tag[2] getlock[n]
+.fi
+.SH DESCRIPTION
+Getlock is used to test for the existence of byte range posix locks on a file
+identified by given fid. The reply contains getlock structure.
+If the lock could be placed it returns F_UNLCK in type field of getlock
+structure.  Otherwise it returns the details of the conflicting locks in
+the getlock structure:
+.TP
+\fItype[1]\fR
+Type of lock: F_RDLCK, F_WRLCK
+.TP
+\fIstart[8]\fR
+Starting offset for lock
+.TP
+\fIlength[8]\fR
+Number of bytes to check for the lock
+If length is 0, check for lock in all bytes starting at the location 'start'
+through to the end of file
+.TP
+\fIpid[4]\fR
+PID of the process that wants to take lock/owns the task in case of reply
+.TP
+\fIclient[4]\fR
+Client id of the system that owns the process which has the conflicting lock
+.SH ORIGIN
+9P2000.L
+.SH SEE ALSO
+9p-intro(5)

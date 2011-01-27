@@ -226,7 +226,7 @@ reproduced, from the top bit down, in the type byte of the Qid: QTDIR,
 QTAPPEND, QTEXCL, (skipping one bit) QTAUTH, and QTTMP. The name QTFILE,
 defined to be zero, identifies the value of the type for a plain file.
 .SH "UNIX EXTENSIONS"
-UNIX extensions are defined in [rfc9p2000.u].
+UNIX extensions are defined in 9p2000.u.
 .LP
 9P2000.u defines several extensions necessary to provide UNIX file
 semantics via 9P.  These fall into the categories of 
@@ -249,23 +249,52 @@ size[4] Rerror tag[2] ename[s] ecode[4]
 .LP
 as well as the stat[n] structure used in the stat, wstat, and read
 operations.  See 9p-stat(5), 9p-attach(5), 9p-open(5), and 9p-error(5).
-.LP
-Additional Linux extensions are defined in 9P2000.L.
-\fBdiod\fR speculatively implements 9P2000.L operations for 
-obtaining file system statistics for df (statfs),
-renaming files across directories (rename),
-and advisory file and byte range locking (lock, flock).
+.SH "Linux EXTENSIONS"
+Additional Linux extensions are defined in 9P2000.L:
 .LP
 .nf
+size[4] Rlerror tag[2] ecode[4]
 size[4] Tstatfs tag[2] fid[4]
-size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8] files[8] ffree[8] fsid[8] namelen[4]
+size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8]
+                files[8] ffree[8] fsid[8] namelen[4]
+size[4] Tlopen tag[2] fid[4] mode[4]
+size[4] Rlopen tag[2] qid[13] iounit[4]
+size[4] Tlcreate tag[2] fid[4] name[s] flags[4] mode[4] gid[4]
+size[4] Rlcreate tag[2] qid[13] iounit[4]
+size[4] Tsymlink tag[2] fid[4] name[s] symtgt[s] gid[4]
+size[4] Rsymlink tag[2] qid[13]
+size[4] Tmknod tag[2] fid[4] name[s] mode[4] major[4] minor[4] gid[4]
+size[4] Rmknod tag[2] qid[13]
 size[4] Trename tag[2] fid[4] newdirfid[4] name[s]
 size[4] Rrename tag[2]
-size[4] Tlock tag[2] fid[4] cmd[1] type[1] pid[8] start[8] end[8]
-size[4] Rlock tag[2] type[1] pid[8] start[8] end[8]
-size[4] Tflock  tag[2] fid[4] cmd[1]
-size[4] Rflock tag[2]
+size[4] Treadlink tag[2] fid[4]
+size[4] Rreadlink tag[2] target[s]
+size[4] Tgetattr tag[2] fid[4] request_mask[8]
+size[4] Rgetattr tag[2] response_mask[8] lstat[n]
+size[4] Tsetattr tag[2] attr[n]
+size[4] Rsetattr tag[2]
+size[4] Txattrwalk ...
+size[4] Rxattrwalk ...
+size[4] Txattrcreate ...
+size[4] Rxattrcreate ...
+size[4] Treaddir tag[2] fid[4] offset[8] count[4]
+size[4] Rreaddir tag[2] count[4] data[count]
+size[4] Tfsync tag[2] fid[4]
+size[4] Rfsync tag[2]
+size[4] Tlock tag[2] fid[4] flock[n]
+size[4] Rlock tag[2] status[1]
+size[4] Tgetlock tag[2] fid[4] getlock[n]
+size[4] Rsetlock tag[2] getlock[n]
+size[4] Tlink tag[2] dfid[4] oldfid[4] newpath[s]
+size[4] Rlink tag[2]
+size[4] Tmkdir tag[2] fid[4] name[s] mode[4] gid[4]
+size[4] Rmkdir tag[2] qid[13]
 .fi
+.LP
+9P2000.L is designed to make 9P2000.u extensions unnecessary in a server
+implementation.  Also, clients like the Linux kernel v9fs should gracefully
+handle ENOSYS replies from servers that do not implement every 9P2000.L
+operation.
 .SH "DIOD EXTENSIONS"
 .B diod
 further extends 9P2000.L with new requests for large atomic I/O with optional
@@ -274,7 +303,8 @@ checksum.
 .nf	
 size[4] Taread tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4]
 size[4] Raread tag[2] count[4] data[count] check[4]
-size[4] Tawrite tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4] data[count] check[4]
+size[4] Tawrite tag[2] fid[4] datacheck[1] offset[8] count[4] rsize[4]
+                data[count] check[4]
 size[4] Rawrite tag[2] count[4]
 .fi
 .LP
@@ -283,9 +313,6 @@ into the transport layer so all protocol operations are covered.
 Also, it may be possible to design a transport which allows msize to
 be expanded to the point where separate atomic read/write operations are
 unnecesssary.
-.LP
-At this time advisory locking is not implemented in \fBdiod\fR as it is
-incompatible with the thread pool model used in npfs.
 .SH ORIGIN
 The Plan 9 operating system, fourth edition, 2002.
 .br

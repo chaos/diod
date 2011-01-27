@@ -38,7 +38,10 @@ Npfcall *np_remove(Npreq *req, Npfcall *tc);
 Npfcall *np_stat(Npreq *req, Npfcall *tc);
 Npfcall *np_wstat(Npreq *req, Npfcall *tc);
 #if HAVE_DOTL
+Npfcall *np_lopen(Npreq *req, Npfcall *tc);
 Npfcall *np_getattr(Npreq *req, Npfcall *tc);
+Npfcall *np_readdir(Npreq *req, Npfcall *tc);
+Npfcall *np_readdir(Npreq *req, Npfcall *tc);
 Npfcall *np_rename(Npreq *req, Npfcall *tc);
 Npfcall *np_statfs(Npreq *req, Npfcall *tc);
 #endif

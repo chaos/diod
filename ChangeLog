@@ -1,3 +1,9 @@
+2011-01-26 Jim Garlick <garlick@llnl.gov>
+
+	* man/* : Begin documenting 9P2000.L.
+
+	* libnpfs/* : Add lopen, readdir implementation for .L.
+
 2011-01-25 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/np.c : Display an error for unhandled ops.

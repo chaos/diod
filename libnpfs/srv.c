@@ -63,7 +63,9 @@ static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
 static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
 #endif
 #if HAVE_DOTL
+static Npfcall* np_default_lopen(Npfid *, u32);
 static Npfcall* np_default_getattr(Npfid *, u64);
+static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
 static Npfcall* np_default_statfs(Npfid *);
 static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
 #endif
@@ -114,7 +116,9 @@ np_srv_create(int nwthread)
 	srv->awrite = np_default_awrite;
 #endif
 #if HAVE_DOTL
+	srv->lopen = np_default_lopen;
 	srv->getattr = np_default_getattr;
+	srv->readdir = np_default_readdir;
 	srv->statfs = np_default_statfs;
 	srv->rename = np_default_rename;
 #endif
@@ -312,9 +316,17 @@ np_process_request(Npreq *req)
 	np_werror(NULL, 0);
 	switch (tc->type) {
 #if HAVE_DOTL
+		case P9_TLOPEN:
+			rc = np_lopen(req, tc);
+			op = "lopen";
+			break;
 		case P9_TGETATTR:
 			rc = np_getattr(req, tc);
 			op = "getattr";
+			break;
+		case P9_TREADDIR:
+			rc = np_readdir(req, tc);
+			op = "readdir";
 			break;
 		case P9_TSTATFS:
 			rc = np_statfs(req, tc);
@@ -503,7 +515,7 @@ np_respond_error(Npreq *req, char *ename, int ecode)
 static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
-	int min_msize = IOHDRSZ;
+	int min_msize = P9_IOHDRSZ;
 #if HAVE_DOTL
 	int proto_ver = p9_proto_2000L;
 #else
@@ -651,19 +663,29 @@ np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq 
 #endif
 #if HAVE_DOTL
 static Npfcall*
+np_default_lopen(Npfid *fid, u32 mode)
+{
+	np_werror(Enotimpl, ENOSYS);
+	return NULL;
+}
+static Npfcall*
 np_default_getattr(Npfid *fid, u64 request_mask)
 {
 	np_werror(Enotimpl, ENOSYS);
 	return NULL;
 }
-
+static Npfcall*
+np_default_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
+{
+	np_werror(Enotimpl, ENOSYS);
+	return NULL;
+}
 static Npfcall*
 np_default_statfs(Npfid *fid)
 {
 	np_werror(Enotimpl, ENOSYS);
 	return NULL;
 }
-
 static Npfcall*
 np_default_rename(Npfid *fid, Npfid *newdirfid, Npstr *newname)
 {

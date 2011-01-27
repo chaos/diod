@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <assert.h>
 #include <zlib.h>
 #include "9p.h"
@@ -56,7 +57,7 @@ char *Eunknownuser = "unknown user";
 Npfcall *
 np_version(Npreq *req, Npfcall *tc)
 {
-	if (tc->msize < IOHDRSZ + 1) {
+	if (tc->msize < P9_IOHDRSZ + 1) {
 		np_werror("msize too small", EIO);
 		return NULL;
 	}
@@ -168,7 +169,7 @@ np_attach(Npreq *req, Npfcall *tc)
 	req->fid = fid;
 	afid = np_fid_find(conn, tc->afid);
 	if (!afid) {
-		if (tc->afid!=NOFID) {
+		if (tc->afid != P9_NOFID) {
 			np_werror(Eunknownfid, EIO);
 			goto done;
 		}
@@ -284,7 +285,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	Npconn *conn;
 	Npfid *fid, *newfid;
 	Npfcall *rc;
-	Npqid wqids[MAXWELEM];
+	Npqid wqids[P9_MAXWELEM];
 
 	rc = NULL;
 	conn = req->conn;
@@ -303,11 +304,11 @@ np_walk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 #endif
-	if (fid->omode != (u16) ~0) {
+	if (!np_fid_omode_isclear(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-	if (tc->nwname > MAXWELEM) {
+	if (tc->nwname > P9_MAXWELEM) {
 		np_werror(Etoomanywnames, EIO);
 		goto done;
 	}
@@ -373,20 +374,23 @@ np_open(Npreq *req, Npfcall *tc)
 		goto done;
 	} else 
 		np_fid_incref(fid);
-
-	req->fid = fid;
-	if (fid->omode != (u16)~0) {
+	if (np_fid_proto_dotl(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-
-	if (fid->type & P9_QTDIR && tc->mode != P9_OREAD) {
+	req->fid = fid;
+	if (!np_fid_omode_isclear(fid)) {
+		np_werror(Ebadusefid, EIO);
+		goto done;
+	}
+	if ((fid->type & P9_QTDIR) && (tc->mode & 3) != P9_OREAD) {
 		np_werror(Eperm, EPERM);
 		goto done;
 	}
 
 	rc = (*conn->srv->open)(fid, tc->mode);
-	fid->omode = tc->mode;
+	if (rc)
+		np_fid_omode_set(fid, tc->mode);
 done:
 //	np_fid_decref(fid);
 	return rc;
@@ -407,9 +411,12 @@ np_create(Npreq *req, Npfcall *tc)
 		goto done;
 	} else 
 		np_fid_incref(fid);
-
+	if (np_fid_proto_dotl(fid)) {
+		np_werror(Ebadusefid, EIO);
+		goto done;
+	}
 	req->fid = fid;
-	if (fid->omode != (u16)~0) {
+	if (!np_fid_omode_isclear(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
@@ -434,7 +441,7 @@ np_create(Npreq *req, Npfcall *tc)
 	rc = (*conn->srv->create)(fid, &tc->name, tc->perm, tc->mode, 
 		&tc->extension);
 	if (rc && rc->type == P9_RCREATE) {
-		fid->omode = tc->mode;
+		np_fid_omode_set(fid, tc->mode);
 		fid->type = rc->qid.type;
 	}
 
@@ -461,7 +468,7 @@ np_read(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (tc->count+IOHDRSZ > conn->msize) {
+	if (tc->count + P9_IOHDRSZ > conn->msize) {
 		np_werror(Etoolarge, EIO);
 		goto done;
 	}
@@ -485,14 +492,23 @@ np_read(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->omode==(u16)~0 || (fid->omode&3)==P9_OWRITE) {
+	if (np_fid_omode_isclear(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-
-	if (fid->type & P9_QTDIR && tc->offset && tc->offset != fid->diroffset) {
-		np_werror(Ebadoffset, EIO);
+	if (np_fid_omode_noread(fid)) {
+		np_werror(Eperm, EPERM);
 		goto done;
+	}
+	if ((fid->type & P9_QTDIR)) {
+		if (np_fid_proto_dotl(fid)) {
+			np_werror(Eperm, EIO);
+			goto done;
+		}
+		if (tc->offset && tc->offset != fid->diroffset) {
+			np_werror(Ebadoffset, EIO);
+			goto done;
+		}
 	}
 		
 	rc = (*conn->srv->read)(fid, tc->offset, tc->count, req);
@@ -533,12 +549,16 @@ np_write(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (fid->omode==(u16)~0 || fid->type & P9_QTDIR || (fid->omode&3)==P9_OREAD) {
+	if (np_fid_omode_isclear(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
+	if ((fid->type & P9_QTDIR) || np_fid_omode_nowrite(fid)) {
+		np_werror(Eperm, EPERM);
+		goto done;
+	}
 
-	if (tc->count+IOHDRSZ > conn->msize) {
+	if (tc->count + P9_IOHDRSZ > conn->msize) {
 		np_werror(Etoolarge, EIO);
 		goto done;
 	}
@@ -578,7 +598,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->omode!=(u16)~0 && fid->omode==P9_ORCLOSE) {
+	if (!np_fid_omode_isclear(fid) && np_fid_omode_rclose(fid)) {
 		rc = (*conn->srv->remove)(fid);
 		if (rc->type == P9_RERROR)
 			goto done;
@@ -702,7 +722,7 @@ np_aread(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (tc->rsize+AIOHDRSZ > conn->msize) {
+	if (tc->rsize + P9_AIOHDRSZ > conn->msize) {
 		np_werror(Etoolarge, EIO);
 		goto done;
 	}
@@ -712,14 +732,23 @@ np_aread(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (fid->omode==(u16)~0 || (fid->omode&3)==P9_OWRITE) {
+	if (np_fid_omode_isclear(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-
-	if (fid->type & P9_QTDIR && tc->offset && tc->offset != fid->diroffset) {
-		np_werror(Ebadoffset, EIO);
+	if (np_fid_omode_noread(fid)) {
+		np_werror(Eperm, EPERM);
 		goto done;
+	}
+	if ((fid->type & P9_QTDIR)) {
+		if (np_fid_proto_dotl(fid)) {
+			np_werror(Eperm, EIO);
+			goto done;
+		}
+		if (tc->offset && tc->offset != fid->diroffset) {
+			np_werror(Ebadoffset, EIO);
+			goto done;
+		}
 	}
 		
 	rc = (*conn->srv->aread)(fid, tc->datacheck, tc->offset, tc->count, tc->rsize, req);
@@ -750,13 +779,16 @@ np_awrite(Npreq *req, Npfcall *tc)
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
-
-	if (fid->omode==(u16)~0 || fid->type & P9_QTDIR || (fid->omode&3)==P9_OREAD) {
+	if (np_fid_omode_isclear(fid)) {
 		np_werror(Ebadusefid, EIO);
 		goto done;
 	}
+	if ((fid->type & P9_QTDIR) || np_fid_omode_nowrite(fid)) {
+		np_werror(Eperm, EPERM);
+		goto done;
+	}
 
-	if (tc->rsize+AIOHDRSZ > conn->msize) {
+	if (tc->rsize + P9_AIOHDRSZ > conn->msize) {
 		np_werror(Etoolarge, EIO);
 		goto done;
 	}
@@ -780,6 +812,43 @@ done:
 
 #if HAVE_DOTL
 Npfcall *
+np_lopen(Npreq *req, Npfcall *tc)
+{
+	Npconn *conn;
+	Npfid *fid;
+	Npfcall *rc;
+
+	rc = NULL;
+	conn = req->conn;
+	fid = np_fid_find(conn, tc->u.tlopen.fid);
+	if (!fid) {
+		np_werror(Eunknownfid, EIO);
+		goto done;
+	} else 
+		np_fid_incref(fid);
+	if (!np_fid_proto_dotl(fid)) {
+		np_werror(Ebadusefid, EIO);
+		goto done;
+	}
+	req->fid = fid;
+	if (!np_fid_omode_isclear(fid)) {
+		np_werror(Ebadusefid, EIO);
+		goto done;
+	}
+	if ((fid->type & P9_QTDIR)
+			&& (tc->u.tlopen.mode & O_ACCMODE) != O_RDONLY) {
+		np_werror(Eperm, EPERM);
+		goto done;
+	}
+
+
+	rc = (*conn->srv->lopen)(fid, tc->u.tlopen.mode);
+	np_fid_omode_set(fid, tc->u.tlopen.mode);
+done:
+//	np_fid_decref(fid);
+	return rc;
+}
+Npfcall *
 np_getattr(Npreq *req, Npfcall *tc)
 {
 	Npconn *conn;
@@ -801,6 +870,48 @@ np_getattr(Npreq *req, Npfcall *tc)
 
 done:
 //	np_fid_decref(fid);
+	return rc;
+}
+Npfcall *
+np_readdir(Npreq *req, Npfcall *tc)
+{
+	Npconn *conn = req->conn;
+	Npfcall *rc = NULL;
+	Npfid *fid = np_fid_find(conn, tc->fid);
+
+	if (!fid) {
+		np_werror(Eunknownfid, EIO);
+		goto done;
+	} else 
+		np_fid_incref(fid);
+	req->fid = fid;
+	if (!np_fid_proto_dotl(fid)) {
+		np_werror(Ebadusefid, EIO);
+		goto done;
+	}
+	if (tc->u.treaddir.count + P9_READDIRHDRSZ > conn->msize) {
+		np_werror(Etoolarge, EIO);
+		goto done;
+	}
+	if (!(fid->type & P9_QTDIR)) {
+		np_werror(Eperm, EPERM);
+		goto done;
+	}
+	if (np_fid_omode_isclear(fid)) {
+		np_werror(Ebadusefid, EIO);
+		goto done;
+	}
+	if (np_fid_omode_noread(fid)) {
+		np_werror(Eperm, EPERM);
+		goto done;
+	}
+	if (tc->u.treaddir.offset && tc->u.treaddir.offset != fid->diroffset) {
+		np_werror(Ebadoffset, EIO);
+		goto done;
+	}
+	rc = (*conn->srv->readdir)(fid, tc->u.treaddir.offset,
+					tc->u.treaddir.count, req);
+done:
 	return rc;
 }
 

@@ -85,8 +85,6 @@ AC_CONFIG_FILES( \
   man/diodctl.conf.5 \
   man/9p-attach.5 \
   man/9p-flush.5 \
-  man/9p-flock.5 \
-  man/9p-lock.5 \
   man/9p-read.5 \
   man/9p-version.5 \
   man/9p-clunk.5 \
@@ -98,6 +96,19 @@ AC_CONFIG_FILES( \
   man/9p-rename.5 \
   man/9p-stat.5 \
   man/9p-statfs.5 \
+  man/9p-lopen.5 \
+  man/9p-lcreate.5 \
+  man/9p-getattr.5 \
+  man/9p-readdir.5 \
+  man/9p-symlink.5 \
+  man/9p-mknod.5 \
+  man/9p-readlink.5 \
+  man/9p-setattr.5 \
+  man/9p-fsync.5 \
+  man/9p-mkdir.5 \
+  man/9p-link.5 \
+  man/9p-getlock.5 \
+  man/9p-lock.5 \
   scripts/Makefile \
   scripts/diodctl.init \
   test/Makefile \

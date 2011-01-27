@@ -1,0 +1,36 @@
+.TH 9p-readdir 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p readdir \- read directory entries
+.SH SYNOPSIS
+.nf
+size[4] Treaddir tag[2] fid[4] offset[8] count[4]
+size[4] Rreaddir tag[2] count[4] data[count]
+.fi
+.SH DESCRIPTION
+The readdir request asks the server to read the directory specified by 'fid'
+at an offset specified by 'offset' and return as many dirent structures as
+possible that fit into count bytes.  Each dirent structure is laid out as
+follows:
+.TP
+\fIqid.type[1]\fR
+The type of the file (directory, etc.), represented as a bit
+vector corresponding to the high 8 bits of the file's mode word.
+.TP
+\fIqid.vers[4]\fR
+Version number for given path.
+.TP
+\fIqid.path[8]\fR
+The file server's unique identification for the file.
+.TP
+\fIoffset[8]\fR
+Offset into the next dirent.
+.TP
+\fItype[1]\fR
+type of this directory entry.
+.TP
+\fIname[256]\fR
+name of this directory entry.
+.SH ORIGIN
+9P2000.L
+.LP
+9p-intro(5)

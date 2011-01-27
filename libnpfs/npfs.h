@@ -45,13 +45,9 @@ enum {
 	P9_CHECK_NONE = 0,
 	P9_CHECK_ADLER32 = 1,
 };
+#define P9_AIOHDRSZ (P9_IOHDRSZ+4+1+4)
 #endif 
 
-#define NOTAG		(u16)(~0)
-#define NOFID		(u32)(~0)
-#define MAXWELEM	16
-#define IOHDRSZ		24
-#define AIOHDRSZ       (IOHDRSZ+4+1+4)
 #define FID_HTABLE_SIZE 64
 
 struct Npstat {
@@ -92,9 +88,9 @@ struct Npfcall {
 	u16		oldtag;			/* P9_TFLUSH */
 	u32		newfid;			/* P9_TWALK */
 	u16		nwname;			/* P9_TWALK */
-	Npstr		wnames[MAXWELEM];	/* P9_TWALK */
+	Npstr		wnames[P9_MAXWELEM];	/* P9_TWALK */
 	u16		nwqid;			/* P9_RWALK */
-	Npqid		wqids[MAXWELEM];	/* P9_RWALK */
+	Npqid		wqids[P9_MAXWELEM];	/* P9_RWALK */
 	u8		mode;			/* P9_TOPEN, P9_TCREATE */
 	u32		iounit;			/* P9_ROPEN, P9_RCREATE */
 	Npstr		name;			/* P9_TCREATE */
@@ -115,8 +111,12 @@ struct Npfcall {
 #endif
 #if HAVE_DOTL
 	union {
+	   struct p9_tlopen tlopen;
+	   struct p9_rlopen rlopen;
 	   struct p9_tgetattr tgetattr;
 	   struct p9_rgetattr rgetattr;
+	   struct p9_treaddir treaddir;
+	   struct p9_rreaddir rreaddir;
 	   struct p9_tstatfs tstatfs;
 	   struct p9_rstatfs rstatfs;
 	   struct p9_trename trename;
@@ -126,12 +126,14 @@ struct Npfcall {
 	Npfcall*	next;
 };
 
+
 struct Npfid {
 	pthread_mutex_t	lock;
 	Npconn*		conn;
 	u32		fid;
 	int		refcount;
-	u16		omode;
+	u32		openmode;
+	u8		openmode_ndef;
 	u8		type;
 	u32		diroffset;
 	Npuser*		user;
@@ -264,7 +266,10 @@ struct Npsrv {
 				  u32 rsize, u8 *data, Npreq *req);
 #endif
 #if HAVE_DOTL
+	Npfcall*	(*lopen)(Npfid *fid, u32 mode);
 	Npfcall*	(*getattr)(Npfid *fid, u64 request_mask);
+	Npfcall*	(*readdir)(Npfid *fid, u64 offset, u32 count,
+				   Npreq *req);
 	Npfcall*	(*statfs)(Npfid *fid);
 	Npfcall*	(*rename)(Npfid *fid, Npfid *newdirfid, Npstr *name);
 #endif
@@ -368,6 +373,9 @@ int np_trans_write(Nptrans *, u8 *, u32);
 int np_deserialize(Npfcall*, u8*, int dotu);
 int np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int dotu);
 int np_deserialize_stat(Npstat *stat, u8* buf, int buflen, int dotu);
+#if HAVE_DOTL
+int np_serialize_p9_dirent(struct p9_dirent *d, u8 *buf, int buflen);
+#endif
 
 void np_strzero(Npstr *str);
 char *np_strdup(Npstr *str);
@@ -397,6 +405,7 @@ Npfcall *np_create_raread(u32 count);
 Npfcall *np_create_rawrite(u32 count);
 #endif
 #if HAVE_DOTL
+Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
 Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
 		u32 st_mode, u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
                 u64 st_size, u64 st_blksize, u64 st_blocks,
@@ -405,6 +414,9 @@ Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
                 u64 st_ctime_sec, u64 st_ctime_nsec,
                 u64 st_btime_sec, u64 st_btime_nsec,
                 u64 st_gen, u64 st_data_version);
+Npfcall *np_alloc_rreaddir(u32 count, u8 **datap);
+void np_set_rreaddir_count(Npfcall *fc, u32 count);
+void np_set_rreaddir_count(Npfcall *, u32);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,
 		u64 files, u64 ffree, u64 fsid, u32 namelen);
@@ -457,4 +469,58 @@ static inline int np_srv_extend (Npsrv *srv)
 {
 	return (srv->proto_version == p9_proto_2000u
 	     || srv->proto_version == p9_proto_2000L);
+}
+static inline int np_conn_proto_dotl (Npconn *conn)
+{
+	return (conn->proto_version == p9_proto_2000L);
+}
+static inline int np_fid_proto_dotl (Npfid *fid)
+{
+	return np_conn_proto_dotl (fid->conn);
+}
+
+/* fid->openmode accessors - use them!
+ * It can be interpreted as linux (9p2000.L) or Plan 9 (otherwise) bits.
+ */
+static inline void np_fid_omode_clear(Npfid *fid)
+{
+	fid->openmode_ndef = 1;
+}
+static inline int np_fid_omode_isclear(Npfid *fid)
+{
+	return fid->openmode_ndef;
+}
+static inline void np_fid_omode_set(Npfid *fid, u32 omode)
+{
+	fid->openmode = omode;
+	fid->openmode_ndef = 0;
+}
+#ifdef O_ACCMODE
+static inline int np_fid_omode_noread (Npfid *fid)
+{
+	int res;
+	if (np_fid_proto_dotl(fid))
+		res = ((fid->openmode & O_ACCMODE) == O_WRONLY);
+	else
+		res = ((fid->openmode & 3) == P9_OWRITE);
+	return res;
+}
+static inline int np_fid_omode_nowrite (Npfid *fid)
+{
+	int res;
+	if (np_fid_proto_dotl(fid))
+		res = ((fid->openmode & O_ACCMODE) == O_RDONLY);
+	else
+		res = ((fid->openmode & 3) == P9_OREAD);
+	return res;
+}
+#endif
+static inline int np_fid_omode_rclose (Npfid *fid)
+{
+	int res;
+	if (np_fid_proto_dotl(fid))
+		res = 0;
+	else
+		res = (fid->openmode == P9_ORCLOSE);
+	return res;
 }

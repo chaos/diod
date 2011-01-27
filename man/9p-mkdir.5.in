@@ -1,0 +1,16 @@
+.TH 9p-mkdir 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+9p mkdir \- create a directory
+.SH SYNOPSIS
+.nf
+size[4] Tmkdir tag[2] fid[4] name[s] mode[4] gid[4]
+size[4] Rmkdir tag[2] qid[13]
+.fi
+.SH DESCRIPTION
+mkdir asks the file server to create a directory with given name,
+mode and gid. The qid for the new directory is returned with
+the mkdir reply message.
+.SH ORIGIN
+9P2000.L
+.SH SEE ALSO
+9p-intro(5)

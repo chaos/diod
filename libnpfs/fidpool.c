@@ -139,7 +139,7 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 		f->fid = fid;
 		f->conn = conn;
 		f->refcount = 0;
-		f->omode = ~0;
+		np_fid_omode_clear (f);
 		f->type = 0;
 		f->diroffset = 0;
 		f->user = NULL;

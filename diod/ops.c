@@ -90,7 +90,6 @@
 
 typedef struct {
     char            *path;
-    int              omode;
     int              fd;
     DIR             *dir;
     struct dirent   *dirent;
@@ -138,7 +137,9 @@ Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
                           u8 *data, Npreq *req);
 #endif
 #if HAVE_DOTL
+Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
 Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
+Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 #endif
@@ -189,7 +190,9 @@ diod_register_ops (Npsrv *srv)
     srv->awrite = diod_awrite;
 #endif
 #if HAVE_DOTL
+    srv->lopen = diod_lopen;
     srv->getattr = diod_getattr;
+    srv->readdir = diod_readdir;
     srv->statfs = diod_statfs;
     srv->rename = diod_rename;
     srv->proto_version = p9_proto_2000L;
@@ -308,7 +311,6 @@ _fidalloc (void)
 
     if (f) {
         f->path = NULL;
-        f->omode = -1;
         f->fd = -1;
         f->dir = NULL;
         f->diroffset = 0;
@@ -430,6 +432,16 @@ _ustat2qid (struct stat *st, Npqid *qid)
         qid->type |= P9_QTDIR;
     if (S_ISLNK(st->st_mode))
         qid->type |= P9_QTSYMLINK;
+}
+
+static void
+_dirent2qid (struct dirent *d, Npqid *qid)
+{
+    assert (d->d_ino != 0);
+    assert (d->d_ino != 1);
+    qid->path = d->d_ino - 2;
+    qid->version = 0;
+    qid->type = 0;
 }
 
 /* Convert UNIX file mode bits to 9P file mode bits.
@@ -810,7 +822,6 @@ diod_open (Npfid *fid, u8 mode)
         err ("diod_open: could not stat file that we just opened");
         goto done;
     }
-    f->omode = mode;
     _ustat2qid (&f->stat, &qid);
     if (!(res = np_create_ropen (&qid, 0))) {
         np_uerror (ENOMEM);
@@ -904,7 +915,6 @@ done:
 static int
 _create_special (Npfid *fid, char *path, u32 perm, Npstr *extension)
 {
-    Fid *f = fid->aux;
     mode_t umode;
     char *ext = NULL;
     int ret = -1;
@@ -935,7 +945,6 @@ _create_special (Npfid *fid, char *path, u32 perm, Npstr *extension)
             goto done;
         }
     }
-    f->omode = 0;
     if (!(perm & P9_DMSYMLINK)) {
         if (chmod (path, umode) < 0) {
             np_uerror (errno);
@@ -955,7 +964,7 @@ done:
 Npfcall*
 diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
 {
-    int n, omode = mode;
+    int n;
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     char *npath = NULL;
@@ -1016,7 +1025,6 @@ diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
     }
     free (f->path);
     f->path = npath;
-    f->omode = omode;
     npath = NULL;
     _ustat2qid (&f->stat, &qid);
     if (!((ret = np_create_rcreate (&qid, 0)))) {
@@ -1571,11 +1579,63 @@ done:
 
 #if HAVE_DOTL
 Npfcall*
+diod_lopen (Npfid *fid, u32 mode)
+{
+    Fid *f = fid->aux;
+    Npfcall *res = NULL;
+    Npqid qid;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_lopen: error switching user");
+        goto done;
+    }
+    if (_fidstat (f) < 0)
+        goto done;
+
+    if (S_ISDIR (f->stat.st_mode)) {
+        f->dir = opendir (f->path);
+        if (!f->dir) {
+            np_uerror (errno);
+            goto done;
+        }
+    } else {
+        f->fd = open (f->path, mode);
+        if (f->fd < 0) {
+            np_uerror (errno);
+            goto done;
+        }
+    }
+    if (_fidstat (f) < 0) {
+        err ("diod_lopen: could not stat file that we just opened");
+        goto done;
+    }
+    _ustat2qid (&f->stat, &qid);
+    if (!(res = np_create_rlopen (&qid, 0))) {
+        np_uerror (ENOMEM);
+        msg ("diod_lopen: out of memory");
+        goto done;
+    }
+
+done:
+    if (np_haserror ()) {
+        if (f->dir) {
+            closedir (f->dir);
+            f->dir = NULL;
+        }
+        if (f->fd != -1) {
+            close (f->fd);
+            f->fd = -1;
+        }
+    }
+    return res;
+}
+Npfcall*
 diod_getattr(Npfid *fid, u64 request_mask)
 {
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     Npqid qid;
+    u64 result_mask = P9_STATS_BASIC;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_getattr: error switching user");
@@ -1584,7 +1644,7 @@ diod_getattr(Npfid *fid, u64 request_mask)
     if (_fidstat (f) < 0)
         goto done;
     _ustat2qid (&f->stat, &qid);
-    if (!(ret = np_create_rgetattr(request_mask, &qid, f->stat.st_mode,
+    if (!(ret = np_create_rgetattr(result_mask, &qid, f->stat.st_mode,
             f->stat.st_uid, f->stat.st_gid, f->stat.st_nlink, f->stat.st_rdev,
             f->stat.st_size, f->stat.st_blksize, f->stat.st_blocks,
             f->stat.st_atim.tv_sec, f->stat.st_atim.tv_nsec,
@@ -1594,6 +1654,79 @@ diod_getattr(Npfid *fid, u64 request_mask)
         msg ("diod_statfs: out of memory");
         goto done;
     }
+done:
+    return ret;
+}
+
+static u32
+_copy_dirent_linux (Fid *f, u8 *buf, u32 buflen)
+{
+    struct p9_dirent d;
+
+    _dirent2qid (f->dirent, &d.qid);
+    d.d_off = f->dirent->d_off;
+    d.d_type = f->dirent->d_type;
+    snprintf (d.d_name, sizeof(d.d_name), "%s", f->dirent->d_name);
+
+    return np_serialize_p9_dirent(&d, buf, buflen);
+}
+
+/* Read some number of dirents into buf - 9p2000.L style.
+ * If buf is too small, leave the last dirent in f->dirent for next time.
+ */
+static u32
+_read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
+{
+    int i, n = 0;
+
+    if (count == 0 || (offset != f->diroffset && offset != 0)) {
+        np_uerror (EINVAL);
+        goto done;
+    }
+    if (offset == 0 && f->diroffset != 0) {
+        f->diroffset = 0;
+        f->dirent = NULL;
+        rewinddir (f->dir);
+    }
+    do {
+        if (!f->dirent)
+            f->dirent = readdir (f->dir);
+        if (!f->dirent)
+                break;
+        i = _copy_dirent_linux (f, buf + n, count - n - 1);
+        if (i > 0)
+            f->dirent = NULL;
+        n += i;
+    } while (i > 0 && n < count);
+
+    f->diroffset += n;
+done:
+    return n;
+}
+
+Npfcall*
+diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
+{
+    int n;
+    Fid *f = fid->aux;
+    Npfcall *ret = NULL;
+    u8 *data;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_readdir: error switching user");
+        goto done;
+    }
+    if (!(ret = np_alloc_rreaddir (count, &data))) {
+        np_uerror (ENOMEM);
+        msg ("diod_readdir: out of memory");
+        goto done;
+    }
+    n = _read_dir_linux (f, data, offset, count);
+    if (np_haserror ()) {
+        free (ret);
+        ret = NULL;
+    } else
+        np_set_rreaddir_count (ret, n);
 done:
     return ret;
 }

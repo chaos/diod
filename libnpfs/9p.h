@@ -24,12 +24,7 @@
  *
  */
 
-/* Copied from 2.6.38-rc2 kernel, then changed:
- * - stripped out kernel function prototypes
- * - stripped out kernel debug macros
- * - added stdint types
- * - change P9_OEXCL to be what npfs.h had so it fits in a u8
- * - added p9_proto_versions from <net/9p/client.h>
+/* Copied from 2.6.38-rc2 kernel, then modified for use with diod.
  */
 
 #ifndef NET_9P_H
@@ -475,6 +470,21 @@ struct p9_iattr_dotl {
 	u64 mtime_nsec;
 };
 
+/**
+ * struct p9_dirent - directory entry structure
+ * @qid: The p9 server qid for this dirent
+ * @d_off: offset to the next dirent
+ * @d_type: type of file
+ * @d_name: file name
+ */
+
+struct p9_dirent {
+        struct p9_qid qid;
+        u64 d_off;
+        unsigned char d_type;
+        char d_name[256];
+};
+
 #define P9_LOCK_SUCCESS 0
 #define P9_LOCK_BLOCKED 1
 #define P9_LOCK_ERROR 2
@@ -518,6 +528,16 @@ struct p9_getlock {
 };
 
 /* Structures for Protocol Operations */
+struct p9_tlopen {
+	u32 fid;
+	u32 mode;
+};
+
+struct p9_rlopen {
+	struct p9_qid qid;
+	u32 iounit;
+};
+
 struct p9_tgetattr {
 	u32 fid;
 	u64 request_mask;
