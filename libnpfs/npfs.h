@@ -111,6 +111,7 @@ struct Npfcall {
 #endif
 #if HAVE_DOTL
 	union {
+	   struct p9_rlerror rlerror;
 	   struct p9_tlopen tlopen;
 	   struct p9_rlopen rlopen;
 	   struct p9_tgetattr tgetattr;
@@ -133,7 +134,7 @@ struct Npfid {
 	u32		fid;
 	int		refcount;
 	u32		openmode;
-	u8		openmode_ndef;
+	u8		openmode_clear;
 	u8		type;
 	u32		diroffset;
 	Npuser*		user;
@@ -374,7 +375,8 @@ int np_deserialize(Npfcall*, u8*, int dotu);
 int np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int dotu);
 int np_deserialize_stat(Npstat *stat, u8* buf, int buflen, int dotu);
 #if HAVE_DOTL
-int np_serialize_p9_dirent(struct p9_dirent *d, u8 *buf, int buflen);
+int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,
+                          int buflen);
 #endif
 
 void np_strzero(Npstr *str);
@@ -405,6 +407,7 @@ Npfcall *np_create_raread(u32 count);
 Npfcall *np_create_rawrite(u32 count);
 #endif
 #if HAVE_DOTL
+Npfcall *np_create_rlerror(u32 ecode);
 Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
 Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
 		u32 st_mode, u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
@@ -414,9 +417,8 @@ Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
                 u64 st_ctime_sec, u64 st_ctime_nsec,
                 u64 st_btime_sec, u64 st_btime_nsec,
                 u64 st_gen, u64 st_data_version);
-Npfcall *np_alloc_rreaddir(u32 count, u8 **datap);
-void np_set_rreaddir_count(Npfcall *fc, u32 count);
-void np_set_rreaddir_count(Npfcall *, u32);
+Npfcall *np_create_rreaddir(u32 count);
+void np_finalize_rreaddir(Npfcall *fc, u32 count);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,
 		u64 files, u64 ffree, u64 fsid, u32 namelen);
@@ -484,16 +486,16 @@ static inline int np_fid_proto_dotl (Npfid *fid)
  */
 static inline void np_fid_omode_clear(Npfid *fid)
 {
-	fid->openmode_ndef = 1;
+	fid->openmode_clear = 1;
 }
 static inline int np_fid_omode_isclear(Npfid *fid)
 {
-	return fid->openmode_ndef;
+	return fid->openmode_clear;
 }
 static inline void np_fid_omode_set(Npfid *fid, u32 omode)
 {
 	fid->openmode = omode;
-	fid->openmode_ndef = 0;
+	fid->openmode_clear = 0;
 }
 #ifdef O_ACCMODE
 static inline int np_fid_omode_noread (Npfid *fid)

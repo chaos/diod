@@ -1,3 +1,7 @@
+2011-01-27 Jim Garlick <garlick@llnl.gov>
+
+	* libnpfs/np.c, diod/ops.c : Fix readdir implementation for .L.
+
 2011-01-26 Jim Garlick <garlick@llnl.gov>
 
 	* man/* : Begin documenting 9P2000.L.

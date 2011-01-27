@@ -405,13 +405,16 @@ np_process_request(Npreq *req)
 			break;
 	}
 	np_rerror(&ename, &ecode);
-	if (ename != NULL) {
+	if (ename != NULL || ecode != 0) {
 		if (rc)
 			free(rc);
-		rc = np_create_rerror(ename, ecode, np_conn_extend(conn));
+		if (np_conn_proto_dotl(req->conn))
+			rc = np_create_rlerror(ecode);
+		else
+			rc = np_create_rerror(ename, ecode, np_conn_extend(conn));
 		if ((req->conn->srv->debuglevel & DEBUG_9P_ERRORS)
 		  			&& req->conn->srv->debugprintf) {
-			req->conn->srv->debugprintf ("%s error: %s\n", op,
+			req->conn->srv->debugprintf ("%s error: %s", op,
 					ecode > 0 ? strerror(ecode) : ename);
 		}
 	}

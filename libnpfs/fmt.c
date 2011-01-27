@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <errno.h>
 #include "9p.h"
 #include "npfs.h"
@@ -176,7 +177,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_TLERROR tag %u", tag);
 		break;
 	case P9_RLERROR:
-		n += snprintf(s+n,len-n, "P9_RLERROR tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_RLERROR tag %u ecode %d", tag,
+			fc->u.rlerror.ecode);
 		break;
 	case P9_TSTATFS:
 		n += snprintf(s+n,len-n, "P9_TSTATFS tag %u", tag);
@@ -185,10 +187,18 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RSTATFS tag %u", tag);
 		break;
 	case P9_TLOPEN:
-		n += snprintf(s+n,len-n, "P9_TLOPEN tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_TLOPEN tag %u "
+			"fid %"PRIu32" mode %"PRIu32,
+			tag,
+			fc->u.tlopen.fid,
+			fc->u.tlopen.mode);
 		break;
 	case P9_RLOPEN:
-		n += snprintf(s+n,len-n, "P9_RLOPEN tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_RLOPEN tag %u "
+			"qid", tag);
+		n += np_printqid(s+n,len-n, &fc->u.rlopen.qid);
+		n += snprintf(s+n,len-n, " iounit %"PRIu32,
+			fc->u.rlopen.iounit);
 		break;
 	case P9_TLCREATE:
 		n += snprintf(s+n,len-n, "P9_TLCREATE tag %u", tag);
@@ -245,10 +255,17 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RXATTRWALKCREATE tag %u", tag);
 		break;
 	case P9_TREADDIR:
-		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u "
+			"fid %"PRIu32" offset %"PRIu64" count %"PRIu32,
+			tag,
+			fc->u.treaddir.fid,
+			fc->u.treaddir.offset,
+			fc->u.treaddir.count);
 		break;
 	case P9_RREADDIR:
-		n += snprintf(s+n,len-n, "P9_RREADDIR tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_RREADDIR tag %u count %"PRIu32,
+			tag,
+			fc->u.rreaddir.count);
 		break;
 	case P9_TFSYNC:
 		n += snprintf(s+n,len-n, "P9_TFSYNC tag %u", tag);

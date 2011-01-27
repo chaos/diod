@@ -426,7 +426,8 @@ _ustat2qid (struct stat *st, Npqid *qid)
     assert (st->st_ino != 0);
     assert (st->st_ino != 1);
     qid->path = st->st_ino - 2;
-    qid->version = st->st_mtime ^ (st->st_size << 8);
+    //qid->version = st->st_mtime ^ (st->st_size << 8);
+    qid->version = 0;
     qid->type = 0;
     if (S_ISDIR(st->st_mode))
         qid->type |= P9_QTDIR;
@@ -439,9 +440,14 @@ _dirent2qid (struct dirent *d, Npqid *qid)
 {
     assert (d->d_ino != 0);
     assert (d->d_ino != 1);
+    assert (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino - 2;
     qid->version = 0;
     qid->type = 0;
+    if (d->d_type == DT_DIR)
+        qid->type |= P9_QTDIR;
+    if (d->d_type == DT_LNK)
+        qid->type |= P9_QTSYMLINK;
 }
 
 /* Convert UNIX file mode bits to 9P file mode bits.
@@ -1651,7 +1657,7 @@ diod_getattr(Npfid *fid, u64 request_mask)
             f->stat.st_mtim.tv_sec, f->stat.st_mtim.tv_nsec,
             f->stat.st_ctim.tv_sec, f->stat.st_ctim.tv_nsec, 0, 0, 0, 0))) {
         np_uerror (ENOMEM);
-        msg ("diod_statfs: out of memory");
+        msg ("diod_getattr: out of memory");
         goto done;
     }
 done:
@@ -1661,46 +1667,55 @@ done:
 static u32
 _copy_dirent_linux (Fid *f, u8 *buf, u32 buflen)
 {
-    struct p9_dirent d;
+    Npqid qid;
+    u32 ret = 0;
 
-    _dirent2qid (f->dirent, &d.qid);
-    d.d_off = f->dirent->d_off;
-    d.d_type = f->dirent->d_type;
-    snprintf (d.d_name, sizeof(d.d_name), "%s", f->dirent->d_name);
-
-    return np_serialize_p9_dirent(&d, buf, buflen);
+    /* FIXME: additional stat for DT_UNKNOWN file systems to avoid
+     * returning an invalid qid.  Check v9fs to see if this is necessary.
+     */
+    if (f->dirent->d_type == DT_UNKNOWN) {
+        char path[PATH_MAX + 1];
+        struct stat sb;
+        snprintf (path, sizeof(path), "%s/%s", f->path, f->dirent->d_name);
+        if (lstat (path, &sb) < 0) {
+            np_uerror (errno);
+            goto done;
+        }
+        _ustat2qid (&sb, &qid);
+    } else  {
+        _dirent2qid (f->dirent, &qid);
+    }
+    fprintf (stderr, "np_serialize_p9dirent %s: %d %d %d %s\n",
+             f->path, (int)qid.path, (int)f->dirent->d_off, f->dirent->d_type,
+             f->dirent->d_name);
+    fflush (stderr);
+    ret = np_serialize_p9dirent(&qid, f->dirent->d_off, f->dirent->d_type,
+                                 f->dirent->d_name, buf, buflen);
+done:
+    return ret;
 }
 
-/* Read some number of dirents into buf - 9p2000.L style.
- * If buf is too small, leave the last dirent in f->dirent for next time.
- */
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
     int i, n = 0;
+    off_t saved_dir_pos;
 
-    if (count == 0 || (offset != f->diroffset && offset != 0)) {
-        np_uerror (EINVAL);
-        goto done;
-    }
-    if (offset == 0 && f->diroffset != 0) {
-        f->diroffset = 0;
-        f->dirent = NULL;
+    if (offset == 0)
         rewinddir (f->dir);
-    }
+    else
+        seekdir (f->dir, offset);
     do {
-        if (!f->dirent)
-            f->dirent = readdir (f->dir);
-        if (!f->dirent)
-                break;
-        i = _copy_dirent_linux (f, buf + n, count - n - 1);
-        if (i > 0)
-            f->dirent = NULL;
+        saved_dir_pos = telldir (f->dir);
+        if (!(f->dirent = readdir (f->dir)))
+            break;
+        i = _copy_dirent_linux (f, buf + n, count - n);
+        if (i == 0) {
+            seekdir (f->dir, saved_dir_pos);
+            break;
+        }
         n += i;
-    } while (i > 0 && n < count);
-
-    f->diroffset += n;
-done:
+    } while (n < count);
     return n;
 }
 
@@ -1710,23 +1725,22 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     int n;
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    u8 *data;
 
     if (!diod_switch_user (fid->user)) {
         msg ("diod_readdir: error switching user");
         goto done;
     }
-    if (!(ret = np_alloc_rreaddir (count, &data))) {
+    if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
         msg ("diod_readdir: out of memory");
         goto done;
     }
-    n = _read_dir_linux (f, data, offset, count);
+    n = _read_dir_linux (f, ret->u.rreaddir.data, offset, count);
     if (np_haserror ()) {
         free (ret);
         ret = NULL;
     } else
-        np_set_rreaddir_count (ret, n);
+        np_finalize_rreaddir (ret, n);
 done:
     return ret;
 }

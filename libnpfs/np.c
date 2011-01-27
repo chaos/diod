@@ -808,17 +808,30 @@ np_create_rawrite(u32 count)
 
 #if HAVE_DOTL
 Npfcall *
+np_create_rlerror(u32 ecode)
+{
+	int size = sizeof(u32);
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
+
+	if (!(fc = np_create_common(bufp, size, P9_RLERROR)))
+		return NULL;
+
+	buf_put_int32(bufp, ecode, &fc->u.rlerror.ecode);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rlopen(Npqid *qid, u32 iounit)
 {
-	int size;
-	Npfcall *fc;
+	int size = sizeof(*qid) + sizeof(u32);
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
 
-	bufp = &buffer;
-	size = sizeof(*qid) + sizeof(u32);
-	fc = np_create_common(bufp, size, P9_RLOPEN);
-	if (!fc)
+	if (!(fc = np_create_common(bufp, size, P9_RLOPEN)))
 		return NULL;
 
 	buf_put_qid(bufp, qid, &fc->u.rlopen.qid);
@@ -874,41 +887,33 @@ np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid, u32 st_mode,
 
 /* srv->readdir () should:
  * 1) call np_alloc_rreaddir ()
- * 2) copy up to count bytes of dirent data in datap
+ * 2) copy up to count bytes of dirent data in u.readdir.data
  * 3) call np_set_rreaddir_count () to set actual byte count
  */
 Npfcall *
-np_alloc_rreaddir(u32 count, u8 **datap)
+np_create_rreaddir(u32 count)
 {
-	int size;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
-	void *p;
+	struct cbuf *bufp = &buffer;
+	int size = sizeof(u32) + count;
 
-	bufp = &buffer;
-	size = sizeof(u32) + count;
-	fc = np_create_common(bufp, size, P9_RREADDIR);
-	if (!fc)
+	if (!(fc = np_create_common(bufp, size, P9_RREADDIR)))
 		return NULL;
-
 	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
-	p = buf_alloc(bufp, count);
-	*datap = fc->u.rreaddir.data = p;
+	fc->u.rreaddir.data = buf_alloc(bufp, count);
 
 	return np_post_check(fc, bufp);
 }
 
 void
-np_set_rreaddir_count(Npfcall *fc, u32 count)
+np_finalize_rreaddir(Npfcall *fc, u32 count)
 {
-	int size;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
+	int size = sizeof(u32) + sizeof(u8) + sizeof(u16) + sizeof(u32) + count;
 
 	assert(count <= fc->u.rreaddir.count);
-	bufp = &buffer;
-	size = sizeof(u32) + count;
 
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
@@ -919,15 +924,12 @@ np_set_rreaddir_count(Npfcall *fc, u32 count)
 Npfcall *
 np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen)
 {
-	int size;
-	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
+	int size = 2*sizeof(u32) + 6*sizeof(u64) + sizeof(u32);
+	Npfcall *fc; 
 
-	bufp = &buffer;
-	size = 2*sizeof(u32) + 6*sizeof(u64) + sizeof(u32);
-	fc = np_create_common(bufp, size, P9_RSTATFS);
-	if (!fc)
+	if (!(fc = np_create_common(bufp, size, P9_RSTATFS)))
 		return NULL;
 
 	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);	
@@ -1121,35 +1123,23 @@ error:
 }
 
 #if HAVE_DOTL
-/* put a null terminated string on the wire */
-static void
-buf_put_nstr(struct cbuf *buf, char *s)
-{
-	int slen = strlen (s) + 1;
-	char *dest;
-
-	dest = buf_alloc(buf, slen);
-
-	memmove(dest, s, slen);
-}
-
 int
-np_serialize_p9_dirent(struct p9_dirent *d, u8 *buf, int buflen)
+np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
+		      u8 *buf, int buflen)
 {
 	struct cbuf buffer;
-	struct cbuf *bufp;
-	int needed;
+	struct cbuf *bufp = &buffer;
+	int size = sizeof(*qid) + sizeof(u64) + sizeof(u8) + strlen(name) + 2;
+	Npstr nstr;
+	Npqid nqid;
 
-	needed = sizeof(struct p9_dirent) + strlen(d->d_name) + 1;
-	if (needed > buflen)
+	if (size > buflen)
 		return 0;
-
-	bufp = &buffer;
 	buf_init(bufp, buf, buflen);
-	buf_put_qid(bufp, &d->qid, NULL);
-	buf_put_int64(bufp, d->d_off, NULL);
-	buf_put_int8(bufp, d->d_type, NULL);
-	buf_put_nstr(bufp, d->d_name);
+	buf_put_qid(bufp, qid, &nqid);
+	buf_put_int64(bufp, offset, NULL);
+	buf_put_int8(bufp, type, NULL);
+	buf_put_str(bufp, name, &nstr);
 	
 	if (buf_check_overflow(bufp))
 		return 0;
@@ -1161,12 +1151,10 @@ np_serialize_p9_dirent(struct p9_dirent *d, u8 *buf, int buflen)
 int 
 np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int extended)
 {
-	int statsz;
 	struct cbuf buffer;
 	struct cbuf *bufp;
 	Npstat stat;
-
-	statsz = size_wstat(wstat, extended);
+	int statsz = size_wstat(wstat, extended);
 
 	if (statsz > buflen)
 		return 0;
