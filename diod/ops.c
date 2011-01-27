@@ -426,6 +426,7 @@ _ustat2qid (struct stat *st, Npqid *qid)
     assert (st->st_ino != 0);
     assert (st->st_ino != 1);
     qid->path = st->st_ino - 2;
+    /* FIXME: ramifcations of always-zero version? */
     //qid->version = st->st_mtime ^ (st->st_size << 8);
     qid->version = 0;
     qid->type = 0;
@@ -442,6 +443,7 @@ _dirent2qid (struct dirent *d, Npqid *qid)
     assert (d->d_ino != 1);
     assert (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino - 2;
+    /* FIXME: ramifcations of always-zero version? */
     qid->version = 0;
     qid->type = 0;
     if (d->d_type == DT_DIR)
@@ -1685,10 +1687,6 @@ _copy_dirent_linux (Fid *f, u8 *buf, u32 buflen)
     } else  {
         _dirent2qid (f->dirent, &qid);
     }
-    fprintf (stderr, "np_serialize_p9dirent %s: %d %d %d %s\n",
-             f->path, (int)qid.path, (int)f->dirent->d_off, f->dirent->d_type,
-             f->dirent->d_name);
-    fflush (stderr);
     ret = np_serialize_p9dirent(&qid, f->dirent->d_off, f->dirent->d_type,
                                  f->dirent->d_name, buf, buflen);
 done:
@@ -1701,6 +1699,9 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
     int i, n = 0;
     off_t saved_dir_pos;
 
+    /* FIXME: seeking to offset (d_off) is possibly not kosher.
+     * Use more complicated method in diod_read above?
+     */
     if (offset == 0)
         rewinddir (f->dir);
     else
