@@ -38,12 +38,23 @@ Npfcall *np_remove(Npreq *req, Npfcall *tc);
 Npfcall *np_stat(Npreq *req, Npfcall *tc);
 Npfcall *np_wstat(Npreq *req, Npfcall *tc);
 #if HAVE_DOTL
-Npfcall *np_lopen(Npreq *req, Npfcall *tc);
-Npfcall *np_getattr(Npreq *req, Npfcall *tc);
-Npfcall *np_readdir(Npreq *req, Npfcall *tc);
-Npfcall *np_readdir(Npreq *req, Npfcall *tc);
-Npfcall *np_rename(Npreq *req, Npfcall *tc);
 Npfcall *np_statfs(Npreq *req, Npfcall *tc);
+Npfcall *np_lopen(Npreq *req, Npfcall *tc);
+Npfcall *np_lcreate(Npreq *req, Npfcall *tc);
+Npfcall *np_symlink(Npreq *req, Npfcall *tc);
+Npfcall *np_mknod(Npreq *req, Npfcall *tc);
+Npfcall *np_rename(Npreq *req, Npfcall *tc);
+Npfcall *np_readlink(Npreq *req, Npfcall *tc);
+Npfcall *np_getattr(Npreq *req, Npfcall *tc);
+Npfcall *np_setattr(Npreq *req, Npfcall *tc);
+Npfcall *np_xattrwalk(Npreq *req, Npfcall *tc);
+Npfcall *np_xattrcreate(Npreq *req, Npfcall *tc);
+Npfcall *np_readdir(Npreq *req, Npfcall *tc);
+Npfcall *np_fsync(Npreq *req, Npfcall *tc);
+Npfcall *np_lock(Npreq *req, Npfcall *tc);
+Npfcall *np_getlock(Npreq *req, Npfcall *tc);
+Npfcall *np_link(Npreq *req, Npfcall *tc);
+Npfcall *np_mkdir(Npreq *req, Npfcall *tc);
 #endif
 #if HAVE_LARGEIO
 Npfcall *np_aread(Npreq *req, Npfcall *tc);

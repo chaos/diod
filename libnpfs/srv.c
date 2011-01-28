@@ -63,11 +63,23 @@ static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
 static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
 #endif
 #if HAVE_DOTL
-static Npfcall* np_default_lopen(Npfid *, u32);
-static Npfcall* np_default_getattr(Npfid *, u64);
-static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
 static Npfcall* np_default_statfs(Npfid *);
+static Npfcall* np_default_lopen(Npfid *, u32);
+static Npfcall* np_default_lcreate(Npfid *, Npstr *, u32, u32, u32);
+static Npfcall* np_default_symlink(Npfid *, Npstr *, Npstr *, u32);
+static Npfcall* np_default_mknod(Npfid *, Npstr *, u32, u32, u32, u32);
 static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
+static Npfcall* np_default_readlink(Npfid *);
+static Npfcall* np_default_getattr(Npfid *, u64);
+static Npfcall* np_default_setattr(Npfid *, u32, struct p9_iattr_dotl *);
+static Npfcall* np_default_xattrwalk(void); /* FIXME */
+static Npfcall* np_default_xattrcreate(void); /* FIXME */
+static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
+static Npfcall* np_default_fsync(Npfid *);
+static Npfcall* np_default_lock(Npfid *, struct p9_flock*);
+static Npfcall* np_default_getlock(Npfid *, struct p9_getlock *);
+static Npfcall* np_default_link(Npfid *, Npfid *, Npstr *);
+static Npfcall* np_default_mkdir(Npfid *, Npstr *, u32, u32);
 #endif
 
 Npsrv*
@@ -116,11 +128,23 @@ np_srv_create(int nwthread)
 	srv->awrite = np_default_awrite;
 #endif
 #if HAVE_DOTL
-	srv->lopen = np_default_lopen;
-	srv->getattr = np_default_getattr;
-	srv->readdir = np_default_readdir;
 	srv->statfs = np_default_statfs;
+	srv->lopen = np_default_lopen;
+	srv->lcreate = np_default_lcreate;
+	srv->symlink = np_default_symlink;
+	srv->mknod = np_default_mknod;
 	srv->rename = np_default_rename;
+	srv->readlink= np_default_readlink;
+	srv->getattr = np_default_getattr;
+	srv->setattr = np_default_setattr;
+	srv->xattrwalk = np_default_xattrwalk;
+	srv->xattrcreate = np_default_xattrcreate;
+	srv->readdir = np_default_readdir;
+	srv->fsync = np_default_fsync;
+	srv->llock = np_default_lock;
+	srv->getlock = np_default_getlock;
+	srv->link = np_default_link;
+	srv->mkdir = np_default_mkdir;
 #endif
 	srv->conns = NULL;
 	srv->reqs_first = NULL;
@@ -316,25 +340,73 @@ np_process_request(Npreq *req)
 	np_werror(NULL, 0);
 	switch (tc->type) {
 #if HAVE_DOTL
+		case P9_TSTATFS:
+			rc = np_statfs(req, tc);
+			op = "statfs";
+			break;
 		case P9_TLOPEN:
 			rc = np_lopen(req, tc);
 			op = "lopen";
+			break;
+		case P9_TLCREATE:
+			rc = np_lcreate(req, tc);
+			op = "lcreate";
+			break;
+		case P9_TSYMLINK:
+			rc = np_symlink(req, tc);
+			op = "symlink";
+			break;
+		case P9_TMKNOD:
+			rc = np_mknod(req, tc);
+			op = "mknod";
+			break;
+		case P9_TRENAME:
+			rc = np_rename(req, tc);
+			op = "rename";
+			break;
+		case P9_TREADLINK:
+			rc = np_readlink(req, tc);
+			op = "readlink";
 			break;
 		case P9_TGETATTR:
 			rc = np_getattr(req, tc);
 			op = "getattr";
 			break;
+		case P9_TSETATTR:
+			rc = np_setattr(req, tc);
+			op = "setattr";
+			break;
+		case P9_TXATTRWALK:
+			rc = np_xattrwalk(req, tc);
+			op = "xattrwalk";
+			break;
+		case P9_TXATTRCREATE:
+			rc = np_xattrcreate(req, tc);
+			op = "xattrcreate";
+			break;
 		case P9_TREADDIR:
 			rc = np_readdir(req, tc);
 			op = "readdir";
 			break;
-		case P9_TSTATFS:
-			rc = np_statfs(req, tc);
-			op = "statfs";
+		case P9_TFSYNC:
+			rc = np_fsync(req, tc);
+			op = "fsync";
 			break;
-		case P9_TRENAME:
-			rc = np_rename(req, tc);
-			op = "rename";
+		case P9_TLOCK:
+			rc = np_lock(req, tc);
+			op = "lock";
+			break;
+		case P9_TGETLOCK:
+			rc = np_getlock(req, tc);
+			op = "getlock";
+			break;
+		case P9_TLINK:
+			rc = np_link(req, tc);
+			op = "link";
+			break;
+		case P9_TMKDIR:
+			rc = np_mkdir(req, tc);
+			op = "mkdir";
 			break;
 #endif
 #if HAVE_LARGEIO
@@ -666,33 +738,108 @@ np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq 
 #endif
 #if HAVE_DOTL
 static Npfcall*
-np_default_lopen(Npfid *fid, u32 mode)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_getattr(Npfid *fid, u64 request_mask)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-static Npfcall*
 np_default_statfs(Npfid *fid)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_lopen(Npfid *fid, u32 mode)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor,
+		 u32 gid)
+{
+	np_uerror(ENOSYS);
 	return NULL;
 }
 static Npfcall*
 np_default_rename(Npfid *fid, Npfid *newdirfid, Npstr *newname)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_readlink(Npfid *fid)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_getattr(Npfid *fid, u64 request_mask)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_setattr(Npfid *fid, u32 valid_mask, struct p9_iattr_dotl *attr)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_xattrwalk(void) 
+{
+	/* FIXME: args */
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_xattrcreate(void) 
+{
+	/* FIXME: args */
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_fsync(Npfid *fid)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_lock(Npfid *fid, struct p9_flock *flock)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_getlock(Npfid *fid, struct p9_getlock *getlock)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_link(Npfid *dfid, Npfid *oldfid, Npstr *newpath)
+{
+	np_uerror(ENOSYS);
+	return NULL;
+}
+static Npfcall*
+np_default_mkdir(Npfid *fid, Npstr *name, u32 mode, u32 gid)
+{
+	np_uerror(ENOSYS);
 	return NULL;
 }
 #endif

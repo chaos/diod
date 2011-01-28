@@ -289,6 +289,22 @@ buf_get_stat(struct cbuf *buf, Npstat *stat, int extended)
 		np_strzero(&stat->extension);
 }
 
+static inline void
+buf_get_iattr_dotl(struct cbuf *buf, struct p9_iattr_dotl *iattr)
+{
+	assert(0); /* FIXME */
+}
+static inline void
+buf_get_flock(struct cbuf *buf, struct p9_flock *flock)
+{
+	assert(0); /* FIXME */
+}
+static inline void
+buf_get_getlock(struct cbuf *buf, struct p9_getlock *getlock)
+{
+	assert(0); /* FIXME */
+}
+
 static int
 size_wstat(Npwstat *wstat, int extended)
 {
@@ -1089,26 +1105,83 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 #endif
 #if HAVE_DOTL
+	case P9_TSTATFS:
+		fc->u.tstatfs.fid = buf_get_int32(bufp);
+		break;
 	case P9_TLOPEN:
 		fc->u.tlopen.fid = buf_get_int32(bufp);
 		fc->u.tlopen.mode = buf_get_int32(bufp);
 		break;
+	case P9_TLCREATE:
+		fc->u.tlcreate.fid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tlcreate.name);
+		fc->u.tlcreate.flags = buf_get_int32(bufp);
+		fc->u.tlcreate.mode = buf_get_int32(bufp);
+		fc->u.tlcreate.gid = buf_get_int32(bufp);
+		break;
+	case P9_TSYMLINK:
+		fc->u.tsymlink.fid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tsymlink.name);
+		buf_get_str(bufp, &fc->u.tsymlink.symtgt);
+		fc->u.tsymlink.gid = buf_get_int32(bufp);
+		break;
+	case P9_TMKNOD:
+		fc->u.tmknod.fid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tmknod.name);
+		fc->u.tmknod.mode = buf_get_int32(bufp);
+		fc->u.tmknod.major = buf_get_int32(bufp);
+		fc->u.tmknod.minor = buf_get_int32(bufp);
+		fc->u.tmknod.gid = buf_get_int32(bufp);
+		break;
+	case P9_TRENAME:
+		fc->u.trename.fid = buf_get_int32(bufp);
+		fc->u.trename.newdirfid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.trename.name);
+		break;
+	case P9_TREADLINK:
+		fc->u.treadlink.fid = buf_get_int32(bufp);
+		break;
 	case P9_TGETATTR:
 		fc->u.tgetattr.fid = buf_get_int32(bufp);
 		fc->u.tgetattr.request_mask = buf_get_int64(bufp);
+		break;
+	case P9_TSETATTR:
+		fc->u.tsetattr.fid = buf_get_int32(bufp);
+		fc->u.tsetattr.valid_mask = buf_get_int32(bufp);
+		buf_get_iattr_dotl(bufp, &fc->u.tsetattr.i);
+		break;
+	case P9_TXATTRWALK:
+		assert(0); /* FIXME */
+		break;
+	case P9_TXATTRCREATE:
+		assert(0); /* FIXME */
 		break;
 	case P9_TREADDIR:
 		fc->u.treaddir.fid = buf_get_int32(bufp);
 		fc->u.treaddir.offset = buf_get_int64(bufp);
 		fc->u.treaddir.count = buf_get_int32(bufp);
 		break;
-	case P9_TSTATFS:
-		fc->u.tstatfs.fid = buf_get_int32(bufp);
+	case P9_TFSYNC:
+		fc->u.tfsync.fid = buf_get_int32(bufp);
 		break;
-	case P9_TRENAME:
-		fc->u.trename.fid = buf_get_int32(bufp);
-		fc->u.trename.newdirfid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->u.trename.name);
+	case P9_TLOCK:
+		fc->u.tlock.fid = buf_get_int32(bufp);
+		buf_get_flock(bufp, &fc->u.tlock.flock);
+		break;
+	case P9_TGETLOCK:
+		fc->u.tgetlock.fid = buf_get_int32(bufp);
+		buf_get_getlock(bufp, &fc->u.tgetlock.getlock);
+		break;
+	case P9_TLINK:
+		fc->u.tlink.dfid = buf_get_int32(bufp);
+		fc->u.tlink.oldfid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tlink.newpath);
+		break;
+	case P9_TMKDIR:
+		fc->u.tmkdir.fid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tmkdir.name);
+		fc->u.tmkdir.mode = buf_get_int32(bufp);
+		fc->u.tmkdir.gid = buf_get_int32(bufp);
 		break;
 #endif
 	}

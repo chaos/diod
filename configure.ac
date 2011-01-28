@@ -109,6 +109,7 @@ AC_CONFIG_FILES( \
   man/9p-link.5 \
   man/9p-getlock.5 \
   man/9p-lock.5 \
+  man/9p-lerror.5 \
   scripts/Makefile \
   scripts/diodctl.init \
   test/Makefile \

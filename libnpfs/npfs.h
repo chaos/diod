@@ -112,16 +112,40 @@ struct Npfcall {
 #if HAVE_DOTL
 	union {
 	   struct p9_rlerror rlerror;
-	   struct p9_tlopen tlopen;
-	   struct p9_rlopen rlopen;
-	   struct p9_tgetattr tgetattr;
-	   struct p9_rgetattr rgetattr;
-	   struct p9_treaddir treaddir;
-	   struct p9_rreaddir rreaddir;
 	   struct p9_tstatfs tstatfs;
 	   struct p9_rstatfs rstatfs;
+	   struct p9_tlopen tlopen;
+	   struct p9_rlopen rlopen;
+	   struct p9_tlcreate tlcreate;
+	   struct p9_rlcreate rlcreate;
+	   struct p9_tsymlink tsymlink;
+	   struct p9_rsymlink rsymlink;
+	   struct p9_tmknod tmknod;
+	   struct p9_rmknod rmknod;
 	   struct p9_trename trename;
 	   struct p9_rrename rrename;
+	   struct p9_treadlink treadlink;
+	   struct p9_rreadlink rreadlink;
+	   struct p9_tgetattr tgetattr;
+	   struct p9_rgetattr rgetattr;
+	   struct p9_tsetattr tsetattr;
+	   struct p9_rsetattr rsetattr;
+	   struct p9_txattrwalk txattrwalk;
+	   struct p9_rxattrwalk rxattrwalk;
+	   struct p9_txattrcreate txattrcreate;
+	   struct p9_rxattrcreate rxattrcreate;
+	   struct p9_treaddir treaddir;
+	   struct p9_rreaddir rreaddir;
+	   struct p9_tfsync tfsync;
+	   struct p9_rfsync rfsync;
+	   struct p9_tlock tlock;
+	   struct p9_rlock rlock;
+	   struct p9_tgetlock tgetlock;
+	   struct p9_rgetlock rgetlock;
+	   struct p9_tlink tlink;
+	   struct p9_rlink rlink;
+	   struct p9_tmkdir tmkdir;
+	   struct p9_rmkdir rmkdir;
 	} u;
 #endif
 	Npfcall*	next;
@@ -267,12 +291,23 @@ struct Npsrv {
 				  u32 rsize, u8 *data, Npreq *req);
 #endif
 #if HAVE_DOTL
-	Npfcall*	(*lopen)(Npfid *fid, u32 mode);
-	Npfcall*	(*getattr)(Npfid *fid, u64 request_mask);
-	Npfcall*	(*readdir)(Npfid *fid, u64 offset, u32 count,
-				   Npreq *req);
-	Npfcall*	(*statfs)(Npfid *fid);
-	Npfcall*	(*rename)(Npfid *fid, Npfid *newdirfid, Npstr *name);
+	Npfcall*	(*statfs)(Npfid *);
+	Npfcall*	(*lopen)(Npfid *, u32);
+	Npfcall*	(*lcreate)(Npfid *, Npstr *, u32, u32, u32);
+	Npfcall*	(*symlink)(Npfid *, Npstr *, Npstr *, u32);
+	Npfcall*	(*mknod)(Npfid *, Npstr *, u32, u32, u32, u32);
+	Npfcall*	(*rename)(Npfid *, Npfid *, Npstr *);
+	Npfcall*	(*readlink)(Npfid *);
+	Npfcall*	(*getattr)(Npfid *, u64);
+	Npfcall*	(*setattr)(Npfid *, u32, struct p9_iattr_dotl *);
+	Npfcall*	(*xattrwalk)(void); /* FIXME */
+	Npfcall*	(*xattrcreate)(void); /* FIXME */
+	Npfcall*	(*readdir)(Npfid *, u64, u32, Npreq *);
+	Npfcall*	(*fsync)(Npfid *);
+	Npfcall*	(*llock)(Npfid *, struct p9_flock*);
+	Npfcall*	(*getlock)(Npfid *, struct p9_getlock *);
+	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
+	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
 #endif
 	/* implementation specific */
 	pthread_mutex_t	lock;

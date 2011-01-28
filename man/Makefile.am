@@ -25,6 +25,7 @@ man5_MANS = \
 	9p-link.5 \
 	9p-getlock.5 \
 	9p-lock.5 \
+	9p-lerror.5 \
 	diodctl.conf.5
 
 EXTRA_DIST = $(man8_MANS) $(man5_MANS)

@@ -458,7 +458,6 @@ struct p9_stat_dotl {
  */
 
 struct p9_iattr_dotl {
-	u32 valid;
 	u32 mode;
 	u32 uid;
 	u32 gid;
@@ -515,31 +514,9 @@ struct p9_getlock {
 struct p9_rlerror {
 	u32 ecode;
 };
-
-struct p9_tlopen {
-	u32 fid;
-	u32 mode;
-};
-
-struct p9_rlopen {
-	struct p9_qid qid;
-	u32 iounit;
-};
-
-struct p9_tgetattr {
-	u32 fid;
-	u64 request_mask;
-};
-
-struct p9_rgetattr {
-	u64 response_mask;
-	struct p9_stat_dotl s;
-};
-
 struct p9_tstatfs {
 	u32 fid;
 };
-
 struct p9_rstatfs {
 	u32 type;
 	u32 bsize;
@@ -551,49 +528,155 @@ struct p9_rstatfs {
 	u64 fsid;
 	u32 namelen;
 };
-
+struct p9_tlopen {
+	u32 fid;
+	u32 mode;
+};
+struct p9_rlopen {
+	struct p9_qid qid;
+	u32 iounit;
+};
+struct p9_tlcreate {
+	u32 fid;
+	struct p9_str name;
+	u32 flags;
+	u32 mode;
+	u32 gid;
+};
+struct p9_rlcreate {
+	struct p9_qid qid;
+	u32 iounit;
+};
+struct p9_tsymlink {
+	u32 fid;
+	struct p9_str name;
+	struct p9_str symtgt;
+	u32 gid;
+};
+struct p9_rsymlink {
+	struct p9_qid qid;
+};
+struct p9_tmknod {
+	u32 fid;
+	struct p9_str name;
+	u32 mode;
+	u32 major;
+	u32 minor;
+	u32 gid;
+};
+struct p9_rmknod {
+	struct p9_qid qid;
+};
 struct p9_trename {
 	u32 fid;
 	u32 newdirfid;
 	struct p9_str name;
 };
-
 struct p9_rrename {
 };
-
+struct p9_treadlink {
+	u32 fid;
+};
+struct p9_rreadlink {
+	char *target;
+};
+struct p9_tgetattr {
+	u32 fid;
+	u64 request_mask;
+};
+struct p9_rgetattr {
+	u64 response_mask;
+	struct p9_stat_dotl s;
+};
+struct p9_tsetattr {
+	u32 fid;
+	u32 valid_mask;
+	struct p9_iattr_dotl i;	
+};
+struct p9_rsetattr {
+};
+struct p9_txattrwalk {
+	/* FIXME */
+};
+struct p9_rxattrwalk {
+	/* FIXME */
+};
+struct p9_txattrcreate {
+	/* FIXME */
+};
+struct p9_rxattrcreate {
+	/* FIXME */
+};
+struct p9_treaddir {
+	u32 fid;
+	u64 offset;
+	u32 count;
+};
+struct p9_rreaddir {
+	u32 count;
+	u8 *data;
+};
+struct p9_tfsync {
+	u32 fid;
+};
+struct p9_rfsync {
+};
+struct p9_tlock {
+	u32 fid;
+	struct p9_flock flock;
+};
+struct p9_rlock {
+	u8 status;
+};
+struct p9_tgetlock {
+	u32 fid;
+	struct p9_getlock getlock;
+};
+struct p9_rgetlock {
+	struct p9_getlock getlock;
+};
+struct p9_tlink {
+	u32 dfid;
+	u32 oldfid;
+	struct p9_str newpath;
+};
+struct p9_rlink {
+};
+struct p9_tmkdir {
+	u32 fid;
+	struct p9_str name;
+	u32 mode;
+	u32 gid;
+};
+struct p9_rmkdir {
+	struct p9_qid qid;
+};
 struct p9_tversion {
 	u32 msize;
 	struct p9_str version;
 };
-
 struct p9_rversion {
 	u32 msize;
 	struct p9_str version;
 };
-
 struct p9_tauth {
 	u32 afid;
 	struct p9_str uname;
 	struct p9_str aname;
 	u32 n_uname;		/* 9P2000.u extensions */
 };
-
 struct p9_rauth {
 	struct p9_qid qid;
 };
-
 struct p9_rerror {
 	struct p9_str error;
 	u32 errnum;		/* 9p2000.u extension */
 };
-
 struct p9_tflush {
 	u16 oldtag;
 };
-
 struct p9_rflush {
 };
-
 struct p9_tattach {
 	u32 fid;
 	u32 afid;
@@ -601,33 +684,27 @@ struct p9_tattach {
 	struct p9_str aname;
 	u32 n_uname;		/* 9P2000.u extensions */
 };
-
 struct p9_rattach {
 	struct p9_qid qid;
 };
-
 struct p9_twalk {
 	u32 fid;
 	u32 newfid;
 	u16 nwname;
 	struct p9_str wnames[16];
 };
-
 struct p9_rwalk {
 	u16 nwqid;
 	struct p9_qid wqids[16];
 };
-
 struct p9_topen {
 	u32 fid;
 	u8 mode;
 };
-
 struct p9_ropen {
 	struct p9_qid qid;
 	u32 iounit;
 };
-
 struct p9_tcreate {
 	u32 fid;
 	struct p9_str name;
@@ -635,73 +712,48 @@ struct p9_tcreate {
 	u8 mode;
 	struct p9_str extension;
 };
-
 struct p9_rcreate {
 	struct p9_qid qid;
 	u32 iounit;
 };
-
 struct p9_tread {
 	u32 fid;
 	u64 offset;
 	u32 count;
 };
-
 struct p9_rread {
 	u32 count;
 	u8 *data;
 };
-
 struct p9_twrite {
 	u32 fid;
 	u64 offset;
 	u32 count;
 	u8 *data;
 };
-
 struct p9_rwrite {
 	u32 count;
 };
-
-struct p9_treaddir {
-	u32 fid;
-	u64 offset;
-	u32 count;
-};
-
-struct p9_rreaddir {
-	u32 count;
-	u8 *data;
-};
-
-
 struct p9_tclunk {
 	u32 fid;
 };
-
 struct p9_rclunk {
 };
-
 struct p9_tremove {
 	u32 fid;
 };
-
 struct p9_rremove {
 };
-
 struct p9_tstat {
 	u32 fid;
 };
-
 struct p9_rstat {
 	struct p9_wstat stat;
 };
-
 struct p9_twstat {
 	u32 fid;
 	struct p9_wstat stat;
 };
-
 struct p9_rwstat {
 };
 

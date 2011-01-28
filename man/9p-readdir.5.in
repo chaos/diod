@@ -28,7 +28,7 @@ Offset into the next dirent.
 \fItype[1]\fR
 type of this directory entry.
 .TP
-\fIname[256]\fR
+\fIname[s]\fR
 name of this directory entry.
 .SH ORIGIN
 9P2000.L
