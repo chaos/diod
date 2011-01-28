@@ -188,8 +188,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 	case P9_TLOPEN:
 		n += snprintf(s+n,len-n, "P9_TLOPEN tag %u "
-			"fid %"PRIu32" mode %"PRIu32,
-			tag,
+			"fid %"PRIu32" mode %"PRIu32, tag,
 			fc->u.tlopen.fid,
 			fc->u.tlopen.mode);
 		break;
@@ -219,7 +218,12 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RMKNOD tag %u", tag);
 		break;
 	case P9_TRENAME:
-		n += snprintf(s+n,len-n, "P9_TRENAME tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_TRENAME tag %u "
+			"fid %"PRIu32" newdirfid %"PRIu32" name %.*s", tag,
+			fc->u.trename.fid,
+			fc->u.trename.newdirfid,
+			fc->u.trename.name.len,
+			fc->u.trename.name.str);
 		break;
 	case P9_RRENAME:
 		n += snprintf(s+n,len-n, "P9_RRENAME tag %u", tag);
@@ -231,10 +235,15 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RREADLINK tag %u", tag);
 		break;
 	case P9_TGETATTR:
-		n += snprintf(s+n,len-n, "P9_TGETATTR tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_TGETATTR tag %u "
+			"fid %"PRIu32" request_mask %"PRIu64, tag,
+			fc->u.tgetattr.fid,
+			fc->u.tgetattr.request_mask);
 		break;
 	case P9_RGETATTR:
-		n += snprintf(s+n,len-n, "P9_RGETATTR tag %u", tag);
+		n += snprintf(s+n,len-n, "P9_RGETATTR tag %u "
+			"response_mask %"PRIu64, tag,
+			fc->u.rgetattr.response_mask);
 		break;
 	case P9_TSETATTR:
 		n += snprintf(s+n,len-n, "P9_TSETATTR tag %u", tag);
@@ -256,8 +265,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 	case P9_TREADDIR:
 		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u "
-			"fid %"PRIu32" offset %"PRIu64" count %"PRIu32,
-			tag,
+			"fid %"PRIu32" offset %"PRIu64" count %"PRIu32, tag,
 			fc->u.treaddir.fid,
 			fc->u.treaddir.offset,
 			fc->u.treaddir.count);

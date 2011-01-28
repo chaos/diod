@@ -841,7 +841,7 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 }
 
 Npfcall *
-np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid, u32 st_mode,
+np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 st_mode,
   		u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
 		u64 st_size, u64 st_blksize, u64 st_blocks,
 		u64 st_atime_sec, u64 st_atime_nsec,
@@ -861,7 +861,7 @@ np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid, u32 st_mode,
 	if (!fc)
 		return NULL;
 
-	buf_put_int64(bufp, st_result_mask, &fc->u.rgetattr.s.st_result_mask);
+	buf_put_int64(bufp, response_mask, &fc->u.rgetattr.response_mask);
 	buf_put_qid(bufp, qid, &fc->u.rgetattr.s.qid);
 	buf_put_int32(bufp, st_mode, &fc->u.rgetattr.s.st_mode);
 	buf_put_int32(bufp, st_uid, &fc->u.rgetattr.s.st_uid);

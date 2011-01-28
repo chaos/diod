@@ -403,7 +403,6 @@ struct p9_wstat {
 };
 
 struct p9_stat_dotl {
-	u64 st_result_mask;
 	struct p9_qid qid;
 	u32 st_mode;
 	u32 st_uid;
@@ -533,6 +532,7 @@ struct p9_tgetattr {
 };
 
 struct p9_rgetattr {
+	u64 response_mask;
 	struct p9_stat_dotl s;
 };
 
