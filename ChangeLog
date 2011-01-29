@@ -1,3 +1,7 @@
+2011-01-29 Jim Garlick <garlick@llnl.gov>
+
+	* libnpfs/* : Partially flesh out new .L ops.
+
 2011-01-28 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/* : Add skeletal implementations of remaining .L operations.

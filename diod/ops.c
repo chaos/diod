@@ -137,11 +137,24 @@ Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
                           u8 *data, Npreq *req);
 #endif
 #if HAVE_DOTL
-Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
-Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
-Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_statfs (Npfid *fid);
+Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
+Npfcall     *diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode,
+                          u32 gid);
+Npfcall     *diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid);
+Npfcall     *diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major,
+                        u32 minor, u32 gid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
+Npfcall     *diod_readlink(Npfid *fid);
+Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
+Npfcall     *diod_setattr (Npfid *fid, u32 valid_mask,
+                           struct p9_iattr_dotl *attr);
+Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
+Npfcall     *diod_fsync (Npfid *fid);
+Npfcall     *diod_lock (Npfid *fid, struct p9_flock *flock);
+Npfcall     *diod_getlock (Npfid *fid, struct p9_getlock *getlock);
+Npfcall     *diod_link (Npfid *dfid, Npfid *oldfid, Npstr *newpath);
+Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
 #endif
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
@@ -190,11 +203,23 @@ diod_register_ops (Npsrv *srv)
     srv->awrite = diod_awrite;
 #endif
 #if HAVE_DOTL
-    srv->lopen = diod_lopen;
-    srv->getattr = diod_getattr;
-    srv->readdir = diod_readdir;
     srv->statfs = diod_statfs;
+    srv->lopen = diod_lopen;
+    srv->lcreate = diod_lcreate;
+    srv->symlink = diod_symlink;
+    srv->mknod = diod_mknod;
     srv->rename = diod_rename;
+    srv->readlink = diod_readlink;
+    srv->getattr = diod_getattr;
+    srv->setattr = diod_setattr;
+    //srv->xattrwalk = diod_xattrwalk;
+    //srv->xattrcreate = diod_xattrcreate;
+    srv->readdir = diod_readdir;
+    srv->fsync = diod_fsync;
+    srv->llock = diod_lock;
+    srv->getlock = diod_getlock;
+    srv->link = diod_link;
+    srv->mkdir = diod_mkdir;
     srv->proto_version = p9_proto_2000L;
 #else
     srv->proto_version = p9_proto_2000u;
@@ -436,6 +461,7 @@ _ustat2qid (struct stat *st, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
+#if HAVE_DOTL
 static void
 _dirent2qid (struct dirent *d, Npqid *qid)
 {
@@ -451,6 +477,7 @@ _dirent2qid (struct dirent *d, Npqid *qid)
     if (d->d_type == DT_LNK)
         qid->type |= P9_QTSYMLINK;
 }
+#endif
 
 /* Convert UNIX file mode bits to 9P file mode bits.
  */
@@ -1586,6 +1613,45 @@ done:
 #endif
 
 #if HAVE_DOTL
+/* Tstatfs - read file system  information (9P2000.L)
+ * N.B. must call statfs() and statvfs() as
+ * only statvfs provides (unsigned long) f_fsid
+ */
+Npfcall*
+diod_statfs (Npfid *fid)
+{
+    Fid *f = fid->aux;
+    struct statfs sb;
+    struct statvfs svb;
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_statfs: error switching user");
+        goto done;
+    }
+    if (_fidstat(f) < 0)
+        goto done;
+    if (statfs (f->path, &sb) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    if (statvfs (f->path, &svb) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
+                                  sb.f_bfree, sb.f_bavail, sb.f_files,
+                                  sb.f_ffree, (u64) svb.f_fsid,
+                                  sb.f_namelen))) {
+        np_uerror (ENOMEM);
+        msg ("diod_statfs: out of memory");
+        goto done;
+    }
+
+done:
+    return ret;
+}
+
 Npfcall*
 diod_lopen (Npfid *fid, u32 mode)
 {
@@ -1637,6 +1703,103 @@ done:
     }
     return res;
 }
+
+Npfcall*
+diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_lcreate: error switching user");
+        goto done;
+    }
+done:
+    return ret;
+}
+
+Npfcall*
+diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_symlink: error switching user");
+        goto done;
+    }
+done:
+    return ret;
+}
+
+Npfcall*
+diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_mknod: error switching user");
+        goto done;
+    }
+done:
+    return ret;
+}
+
+/* Trename - rename a file, potentially to another directory (9P2000.L)
+ */
+Npfcall*
+diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
+{
+    Fid *f = fid->aux;
+    Fid *d = newdirfid->aux;
+    Npfcall *ret = NULL;
+    char *newpath = NULL;
+    int newpathlen;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_rename: error switching user");
+        goto done;
+    }
+    if (!(ret = np_create_rrename ())) {
+        np_uerror (ENOMEM);
+        msg ("diod_rename: out of memory");
+        goto done;
+    }
+    newpathlen = newname->len + strlen (d->path) + 2;
+    if (!(newpath = _malloc (newpathlen))) {
+        msg ("diod_rename: out of memory");
+        goto done;
+    }
+    snprintf (newpath, newpathlen, "%s/%s", d->path, newname->str);
+    if (rename (f->path, newpath) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    free (f->path);
+    f->path = newpath;
+done:
+    if (np_haserror ()) {
+        if (newpath)
+            free (newpath);
+        if (ret) {
+            free (ret);
+            ret = NULL;
+        }
+    }
+    return ret;
+}
+
+Npfcall*
+diod_readlink(Npfid *fid)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_readlink: error switching user");
+        goto done;
+    }
+done:
+    return ret;
+}
+
 Npfcall*
 diod_getattr(Npfid *fid, u64 request_mask)
 {
@@ -1660,6 +1823,19 @@ diod_getattr(Npfid *fid, u64 request_mask)
             f->stat.st_ctim.tv_sec, f->stat.st_ctim.tv_nsec, 0, 0, 0, 0))) {
         np_uerror (ENOMEM);
         msg ("diod_getattr: out of memory");
+        goto done;
+    }
+done:
+    return ret;
+}
+
+Npfcall*
+diod_setattr (Npfid *fid, u32 valid_mask, struct p9_iattr_dotl *attr)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_setattr: error switching user");
         goto done;
     }
 done:
@@ -1746,87 +1922,68 @@ done:
     return ret;
 }
 
-/* Tstatfs - read file system  information (9P2000.L)
- * N.B. must call statfs() and statvfs() as
- * only statvfs provides (unsigned long) f_fsid
- */
 Npfcall*
-diod_statfs (Npfid *fid)
+diod_fsync (Npfid *fid)
 {
-    Fid *f = fid->aux;
-    struct statfs sb;
-    struct statvfs svb;
     Npfcall *ret = NULL;
 
-    /* XXX need to switch user here? */
     if (!diod_switch_user (fid->user)) {
-        msg ("diod_statfs: error switching user");
+        msg ("diod_fsync: error switching user");
         goto done;
     }
-    if (_fidstat(f) < 0)
-        goto done;
-    if (statfs (f->path, &sb) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    if (statvfs (f->path, &svb) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
-                                  sb.f_bfree, sb.f_bavail, sb.f_files,
-                                  sb.f_ffree, (u64) svb.f_fsid,
-                                  sb.f_namelen))) {
-        np_uerror (ENOMEM);
-        msg ("diod_statfs: out of memory");
-        goto done;
-    }
-
 done:
-    return ret;
+   return ret;
 }
 
-/* Trename - rename a file, potentially to another directory (9P2000.L)
- */
 Npfcall*
-diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
+diod_lock (Npfid *fid, struct p9_flock *flock)
 {
-    Fid *f = fid->aux;
-    Fid *d = newdirfid->aux;
     Npfcall *ret = NULL;
-    char *newpath = NULL;
-    int newpathlen;
 
     if (!diod_switch_user (fid->user)) {
-        msg ("diod_rename: error switching user");
+        msg ("diod_lock: error switching user");
         goto done;
     }
-    if (!(ret = np_create_rrename ())) {
-        np_uerror (ENOMEM);
-        msg ("diod_rename: out of memory");
-        goto done;
-    }
-    newpathlen = newname->len + strlen (d->path) + 2;
-    if (!(newpath = _malloc (newpathlen))) {
-        msg ("diod_rename: out of memory");
-        goto done;
-    }
-    snprintf (newpath, newpathlen, "%s/%s", d->path, newname->str);
-    if (rename (f->path, newpath) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    free (f->path);
-    f->path = newpath;
 done:
-    if (np_haserror ()) {
-        if (newpath)
-            free (newpath);
-        if (ret) {
-            free (ret);
-            ret = NULL;
-        }
+   return ret;
+}
+
+Npfcall*
+diod_getlock (Npfid *fid, struct p9_getlock *getlock)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_getlock: error switching user");
+        goto done;
     }
+done:
+   return ret;
+}
+
+Npfcall*
+diod_link (Npfid *dfid, Npfid *oldfid, Npstr *newpath)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (dfid->user)) {
+        msg ("diod_link: error switching user");
+        goto done;
+    }
+done:
+   return ret;
+}
+
+Npfcall*
+diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
+{
+    Npfcall *ret = NULL;
+
+    if (!diod_switch_user (fid->user)) {
+        msg ("diod_mkdir: error switching user");
+        goto done;
+    }
+done:
     return ret;
 }
 #endif

@@ -811,78 +811,62 @@ done:
 #endif
 
 #if HAVE_DOTL
+static Npfid *
+_getfid_dotl(Npreq *req, u32 fid)
+{
+	Npfid *f = NULL;
+
+	if (!np_conn_proto_dotl (req->conn))
+		goto done;
+	if (!(f = np_fid_find(req->conn, fid)))
+		goto done;
+	np_fid_incref(f);
+	req->fid = f;
+done:
+	if (f == NULL)
+		np_uerror(EIO);
+	return f;
+}
+	
 Npfcall *
 np_statfs(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tstatfs.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tstatfs.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	req->fid = fid;
-	rc = (*conn->srv->statfs)(fid);
+	rc = (*req->conn->srv->statfs)(fid);
 done:
-//	np_fid_decref(fid);
 	return rc;
 }
 
 Npfcall *
 np_lopen(Npreq *req, Npfcall *tc)
 {
+	Npfid *fid = _getfid_dotl(req, tc->u.tlopen.fid);
 	Npfcall *rc = NULL;
-	Npconn *conn = req->conn;
-	Npfid *fid = np_fid_find(conn, tc->u.tlopen.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
-	req->fid = fid;
-	if (!np_fid_omode_isclear(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
-	if ((fid->type & P9_QTDIR)
-			&& (tc->u.tlopen.mode & O_ACCMODE) != O_RDONLY) {
-		np_uerror(EPERM);
-		goto done;
-	}
-
-
-	rc = (*conn->srv->lopen)(fid, tc->u.tlopen.mode);
-	if (rc)
-		np_fid_omode_set(fid, tc->u.tlopen.mode);
+	rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
 done:
-//	np_fid_decref(fid);
 	return rc;
 }
 
 Npfcall *
 np_lcreate(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tlcreate.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tlcreate.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
-	req->fid = fid;
+	rc = (*req->conn->srv->lcreate)(fid,
+					&tc->u.tlcreate.name,
+					tc->u.tlcreate.flags,
+					tc->u.tlcreate.mode,
+					tc->u.tlcreate.gid);
 done:
 	return rc;
 }
@@ -890,19 +874,15 @@ done:
 Npfcall *
 np_symlink(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tsymlink.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tsymlink.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->symlink)(fid,
+					&tc->u.tsymlink.name,
+					&tc->u.tsymlink.symtgt,
+					tc->u.tsymlink.gid);
 done:
 	return rc;
 }
@@ -910,19 +890,17 @@ done:
 Npfcall *
 np_mknod(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tmknod.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tmknod.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->mknod)(fid,
+					&tc->u.tmknod.name,
+					tc->u.tmknod.mode,
+					tc->u.tmknod.major,
+					tc->u.tmknod.minor,
+					tc->u.tmknod.gid);
 done:
 	return rc;
 }
@@ -930,46 +908,33 @@ done:
 Npfcall *
 np_rename(Npreq *req, Npfcall *tc)
 {
-	Npfcall *rc = NULL;
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.trename.fid);
 	Npfid *newdirfid = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.trename.fid);
+	Npfcall *rc = NULL;
 
-	if (!fid) {
+	if (!fid)
+		goto done;
+	if (!(newdirfid = np_fid_find(req->conn, tc->u.trename.newdirfid))) {
 		np_uerror(EIO);
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	req->fid = fid;
-	newdirfid = np_fid_find(conn, tc->u.trename.newdirfid);
-	if (!newdirfid) {
-		np_uerror(EIO);
-		goto done;
-	} else 
-		np_fid_incref(newdirfid);
-	rc = (*conn->srv->rename)(fid, newdirfid, &tc->u.trename.name);
+	}
+	np_fid_incref(newdirfid);
+	rc = (*req->conn->srv->rename)(fid, newdirfid,
+					&tc->u.trename.name);
 done:
 	np_fid_decref(newdirfid);
-//	np_fid_decref(fid);
 	return rc;
 }
 
 Npfcall *
 np_readlink(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.treadlink.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.treadlink.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->readlink)(fid);
 done:
 	return rc;
 }
@@ -977,27 +942,29 @@ done:
 Npfcall *
 np_getattr(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tgetattr.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tgetattr.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	req->fid = fid;
-	rc = (*conn->srv->getattr)(fid, tc->u.tgetattr.request_mask);
+	rc = (*req->conn->srv->getattr)(fid,
+					tc->u.tgetattr.request_mask);
 done:
-//	np_fid_decref(fid);
 	return rc;
 }
 
 Npfcall *
 np_setattr(Npreq *req, Npfcall *tc)
 {
+	Npfid *fid = _getfid_dotl(req, tc->u.tsetattr.fid);
 	Npfcall *rc = NULL;
-	/* FIXME */
+
+	if (!fid)
+		goto done;
+	rc = (*req->conn->srv->setattr)(fid,
+					tc->u.tsetattr.valid_mask,
+					&tc->u.tsetattr.i);
+done:
 	return rc;
 }
 
@@ -1016,42 +983,18 @@ np_xattrcreate(Npreq *req, Npfcall *tc)
 Npfcall *
 np_readdir(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.treaddir.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.treaddir.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	req->fid = fid;
-	if (!np_fid_proto_dotl(fid)) {
+	if (tc->u.treaddir.count + P9_READDIRHDRSZ > req->conn->msize) {
 		np_uerror(EIO);
 		goto done;
 	}
-	if (tc->u.treaddir.count + P9_READDIRHDRSZ > conn->msize) {
-		np_uerror(EIO);
-		goto done;
-	}
-	//if (!(fid->type & P9_QTDIR)) {
-	//	np_werror(Eperm, EPERM);
-	//	goto done;
-	//}
-	if (np_fid_omode_isclear(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
-	if (np_fid_omode_noread(fid)) {
-		np_uerror(EPERM);
-		goto done;
-	}
-	//if (tc->u.treaddir.offset && tc->u.treaddir.offset != fid->diroffset) {
-	//	np_werror(Ebadoffset, EIO);
-	//	goto done;
-	//}
-	rc = (*conn->srv->readdir)(fid, tc->u.treaddir.offset,
-					tc->u.treaddir.count, req);
+	rc = (*req->conn->srv->readdir)(fid, tc->u.treaddir.offset,
+					tc->u.treaddir.count,
+					req);
 done:
 	return rc;
 }
@@ -1059,19 +1002,12 @@ done:
 Npfcall *
 np_fsync(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tfsync.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tfsync.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->fsync)(fid);
 done:
 	return rc;
 }
@@ -1079,19 +1015,12 @@ done:
 Npfcall *
 np_lock(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tlock.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tlock.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->llock)(fid, &tc->u.tlock.flock);
 done:
 	return rc;
 }
@@ -1099,19 +1028,12 @@ done:
 Npfcall *
 np_getlock(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tgetlock.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tgetlock.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->getlock)(fid, &tc->u.tgetlock.getlock);
 done:
 	return rc;
 }
@@ -1119,26 +1041,35 @@ done:
 Npfcall *
 np_link(Npreq *req, Npfcall *tc)
 {
+	Npfid *fid = _getfid_dotl(req, tc->u.tlink.dfid);
+	Npfid *oldfid;
 	Npfcall *rc = NULL;
+
+	if (!fid)
+		goto done;
+	if (!(oldfid = np_fid_find(req->conn, tc->u.tlink.oldfid))) {
+		np_uerror(EIO);
+		goto done;
+	}
+	np_fid_incref(oldfid);
+	rc = (*req->conn->srv->link)(fid, oldfid,
+					&tc->u.tlink.newpath);
+done:
 	return rc;
 }
 
 Npfcall *
 np_mkdir(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_dotl(req, tc->u.tmkdir.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid = np_fid_find(conn, tc->u.tmkdir.fid);
 
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-	if (!np_fid_proto_dotl(fid)) {
-		np_uerror(EIO);
-		goto done;
-	}
+	rc = (*req->conn->srv->mkdir)(fid,
+					&tc->u.tmkdir.name,
+					tc->u.tmkdir.mode,
+				 	tc->u.tmkdir.gid);
 done:
 	return rc;
 }

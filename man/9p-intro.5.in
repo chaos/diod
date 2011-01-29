@@ -271,12 +271,12 @@ size[4] Treadlink tag[2] fid[4]
 size[4] Rreadlink tag[2] target[s]
 size[4] Tgetattr tag[2] fid[4] request_mask[8]
 size[4] Rgetattr tag[2] response_mask[8] lstat[n]
-size[4] Tsetattr tag[2] valid_mask[4] attr[n]
+size[4] Tsetattr tag[2] fid[4] valid_mask[4] attr[n]
 size[4] Rsetattr tag[2]
-size[4] Txattrwalk ...
-size[4] Rxattrwalk ...
-size[4] Txattrcreate ...
-size[4] Rxattrcreate ...
+size[4] Txattrwalk tag[2] fid[4] attrfid[4] name[s]
+size[4] Rxattrwalk tag[2] size[8]
+size[4] Txattrcreate tag[2] fid[4] name[s] size[8] flag[4]
+size[4] Rxattrcreate tag[2]
 size[4] Treaddir tag[2] fid[4] offset[8] count[4]
 size[4] Rreaddir tag[2] count[4] data[count]
 size[4] Tfsync tag[2] fid[4]

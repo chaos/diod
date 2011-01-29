@@ -173,6 +173,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 
 	n = 0;
 	switch (type) {
+#if HAVE_DOTL
 	case P9_TLERROR:
 		n += snprintf(s+n,len-n, "P9_TLERROR tag %u", tag);
 		break;
@@ -305,6 +306,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RMKDIR:
 		n += snprintf(s+n,len-n, "P9_RMKDIR tag %u", tag);
 		break;
+#endif
 	case P9_TVERSION:
 		n += snprintf(s+n,len-n, "P9_TVERSION tag %u msize %u version '%.*s'", 
 			tag, fc->msize, fc->version.len, fc->version.str);

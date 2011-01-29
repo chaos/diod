@@ -476,14 +476,19 @@ np_process_request(Npreq *req)
 			op = "<unknown>";
 			break;
 	}
-	np_rerror(&ename, &ecode);
-	if (ename != NULL || ecode != 0) {
+	if (np_haserror()) {
+		np_rerror(&ename, &ecode);
 		if (rc)
 			free(rc);
+#if HAVE_DOTL
 		if (np_conn_proto_dotl(req->conn))
 			rc = np_create_rlerror(ecode);
 		else
-			rc = np_create_rerror(ename, ecode, np_conn_extend(conn));
+			rc = np_create_rerror(ename, ecode,
+					      np_conn_extend(conn));
+#else
+		rc = np_create_rerror(ename, ecode, np_conn_extend(conn));
+#endif
 		if ((req->conn->srv->debuglevel & DEBUG_9P_ERRORS)
 		  			&& req->conn->srv->debugprintf) {
 			req->conn->srv->debugprintf ("%s error: %s", op,

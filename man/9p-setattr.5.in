@@ -3,7 +3,7 @@
 9p setattr \- change file status information
 .SH SYNOPSIS
 .nf
-size[4] Tsetattr tag[2] attr[n]
+size[4] Tsetattr tag[2] fid[4] attr[n]
 size[4] Rsetattr tag[2]
 .fi
 .SH DESCRIPTION

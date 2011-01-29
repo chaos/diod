@@ -141,7 +141,7 @@ np_haserror()
 	pthread_once(&error_once, np_init_error_key);
 	err = pthread_getspecific(error_key);
 	if (err)
-		return err->ename != NULL;
+		return (err->ename != NULL || err->ecode != 0);
 	else
 		return 0;
 }

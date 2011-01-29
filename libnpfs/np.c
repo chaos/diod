@@ -289,21 +289,39 @@ buf_get_stat(struct cbuf *buf, Npstat *stat, int extended)
 		np_strzero(&stat->extension);
 }
 
+#if HAVE_DOTL
 static inline void
-buf_get_iattr_dotl(struct cbuf *buf, struct p9_iattr_dotl *iattr)
+buf_get_iattr_dotl(struct cbuf *buf, struct p9_iattr_dotl *i)
 {
-	assert(0); /* FIXME */
+	i->mode = buf_get_int32(buf);
+	i->uid = buf_get_int32(buf);
+	i->gid = buf_get_int32(buf);
+	i->size = buf_get_int64(buf);
+	i->atime_sec = buf_get_int64(buf);
+	i->atime_nsec = buf_get_int64(buf);
+	i->mtime_sec = buf_get_int64(buf);
+	i->mtime_nsec = buf_get_int64(buf);
 }
 static inline void
-buf_get_flock(struct cbuf *buf, struct p9_flock *flock)
+buf_get_flock(struct cbuf *buf, struct p9_flock *f)
 {
-	assert(0); /* FIXME */
+	f->type = buf_get_int8(buf);	
+	f->flags = buf_get_int32(buf);	
+	f->start = buf_get_int64(buf);	
+	f->length = buf_get_int64(buf);	
+	f->proc_id = buf_get_int32(buf);	
+	buf_get_str(buf, &f->client_id);	
 }
 static inline void
-buf_get_getlock(struct cbuf *buf, struct p9_getlock *getlock)
+buf_get_getlock(struct cbuf *buf, struct p9_getlock *g)
 {
-	assert(0); /* FIXME */
+	g->type = buf_get_int8(buf);	
+	g->start = buf_get_int64(buf);	
+	g->length = buf_get_int64(buf);	
+	g->proc_id = buf_get_int32(buf);	
+	buf_get_str(buf, &g->client_id);	
 }
+#endif
 
 static int
 size_wstat(Npwstat *wstat, int extended)
@@ -758,14 +776,12 @@ np_create_rwstat(void)
 Npfcall *
 np_create_raread(u32 count)
 {
-	int size;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf * = &buffer;
+	int size = sizeof(u32) + count + sizeof(u32);
 	void *p;
 
-	bufp = &buffer;
-	size = 4 + count + 4; /* count[4] data[count] check[4] */
 	fc = np_create_common(bufp, size, P9_RAREAD);
 	if (!fc)
 		return NULL;
@@ -780,16 +796,14 @@ np_create_raread(u32 count)
 void
 np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck)
 {
-	int size;
+	int size = sizeof(u32) + sizeof(u8) + sizeof(u16)
+			+ sizeof(u32) + count + sizeof(u32);
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 	u32 check = 0;
 	void *p;
 
 	assert(count <= fc->count);
-	bufp = &buffer;
-	size = 4 + 1 + 2 + 4 + count + 4; /* size[4] id[1] tag[2] */
-					  /*   count[4] data[count] check[4] */
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
@@ -805,13 +819,11 @@ np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck)
 Npfcall *
 np_create_rawrite(u32 count)
 {
-	int size;
+	int size = sizeof(u32);
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 4; /* count[4] */
 	fc = np_create_common(bufp, size, P9_RAWRITE);
 	if (!fc)
 		return NULL;
@@ -1236,23 +1248,6 @@ np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int extended)
 	buf_init(bufp, buf, buflen);
 
 	buf_put_wstat(bufp, wstat, &stat, statsz, extended);
-
-	if (buf_check_overflow(bufp))
-		return 0;
-
-	return bufp->p - bufp->sp;
-}
-
-int 
-np_deserialize_stat(Npstat *stat, u8* buf, int buflen, int extended)
-{
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	buf_init(bufp, buf, buflen);
-
-	buf_get_stat(bufp, stat, extended);
 
 	if (buf_check_overflow(bufp))
 		return 0;

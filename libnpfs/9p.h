@@ -491,7 +491,7 @@ struct p9_flock {
 	u64 start;
 	u64 length;
 	u32 proc_id;
-	char *client_id;
+	struct p9_str client_id;
 };
 
 /* struct p9_getlock: getlock structure
@@ -507,7 +507,7 @@ struct p9_getlock {
 	u64 start;
 	u64 length;
 	u32 proc_id;
-	char *client_id;
+	struct p9_str client_id;
 };
 
 /* Structures for Protocol Operations */
