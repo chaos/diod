@@ -708,51 +708,21 @@ done:
 Npfcall *
 np_aread(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
+	Npconn *conn = req->conn;
+	Npfid *fid = np_fid_find(conn, tc->u.taread.fid);
+	Npfcall *rc = NULL;
 
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
 	if (!fid) {
 		np_werror(Eunknownfid, EIO);
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
+	}
+	np_fid_incref(fid);
 	req->fid = fid;
-	if (tc->rsize + P9_AIOHDRSZ > conn->msize) {
-		np_werror(Etoolarge, EIO);
-		goto done;
-	}
-
-	if (fid->type & P9_QTAUTH) {
-		np_werror(Ebadusefid, EIO);
-		goto done;
-	}
-
-	if (np_fid_omode_isclear(fid)) {
-		np_werror(Ebadusefid, EIO);
-		goto done;
-	}
-	if (np_fid_omode_noread(fid)) {
-		np_werror(Eperm, EPERM);
-		goto done;
-	}
-	if ((fid->type & P9_QTDIR)) {
-		if (np_fid_proto_dotl(fid)) {
-			np_werror(Eperm, EIO);
-			goto done;
-		}
-		if (tc->offset && tc->offset != fid->diroffset) {
-			np_werror(Ebadoffset, EIO);
-			goto done;
-		}
-	}
-		
-	rc = (*conn->srv->aread)(fid, tc->datacheck, tc->offset, tc->count, tc->rsize, req);
-
+	rc = (*conn->srv->aread)(fid,
+				tc->u.taread.datacheck,
+				tc->u.taread.offset,
+				tc->u.taread.count,
+				tc->u.taread.rsize, req);
 done:
 	return rc;
 }
@@ -760,51 +730,30 @@ done:
 Npfcall *
 np_awrite(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
+	Npconn *conn = req->conn;
+	Npfid *fid = np_fid_find(conn, tc->u.tawrite.fid);
+	Npfcall *rc = NULL;
 	u32 check;
 
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
 	if (!fid) {
 		np_werror(Eunknownfid, EIO);
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
+	}
+	np_fid_incref(fid);
 	req->fid = fid;
-	if (fid->type & P9_QTAUTH) {
-		np_werror(Ebadusefid, EIO);
-		goto done;
-	}
-	if (np_fid_omode_isclear(fid)) {
-		np_werror(Ebadusefid, EIO);
-		goto done;
-	}
-	if ((fid->type & P9_QTDIR) || np_fid_omode_nowrite(fid)) {
-		np_werror(Eperm, EPERM);
-		goto done;
-	}
-
-	if (tc->rsize + P9_AIOHDRSZ > conn->msize) {
-		np_werror(Etoolarge, EIO);
-		goto done;
-	}
-
-	if (tc->datacheck == P9_CHECK_ADLER32) {
+	if (tc->u.tawrite.datacheck == P9_CHECK_ADLER32) {
 		check = adler32(0L, Z_NULL, 0);
-		check = adler32(check, tc->data, tc->rsize);
-		if (tc->check != check) {
-			np_werror("write checksum verification failure",
-				  EAGAIN);
+		check = adler32(check, tc->u.tawrite.data, tc->u.tawrite.rsize);
+		if (tc->u.tawrite.check != check) {
+			np_werror("write checksum verification failure", EAGAIN);
 			goto done;
 		}
 	}
-
-	rc = (*conn->srv->awrite)(fid, tc->offset, tc->count, tc->rsize, tc->data, req);
-
+	rc = (*conn->srv->awrite)(fid,
+				tc->u.tawrite.offset,
+				tc->u.tawrite.count,
+				tc->u.tawrite.rsize,
+				tc->u.tawrite.data, req);
 done:
 	return rc;
 }
@@ -1020,7 +969,7 @@ np_lock(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	rc = (*req->conn->srv->llock)(fid, &tc->u.tlock.flock);
+	rc = (*req->conn->srv->llock)(fid, &tc->u.tlock.fl);
 done:
 	return rc;
 }
@@ -1033,7 +982,7 @@ np_getlock(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	rc = (*req->conn->srv->getlock)(fid, &tc->u.tgetlock.getlock);
+	rc = (*req->conn->srv->getlock)(fid, &tc->u.tgetlock.gl);
 done:
 	return rc;
 }

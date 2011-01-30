@@ -104,13 +104,8 @@ struct Npfcall {
 	u32		ecode;			/* P9_RERROR */
 	Npstr		extension;		/* P9_TCREATE */
 	u32		n_uname;
-#if HAVE_LARGEIO
-	u32		rsize;			/* P9_TAREAD, P9_TAWRITE */
-	u8		datacheck;		/* P9_TAREAD, P9_TAWRITE */
-	u32		check;			/* P9_RAREAD, P9_TAWRITE */
-#endif
-#if HAVE_DOTL
 	union {
+#if HAVE_DOTL
 	   struct p9_rlerror rlerror;
 	   struct p9_tstatfs tstatfs;
 	   struct p9_rstatfs rstatfs;
@@ -146,8 +141,14 @@ struct Npfcall {
 	   struct p9_rlink rlink;
 	   struct p9_tmkdir tmkdir;
 	   struct p9_rmkdir rmkdir;
-	} u;
 #endif
+#if HAVE_LARGEIO
+	   struct p9_tawrite tawrite;
+	   struct p9_rawrite rawrite;
+	   struct p9_taread taread;
+	   struct p9_raread raread;
+#endif
+	} u;
 	Npfcall*	next;
 };
 
@@ -284,12 +285,6 @@ struct Npsrv {
 	Npfcall*	(*remove)(Npfid *fid);
 	Npfcall*	(*stat)(Npfid *fid);
 	Npfcall*	(*wstat)(Npfid *fid, Npstat *stat);
-#if HAVE_LARGEIO
-	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
-				 u32 count, u32 rsize, Npreq *req);
-	Npfcall*	(*awrite)(Npfid *fid, u64 offset, u32 count,
-				  u32 rsize, u8 *data, Npreq *req);
-#endif
 #if HAVE_DOTL
 	Npfcall*	(*statfs)(Npfid *);
 	Npfcall*	(*lopen)(Npfid *, u32);
@@ -308,6 +303,12 @@ struct Npsrv {
 	Npfcall*	(*getlock)(Npfid *, struct p9_getlock *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
+#endif
+#if HAVE_LARGEIO
+	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
+				 u32 count, u32 rsize, Npreq *req);
+	Npfcall*	(*awrite)(Npfid *fid, u64 offset, u32 count,
+				  u32 rsize, u8 *data, Npreq *req);
 #endif
 	/* implementation specific */
 	pthread_mutex_t	lock;

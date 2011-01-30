@@ -303,23 +303,23 @@ buf_get_iattr_dotl(struct cbuf *buf, struct p9_iattr_dotl *i)
 	i->mtime_nsec = buf_get_int64(buf);
 }
 static inline void
-buf_get_flock(struct cbuf *buf, struct p9_flock *f)
+buf_get_flock(struct cbuf *buf, struct p9_flock *fl)
 {
-	f->type = buf_get_int8(buf);	
-	f->flags = buf_get_int32(buf);	
-	f->start = buf_get_int64(buf);	
-	f->length = buf_get_int64(buf);	
-	f->proc_id = buf_get_int32(buf);	
-	buf_get_str(buf, &f->client_id);	
+	fl->type = buf_get_int8(buf);	
+	fl->flags = buf_get_int32(buf);	
+	fl->start = buf_get_int64(buf);	
+	fl->length = buf_get_int64(buf);	
+	fl->proc_id = buf_get_int32(buf);	
+	buf_get_str(buf, &fl->client_id);	
 }
 static inline void
-buf_get_getlock(struct cbuf *buf, struct p9_getlock *g)
+buf_get_getlock(struct cbuf *buf, struct p9_getlock *gl)
 {
-	g->type = buf_get_int8(buf);	
-	g->start = buf_get_int64(buf);	
-	g->length = buf_get_int64(buf);	
-	g->proc_id = buf_get_int32(buf);	
-	buf_get_str(buf, &g->client_id);	
+	gl->type = buf_get_int8(buf);	
+	gl->start = buf_get_int64(buf);	
+	gl->length = buf_get_int64(buf);	
+	gl->proc_id = buf_get_int32(buf);	
+	buf_get_str(buf, &gl->client_id);	
 }
 #endif
 
@@ -778,7 +778,7 @@ np_create_raread(u32 count)
 {
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf * = &buffer;
+	struct cbuf *bufp = &buffer;
 	int size = sizeof(u32) + count + sizeof(u32);
 	void *p;
 
@@ -786,9 +786,9 @@ np_create_raread(u32 count)
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, count, &fc->count);
+	buf_put_int32(bufp, count, &fc->u.raread.count);
 	p = buf_alloc(bufp, count);
-	fc->data = p;
+	fc->u.raread.data = p;
 
 	return np_post_check(fc, bufp);
 }
@@ -803,17 +803,17 @@ np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck)
 	u32 check = 0;
 	void *p;
 
-	assert(count <= fc->count);
+	assert(count <= fc->u.raread.count);
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
-	buf_put_int32(bufp, count, &fc->count);
+	buf_put_int32(bufp, count, &fc->u.raread.count);
 	p = buf_alloc(bufp, count);
 	if (datacheck == P9_CHECK_ADLER32) {
 		check = adler32(0L, Z_NULL, 0);
 		check = adler32(check, p, count);
 	}
-	buf_put_int32(bufp, check, &fc->check);
+	buf_put_int32(bufp, check, &fc->u.raread.check);
 }
 
 Npfcall *
@@ -1100,20 +1100,20 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 #if HAVE_LARGEIO
 	case P9_TAREAD:
-		fc->fid = buf_get_int32(bufp);
-		fc->datacheck = buf_get_int8(bufp);
-		fc->offset = buf_get_int64(bufp);
-		fc->count = buf_get_int32(bufp);
-		fc->rsize = buf_get_int32(bufp);
+		fc->u.taread.fid = buf_get_int32(bufp);
+		fc->u.taread.datacheck = buf_get_int8(bufp);
+		fc->u.taread.offset = buf_get_int64(bufp);
+		fc->u.taread.count = buf_get_int32(bufp);
+		fc->u.taread.rsize = buf_get_int32(bufp);
 		break;
 	case P9_TAWRITE:
-		fc->fid = buf_get_int32(bufp);
-		fc->datacheck = buf_get_int8(bufp);
-		fc->offset = buf_get_int64(bufp);
-		fc->count = buf_get_int32(bufp);
-		fc->rsize = buf_get_int32(bufp);
-		fc->data = buf_alloc(bufp, fc->rsize);
-		fc->check = buf_get_int32(bufp);
+		fc->u.tawrite.fid = buf_get_int32(bufp);
+		fc->u.tawrite.datacheck = buf_get_int8(bufp);
+		fc->u.tawrite.offset = buf_get_int64(bufp);
+		fc->u.tawrite.count = buf_get_int32(bufp);
+		fc->u.tawrite.rsize = buf_get_int32(bufp);
+		fc->u.tawrite.data = buf_alloc(bufp, fc->u.tawrite.rsize);
+		fc->u.tawrite.check = buf_get_int32(bufp);
 		break;
 #endif
 #if HAVE_DOTL
@@ -1178,11 +1178,11 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 	case P9_TLOCK:
 		fc->u.tlock.fid = buf_get_int32(bufp);
-		buf_get_flock(bufp, &fc->u.tlock.flock);
+		buf_get_flock(bufp, &fc->u.tlock.fl);
 		break;
 	case P9_TGETLOCK:
 		fc->u.tgetlock.fid = buf_get_int32(bufp);
-		buf_get_getlock(bufp, &fc->u.tgetlock.getlock);
+		buf_get_getlock(bufp, &fc->u.tgetlock.gl);
 		break;
 	case P9_TLINK:
 		fc->u.tlink.dfid = buf_get_int32(bufp);

@@ -192,6 +192,13 @@ np_printiattr(char *s, int len, struct p9_iattr_dotl *ip)
 
 	return n;
 }
+
+static int
+np_printdents(char *s, int len, u8 *buf, int buflen)
+{
+	/* FIXME: decode directory entries here */
+	return np_sndump(s, len, buf, buflen < 64 ? buflen : 64);
+}
 #endif
 
 static int
@@ -329,17 +336,17 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RSETATTR:
 		n += snprintf(s+n,len-n, "P9_RSETATTR tag %u", fc->tag);
 		break;
-	case P9_TXATTRWALK:
-		n += snprintf(s+n,len-n, "P9_TXATTRWALK tag %u", fc->tag); /* FIXME */
+	case P9_TXATTRWALK: /* FIXME */
+		n += snprintf(s+n,len-n, "P9_TXATTRWALK tag %u", fc->tag);
 		break;
-	case P9_RXATTRWALK:
-		n += snprintf(s+n,len-n, "P9_RXATTRWALK tag %u", fc->tag); /* FIXME */
+	case P9_RXATTRWALK: /* FIXME */
+		n += snprintf(s+n,len-n, "P9_RXATTRWALK tag %u", fc->tag);
 		break;
-	case P9_TXATTRCREATE:
-		n += snprintf(s+n,len-n, "P9_TXATTRWALKCREATE tag %u", fc->tag); /* FIXME */
+	case P9_TXATTRCREATE: /* FIXME */
+		n += snprintf(s+n,len-n, "P9_TXATTRWALKCREATE tag %u", fc->tag);
 		break;
-	case P9_RXATTRCREATE:
-		n += snprintf(s+n,len-n, "P9_RXATTRWALKCREATE tag %u", fc->tag); /* FIXME */
+	case P9_RXATTRCREATE: /* FIXME */
+		n += snprintf(s+n,len-n, "P9_RXATTRWALKCREATE tag %u", fc->tag);
 		break;
 	case P9_TREADDIR:
 		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u ", fc->tag);
@@ -350,7 +357,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RREADDIR:
 		n += snprintf(s+n,len-n, "P9_RREADDIR tag %u ", fc->tag);
 		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.rreaddir.count);
-		/* FIXME decode dents */
+		n += snprintf(s+n,len-n, " DATA ");
+		n += np_printdents(s+n,len-n, fc->u.rreaddir.data, fc->u.rreaddir.count);
 		break;
 	case P9_TFSYNC:
 		n += snprintf(s+n,len-n, "P9_TFSYNC tag %u", fc->tag);
@@ -362,7 +370,13 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_TLOCK:
 		n += snprintf(s+n,len-n, "P9_TLOCK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlock.fid);
-		/* FIXME decode flock */
+		n += snprintf(s+n,len-n, " type %u", fc->u.tlock.fl.type);
+		n += snprintf(s+n,len-n, " flags %"PRIu32, fc->u.tlock.fl.flags);
+		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tlock.fl.start);
+		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tlock.fl.length);
+		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tlock.fl.proc_id);
+		n += snprintf(s+n,len-n, " client_id %.*s",
+			fc->u.tlock.fl.client_id.len, fc->u.tlock.fl.client_id.str);
 		break;
 	case P9_RLOCK:
 		n += snprintf(s+n,len-n, "P9_RLOCK tag %u", fc->tag);
@@ -371,11 +385,21 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_TGETLOCK:
 		n += snprintf(s+n,len-n, "P9_TGETLOCK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tgetlock.fid);
-		/* FIXME decode getlock */
+		n += snprintf(s+n,len-n, " type %u", fc->u.tgetlock.gl.type);
+		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tgetlock.gl.start);
+		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tgetlock.gl.length);
+		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tgetlock.gl.proc_id);
+		n += snprintf(s+n,len-n, " client_id %.*s",
+			fc->u.tgetlock.gl.client_id.len, fc->u.tgetlock.gl.client_id.str);
 		break;
 	case P9_RGETLOCK:
 		n += snprintf(s+n,len-n, "P9_RGETLOCK tag %u", fc->tag);
-		/* FIXME decode getlock */
+		n += snprintf(s+n,len-n, " type %u", fc->u.rgetlock.gl.type);
+		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.rgetlock.gl.start);
+		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.rgetlock.gl.length);
+		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.rgetlock.gl.proc_id);
+		n += snprintf(s+n,len-n, " client_id %.*s",
+			fc->u.rgetlock.gl.client_id.len, fc->u.rgetlock.gl.client_id.str);
 		break;
 	case P9_TLINK:
 		n += snprintf(s+n,len-n, "P9_TLINK tag %u", fc->tag);
@@ -398,6 +422,37 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RMKDIR:
 		n += snprintf(s+n,len-n, "P9_RMKDIR tag %u qid ", fc->tag);
 		n += np_printqid(s+n, len-n, &fc->u.rmkdir.qid);
+		break;
+#endif
+#if HAVE_LARGEIO
+	case P9_TAREAD:
+		n += snprintf(s+n,len-n, "P9_TAREAD tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.taread.fid);
+		n += snprintf(s+n,len-n, " datacheck %u", fc->u.taread.datacheck);
+		n += snprintf(s+n,len-n, " offset %"PRIu64, fc->u.taread.offset);
+		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.taread.count);
+		n += snprintf(s+n,len-n, " rsize %"PRIu32, fc->u.taread.rsize);
+		break;
+	case P9_RAREAD:
+		n += snprintf(s+n,len-n, "P9_RAREAD tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.raread.count);
+		n += snprintf(s+n,len-n, " DATA ");
+		n += np_printdata(s+n,len-n, fc->u.raread.data, fc->u.raread.count);
+		break;
+		
+	case P9_TAWRITE:
+		n += snprintf(s+n,len-n, "P9_TAWRITE tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tawrite.fid);
+		n += snprintf(s+n,len-n, " datacheck %u", fc->u.tawrite.datacheck);
+		n += snprintf(s+n,len-n, " offset %"PRIu64, fc->u.tawrite.offset);
+		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.tawrite.count);
+		n += snprintf(s+n,len-n, " rsize %"PRIu32, fc->u.tawrite.rsize);
+		n += snprintf(s+n,len-n, " DATA ");
+		n += np_printdata(s+n,len-n, fc->u.tawrite.data, fc->u.tawrite.rsize);
+		break;
+	case P9_RAWRITE:
+		n += snprintf(s+n,len-n, "P9_RAWRITE.diod tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.rawrite.count);
 		break;
 #endif
 	case P9_TVERSION:
@@ -541,27 +596,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_RWSTAT:
 		n += snprintf(s+n,len-n, "P9_RWSTAT tag %u", fc->tag);
 		break;
-#if HAVE_LARGEIO
-	case P9_TAREAD:
-		n += snprintf(s+n,len-n, "P9_TAREAD.diod tag %u fid %d datacheck %d offset %llu count %u rsize %u", 
-			fc->tag, fc->fid, fc->datacheck, (unsigned long long)fc->offset,
-			fc->count, fc->rsize);
-		break;
-	case P9_RAREAD:
-		n += snprintf(s+n,len-n, "P9_RAREAD.diod tag %u count %u data ", fc->tag, fc->count);
-		n += np_printdata(s+n,len-n, fc->data, fc->count);
-		break;
-		
-	case P9_TAWRITE:
-		n += snprintf(s+n,len-n, "P9_TAWRITE.diod tag %u fid %d datacheck %d offset %llu count %u rsize %u data ",
-			fc->tag, fc->fid, fc->datacheck, (unsigned long long)fc->offset,
-			fc->count, fc->rsize);
-		n += np_printdata(s+n,len-n, fc->data, fc->rsize);
-		break;
-	case P9_RAWRITE:
-		n += snprintf(s+n,len-n, "P9_RAWRITE.diod tag %u count %u", fc->tag, fc->count);
-		break;
-#endif
 	default:
 		n += snprintf(s+n,len-n, "unknown type %d", fc->type);
 		break;

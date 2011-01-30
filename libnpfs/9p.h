@@ -170,9 +170,9 @@ enum p9_msg_t {
 	P9_RLINK,
 	P9_TMKDIR = 72,
 	P9_RMKDIR,
-	P9_TAREAD = 80,		/* diod ext */
+	P9_TAREAD = 80,		/* diod */
 	P9_RAREAD,
-	P9_TAWRITE = 82,	/* diod ext */
+	P9_TAWRITE = 82,	/* diod */
 	P9_RAWRITE,
 	P9_TVERSION = 100,
 	P9_RVERSION,
@@ -623,17 +623,17 @@ struct p9_rfsync {
 };
 struct p9_tlock {
 	u32 fid;
-	struct p9_flock flock;
+	struct p9_flock fl;
 };
 struct p9_rlock {
 	u8 status;
 };
 struct p9_tgetlock {
 	u32 fid;
-	struct p9_getlock getlock;
+	struct p9_getlock gl;
 };
 struct p9_rgetlock {
-	struct p9_getlock getlock;
+	struct p9_getlock gl;
 };
 struct p9_tlink {
 	u32 dfid;
@@ -650,6 +650,31 @@ struct p9_tmkdir {
 };
 struct p9_rmkdir {
 	struct p9_qid qid;
+};
+struct p9_tawrite {
+	u32 fid;
+	u8 datacheck;
+	u64 offset;
+	u32 count;
+	u32 rsize;
+	u8 *data;
+	u32 check;
+};
+struct p9_rawrite {
+	u32 count;
+};
+struct p9_taread {
+	u32 fid;
+	u8 datacheck;
+	u64 offset;
+	u32 count;
+	u32 rsize;
+};
+struct p9_raread {
+	u32 count;
+	u8 datacheck;
+	u8 *data;
+	u32 check;
 };
 struct p9_tversion {
 	u32 msize;
