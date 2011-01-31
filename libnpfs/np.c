@@ -891,23 +891,33 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 
 	return np_post_check(fc, bufp);
 }
+Npfcall *
+np_create_rlcreate(struct p9_qid *qid, u32 iounit)
+{
+	int size = sizeof(*qid) + sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
 
-/* FIXME: Npfcall *np_create_rlcreate() */
+	if (!(fc = np_create_common(bufp, size, P9_RCREATE)))
+		return NULL;
+	buf_put_qid(bufp, qid, &fc->u.rlcreate.qid);
+	buf_put_int32(bufp, iounit, &fc->u.rlcreate.iounit);
+
+	return np_post_check(fc, bufp);
+}
+
 /* FIXME: Npfcall *np_create_rsymlink() */
 /* FIXME: Npfcall *np_create_rmknod() */
 
 Npfcall *
 np_create_rrename(void)
 {
-	int size;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, P9_RRENAME);
-	if (!fc)
+	if (!(fc = np_create_common(bufp, 0, P9_RRENAME)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -960,7 +970,19 @@ np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 st_mode,
 	return np_post_check(fc, bufp);
 }
 
-/* FIXME: Npfcall * np_create_rsetattr() */
+Npfcall *
+np_create_rsetattr(void)
+{
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, 0, P9_RRENAME)))
+		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
 /* FIXME: Npfcall * np_create_rxattrwalk() */
 /* FIXME: Npfcall * np_create_rxattrcreate() */
 

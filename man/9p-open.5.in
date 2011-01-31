@@ -78,8 +78,7 @@ The iounit field returned by open and create may be zero.  If it is not,
 it is the maximum number of bytes that are guaranteed to be read from or
 written to the file without breaking the I/O transfer into multiple 9P
 messages; see 9p-read(5).
-.SH "UNIX EXTENSIONS"
-Extracted from [rfc9p2000.u]:
+.SH "9P2000.u"
 .nf
 size[4] Tcreate tag[2] fid[4] name[s] perm[4] mode[1] extension[s]
 size[4] Rcreate tag[2] qid[13] iounit[4]
@@ -93,8 +92,6 @@ extension[s] is a string describing special files, depending on the mode bit.
 For DSYMLINK files, the string is the target of the link.  For DMDEVICE files,
 the string is "b 1 2" for a block device with major 1, minor 2.
 For normal files, this string is empty. 
-.SH "LINUX ENTRY POINTS"
-tbd
 .SH "PLAN9 ENTRY POINTS"
 Open and create both generate open messages; only create generates a create
 message.  The iounit associated with an open file may be discovered by
@@ -112,11 +109,4 @@ The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-[plan9] http://plan9.bell-labs.com/sys/man/index.html
-.LP
-[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
-Eric Van Hensbergen and Ron Minnich, 2005.
-.LP
-[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
-.LP
 9p-intro(5)

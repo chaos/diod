@@ -134,9 +134,7 @@ machine independent encoding given above (see 9p-read(5)).
 .LP
 Note that since the stat information is sent as a 9P variable–length datum,
 it is limited to a maximum of 65535 bytes.
-.SH "UNIX EXTENSIONS"
-Extracted from [rfc9p2000.u]:
-.LP
+.SH "9P2000.u"
 There are four new fields appended to the stat structure supporting 9P2000
 extensions - as well as new mode bits and corresponding qid.type bits.
 .TP
@@ -181,11 +179,4 @@ The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-[plan9] http://plan9.bell-labs.com/sys/man/index.html
-.LP
-[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
-Eric Van Hensbergen and Ron Minnich, 2005.
-.LP
-[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
-.LP
 9p-intro(5)

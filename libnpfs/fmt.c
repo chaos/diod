@@ -199,19 +199,40 @@ np_printlstat(char *s, int len, struct p9_stat_dotl *lp)
 }
 
 static int
-np_printiattr(char *s, int len, struct p9_iattr_dotl *ip)
+np_printiattr(char *s, int len, u32 valid, struct p9_iattr_dotl *ip)
 {
-	int n;
+	int n = 0;
 
-	n = snprintf(s,len, " mode %"PRIu32, ip->mode);
-	n += snprintf(s+n,len-n, " uid %"PRIu32, ip->uid);
-	n += snprintf(s+n,len-n, " gid %"PRIu32, ip->gid);
-	n += snprintf(s+n,len-n, " size %"PRIu64, ip->size);
-	n += snprintf(s+n,len-n, " atime %s",
-		np_timestr(ip->atime_sec, ip->atime_nsec));
-	n += snprintf(s+n,len-n, " mtime %s",
-		np_timestr(ip->mtime_sec, ip->mtime_nsec));
-
+	if ((valid & P9_IATTR_MODE))
+		n += snprintf(s+n,len-n, "mode %"PRIu32, ip->mode);
+	else
+		n += snprintf(s+n,len-n, "mode X");
+	if ((valid & P9_IATTR_UID))
+		n += snprintf(s+n,len-n, " uid %"PRIu32, ip->uid);
+	else
+		n += snprintf(s+n,len-n, " uid X");
+	if ((valid & P9_IATTR_GID))
+		n += snprintf(s+n,len-n, " gid %"PRIu32, ip->gid);
+	else
+		n += snprintf(s+n,len-n, " gid X");
+	if ((valid & P9_IATTR_SIZE))
+		n += snprintf(s+n,len-n, " size %"PRIu64, ip->size);
+	else
+		n += snprintf(s+n,len-n, " size X");
+	if (!(valid & P9_IATTR_ATIME))
+		n += snprintf(s+n,len-n, " atime X");
+	else if (!(valid & P9_IATTR_ATIME_SET))
+		n += snprintf(s+n,len-n, " atime X");
+	else
+		n += snprintf(s+n,len-n, " atime %s",
+			np_timestr(ip->atime_sec, ip->atime_nsec));
+	if (!(valid & P9_IATTR_MTIME))
+		n += snprintf(s+n,len-n, " mtime X");
+	else if (!(valid & P9_IATTR_MTIME_SET))
+		n += snprintf(s+n,len-n, " mtime now");
+	else
+		n += snprintf(s+n,len-n, " mtime %s",
+			np_timestr(ip->mtime_sec, ip->mtime_nsec));
 	return n;
 }
 
@@ -352,8 +373,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_TSETATTR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tsetattr.fid);
 		n += snprintf(s+n,len-n, " valid_mask 0x%"PRIx32, fc->u.tsetattr.valid_mask);
-		n += snprintf(s+n,len-n, " IATTR: ");
-		n += np_printiattr(s+n,len-n, &fc->u.tsetattr.i);
+		n += snprintf(s+n,len-n, " ");
+		n += np_printiattr(s+n,len-n, fc->u.tsetattr.valid_mask, &fc->u.tsetattr.i);
 		break;
 	case P9_RSETATTR:
 		n += snprintf(s+n,len-n, "P9_RSETATTR tag %u", fc->tag);

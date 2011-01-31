@@ -43,9 +43,7 @@ authentication protocol.  That protocol's definition is not part of 9P itself.
 Once the protocol is complete, the same afid is presented in the \fIattach\fR
 message for the user, granting entry.  The same validated afid may be used
 for multiple \fIattach\fR messages with the same uname and aname.
-.SH "UNIX EXTENSIONS"
-Extracted from [rfc9p2000.u]:
-.LP
+.SH "9P2000.u"
 .nf
 size[4] Tauth tag[2] afid[4] uname[s] aname[s] n_uname[4]
 size[4] Rauth tag[2] aqid[13]
@@ -91,11 +89,4 @@ The Plan 9 operating system, fourth edition, 2002.
 .br
 Copyright (c) 2010 Lucent Technologies. All rights reserved.
 .SH "SEE ALSO"
-[plan9] http://plan9.bell-labs.com/sys/man/index.html
-.LP
-[graverobbers] ``Grave Robbers from Outer Space: Using 9P2000 Under Linux'',
-Eric Van Hensbergen and Ron Minnich, 2005.
-.LP
-[rfc9p2000.u] http://ericvh.github.com/9p-rfc/rfc9p2000.u.html
-.LP
 9p-intro(5)

@@ -448,6 +448,7 @@ Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,
 		u64 files, u64 ffree, u64 fsid, u32 namelen);
 Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
+Npfcall *np_create_rlcreate(struct p9_qid *qid, u32 iounit);
 Npfcall *np_create_rrename(void);
 Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
 		u32 st_mode, u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
@@ -457,6 +458,7 @@ Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
                 u64 st_ctime_sec, u64 st_ctime_nsec,
                 u64 st_btime_sec, u64 st_btime_nsec,
                 u64 st_gen, u64 st_data_version);
+Npfcall *np_create_rsetattr(void);
 Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);
 Npfcall *np_create_rfsync(void);

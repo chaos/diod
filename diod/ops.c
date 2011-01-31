@@ -57,6 +57,7 @@
 #endif
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
 #define _BSD_SOURCE         /* makedev, st_atim etc */
+#define _ATFILE_SOURCE      /* utimensat */
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -148,7 +149,7 @@ Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 Npfcall     *diod_readlink(Npfid *fid);
 Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
 Npfcall     *diod_setattr (Npfid *fid, u32 valid_mask,
-                           struct p9_iattr_dotl *attr);
+                           struct p9_iattr_dotl *iattr);
 Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_fsync (Npfid *fid);
 Npfcall     *diod_lock (Npfid *fid, struct p9_flock *flock);
@@ -205,13 +206,13 @@ diod_register_ops (Npsrv *srv)
 #if HAVE_DOTL
     srv->statfs = diod_statfs;
     srv->lopen = diod_lopen;
-    //srv->lcreate = diod_lcreate;
+    srv->lcreate = diod_lcreate;
     //srv->symlink = diod_symlink;
     //srv->mknod = diod_mknod;
     srv->rename = diod_rename;
     //srv->readlink = diod_readlink;
     srv->getattr = diod_getattr;
-    //srv->setattr = diod_setattr;
+    srv->setattr = diod_setattr;
     //srv->xattrwalk = diod_xattrwalk;
     //srv->xattrcreate = diod_xattrcreate;
     srv->readdir = diod_readdir;
@@ -1709,15 +1710,43 @@ done:
 }
 
 Npfcall*
-diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
+diod_lcreate(Npfid *dfid, Npstr *name, u32 flags, u32 mode, u32 gid)
 {
     Npfcall *ret = NULL;
+    Fid *df = dfid->aux;
+    char *npath = NULL;
+    Npqid qid;
+    struct stat sb;
+    mode_t saved_umask;
 
-    if (!diod_switch_user (fid->user, gid)) {
+    if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_lcreate: error switching user");
         goto done;
     }
+    if (!(npath = _mkpath(df->path, name))) {
+        msg ("diod_lcreate: out of memory");
+        goto done;
+    }
+    saved_umask = umask(0);
+    if (creat (npath, mode) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    umask(saved_umask);
+    if (lstat (npath, &sb) < 0) {
+        np_uerror (errno);
+        rmdir (npath);
+        goto done;
+    }
+    _ustat2qid (&sb, &qid);
+    if (!((ret = np_create_rlcreate (&qid, sb.st_blksize)))) {
+        np_uerror (ENOMEM);
+        msg ("diod_lcreate: out of memory");
+        goto done;
+    }
 done:
+    if (npath)
+        free (npath);
     return ret;
 }
 
@@ -1834,12 +1863,65 @@ done:
 }
 
 Npfcall*
-diod_setattr (Npfid *fid, u32 valid_mask, struct p9_iattr_dotl *attr)
+diod_setattr (Npfid *fid, u32 valid, struct p9_iattr_dotl *iattr)
 {
     Npfcall *ret = NULL;
+    Fid *f = fid->aux;
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_setattr: error switching user");
+        goto done;
+    }
+
+    /* chmod */
+    if ((valid & P9_IATTR_MODE) && chmod (f->path, iattr->mode) < 0) {
+        np_uerror(errno);
+        goto done;
+    }
+
+    /* chown */
+    if ((valid & P9_IATTR_UID) || (valid & P9_IATTR_GID)) {
+        if (chown (f->path, (valid & P9_IATTR_UID) ? iattr->uid : -1,
+                            (valid & P9_IATTR_GID) ? iattr->gid : -1) < 0) {
+            np_uerror(errno);
+            goto done;
+        }
+    }
+
+    /* truncate */
+    if ((valid & P9_IATTR_SIZE) && truncate (f->path, iattr->size) < 0) {
+        np_uerror(errno);
+        goto done;
+    }
+
+    /* utimes */
+    if ((valid & P9_IATTR_ATIME) || (valid & P9_IATTR_MTIME)) {
+        struct timespec ts[2];
+
+        ts[0].tv_sec = iattr->atime_sec;
+        if (!(valid & P9_IATTR_ATIME))
+            ts[0].tv_nsec = UTIME_OMIT;
+        else if (!(valid & P9_IATTR_ATIME_SET))
+            ts[0].tv_nsec = UTIME_NOW;
+        else
+            ts[0].tv_nsec = iattr->atime_nsec;
+
+        ts[1].tv_sec = iattr->mtime_sec;
+        if (!(valid & P9_IATTR_MTIME))
+            ts[1].tv_nsec = UTIME_OMIT;
+        else if (!(valid & P9_IATTR_MTIME_SET))
+            ts[1].tv_nsec = UTIME_NOW;
+        else
+            ts[1].tv_nsec = iattr->mtime_nsec;
+
+        if (utimensat(-1, f->path, ts, 0) < 0) {
+            np_uerror(errno);
+            goto done;
+        }
+    }
+    if (!(ret = np_create_rsetattr())) {
+        np_uerror (ENOMEM);
+        msg ("diod_setattr: out of memory");
         goto done;
     }
 done:
@@ -1852,9 +1934,6 @@ _copy_dirent_linux (Fid *f, u8 *buf, u32 buflen)
     Npqid qid;
     u32 ret = 0;
 
-    /* FIXME: additional stat for DT_UNKNOWN file systems to avoid
-     * returning an invalid qid.  Check v9fs to see if this is necessary.
-     */
     if (f->dirent->d_type == DT_UNKNOWN) {
         char path[PATH_MAX + 1];
         struct stat sb;
@@ -1873,15 +1952,16 @@ done:
     return ret;
 }
 
+/* FIXME: seekdir(previous d_off) OK?
+ * If not, substitute saved_dir_position for d_off in last returned.
+ * If so, get rid of saved_dir_position and 2nd seekdir.
+ */
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
     int i, n = 0;
     off_t saved_dir_pos;
 
-    /* FIXME: seeking to offset (d_off) is possibly not kosher.
-     * Use more complicated method in diod_read above?
-     */
     if (offset == 0)
         rewinddir (f->dir);
     else
@@ -1936,7 +2016,7 @@ diod_fsync (Npfid *fid)
         msg ("diod_fsync: error switching user");
         goto done;
     }
-    if (f->fd == -1) {
+    if (f->fd == -1) { /* FIXME: should this be silently ignored? */
         np_uerror (EBADF);
         goto done;
     }

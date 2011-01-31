@@ -26,6 +26,6 @@ In addition, data is protected by an optional 32 bit check field.
 The datacheck field configures checksum behavior (0x00 for disabled,
 0x01 for Adler32).
 .SH ORIGIN
-diod-specific
+diod
 .LP
 9p-intro(5)

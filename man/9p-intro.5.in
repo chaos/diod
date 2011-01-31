@@ -225,7 +225,7 @@ archives. (Bit 28 is skipped for historical reasons.) These bits are
 reproduced, from the top bit down, in the type byte of the Qid: QTDIR,
 QTAPPEND, QTEXCL, (skipping one bit) QTAUTH, and QTTMP. The name QTFILE,
 defined to be zero, identifies the value of the type for a plain file.
-.SH "UNIX EXTENSIONS"
+.SH "9P2000.u"
 UNIX extensions are defined in 9p2000.u.
 .LP
 9P2000.u defines several extensions necessary to provide UNIX file
@@ -249,7 +249,7 @@ size[4] Rerror tag[2] ename[s] ecode[4]
 .LP
 as well as the stat[n] structure used in the stat, wstat, and read
 operations.  See 9p-stat(5), 9p-attach(5), 9p-open(5), and 9p-error(5).
-.SH "Linux EXTENSIONS"
+.SH "9P2000.L"
 Additional Linux extensions are defined in 9P2000.L:
 .LP
 .nf
@@ -295,7 +295,7 @@ size[4] Rmkdir tag[2] qid[13]
 implementation.  Also, clients like the Linux kernel v9fs should gracefully
 handle ENOSYS replies from servers that do not implement every 9P2000.L
 operation.
-.SH "DIOD EXTENSIONS"
+.SH "DIOD"
 .B diod
 further extends 9P2000.L with new requests for large atomic I/O with optional
 checksum.
