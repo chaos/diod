@@ -459,7 +459,9 @@ Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
                 u64 st_gen, u64 st_data_version);
 Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);
-Npfcall * np_create_rmkdir(struct p9_qid *qid);
+Npfcall *np_create_rfsync(void);
+Npfcall *np_create_rmkdir(struct p9_qid *qid);
+Npfcall *np_create_rlink(void);
 #endif
 void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
 

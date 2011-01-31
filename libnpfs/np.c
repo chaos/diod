@@ -1000,10 +1000,35 @@ np_finalize_rreaddir(Npfcall *fc, u32 count)
 	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
 }
 
+Npfcall *
+np_create_rfsync(void)
+{
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, 0, P9_RFSYNC)))
+		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
 /* FIXME: Npfcall * np_create_rfsync() */
 /* FIXME: Npfcall * np_create_rlock() */
 /* FIXME: Npfcall * np_create_rgetlock() */
-/* FIXME: Npfcall * np_create_rlink() */
+
+Npfcall *
+np_create_rlink(void)
+{
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, 0, P9_RLINK)))
+		return NULL;
+
+	return np_post_check(fc, bufp);
+}
 
 Npfcall *
 np_create_rmkdir(struct p9_qid *qid)
@@ -1216,8 +1241,8 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 	case P9_TLINK:
 		fc->u.tlink.dfid = buf_get_int32(bufp);
-		fc->u.tlink.oldfid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->u.tlink.newpath);
+		fc->u.tlink.fid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tlink.name);
 		break;
 	case P9_TMKDIR:
 		fc->u.tmkdir.fid = buf_get_int32(bufp);

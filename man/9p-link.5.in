@@ -3,11 +3,20 @@
 9p link \- create a hard link
 .SH SYNOPSIS
 .nf
-size[4] Tlink tag[2] dfid[4] oldfid[4] newpath[s]
+size[4] Tlink tag[2] dfid[4] fid[4] name[s]
 size[4] Rlink tag[2]
 .fi
 .SH DESCRIPTION
-Create a link 'newpath' in directory pointed by dfid linking to oldfid path.
+Create a hard link.
+.TP
+\fIdfid\fR
+The parent directory that will contain the link.
+.TP
+\fIfid\fR
+The link target.
+.TP
+\fIname\fR
+The file name of link.
 .SH ORIGIN
 9P2000.L
 .SH SEE ALSO

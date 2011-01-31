@@ -1,6 +1,8 @@
 2011-01-31 Jim Garlick <garlick@llnl.gov>
 
-	* diod/ops.c, libnpfs/fcall.c : Get mkdir working.
+	* diod/ops.c, libnpfs/fcall.c : Add link, fsync implementation for .L.
+
+	* diod/ops.c, libnpfs/fcall.c : Add mkdir implementation for .L.
 
 2011-01-29 Jim Garlick <garlick@llnl.gov>
 

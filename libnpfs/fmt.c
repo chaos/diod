@@ -85,7 +85,7 @@ np_printqid(char *s, int len, Npqid *q)
 		buf[n++] = 'L';
 	buf[n] = '\0';
 
-	return snprintf(s, len, " (%.16llx %x '%s')", (unsigned long long)q->path, q->version, buf);
+	return snprintf(s, len, "(%.16llx %x '%s')", (unsigned long long)q->path, q->version, buf);
 }
 
 int
@@ -316,7 +316,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tmknod.gid);
 		break;
 	case P9_RMKNOD:
-		n += snprintf(s+n,len-n, "P9_RMKNOD tag %d qid", fc->tag);
+		n += snprintf(s+n,len-n, "P9_RMKNOD tag %d qid ", fc->tag);
 		n += np_printqid(s+n, len-n, &fc->u.rsymlink.qid);
 		break;
 	case P9_TRENAME:
@@ -425,9 +425,9 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_TLINK:
 		n += snprintf(s+n,len-n, "P9_TLINK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " dfid %"PRIu32, fc->u.tlink.dfid);
-		n += snprintf(s+n,len-n, " oldfid %"PRIu32, fc->u.tlink.oldfid);
-		n += snprintf(s+n,len-n, " newpath %.*s",
-			fc->u.tlink.newpath.len, fc->u.tlink.newpath.str);
+		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlink.fid);
+		n += snprintf(s+n,len-n, " name %.*s",
+			fc->u.tlink.name.len, fc->u.tlink.name.str);
 		break;
 	case P9_RLINK:
 		n += snprintf(s+n,len-n, "P9_RLINK tag %u", fc->tag);
@@ -543,7 +543,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 		
 	case P9_ROPEN:
-		n += snprintf(s+n,len-n, "P9_ROPEN tag %u", fc->tag);
+		n += snprintf(s+n,len-n, "P9_ROPEN tag %u qid ", fc->tag);
 		n += np_printqid(s+n,len-n, &fc->qid);
 		n += snprintf(s+n,len-n, " iounit %d", fc->iounit);
 		break;
@@ -559,7 +559,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 		
 	case P9_RCREATE:
-		n += snprintf(s+n,len-n, "P9_RCREATE tag %u", fc->tag);
+		n += snprintf(s+n,len-n, "P9_RCREATE tag %u qid ", fc->tag);
 		n += np_printqid(s+n,len-n, &fc->qid);
 		n += snprintf(s+n,len-n, " iounit %d", fc->iounit);
 		break;

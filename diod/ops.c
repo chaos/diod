@@ -153,7 +153,7 @@ Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_fsync (Npfid *fid);
 Npfcall     *diod_lock (Npfid *fid, struct p9_flock *flock);
 Npfcall     *diod_getlock (Npfid *fid, struct p9_getlock *getlock);
-Npfcall     *diod_link (Npfid *dfid, Npfid *oldfid, Npstr *newpath);
+Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
 #endif
 static int       _fidstat       (Fid *fid);
@@ -215,10 +215,10 @@ diod_register_ops (Npsrv *srv)
     //srv->xattrwalk = diod_xattrwalk;
     //srv->xattrcreate = diod_xattrcreate;
     srv->readdir = diod_readdir;
-    //srv->fsync = diod_fsync;
+    srv->fsync = diod_fsync;
     //srv->llock = diod_lock;
     //srv->getlock = diod_getlock;
-    //srv->link = diod_link;
+    srv->link = diod_link;
     srv->mkdir = diod_mkdir;
     srv->proto_version = p9_proto_2000L;
 #else
@@ -1930,13 +1930,27 @@ Npfcall*
 diod_fsync (Npfid *fid)
 {
     Npfcall *ret = NULL;
+    Fid *f = fid->aux;
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_fsync: error switching user");
         goto done;
     }
+    if (f->fd == -1) {
+        np_uerror (EBADF);
+        goto done;
+    }
+    if (fsync(f->fd) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    if (!((ret = np_create_rfsync ()))) {
+        np_uerror (ENOMEM);
+        msg ("diod_fsync: out of memory");
+        goto done;
+    }
 done:
-   return ret;
+    return ret;
 }
 
 Npfcall*
@@ -1966,35 +1980,51 @@ done:
 }
 
 Npfcall*
-diod_link (Npfid *dfid, Npfid *oldfid, Npstr *newpath)
+diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
 {
     Npfcall *ret = NULL;
+    Fid *df = dfid->aux;
+    Fid *f = fid->aux;
+    char *npath = NULL;
 
     if (!diod_switch_user (dfid->user, -1)) {
         msg ("diod_link: error switching user");
         goto done;
     }
+    if (!(npath = _mkpath(df->path, name))) {
+        msg ("diod_mkdir: out of memory");
+        goto done;
+    }
+    if (link (f->path, npath) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    if (!((ret = np_create_rlink ()))) {
+        np_uerror (ENOMEM);
+        msg ("diod_mkdir: out of memory");
+        goto done;
+    }
 done:
-   return ret;
+    if (npath)
+        free (npath);
+    return ret;
 }
 
 Npfcall*
-diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
+diod_mkdir (Npfid *dfid, Npstr *name, u32 mode, u32 gid)
 {
     Npfcall *ret = NULL;
-    Fid *f = fid->aux;
+    Fid *df = dfid->aux;
     char *npath = NULL;
     Npqid qid;
     struct stat sb;
     mode_t saved_umask;
 
-    if (!diod_switch_user (fid->user, gid)) {
+    if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_mkdir: error switching user");
         goto done;
     }
-    if (_fidstat (f) < 0)
-        goto done;
-    if (!(npath = _mkpath(f->path, name))) {
+    if (!(npath = _mkpath(df->path, name))) {
         msg ("diod_mkdir: out of memory");
         goto done;
     }

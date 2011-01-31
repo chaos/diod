@@ -990,19 +990,19 @@ done:
 Npfcall *
 np_link(Npreq *req, Npfcall *tc)
 {
-	Npfid *fid = _getfid_dotl(req, tc->u.tlink.dfid);
-	Npfid *oldfid;
+	Npfid *dfid = _getfid_dotl(req, tc->u.tlink.dfid);
+	Npfid *fid;
 	Npfcall *rc = NULL;
 
-	if (!fid)
+	if (!dfid)
 		goto done;
-	if (!(oldfid = np_fid_find(req->conn, tc->u.tlink.oldfid))) {
+	if (!(fid = np_fid_find(req->conn, tc->u.tlink.fid))) {
 		np_uerror(EIO);
 		goto done;
 	}
-	np_fid_incref(oldfid);
-	rc = (*req->conn->srv->link)(fid, oldfid,
-					&tc->u.tlink.newpath);
+	np_fid_incref(fid);
+	rc = (*req->conn->srv->link)(dfid, fid, &tc->u.tlink.name);
+	np_fid_decref(fid);
 done:
 	return rc;
 }

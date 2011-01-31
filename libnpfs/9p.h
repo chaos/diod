@@ -637,8 +637,8 @@ struct p9_rgetlock {
 };
 struct p9_tlink {
 	u32 dfid;
-	u32 oldfid;
-	struct p9_str newpath;
+	u32 fid;
+	struct p9_str name;
 };
 struct p9_rlink {
 };

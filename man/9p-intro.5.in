@@ -285,9 +285,9 @@ size[4] Tlock tag[2] fid[4] flock[n]
 size[4] Rlock tag[2] status[1]
 size[4] Tgetlock tag[2] fid[4] getlock[n]
 size[4] Rgetlock tag[2] getlock[n]
-size[4] Tlink tag[2] dfid[4] oldfid[4] newpath[s]
+size[4] Tlink tag[2] dfid[4] fid[4] name[s]
 size[4] Rlink tag[2]
-size[4] Tmkdir tag[2] fid[4] name[s] mode[4] gid[4]
+size[4] Tmkdir tag[2] dfid[4] name[s] mode[4] gid[4]
 size[4] Rmkdir tag[2] qid[13]
 .fi
 .LP
