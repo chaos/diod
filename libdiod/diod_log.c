@@ -203,7 +203,7 @@ done:
 static void
 _verr (int errnum, const char *fmt, va_list ap)
 {
-    char buf[256];
+    char buf[1024];
     char errbuf[64];
 
     strerror_r (errnum, errbuf, sizeof (errbuf));
@@ -223,7 +223,7 @@ _verr (int errnum, const char *fmt, va_list ap)
 static void
 _vlog (const char *fmt, va_list ap)
 {
-    char buf[256];
+    char buf[1024];
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {

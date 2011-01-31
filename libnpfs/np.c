@@ -852,6 +852,30 @@ np_create_rlerror(u32 ecode)
 }
 
 Npfcall *
+np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen)
+{
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	int size = 2*sizeof(u32) + 6*sizeof(u64) + sizeof(u32);
+	Npfcall *fc; 
+
+	if (!(fc = np_create_common(bufp, size, P9_RSTATFS)))
+		return NULL;
+
+	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);	
+	buf_put_int32(bufp, bsize,   &fc->u.rstatfs.bsize);
+	buf_put_int64(bufp, blocks,  &fc->u.rstatfs.blocks);
+	buf_put_int64(bufp, bfree,   &fc->u.rstatfs.bfree);
+	buf_put_int64(bufp, bavail,  &fc->u.rstatfs.bavail);
+	buf_put_int64(bufp, files,   &fc->u.rstatfs.files);
+	buf_put_int64(bufp, ffree,   &fc->u.rstatfs.ffree);
+	buf_put_int64(bufp, fsid,    &fc->u.rstatfs.fsid);
+	buf_put_int32(bufp, namelen, &fc->u.rstatfs.namelen);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rlopen(Npqid *qid, u32 iounit)
 {
 	int size = sizeof(*qid) + sizeof(u32);
@@ -867,6 +891,29 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 
 	return np_post_check(fc, bufp);
 }
+
+/* FIXME: Npfcall *np_create_rlcreate() */
+/* FIXME: Npfcall *np_create_rsymlink() */
+/* FIXME: Npfcall *np_create_rmknod() */
+
+Npfcall *
+np_create_rrename(void)
+{
+	int size;
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp;
+
+	bufp = &buffer;
+	size = 0;
+	fc = np_create_common(bufp, size, P9_RRENAME);
+	if (!fc)
+		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
+/* FIXME: Npfcall *np_create_rreadlink() */
 
 Npfcall *
 np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 st_mode,
@@ -913,6 +960,10 @@ np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 st_mode,
 	return np_post_check(fc, bufp);
 }
 
+/* FIXME: Npfcall * np_create_rsetattr() */
+/* FIXME: Npfcall * np_create_rxattrwalk() */
+/* FIXME: Npfcall * np_create_rxattrcreate() */
+
 /* srv->readdir () should:
  * 1) call np_alloc_rreaddir ()
  * 2) copy up to count bytes of dirent data in u.readdir.data
@@ -949,43 +1000,22 @@ np_finalize_rreaddir(Npfcall *fc, u32 count)
 	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
 }
 
-Npfcall *
-np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen)
-{
-	struct cbuf buffer;
-	struct cbuf *bufp = &buffer;
-	int size = 2*sizeof(u32) + 6*sizeof(u64) + sizeof(u32);
-	Npfcall *fc; 
-
-	if (!(fc = np_create_common(bufp, size, P9_RSTATFS)))
-		return NULL;
-
-	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);	
-	buf_put_int32(bufp, bsize,   &fc->u.rstatfs.bsize);
-	buf_put_int64(bufp, blocks,  &fc->u.rstatfs.blocks);
-	buf_put_int64(bufp, bfree,   &fc->u.rstatfs.bfree);
-	buf_put_int64(bufp, bavail,  &fc->u.rstatfs.bavail);
-	buf_put_int64(bufp, files,   &fc->u.rstatfs.files);
-	buf_put_int64(bufp, ffree,   &fc->u.rstatfs.ffree);
-	buf_put_int64(bufp, fsid,    &fc->u.rstatfs.fsid);
-	buf_put_int32(bufp, namelen, &fc->u.rstatfs.namelen);
-
-	return np_post_check(fc, bufp);
-}
+/* FIXME: Npfcall * np_create_rfsync() */
+/* FIXME: Npfcall * np_create_rlock() */
+/* FIXME: Npfcall * np_create_rgetlock() */
+/* FIXME: Npfcall * np_create_rlink() */
 
 Npfcall *
-np_create_rrename(void)
+np_create_rmkdir(struct p9_qid *qid)
 {
-	int size;
+	int size = sizeof(*qid);
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, P9_RRENAME);
-	if (!fc)
+	if (!(fc = np_create_common(bufp, size, P9_RMKDIR)))
 		return NULL;
+	buf_put_qid(bufp, qid, &fc->u.rmkdir.qid);
 
 	return np_post_check(fc, bufp);
 }

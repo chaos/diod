@@ -21,9 +21,8 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-int diod_switch_user (Npuser *u);
+int diod_switch_user (Npuser *u, gid_t gid_override);
 char *diod_user_get_jobid (Npuser *u);
-int diod_switch_user (Npuser *u);
 void diod_become_user (char *name, uid_t uid, int realtoo);
 #if HAVE_MUNGE
 int diod_user_get_authinfo (Npuser *u, int *authenticated, char **jobidp);

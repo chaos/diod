@@ -118,7 +118,7 @@ Npuserpool *diod_upool = &upool;
  * demonstrate that this works with pthreads work crew.
  */
 int
-diod_switch_user (Npuser *u)
+diod_switch_user (Npuser *u, gid_t gid_override)
 {
     Duser *d = u->aux;
     int ret = 0;
@@ -132,7 +132,7 @@ diod_switch_user (Npuser *u)
         np_uerror (errno);
         goto done;
     }
-    if (setfsgid (u->dfltgroup->gid) < 0) {
+    if (setfsgid (gid_override == -1 ? u->dfltgroup->gid : gid_override) < 0) {
         np_uerror (errno);
         goto done;
     }

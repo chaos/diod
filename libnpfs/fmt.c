@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <errno.h>
+#include <time.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -146,6 +147,27 @@ np_dump(FILE *f, u8 *data, int datalen)
 	return fprintf (f, "%s", s);
 }
 
+static void
+_chomp(char *s)
+{
+	int len = strlen(s);
+	if (s[len - 1] == '\n')
+		s[len - 1] = '\0';
+}
+
+static char *
+np_timestr(const u64 sec, const u64 nsec)
+{
+	const time_t t = sec;
+	char *s = "0";
+
+	if (sec > 0) {
+		s = ctime(&t);
+		_chomp(s);
+	}
+	return s;
+}
+
 #if HAVE_DOTL
 static int
 np_printlstat(char *s, int len, struct p9_stat_dotl *lp)
@@ -154,24 +176,24 @@ np_printlstat(char *s, int len, struct p9_stat_dotl *lp)
 
 	n = snprintf(s,len, "qid ");
 	n += np_printqid(s+n,len-n, &lp->qid);
-	n += snprintf(s+n,len-n, " st_mode %"PRIu32, lp->st_mode);
-	n += snprintf(s+n,len-n, " st_uid %"PRIu32, lp->st_uid);
-	n += snprintf(s+n,len-n, " st_gid %"PRIu32, lp->st_gid);
-	n += snprintf(s+n,len-n, " st_nlink %"PRIu64, lp->st_nlink);
-	n += snprintf(s+n,len-n, " st_rdev %"PRIu64, lp->st_rdev);
-	n += snprintf(s+n,len-n, " st_size %"PRIu64, lp->st_size);
-	n += snprintf(s+n,len-n, " st_blksize %"PRIu64, lp->st_blksize);
-	n += snprintf(s+n,len-n, " st_blocks %"PRIu64"\n", lp->st_blocks);
-	n += snprintf(s+n,len-n, " st_atime_sec %"PRIu64, lp->st_atime_sec);
-	n += snprintf(s+n,len-n, " st_atime_nsec %"PRIu64"\n", lp->st_atime_nsec);
-	n += snprintf(s+n,len-n, " st_mtime_sec %"PRIu64, lp->st_mtime_sec);
-	n += snprintf(s+n,len-n, " st_mtime_nsec %"PRIu64"\n", lp->st_mtime_nsec);
-	n += snprintf(s+n,len-n, " st_ctime_sec %"PRIu64, lp->st_ctime_sec);
-	n += snprintf(s+n,len-n, " st_ctime_nsec %"PRIu64"\n", lp->st_ctime_nsec);
-	n += snprintf(s+n,len-n, " st_btime_sec %"PRIu64, lp->st_btime_sec);
-	n += snprintf(s+n,len-n, " st_btime_nsec %"PRIu64"\n", lp->st_btime_nsec);
-	n += snprintf(s+n,len-n, " st_gen %"PRIu64, lp->st_gen);
-	n += snprintf(s+n,len-n, " st_data_version %"PRIu64, lp->st_data_version);
+	n += snprintf(s+n,len-n, " mode %"PRIu32, lp->st_mode);
+	n += snprintf(s+n,len-n, " uid %"PRIu32, lp->st_uid);
+	n += snprintf(s+n,len-n, " gid %"PRIu32, lp->st_gid);
+	n += snprintf(s+n,len-n, " nlink %"PRIu64, lp->st_nlink);
+	n += snprintf(s+n,len-n, " rdev %"PRIu64, lp->st_rdev);
+	n += snprintf(s+n,len-n, " size %"PRIu64, lp->st_size);
+	n += snprintf(s+n,len-n, " blksize %"PRIu64, lp->st_blksize);
+	n += snprintf(s+n,len-n, " blocks %"PRIu64, lp->st_blocks);
+	n += snprintf(s+n,len-n, " gen %"PRIu64, lp->st_gen);
+	n += snprintf(s+n,len-n, " data_version %"PRIu64, lp->st_data_version);
+	n += snprintf(s+n,len-n, " atime %s",
+		np_timestr(lp->st_atime_sec, lp->st_atime_nsec));
+	n += snprintf(s+n,len-n, " mtime %s",
+		np_timestr(lp->st_mtime_sec, lp->st_mtime_nsec));
+	n += snprintf(s+n,len-n, " ctime %s",
+		np_timestr(lp->st_ctime_sec, lp->st_ctime_nsec));
+	n += snprintf(s+n,len-n, " btime %s",
+		np_timestr(lp->st_btime_sec, lp->st_btime_nsec));
 
 	return n;
 }
@@ -185,10 +207,10 @@ np_printiattr(char *s, int len, struct p9_iattr_dotl *ip)
 	n += snprintf(s+n,len-n, " uid %"PRIu32, ip->uid);
 	n += snprintf(s+n,len-n, " gid %"PRIu32, ip->gid);
 	n += snprintf(s+n,len-n, " size %"PRIu64, ip->size);
-	n += snprintf(s+n,len-n, " atime_sec %"PRIu64, ip->atime_sec);
-	n += snprintf(s+n,len-n, " atime_nsec %"PRIu64, ip->atime_nsec);
-	n += snprintf(s+n,len-n, " mtime_sec %"PRIu64, ip->mtime_sec);
-	n += snprintf(s+n,len-n, " mtime_nsec %"PRIu64, ip->mtime_nsec);
+	n += snprintf(s+n,len-n, " atime %s",
+		np_timestr(ip->atime_sec, ip->atime_nsec));
+	n += snprintf(s+n,len-n, " mtime %s",
+		np_timestr(ip->mtime_sec, ip->mtime_nsec));
 
 	return n;
 }
@@ -249,7 +271,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_TLOPEN:
 		n += snprintf(s+n,len-n, "P9_TLOPEN tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlopen.fid);
-		n += snprintf(s+n,len-n, " mode %"PRIu32, fc->u.tlopen.mode);
+		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tlopen.mode);
 		break;
 	case P9_RLOPEN:
 		n += snprintf(s+n,len-n, "P9_RLOPEN tag %u qid ", fc->tag);
@@ -262,7 +284,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, " name %.*s",
 			fc->u.tlcreate.name.len, fc->u.tlcreate.name.str);
 		n += snprintf(s+n,len-n, " flags %"PRIu32, fc->u.tlcreate.flags);
-		n += snprintf(s+n,len-n, " mode %"PRIu32, fc->u.tlcreate.mode);
+		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tlcreate.mode);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tlcreate.gid);
 		break;
 	case P9_RLCREATE:
@@ -288,7 +310,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tmknod.fid);
 		n += snprintf(s+n,len-n, " name %.*s",
 			fc->u.tmknod.name.len, fc->u.tmknod.name.str);
-		n += snprintf(s+n,len-n, " mode %"PRIu32, fc->u.tmknod.mode);
+		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tmknod.mode);
 		n += snprintf(s+n,len-n, " major %"PRIu32, fc->u.tmknod.major);
 		n += snprintf(s+n,len-n, " minor %"PRIu32, fc->u.tmknod.minor);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tmknod.gid);
@@ -318,18 +340,18 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 	case P9_TGETATTR:
 		n += snprintf(s+n,len-n, "P9_TGETATTR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tgetattr.fid);
-		n += snprintf(s+n,len-n, " request_mask %"PRIu64, fc->u.tgetattr.request_mask);
+		n += snprintf(s+n,len-n, " request_mask 0x%"PRIx64, fc->u.tgetattr.request_mask);
 		break;
 	case P9_RGETATTR:
 		n += snprintf(s+n,len-n, "P9_RGETATTR tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " response_mask %"PRIu64, fc->u.rgetattr.response_mask);
-		n += snprintf(s+n,len-n, " STAT: ");
+		n += snprintf(s+n,len-n, " response_mask 0x%"PRIx64, fc->u.rgetattr.response_mask);
+		n += snprintf(s+n,len-n, " ");
 		n += np_printlstat(s+n,len-n, &fc->u.rgetattr.s);
 		break;
 	case P9_TSETATTR:
 		n += snprintf(s+n,len-n, "P9_TSETATTR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tsetattr.fid);
-		n += snprintf(s+n,len-n, " valid_mask %"PRIu32, fc->u.tsetattr.valid_mask);
+		n += snprintf(s+n,len-n, " valid_mask 0x%"PRIx32, fc->u.tsetattr.valid_mask);
 		n += snprintf(s+n,len-n, " IATTR: ");
 		n += np_printiattr(s+n,len-n, &fc->u.tsetattr.i);
 		break;
@@ -349,15 +371,14 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RXATTRWALKCREATE tag %u", fc->tag);
 		break;
 	case P9_TREADDIR:
-		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u ", fc->tag);
+		n += snprintf(s+n,len-n, "P9_TREADDIR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.treaddir.fid);
 		n += snprintf(s+n,len-n, " offset %"PRIu64, fc->u.treaddir.offset);
 		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.treaddir.count);
 		break;
 	case P9_RREADDIR:
-		n += snprintf(s+n,len-n, "P9_RREADDIR tag %u ", fc->tag);
+		n += snprintf(s+n,len-n, "P9_RREADDIR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.rreaddir.count);
-		n += snprintf(s+n,len-n, " DATA ");
 		n += np_printdents(s+n,len-n, fc->u.rreaddir.data, fc->u.rreaddir.count);
 		break;
 	case P9_TFSYNC:
@@ -416,7 +437,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tmkdir.fid);
 		n += snprintf(s+n,len-n, " name %.*s",
 			fc->u.tmkdir.name.len, fc->u.tmkdir.name.str);
-		n += snprintf(s+n,len-n, " mode %"PRIu32, fc->u.tmkdir.mode);
+		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tmkdir.mode);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tmkdir.gid);
 		break;
 	case P9_RMKDIR:
