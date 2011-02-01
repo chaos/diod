@@ -818,6 +818,10 @@ np_lcreate(Npreq *req, Npfcall *tc)
 					tc->u.tlcreate.flags,
 					tc->u.tlcreate.mode,
 					tc->u.tlcreate.gid);
+	if (rc) {
+		np_fid_omode_set(fid, O_CREAT|O_WRONLY|O_TRUNC);
+		fid->type = rc->u.rlcreate.qid.type;
+	}
 done:
 	return rc;
 }

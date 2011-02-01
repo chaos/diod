@@ -237,7 +237,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlcreate.fid);
 		n += snprintf(s+n,len-n, " name %.*s",
 			fc->u.tlcreate.name.len, fc->u.tlcreate.name.str);
-		n += snprintf(s+n,len-n, " flags %"PRIu32, fc->u.tlcreate.flags);
+		n += snprintf(s+n,len-n, " flags 0x%"PRIx32, fc->u.tlcreate.flags);
 		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tlcreate.mode);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tlcreate.gid);
 		break;

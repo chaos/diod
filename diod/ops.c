@@ -1710,36 +1710,38 @@ done:
 }
 
 Npfcall*
-diod_lcreate(Npfid *dfid, Npstr *name, u32 flags, u32 mode, u32 gid)
+diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
 {
     Npfcall *ret = NULL;
-    Fid *df = dfid->aux;
+    Fid *f = fid->aux;
     char *npath = NULL;
     Npqid qid;
-    struct stat sb;
     mode_t saved_umask;
 
-    if (!diod_switch_user (dfid->user, gid)) {
+    if (!diod_switch_user (fid->user, gid)) {
         msg ("diod_lcreate: error switching user");
         goto done;
     }
-    if (!(npath = _mkpath(df->path, name))) {
+    if (!(npath = _mkpath(f->path, name))) {
         msg ("diod_lcreate: out of memory");
         goto done;
     }
+    /* assert (f->fd == -1); */
     saved_umask = umask(0);
-    if (creat (npath, mode) < 0) {
+    if ((f->fd = creat (npath, mode)) < 0) {
         np_uerror (errno);
         goto done;
     }
     umask(saved_umask);
-    if (lstat (npath, &sb) < 0) {
+    free (f->path);
+    f->path = npath;
+    npath = NULL;
+    if (_fidstat (f) < 0) {
         np_uerror (errno);
-        rmdir (npath);
         goto done;
     }
-    _ustat2qid (&sb, &qid);
-    if (!((ret = np_create_rlcreate (&qid, sb.st_blksize)))) {
+    _ustat2qid (&f->stat, &qid);
+    if (!((ret = np_create_rlcreate (&qid, f->stat.st_blksize)))) {
         np_uerror (ENOMEM);
         msg ("diod_lcreate: out of memory");
         goto done;
