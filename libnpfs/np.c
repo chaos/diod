@@ -291,18 +291,6 @@ buf_get_stat(struct cbuf *buf, Npstat *stat, int extended)
 
 #if HAVE_DOTL
 static inline void
-buf_get_iattr_dotl(struct cbuf *buf, struct p9_iattr_dotl *i)
-{
-	i->mode = buf_get_int32(buf);
-	i->uid = buf_get_int32(buf);
-	i->gid = buf_get_int32(buf);
-	i->size = buf_get_int64(buf);
-	i->atime_sec = buf_get_int64(buf);
-	i->atime_nsec = buf_get_int64(buf);
-	i->mtime_sec = buf_get_int64(buf);
-	i->mtime_nsec = buf_get_int64(buf);
-}
-static inline void
 buf_get_flock(struct cbuf *buf, struct p9_flock *fl)
 {
 	fl->type = buf_get_int8(buf);	
@@ -967,46 +955,43 @@ np_create_rreadlink(char *target)
 }
 
 Npfcall *
-np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 st_mode,
-  		u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
-		u64 st_size, u64 st_blksize, u64 st_blocks,
-		u64 st_atime_sec, u64 st_atime_nsec,
-		u64 st_mtime_sec, u64 st_mtime_nsec,
-		u64 st_ctime_sec, u64 st_ctime_nsec,
-		u64 st_btime_sec, u64 st_btime_nsec,
-		u64 st_gen, u64 st_data_version)
+np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 mode,
+  		u32 uid, u32 gid, u64 nlink, u64 rdev,
+		u64 size, u64 blksize, u64 blocks,
+		u64 atime_sec, u64 atime_nsec,
+		u64 mtime_sec, u64 mtime_nsec,
+		u64 ctime_sec, u64 ctime_nsec,
+		u64 btime_sec, u64 btime_nsec,
+		u64 gen, u64 data_version)
 {
-	int size;
+	int bufsize = sizeof(u64) + sizeof(*qid) + 3*sizeof(u32) + 15*sizeof(u64);
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = sizeof(u64) + sizeof(*qid) + 3*sizeof(u32) + 15*sizeof(u64);
-	fc = np_create_common(bufp, size, P9_RGETATTR);
-	if (!fc)
+	if (!(fc = np_create_common(bufp, bufsize, P9_RGETATTR)))
 		return NULL;
 
-	buf_put_int64(bufp, response_mask, &fc->u.rgetattr.response_mask);
-	buf_put_qid(bufp, qid, &fc->u.rgetattr.s.qid);
-	buf_put_int32(bufp, st_mode, &fc->u.rgetattr.s.st_mode);
-	buf_put_int32(bufp, st_uid, &fc->u.rgetattr.s.st_uid);
-	buf_put_int32(bufp, st_gid, &fc->u.rgetattr.s.st_gid);
-	buf_put_int64(bufp, st_nlink, &fc->u.rgetattr.s.st_nlink);
-	buf_put_int64(bufp, st_rdev, &fc->u.rgetattr.s.st_rdev);
-	buf_put_int64(bufp, st_size, &fc->u.rgetattr.s.st_size);
-	buf_put_int64(bufp, st_blksize, &fc->u.rgetattr.s.st_blksize);
-	buf_put_int64(bufp, st_blocks, &fc->u.rgetattr.s.st_blocks);
-	buf_put_int64(bufp, st_atime_sec, &fc->u.rgetattr.s.st_atime_sec);
-	buf_put_int64(bufp, st_atime_nsec, &fc->u.rgetattr.s.st_atime_nsec);
-	buf_put_int64(bufp, st_mtime_sec, &fc->u.rgetattr.s.st_mtime_sec);
-	buf_put_int64(bufp, st_mtime_nsec, &fc->u.rgetattr.s.st_mtime_nsec);
-	buf_put_int64(bufp, st_ctime_sec, &fc->u.rgetattr.s.st_ctime_sec);
-	buf_put_int64(bufp, st_ctime_nsec, &fc->u.rgetattr.s.st_ctime_nsec);
-	buf_put_int64(bufp, st_btime_sec, &fc->u.rgetattr.s.st_btime_sec);
-	buf_put_int64(bufp, st_btime_nsec, &fc->u.rgetattr.s.st_btime_nsec);
-	buf_put_int64(bufp, st_gen, &fc->u.rgetattr.s.st_gen);
-	buf_put_int64(bufp, st_data_version, &fc->u.rgetattr.s.st_data_version);
+	buf_put_int64(bufp, response_mask, &fc->u.rgetattr.valid);
+	buf_put_qid(bufp, qid, &fc->u.rgetattr.qid);
+	buf_put_int32(bufp, mode, &fc->u.rgetattr.mode);
+	buf_put_int32(bufp, uid, &fc->u.rgetattr.uid);
+	buf_put_int32(bufp, gid, &fc->u.rgetattr.gid);
+	buf_put_int64(bufp, nlink, &fc->u.rgetattr.nlink);
+	buf_put_int64(bufp, rdev, &fc->u.rgetattr.rdev);
+	buf_put_int64(bufp, size, &fc->u.rgetattr.size);
+	buf_put_int64(bufp, blksize, &fc->u.rgetattr.blksize);
+	buf_put_int64(bufp, blocks, &fc->u.rgetattr.blocks);
+	buf_put_int64(bufp, atime_sec, &fc->u.rgetattr.atime_sec);
+	buf_put_int64(bufp, atime_nsec, &fc->u.rgetattr.atime_nsec);
+	buf_put_int64(bufp, mtime_sec, &fc->u.rgetattr.mtime_sec);
+	buf_put_int64(bufp, mtime_nsec, &fc->u.rgetattr.mtime_nsec);
+	buf_put_int64(bufp, ctime_sec, &fc->u.rgetattr.ctime_sec);
+	buf_put_int64(bufp, ctime_nsec, &fc->u.rgetattr.ctime_nsec);
+	buf_put_int64(bufp, btime_sec, &fc->u.rgetattr.btime_sec);
+	buf_put_int64(bufp, btime_nsec, &fc->u.rgetattr.btime_nsec);
+	buf_put_int64(bufp, gen, &fc->u.rgetattr.gen);
+	buf_put_int64(bufp, data_version, &fc->u.rgetattr.data_version);
 
 	return np_post_check(fc, bufp);
 }
@@ -1276,8 +1261,15 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 	case P9_TSETATTR:
 		fc->u.tsetattr.fid = buf_get_int32(bufp);
-		fc->u.tsetattr.valid_mask = buf_get_int32(bufp);
-		buf_get_iattr_dotl(bufp, &fc->u.tsetattr.i);
+		fc->u.tsetattr.valid = buf_get_int32(bufp);
+		fc->u.tsetattr.mode = buf_get_int32(bufp);
+		fc->u.tsetattr.uid = buf_get_int32(bufp);
+		fc->u.tsetattr.gid = buf_get_int32(bufp);
+		fc->u.tsetattr.size = buf_get_int64(bufp);
+		fc->u.tsetattr.atime_sec = buf_get_int64(bufp);
+		fc->u.tsetattr.atime_nsec = buf_get_int64(bufp);
+		fc->u.tsetattr.mtime_sec = buf_get_int64(bufp);
+		fc->u.tsetattr.mtime_nsec = buf_get_int64(bufp);
 		break;
 	case P9_TXATTRWALK:
 		assert(0); /* FIXME */

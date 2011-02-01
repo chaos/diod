@@ -7,8 +7,7 @@ size[4] TReadlink tag[2] fid[4]
 size[4] RReadlink tag[2] target[s]
 .fi
 .SH DESCRIPTION
-Readlink is used to return the contents of the symoblic link
-referred by fid. Contents of symboic link is returned as a response.
+Readlink returns the contents of the symoblic link referenced by fid.
 .TP
 \fItarget[s]\fR
 Contents of the symbolic link referred by fid.

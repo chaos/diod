@@ -402,81 +402,38 @@ struct p9_wstat {
 	u32 n_muid;		/* 9p2000.u extensions */
 };
 
-struct p9_stat_dotl {
-	struct p9_qid qid;
-	u32 st_mode;
-	u32 st_uid;
-	u32 st_gid;
-	u64 st_nlink;
-	u64 st_rdev;
-	u64 st_size;
-	u64 st_blksize;
-	u64 st_blocks;
-	u64 st_atime_sec;
-	u64 st_atime_nsec;
-	u64 st_mtime_sec;
-	u64 st_mtime_nsec;
-	u64 st_ctime_sec;
-	u64 st_ctime_nsec;
-	u64 st_btime_sec;
-	u64 st_btime_nsec;
-	u64 st_gen;
-	u64 st_data_version;
-};
-
-#define P9_STATS_MODE		0x00000001ULL
-#define P9_STATS_NLINK		0x00000002ULL
-#define P9_STATS_UID		0x00000004ULL
-#define P9_STATS_GID		0x00000008ULL
-#define P9_STATS_RDEV		0x00000010ULL
-#define P9_STATS_ATIME		0x00000020ULL
-#define P9_STATS_MTIME		0x00000040ULL
-#define P9_STATS_CTIME		0x00000080ULL
-#define P9_STATS_INO		0x00000100ULL
-#define P9_STATS_SIZE		0x00000200ULL
-#define P9_STATS_BLOCKS		0x00000400ULL
-
-#define P9_STATS_BTIME		0x00000800ULL
-#define P9_STATS_GEN		0x00001000ULL
-#define P9_STATS_DATA_VERSION	0x00002000ULL
-
-#define P9_STATS_BASIC		0x000007ffULL /* Mask for fields up to BLOCKS */
-#define P9_STATS_ALL		0x00003fffULL /* Mask for All fields above */
-
-/**
- * struct p9_iattr_dotl - P9 inode attribute for setattr
- * @valid: bitfield specifying which fields are valid
- *         same as in struct iattr
- * @mode: File permission bits
- * @uid: user id of owner
- * @gid: group id
- * @size: File size
- * @atime_sec: Last access time, seconds
- * @atime_nsec: Last access time, nanoseconds
- * @mtime_sec: Last modification time, seconds
- * @mtime_nsec: Last modification time, nanoseconds
+/* Bit values for getattr valid field.
  */
+#define P9_GETATTR_MODE		0x00000001ULL
+#define P9_GETATTR_NLINK	0x00000002ULL
+#define P9_GETATTR_UID		0x00000004ULL
+#define P9_GETATTR_GID		0x00000008ULL
+#define P9_GETATTR_RDEV		0x00000010ULL
+#define P9_GETATTR_ATIME	0x00000020ULL
+#define P9_GETATTR_MTIME	0x00000040ULL
+#define P9_GETATTR_CTIME	0x00000080ULL
+#define P9_GETATTR_INO		0x00000100ULL
+#define P9_GETATTR_SIZE		0x00000200ULL
+#define P9_GETATTR_BLOCKS	0x00000400ULL
 
-struct p9_iattr_dotl {
-	u32 mode;
-	u32 uid;
-	u32 gid;
-	u64 size;
-	u64 atime_sec;
-	u64 atime_nsec;
-	u64 mtime_sec;
-	u64 mtime_nsec;
-};
+#define P9_GETATTR_BTIME	0x00000800ULL
+#define P9_GETATTR_GEN		0x00001000ULL
+#define P9_GETATTR_DATA_VERSION	0x00002000ULL
 
-#define P9_IATTR_MODE		0x00000001UL
-#define P9_IATTR_UID		0x00000002UL
-#define P9_IATTR_GID		0x00000004UL
-#define P9_IATTR_SIZE		0x00000008UL
-#define P9_IATTR_ATIME		0x00000010UL
-#define P9_IATTR_MTIME		0x00000020UL
-#define P9_IATTR_CTIME		0x00000040UL
-#define P9_IATTR_ATIME_SET	0x00000080UL
-#define P9_IATTR_MTIME_SET	0x00000100UL
+#define P9_GETATTR_BASIC	0x000007ffULL /* Mask for fields up to BLOCKS */
+#define P9_GETATTR_ALL		0x00003fffULL /* Mask for All fields above */
+
+/* Bit values for setattr valid field.
+ */
+#define P9_SETATTR_MODE		0x00000001UL
+#define P9_SETATTR_UID		0x00000002UL
+#define P9_SETATTR_GID		0x00000004UL
+#define P9_SETATTR_SIZE		0x00000008UL
+#define P9_SETATTR_ATIME	0x00000010UL
+#define P9_SETATTR_MTIME	0x00000020UL
+#define P9_SETATTR_CTIME	0x00000040UL
+#define P9_SETATTR_ATIME_SET	0x00000080UL
+#define P9_SETATTR_MTIME_SET	0x00000100UL
 
 #define P9_LOCK_SUCCESS 0
 #define P9_LOCK_BLOCKED 1
@@ -595,13 +552,38 @@ struct p9_tgetattr {
 	u64 request_mask;
 };
 struct p9_rgetattr {
-	u64 response_mask;
-	struct p9_stat_dotl s;
+	u64 valid;
+	struct p9_qid qid;
+	u32 mode;
+	u32 uid;
+	u32 gid;
+	u64 nlink;
+	u64 rdev;
+	u64 size;
+	u64 blksize;
+	u64 blocks;
+	u64 atime_sec;
+	u64 atime_nsec;
+	u64 mtime_sec;
+	u64 mtime_nsec;
+	u64 ctime_sec;
+	u64 ctime_nsec;
+	u64 btime_sec;
+	u64 btime_nsec;
+	u64 gen;
+	u64 data_version;
 };
 struct p9_tsetattr {
 	u32 fid;
-	u32 valid_mask;
-	struct p9_iattr_dotl i;	
+	u32 valid;
+	u32 mode;
+	u32 uid;
+	u32 gid;
+	u64 size;
+	u64 atime_sec;
+	u64 atime_nsec;
+	u64 mtime_sec;
+	u64 mtime_nsec;
 };
 struct p9_rsetattr {
 };

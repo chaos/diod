@@ -4,125 +4,95 @@
 .SH SYNOPSIS
 .nf
 size[4] Tgetattr tag[2] fid[4] request_mask[8]
-size[4] Rgetattr tag[2] response_mask[8] lstat[n]
+size[4] Rgetattr tag[2] valid[8] qid[13] mode[4] nlink[8] uid[4] gid[4]
+                 rdev[8] size[8] blksize]8] blocks[8]
+                 atime_sec[8] atime_nsec[8] mtime_sec[8] mtime_nsec[8]
+                 ctime_sec[8] ctime_nsec[8] btime_sec[8] btime_nsec[8]
+                 gen[8] data_version[8]
 .fi
 .SH DESCRIPTION
-The getattr transaction inquires about the file identified by fid.
-The reply will contain a machine-independent directory entry,
-laid out as follows.  Only fields with appropriate bit set in
-request_mask[8] need be returned.  Similarly, response_mask[8]
-indicates which fields are valid in the response.
-See below for bit values.
+getattr requests file attributes identified in request_mask[8]
+for the file referenced by fid.  The same bit values are
+used in both valid[8] and request_mask[8] (see below).
 .TP
-\fIst_result_mask[8]\fR
+\fIvalid[8]\fR
 A bitmask indicating which fields in the response are valid.
 See below for bit values.
 .TP
-\fIqid.type[1]\fR
-the type of the file (directory, etc.), represented as a bit
-vector corresponding to the high 8 bits of the file's mode word.
+\fIqid[13]\fR
+The qid of the file.
 .br
-Valid if bit P9_STATS_INO (0x100) is set in result_mask[8].
+Valid if P9_GETATTR_INO (0x100) is set in valid[8].
 .TP
-\fIqid.vers[4]\fR
-version number for given path.
-.br
-Valid if bit P9_STATS_INO (0x0100) is set in result_mask[8].
-.TP
-\fIqid.path[8]\fR
-the file server's unique identification for the file
-.br
-Valid if bit P9_STATS_INO (0x0100) is set in result_mask[8].
-.TP
-\fIst_mode[4]\fR
+\fImode[4]\fR
 Permission and flags
 .br
-Valid if bit P9_STATS_MODE (0x0001) is set in result_mask[8].
+Valid if P9_GETATTR_MODE (0x1) is set in valid[8].
 .TP
-\fIst_nlink[8]\fR
+\fInlink[8]\fR
 Number of hard links
 .br
-Valid if bit P9_STATS_NLINK (0x0002) is set in result_mask[8].
+Valid if P9_GETATTR_NLINK (0x2) is set in valid[8].
 .TP
-\fIst_uid[4]\fR
+\fIuid[4]\fR
 User id of owner
 .br
-Valid if bit P9_STATS_UID (0x0004) is set in result_mask[8].
+Valid if P9_GETATTR_UID (0x4) is set in valid[8].
 .TP
-\fIst_gid[4]\fR
+\fIgid[4]\fR
 Group ID of owner
 .br
-Valid if bit P9_STATS_GID (0x0008) is set in result_mask[8].
+Valid if P9_GETATTR_GID (0x8) is set in valid[8].
 .TP
-\fIst_rdev[8]\fR
+\fIrdev[8]\fR
 Device ID (if special file)
 .br
-Valid if bit P9_STATS_RDEV (0x0010) is set in result_mask[8].
+Valid if P9_GETATTR_RDEV (0x10) is set in valid[8].
 .TP
-\fIst_size[8]\fR
+\fIsize[8]\fR
 Size, in bytes
 .br
-Valid if bit P9_STATS_SIZE (0x0200) is set in result_mask[8].
+Valid if P9_GETATTR_SIZE (0x200) is set in valid[8].
 .TP
-\fIst_blksize[8]\fR
+\fIblksize[8]\fR
 Block size for file system IO.
 .br
 Always must be valid (no mask bit).
 .TP
-\fIst_blocks[8]\fR
+\fIblocks[8]\fR
 Number of file system blocks allocated
 .br
-Valid if bit P9_STATS_BLOCKS (0x0400) is set in result_mask[8].
+Valid if P9_GETATTR_BLOCKS (0x400) is set in valid[8].
 .TP
-\fIst_atime_sec[8]\fR
-Time of last access, seconds
+\fIatime_sec[8]\fR, \fIatime_nsec[8]\fR
+Time of last access, seconds and nanoseconds.
 .br
-Valid if bit P9_STATS_ATIME (0x0020) is set in result_mask[8].
+Valid if P9_GETATTR_ATIME (0x20) is set in valid[8].
 .TP
-\fIst_atime_nsec[8]\fR
-Time of last access, nanoseconds
+\fImtime_sec[8]\fR, \fImtime_nsec[8]\fR
+Time of last modification, seconds and nanoseconds.
 .br
-Valid if bit P9_STATS_ATIME (0x0020) is set in result_mask[8].
+Valid if P9_GETATTR_MTIME (0x40) is set in valid[8].
 .TP
-\fIst_mtime_sec[8]\fR
-Time of last modification, seconds
+\fIctime_sec[8]\fR, \fIctime_nsec[8]\fR
+Time of last status change, seconds and nanoseconds.
 .br
-Valid if bit P9_STATS_MTIME (0x0040) is set in result_mask[8].
+Valid if P9_GETATTR_CTIME (0x80) is set in valid[8].
 .TP
-\fIst_mtime_nsec[8]\fR
-Time of last modification, nanoseconds
+\fIbtime_sec[8]\fR, \fIbtime_nsec[8]\fR
+Time of last backup, seconds and nanoseconds (not currently used).
 .br
-Valid if bit P9_STATS_MTIME (0x0040) is set in result_mask[8].
+Valid if P9_GETATTR_BTIME (0x800) is set in valid[8].
 .TP
-\fIst_ctime_sec[8]\fR
-Time of last status change, seconds
-.br
-Valid if bit P9_STATS_CTIME (0x0080) is set in result_mask[8].
-.TP
-\fIst_ctime_nsec[8]\fR
-Time of last status change, nanoseconds
-.br
-Valid if bit P9_STATS_CTIME (0x0080) is set in result_mask[8].
-.TP
-\fIst_btime_sec[8]\fR
-Reserved for future use.
-.br
-Valid if bit P9_STATS_BTIME (0x0800) is set in result_mask[8].
-.TP
-\fIst_btime_nsec[8]\fR
-Reserved for future use.
-.br
-Valid if bit P9_STATS_BTIME (0x0800) is set in result_mask[8].
-.TP
-\fIst_gen[8]\fR
+\fIgen[8]\fR
 Inode generation number.
 .br
-Valid if bit P9_STATS_GEN (0x1000) is set in result_mask[8].
+Valid if P9_GETATTR_GEN (0x1000) is set in valid[8].
 .TP
-\fIst_data_version[8]\fR
+\fIdata_version[8]\fR
 Reserved for future use.
 .br
-Valid if bit P9_STATS_DATA_VERSION (0x2000) is set in result_mask[8].
+Valid if P9_GETATTR_DATA_VERSION (0x2000) is set in valid[8].
 .SH ORIGIN
 9P2000.L
 .SH SEE ALSO

@@ -294,7 +294,8 @@ struct Npsrv {
 	Npfcall*	(*rename)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*readlink)(Npfid *);
 	Npfcall*	(*getattr)(Npfid *, u64);
-	Npfcall*	(*setattr)(Npfid *, u32, struct p9_iattr_dotl *);
+	Npfcall*	(*setattr)(Npfid *, u32, u32, u32, u32, u64, u64, u64,
+				   u64, u64);
 	Npfcall*	(*xattrwalk)(void); /* FIXME */
 	Npfcall*	(*xattrcreate)(void); /* FIXME */
 	Npfcall*	(*readdir)(Npfid *, u64, u32, Npreq *);
@@ -453,14 +454,14 @@ Npfcall *np_create_rsymlink (struct p9_qid *qid);
 Npfcall *np_create_rreadlink(char *symtgt);
 Npfcall *np_create_rmknod (struct p9_qid *qid);
 Npfcall *np_create_rrename(void);
-Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
-		u32 st_mode, u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,
-                u64 st_size, u64 st_blksize, u64 st_blocks,
-                u64 st_atime_sec, u64 st_atime_nsec,
-                u64 st_mtime_sec, u64 st_mtime_nsec,
-                u64 st_ctime_sec, u64 st_ctime_nsec,
-                u64 st_btime_sec, u64 st_btime_nsec,
-                u64 st_gen, u64 st_data_version);
+Npfcall *np_create_rgetattr(u64 valid, struct p9_qid *qid,
+		u32 mode, u32 uid, u32 gid, u64 nlink, u64 rdev,
+                u64 size, u64 blksize, u64 st_blocks,
+                u64 atime_sec, u64 atime_nsec,
+                u64 mtime_sec, u64 mtime_nsec,
+                u64 ctime_sec, u64 ctime_nsec,
+                u64 btime_sec, u64 btime_nsec,
+                u64 gen, u64 data_version);
 Npfcall *np_create_rsetattr(void);
 Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);

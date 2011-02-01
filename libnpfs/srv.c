@@ -71,7 +71,8 @@ static Npfcall* np_default_mknod(Npfid *, Npstr *, u32, u32, u32, u32);
 static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
 static Npfcall* np_default_readlink(Npfid *);
 static Npfcall* np_default_getattr(Npfid *, u64);
-static Npfcall* np_default_setattr(Npfid *, u32, struct p9_iattr_dotl *);
+static Npfcall* np_default_setattr(Npfid *, u32, u32, u32, u32, u64,
+                                   u64, u64, u64, u64);
 static Npfcall* np_default_xattrwalk(void); /* FIXME */
 static Npfcall* np_default_xattrcreate(void); /* FIXME */
 static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
@@ -792,7 +793,8 @@ np_default_getattr(Npfid *fid, u64 request_mask)
 	return NULL;
 }
 static Npfcall*
-np_default_setattr(Npfid *fid, u32 valid_mask, struct p9_iattr_dotl *attr)
+np_default_setattr(Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
+                   u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
 {
 	np_uerror(ENOSYS);
 	return NULL;

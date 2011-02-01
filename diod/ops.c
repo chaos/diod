@@ -148,8 +148,8 @@ Npfcall     *diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major,
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 Npfcall     *diod_readlink(Npfid *fid);
 Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
-Npfcall     *diod_setattr (Npfid *fid, u32 valid_mask,
-                           struct p9_iattr_dotl *iattr);
+Npfcall     *diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
+                        u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec);
 Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_fsync (Npfid *fid);
 Npfcall     *diod_lock (Npfid *fid, struct p9_flock *flock);
@@ -1912,7 +1912,7 @@ diod_getattr(Npfid *fid, u64 request_mask)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     Npqid qid;
-    u64 result_mask = P9_STATS_BASIC;
+    u64 result_mask = P9_GETATTR_BASIC;
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_getattr: error switching user");
@@ -1936,7 +1936,8 @@ done:
 }
 
 Npfcall*
-diod_setattr (Npfid *fid, u32 valid, struct p9_iattr_dotl *iattr)
+diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
+              u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
 {
     Npfcall *ret = NULL;
     Fid *f = fid->aux;
@@ -1947,50 +1948,50 @@ diod_setattr (Npfid *fid, u32 valid, struct p9_iattr_dotl *iattr)
     }
 
     /* chmod */
-    if ((valid & P9_IATTR_MODE) && chmod (f->path, iattr->mode) < 0) {
+    if ((valid & P9_SETATTR_MODE) && chmod (f->path, mode) < 0) {
         np_uerror(errno);
         goto done;
     }
 
     /* chown */
-    if ((valid & P9_IATTR_UID) || (valid & P9_IATTR_GID)) {
-        if (chown (f->path, (valid & P9_IATTR_UID) ? iattr->uid : -1,
-                            (valid & P9_IATTR_GID) ? iattr->gid : -1) < 0) {
+    if ((valid & P9_SETATTR_UID) || (valid & P9_SETATTR_GID)) {
+        if (chown (f->path, (valid & P9_SETATTR_UID) ? uid : -1,
+                            (valid & P9_SETATTR_GID) ? gid : -1) < 0) {
             np_uerror(errno);
             goto done;
         }
     }
 
     /* truncate */
-    if ((valid & P9_IATTR_SIZE) && truncate (f->path, iattr->size) < 0) {
+    if ((valid & P9_SETATTR_SIZE) && truncate (f->path, size) < 0) {
         np_uerror(errno);
         goto done;
     }
 
     /* utimes */
-    if ((valid & P9_IATTR_ATIME) || (valid & P9_IATTR_MTIME)) {
+    if ((valid & P9_SETATTR_ATIME) || (valid & P9_SETATTR_MTIME)) {
         struct timespec ts[2];
 
-        if (!(valid & P9_IATTR_ATIME)) {
+        if (!(valid & P9_SETATTR_ATIME)) {
             ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_OMIT;
-        } else if (!(valid & P9_IATTR_ATIME_SET)) {
+        } else if (!(valid & P9_SETATTR_ATIME_SET)) {
             ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_NOW;
         } else {
-            ts[0].tv_sec = iattr->atime_sec;
-            ts[0].tv_nsec = iattr->atime_nsec;
+            ts[0].tv_sec = atime_sec;
+            ts[0].tv_nsec = atime_nsec;
         }
 
-        if (!(valid & P9_IATTR_MTIME)) {
+        if (!(valid & P9_SETATTR_MTIME)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_OMIT;
-        } else if (!(valid & P9_IATTR_MTIME_SET)) {
+        } else if (!(valid & P9_SETATTR_MTIME_SET)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_NOW;
         } else {
-            ts[1].tv_sec = iattr->mtime_sec;
-            ts[1].tv_nsec = iattr->mtime_nsec;
+            ts[1].tv_sec = mtime_sec;
+            ts[1].tv_nsec = mtime_nsec;
         }
 
         if (utimensat(-1, f->path, ts, 0) < 0) {

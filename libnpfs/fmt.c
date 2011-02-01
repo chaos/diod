@@ -170,73 +170,6 @@ np_timestr(const u64 sec, const u64 nsec)
 
 #if HAVE_DOTL
 static int
-np_printlstat(char *s, int len, struct p9_stat_dotl *lp)
-{
-	int n;
-
-	n = snprintf(s,len, "qid ");
-	n += np_printqid(s+n,len-n, &lp->qid);
-	n += snprintf(s+n,len-n, " mode %"PRIu32, lp->st_mode);
-	n += snprintf(s+n,len-n, " uid %"PRIu32, lp->st_uid);
-	n += snprintf(s+n,len-n, " gid %"PRIu32, lp->st_gid);
-	n += snprintf(s+n,len-n, " nlink %"PRIu64, lp->st_nlink);
-	n += snprintf(s+n,len-n, " rdev %"PRIu64, lp->st_rdev);
-	n += snprintf(s+n,len-n, " size %"PRIu64, lp->st_size);
-	n += snprintf(s+n,len-n, " blksize %"PRIu64, lp->st_blksize);
-	n += snprintf(s+n,len-n, " blocks %"PRIu64, lp->st_blocks);
-	n += snprintf(s+n,len-n, " gen %"PRIu64, lp->st_gen);
-	n += snprintf(s+n,len-n, " data_version %"PRIu64, lp->st_data_version);
-	n += snprintf(s+n,len-n, " atime %s",
-		np_timestr(lp->st_atime_sec, lp->st_atime_nsec));
-	n += snprintf(s+n,len-n, " mtime %s",
-		np_timestr(lp->st_mtime_sec, lp->st_mtime_nsec));
-	n += snprintf(s+n,len-n, " ctime %s",
-		np_timestr(lp->st_ctime_sec, lp->st_ctime_nsec));
-	n += snprintf(s+n,len-n, " btime %s",
-		np_timestr(lp->st_btime_sec, lp->st_btime_nsec));
-
-	return n;
-}
-
-static int
-np_printiattr(char *s, int len, u32 valid, struct p9_iattr_dotl *ip)
-{
-	int n = 0;
-
-	if ((valid & P9_IATTR_MODE))
-		n += snprintf(s+n,len-n, "mode %"PRIu32, ip->mode);
-	else
-		n += snprintf(s+n,len-n, "mode X");
-	if ((valid & P9_IATTR_UID))
-		n += snprintf(s+n,len-n, " uid %"PRIu32, ip->uid);
-	else
-		n += snprintf(s+n,len-n, " uid X");
-	if ((valid & P9_IATTR_GID))
-		n += snprintf(s+n,len-n, " gid %"PRIu32, ip->gid);
-	else
-		n += snprintf(s+n,len-n, " gid X");
-	if ((valid & P9_IATTR_SIZE))
-		n += snprintf(s+n,len-n, " size %"PRIu64, ip->size);
-	else
-		n += snprintf(s+n,len-n, " size X");
-	if (!(valid & P9_IATTR_ATIME))
-		n += snprintf(s+n,len-n, " atime X");
-	else if (!(valid & P9_IATTR_ATIME_SET))
-		n += snprintf(s+n,len-n, " atime X");
-	else
-		n += snprintf(s+n,len-n, " atime %s",
-			np_timestr(ip->atime_sec, ip->atime_nsec));
-	if (!(valid & P9_IATTR_MTIME))
-		n += snprintf(s+n,len-n, " mtime X");
-	else if (!(valid & P9_IATTR_MTIME_SET))
-		n += snprintf(s+n,len-n, " mtime now");
-	else
-		n += snprintf(s+n,len-n, " mtime %s",
-			np_timestr(ip->mtime_sec, ip->mtime_nsec));
-	return n;
-}
-
-static int
 np_printdents(char *s, int len, u8 *buf, int buflen)
 {
 	/* FIXME: decode directory entries here */
@@ -366,16 +299,104 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 	case P9_RGETATTR:
 		n += snprintf(s+n,len-n, "P9_RGETATTR tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " response_mask 0x%"PRIx64, fc->u.rgetattr.response_mask);
-		n += snprintf(s+n,len-n, " ");
-		n += np_printlstat(s+n,len-n, &fc->u.rgetattr.s);
+		n += snprintf(s+n,len-n, " valid 0x%"PRIx64, fc->u.rgetattr.valid);
+		n += snprintf(s+n,len-n, " qid ");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_INO))
+			n += np_printqid(s+n,len-n, &fc->u.rgetattr.qid);
+		else
+			n += snprintf(s+n,len-n, "X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_MODE))
+			n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.rgetattr.mode);
+		else
+			n += snprintf(s+n,len-n, " mode X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_UID))
+			n += snprintf(s+n,len-n, " uid %"PRIu32, fc->u.rgetattr.uid);
+		else
+			n += snprintf(s+n,len-n, " uid X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_GID))
+			n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.rgetattr.gid);
+		else
+			n += snprintf(s+n,len-n, " gid X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_NLINK))
+			n += snprintf(s+n,len-n, " nlink %"PRIu64, fc->u.rgetattr.nlink);
+		else
+			n += snprintf(s+n,len-n, " nlink X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_RDEV))
+			n += snprintf(s+n,len-n, " rdev %"PRIu64, fc->u.rgetattr.rdev);
+		else
+			n += snprintf(s+n,len-n, " rdev X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_SIZE))
+			n += snprintf(s+n,len-n, " size %"PRIu64, fc->u.rgetattr.size);
+		else
+			n += snprintf(s+n,len-n, " size X");
+		n += snprintf(s+n,len-n, " blksize %"PRIu64, fc->u.rgetattr.blksize);
+		if ((fc->u.rgetattr.valid & P9_GETATTR_BLOCKS))
+			n += snprintf(s+n,len-n, " blocks %"PRIu64, fc->u.rgetattr.blocks);
+		else
+			n += snprintf(s+n,len-n, " blocks X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_ATIME))
+			n += snprintf(s+n,len-n, " atime %s",
+				np_timestr(fc->u.rgetattr.atime_sec, fc->u.rgetattr.atime_nsec));
+		else
+			n += snprintf(s+n,len-n, " atime X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_MTIME))
+			n += snprintf(s+n,len-n, " mtime %s",
+				np_timestr(fc->u.rgetattr.mtime_sec, fc->u.rgetattr.mtime_nsec));
+		else
+			n += snprintf(s+n,len-n, " mtime X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_CTIME))
+			n += snprintf(s+n,len-n, " ctime %s",
+				np_timestr(fc->u.rgetattr.ctime_sec, fc->u.rgetattr.ctime_nsec));
+		else
+			n += snprintf(s+n,len-n, " ctime X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_BTIME))
+			n += snprintf(s+n,len-n, " btime %s",
+				np_timestr(fc->u.rgetattr.btime_sec, fc->u.rgetattr.btime_nsec));
+		else
+			n += snprintf(s+n,len-n, " btime X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_GEN))
+			n += snprintf(s+n,len-n, " gen %"PRIu64, fc->u.rgetattr.gen);
+		else
+			n += snprintf(s+n,len-n, " gen X");
+		if ((fc->u.rgetattr.valid & P9_GETATTR_DATA_VERSION))
+			n += snprintf(s+n,len-n, " data_version %"PRIu64, fc->u.rgetattr.data_version);
+		else
+			n += snprintf(s+n,len-n, " data_version X");
 		break;
 	case P9_TSETATTR:
 		n += snprintf(s+n,len-n, "P9_TSETATTR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tsetattr.fid);
-		n += snprintf(s+n,len-n, " valid_mask 0x%"PRIx32, fc->u.tsetattr.valid_mask);
-		n += snprintf(s+n,len-n, " ");
-		n += np_printiattr(s+n,len-n, fc->u.tsetattr.valid_mask, &fc->u.tsetattr.i);
+		n += snprintf(s+n,len-n, " valid 0x%"PRIx32, fc->u.tsetattr.valid);
+		if ((fc->u.tsetattr.valid & P9_SETATTR_MODE))
+			n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tsetattr.mode);
+		else
+			n += snprintf(s+n,len-n, " mode X");
+		if ((fc->u.tsetattr.valid & P9_SETATTR_UID))
+			n += snprintf(s+n,len-n, " uid %"PRIu32, fc->u.tsetattr.uid);
+		else
+			n += snprintf(s+n,len-n, " uid X");
+		if ((fc->u.tsetattr.valid & P9_SETATTR_GID))
+			n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tsetattr.gid);
+		else
+			n += snprintf(s+n,len-n, " gid X");
+		if ((fc->u.tsetattr.valid & P9_SETATTR_SIZE))
+			n += snprintf(s+n,len-n, " size %"PRIu64, fc->u.tsetattr.size);
+		else
+			n += snprintf(s+n,len-n, " size X");
+		if (!(fc->u.tsetattr.valid & P9_SETATTR_ATIME))
+			n += snprintf(s+n,len-n, " atime X");
+		else if (!(fc->u.tsetattr.valid & P9_SETATTR_ATIME_SET))
+			n += snprintf(s+n,len-n, " atime X");
+		else
+			n += snprintf(s+n,len-n, " atime %s",
+				np_timestr(fc->u.tsetattr.atime_sec, fc->u.tsetattr.atime_nsec));
+		if (!(fc->u.tsetattr.valid & P9_SETATTR_MTIME))
+			n += snprintf(s+n,len-n, " mtime X");
+		else if (!(fc->u.tsetattr.valid & P9_SETATTR_MTIME_SET))
+			n += snprintf(s+n,len-n, " mtime now");
+		else
+			n += snprintf(s+n,len-n, " mtime %s",
+				np_timestr(fc->u.tsetattr.mtime_sec, fc->u.tsetattr.mtime_nsec));
 		break;
 	case P9_RSETATTR:
 		n += snprintf(s+n,len-n, "P9_RSETATTR tag %u", fc->tag);

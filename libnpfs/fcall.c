@@ -896,8 +896,7 @@ np_getattr(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	rc = (*req->conn->srv->getattr)(fid,
-					tc->u.tgetattr.request_mask);
+	rc = (*req->conn->srv->getattr)(fid, tc->u.tgetattr.request_mask);
 done:
 	return rc;
 }
@@ -911,8 +910,15 @@ np_setattr(Npreq *req, Npfcall *tc)
 	if (!fid)
 		goto done;
 	rc = (*req->conn->srv->setattr)(fid,
-					tc->u.tsetattr.valid_mask,
-					&tc->u.tsetattr.i);
+					tc->u.tsetattr.valid,
+					tc->u.tsetattr.mode,
+					tc->u.tsetattr.uid,
+					tc->u.tsetattr.gid,
+					tc->u.tsetattr.size,
+					tc->u.tsetattr.atime_sec,
+					tc->u.tsetattr.atime_nsec,
+					tc->u.tsetattr.mtime_sec,
+					tc->u.tsetattr.mtime_nsec);
 done:
 	return rc;
 }
