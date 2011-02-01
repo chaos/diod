@@ -1076,7 +1076,6 @@ np_create_rfsync(void)
 	return np_post_check(fc, bufp);
 }
 
-/* FIXME: Npfcall * np_create_rfsync() */
 /* FIXME: Npfcall * np_create_rlock() */
 /* FIXME: Npfcall * np_create_rgetlock() */
 

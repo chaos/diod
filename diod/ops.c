@@ -1971,21 +1971,27 @@ diod_setattr (Npfid *fid, u32 valid, struct p9_iattr_dotl *iattr)
     if ((valid & P9_IATTR_ATIME) || (valid & P9_IATTR_MTIME)) {
         struct timespec ts[2];
 
-        ts[0].tv_sec = iattr->atime_sec;
-        if (!(valid & P9_IATTR_ATIME))
+        if (!(valid & P9_IATTR_ATIME)) {
+            ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_OMIT;
-        else if (!(valid & P9_IATTR_ATIME_SET))
+        } else if (!(valid & P9_IATTR_ATIME_SET)) {
+            ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_NOW;
-        else
+        } else {
+            ts[0].tv_sec = iattr->atime_sec;
             ts[0].tv_nsec = iattr->atime_nsec;
+        }
 
-        ts[1].tv_sec = iattr->mtime_sec;
-        if (!(valid & P9_IATTR_MTIME))
+        if (!(valid & P9_IATTR_MTIME)) {
+            ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_OMIT;
-        else if (!(valid & P9_IATTR_MTIME_SET))
+        } else if (!(valid & P9_IATTR_MTIME_SET)) {
+            ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_NOW;
-        else
+        } else {
+            ts[1].tv_sec = iattr->mtime_sec;
             ts[1].tv_nsec = iattr->mtime_nsec;
+        }
 
         if (utimensat(-1, f->path, ts, 0) < 0) {
             np_uerror(errno);
