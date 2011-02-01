@@ -356,7 +356,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 	case P9_RREADLINK:
 		n += snprintf(s+n,len-n, "P9_RREADLINK tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " target %s", fc->u.rreadlink.target);
+		n += snprintf(s+n,len-n, " target %.*s",
+			fc->u.rreadlink.target.len, fc->u.rreadlink.target.str);
 		break;
 	case P9_TGETATTR:
 		n += snprintf(s+n,len-n, "P9_TGETATTR tag %u", fc->tag);

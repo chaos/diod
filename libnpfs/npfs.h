@@ -449,6 +449,9 @@ Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 files, u64 ffree, u64 fsid, u32 namelen);
 Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
 Npfcall *np_create_rlcreate(struct p9_qid *qid, u32 iounit);
+Npfcall *np_create_rsymlink (struct p9_qid *qid);
+Npfcall *np_create_rreadlink(char *symtgt);
+Npfcall *np_create_rmknod (struct p9_qid *qid);
 Npfcall *np_create_rrename(void);
 Npfcall *np_create_rgetattr(u64 st_result_mask, struct p9_qid *qid,
 		u32 st_mode, u32 st_uid, u32 st_gid, u64 st_nlink, u64 st_rdev,

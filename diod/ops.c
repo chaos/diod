@@ -142,8 +142,8 @@ Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
 Npfcall     *diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode,
                           u32 gid);
-Npfcall     *diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid);
-Npfcall     *diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major,
+Npfcall     *diod_symlink(Npfid *dfid, Npstr *name, Npstr *symtgt, u32 gid);
+Npfcall     *diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major,
                         u32 minor, u32 gid);
 Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
 Npfcall     *diod_readlink(Npfid *fid);
@@ -207,10 +207,10 @@ diod_register_ops (Npsrv *srv)
     srv->statfs = diod_statfs;
     srv->lopen = diod_lopen;
     srv->lcreate = diod_lcreate;
-    //srv->symlink = diod_symlink;
-    //srv->mknod = diod_mknod;
+    srv->symlink = diod_symlink;
+    srv->mknod = diod_mknod;
     srv->rename = diod_rename;
-    //srv->readlink = diod_readlink;
+    srv->readlink = diod_readlink;
     srv->getattr = diod_getattr;
     srv->setattr = diod_setattr;
     //srv->xattrwalk = diod_xattrwalk;
@@ -1751,28 +1751,90 @@ done:
 }
 
 Npfcall*
-diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
+diod_symlink(Npfid *dfid, Npstr *name, Npstr *symtgt, u32 gid)
 {
     Npfcall *ret = NULL;
+    Fid *df = dfid->aux;
+    char *target = NULL, *npath = NULL;
+    Npqid qid;
+    struct stat sb;
+    mode_t saved_umask;
 
-    if (!diod_switch_user (fid->user, gid)) {
+    if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_symlink: error switching user");
         goto done;
     }
+    if (!(npath = _mkpath(df->path, name))) {
+        msg ("diod_symlink: out of memory");
+        goto done;
+    }
+    if (!(target = _p9strdup (symtgt))) {
+        msg ("diod_symlink: out of memory");
+        goto done;
+    }
+    saved_umask = umask(0);
+    if (symlink (target, npath) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    umask(saved_umask);
+    if (lstat (npath, &sb) < 0) {
+        np_uerror (errno);
+        rmdir (npath);
+        goto done;
+    }
+    _ustat2qid (&sb, &qid);
+    if (!((ret = np_create_rsymlink (&qid)))) {
+        np_uerror (ENOMEM);
+        msg ("diod_symlink: out of memory");
+        goto done;
+    }
 done:
+    if (npath)
+        free (npath);
+    if (target)
+        free (target);
     return ret;
 }
 
 Npfcall*
-diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
+diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
 {
     Npfcall *ret = NULL;
+    Fid *df = dfid->aux;
+    char *npath = NULL;
+    Npqid qid;
+    struct stat sb;
+    mode_t saved_umask;
 
-    if (!diod_switch_user (fid->user, gid)) {
+    if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_mknod: error switching user");
         goto done;
     }
+    if (!(npath = _mkpath(df->path, name))) {
+        msg ("diod_mknod: out of memory");
+        goto done;
+    }
+    saved_umask = umask(0);
+    if (mknod (npath, mode, makedev (major, minor)) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    umask(saved_umask);
+    if (lstat (npath, &sb) < 0) {
+        np_uerror (errno);
+        rmdir (npath);
+        goto done;
+    }
+    _ustat2qid (&sb, &qid);
+    if (!((ret = np_create_rsymlink (&qid)))) {
+        np_uerror (ENOMEM);
+        msg ("diod_mknod: out of memory");
+        goto done;
+    }
 done:
+    if (npath)
+        free (npath);
     return ret;
 }
 
@@ -1823,10 +1885,21 @@ done:
 Npfcall*
 diod_readlink(Npfid *fid)
 {
+    Fid *f = fid->aux;
     Npfcall *ret = NULL;
+    char target[PATH_MAX + 1];
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_readlink: error switching user");
+        goto done;
+    }
+    if (readlink (f->path, target, sizeof(target)) < 0) {
+        np_uerror (errno);
+        goto done;
+    }
+    if (!(ret = np_create_rreadlink(target))) {
+        np_uerror (ENOMEM);
+        msg ("diod_readlink: out of memory");
         goto done;
     }
 done:
@@ -2036,27 +2109,13 @@ done:
 Npfcall*
 diod_lock (Npfid *fid, struct p9_flock *flock)
 {
-    Npfcall *ret = NULL;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_lock: error switching user");
-        goto done;
-    }
-done:
-   return ret;
+   return NULL; /* FIXME */
 }
 
 Npfcall*
 diod_getlock (Npfid *fid, struct p9_getlock *getlock)
 {
-    Npfcall *ret = NULL;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_getlock: error switching user");
-        goto done;
-    }
-done:
-   return ret;
+   return NULL; /* FIXME */
 }
 
 Npfcall*

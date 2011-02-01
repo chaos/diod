@@ -891,6 +891,7 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 
 	return np_post_check(fc, bufp);
 }
+
 Npfcall *
 np_create_rlcreate(struct p9_qid *qid, u32 iounit)
 {
@@ -907,8 +908,35 @@ np_create_rlcreate(struct p9_qid *qid, u32 iounit)
 	return np_post_check(fc, bufp);
 }
 
-/* FIXME: Npfcall *np_create_rsymlink() */
-/* FIXME: Npfcall *np_create_rmknod() */
+Npfcall *
+np_create_rsymlink(struct p9_qid *qid)
+{
+	int size = sizeof(*qid);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_RSYMLINK)))
+		return NULL;
+	buf_put_qid(bufp, qid, &fc->u.rsymlink.qid);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_rmknod (struct p9_qid *qid)
+{
+	int size = sizeof(*qid);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_RMKNOD)))
+		return NULL;
+	buf_put_qid(bufp, qid, &fc->u.rmknod.qid);
+
+	return np_post_check(fc, bufp);
+}
 
 Npfcall *
 np_create_rrename(void)
@@ -923,7 +951,20 @@ np_create_rrename(void)
 	return np_post_check(fc, bufp);
 }
 
-/* FIXME: Npfcall *np_create_rreadlink() */
+Npfcall *
+np_create_rreadlink(char *target)
+{
+	int size = strlen(target) + 2;
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_RREADLINK)))
+		return NULL;
+	buf_put_str(bufp, target, &fc->u.rreadlink.target);
+
+	return np_post_check(fc, bufp);
+}
 
 Npfcall *
 np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 st_mode,

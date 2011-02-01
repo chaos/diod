@@ -588,7 +588,7 @@ struct p9_treadlink {
 	u32 fid;
 };
 struct p9_rreadlink {
-	char *target;
+	struct p9_str target;
 };
 struct p9_tgetattr {
 	u32 fid;

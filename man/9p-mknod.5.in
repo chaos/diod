@@ -3,13 +3,14 @@
 9p mknod \- create a device node
 .SH SYNOPSIS
 .nf
-size[4] Tmknod tag[2] fid[4] name[s] mode[4] major[4] minor[4] gid[4]
+size[4] Tmknod tag[2] dfid[4] name[s] mode[4] major[4] minor[4] gid[4]
 size[4] Rmknod tag[2] qid[13]
 .fi
 .SH DESCRIPTION
-mknod asks the file server to create a device node with given device
-type, mode and gid. The qid for the new device node is returned with
-the mknod reply message.
+mknod asks the file server to create a device node with given name in
+the directory referenced by dfid, with the device mode, major, and minor
+number.  
+The qid for the new device node is returned in the reply.
 .SH ORIGIN
 9P2000.L
 .SH SEE ALSO
