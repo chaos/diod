@@ -799,6 +799,8 @@ np_lopen(Npreq *req, Npfcall *tc)
 	if (!fid)
 		goto done;
 	rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
+	if (rc)
+		np_fid_omode_set(fid, tc->u.tlopen.mode);
 done:
 	return rc;
 }

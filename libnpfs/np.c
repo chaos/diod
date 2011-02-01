@@ -1003,7 +1003,7 @@ np_create_rsetattr(void)
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
-	if (!(fc = np_create_common(bufp, 0, P9_RRENAME)))
+	if (!(fc = np_create_common(bufp, 0, P9_RSETATTR)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
