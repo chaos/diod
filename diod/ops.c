@@ -1914,7 +1914,8 @@ diod_getattr(Npfid *fid, u64 request_mask)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     Npqid qid;
-    u64 result_mask = P9_GETATTR_BASIC;
+    //u64 result_mask = P9_GETATTR_BASIC;
+    u64 valid = request_mask;
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_getattr: error switching user");
@@ -1923,7 +1924,7 @@ diod_getattr(Npfid *fid, u64 request_mask)
     if (_fidstat (f) < 0)
         goto done;
     _ustat2qid (&f->stat, &qid);
-    if (!(ret = np_create_rgetattr(result_mask, &qid, f->stat.st_mode,
+    if (!(ret = np_create_rgetattr(valid, &qid, f->stat.st_mode,
             f->stat.st_uid, f->stat.st_gid, f->stat.st_nlink, f->stat.st_rdev,
             f->stat.st_size, f->stat.st_blksize, f->stat.st_blocks,
             f->stat.st_atim.tv_sec, f->stat.st_atim.tv_nsec,
