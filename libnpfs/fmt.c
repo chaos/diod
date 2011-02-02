@@ -541,9 +541,11 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		break;
 
 	case P9_TATTACH:
-		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d uname %.*s aname %.*s n_uname %u",
+		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d uname %.*s aname %.*s",
 			fc->tag, fc->fid, fc->afid, fc->uname.len, fc->uname.str, 
-			fc->aname.len, fc->aname.str, fc->n_uname);
+			fc->aname.len, fc->aname.str);
+		if (dotu)
+			n += snprintf(s+n,len-n, " n_uname %u", fc->n_uname);
 		break;
 
 	case P9_RATTACH:
@@ -570,8 +572,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_TWALK tag %u fid %d newfid %d nwname %d", 
 			fc->tag, fc->fid, fc->newfid, fc->nwname);
 		for(i = 0; i < fc->nwname; i++)
-			n += snprintf(s+n,len-n, " '%.*s'", fc->wnames[i].len, 
-				fc->wnames[i].str);
+			n += snprintf(s+n,len-n, " '%.*s'",
+				fc->wnames[i].len, fc->wnames[i].str);
 		break;
 		
 	case P9_RWALK:
@@ -597,8 +599,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += np_printperm(s+n,len-n, fc->perm);
 		n += snprintf(s+n,len-n, " mode %d", fc->mode);
 		if (dotu)
-			n += snprintf(s+n,len-n, " ext %.*s", fc->extension.len,
-				fc->extension.str);
+			n += snprintf(s+n,len-n, " ext %.*s",
+				fc->extension.len, fc->extension.str);
 		break;
 		
 	case P9_RCREATE:

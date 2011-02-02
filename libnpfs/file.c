@@ -869,7 +869,7 @@ done:
 void
 npfile_init_srv(Npsrv *srv, Npfile *root)
 {
-	srv->proto_version = p9_proto_2000u;
+	srv->proto_version = p9_proto_legacy;
 	srv->attach = npfile_attach;
 	srv->clone = npfile_clone;
 	srv->walk = npfile_walk;

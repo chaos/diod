@@ -93,11 +93,7 @@ np_srv_create(int nwthread)
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
-#if HAVE_DOTL
-	srv->proto_version = p9_proto_2000L;
-#else
-	srv->proto_version = p9_proto_2000u;
-#endif
+	srv->proto_version = p9_proto_legacy;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
 	srv->shuttingdown = 0;
@@ -596,53 +592,41 @@ np_respond_error(Npreq *req, char *ename, int ecode)
 static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
-	int min_msize = P9_IOHDRSZ;
-#if HAVE_DOTL
-	int proto_ver = p9_proto_2000L;
-#else
-	int proto_ver = p9_proto_2000u;
-#endif
-	char *ver = NULL;
+	int nver = -1;
 	Npfcall *rc = NULL;
+	char *s;
 
 	if (msize > conn->srv->msize)
 		msize = conn->srv->msize;
-
-	if (!np_strcmp(version, "9P2000")) {
-		ver = p9_proto_legacy;
-		ver = "9P2000";
-	} else if (!np_strcmp(version, "9P2000.u")) {
-		switch (conn->proto_version) {
-			case p9_proto_2000u:
-#if HAVE_DOTL
-			case p9_proto_2000L:
-#endif
-				proto_ver = p9_proto_2000u;
-				ver = "9P2000.u";
-				break;
-			default:
-				np_werror("unsupported 9P version", EIO);
-		}
-#if HAVE_DOTL
-	} else if (!np_strcmp(version, "9P2000.L")) {
-		if (conn->proto_version == p9_proto_2000L) {
-			proto_ver = p9_proto_2000L;
-			ver = "9P2000.L";
-		} else
-			np_werror("unsupported 9P version", EIO);
-#endif
-	} else
-		np_werror("unsupported 9P version", EIO);
-
-	if (msize < min_msize)
+	if (msize < P9_IOHDRSZ) {
 		np_werror("msize too small", EIO);
-
-	if (!np_haserror ()) {
-		np_conn_reset(conn, msize, proto_ver);
-		if (!(rc = np_create_rversion(msize, ver)))
-			np_uerror(ENOMEM);
+		goto done;
 	}
 
+	if (!np_strcmp(version, "9P2000"))
+		nver = p9_proto_legacy;
+	else if (!np_strcmp(version, "9P2000.u"))
+		nver = p9_proto_2000u;
+	else if (!np_strcmp(version, "9P2000.L"))
+		nver = p9_proto_2000L;
+
+	/* Requested protocol must match server supported protocol.
+ 	 * There is no mechansim now for fallback.
+ 	 */
+	if (nver == -1 || nver != conn->proto_version)	 {
+		np_werror("unsupported 9P version", EIO);
+		goto done;
+	}
+	np_conn_reset(conn, msize, nver);
+
+	if (!(s = malloc(version->len + 1)))
+		goto done;
+	memcpy(s, version->str, version->len);
+	s[version->len] = '\0';
+
+	if (!(rc = np_create_rversion(msize, s)))
+		np_uerror(ENOMEM);
+done:
 	return rc;
 }
 

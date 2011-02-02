@@ -610,6 +610,7 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt, char *opt_debug,
     opt_add (o, "uname=%s", cred);
     opt_add (o, "port=10005");
     opt_add (o, "aname=/diodctl");
+    opt_add (o, "version=9p2000");
     if (opt_debug)
         opt_add (o, opt_debug);
     if (geteuid () != 0)

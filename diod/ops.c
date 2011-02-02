@@ -223,7 +223,7 @@ diod_register_ops (Npsrv *srv)
     srv->mkdir = diod_mkdir;
     srv->proto_version = p9_proto_2000L;
 #else
-    srv->proto_version = p9_proto_2000u;
+    srv->proto_version = p9_proto_2000u; /* legacy is unsupported */
 #endif
 }
 

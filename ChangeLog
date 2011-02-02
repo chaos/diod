@@ -3,6 +3,10 @@
 	* libixp/* : Import clone from http://hg.suckless.org/libixp
 	to use for user space client testing.
 
+	* libnpfs/srv.c, libnpfs/file.c, diod/ops.c, diodmount/diodmount.c :
+	Disable server protocol fallback.  Force diodctl legacy, diod .L or
+	.u if .L is not configured.
+
 2011-02-01 Jim Garlick <garlick@llnl.gov>
 
 	* diod/ops.c, man/*, libnpfs/* : Code and documentation cleanup.
