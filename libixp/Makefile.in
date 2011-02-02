@@ -15,6 +15,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 pkgdatadir = $(datadir)/@PACKAGE@
 pkgincludedir = $(includedir)/@PACKAGE@
@@ -35,8 +36,9 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-subdir = libdiod
-DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
+noinst_PROGRAMS = ixpc$(EXEEXT)
+subdir = libixp
+DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -55,11 +57,18 @@ CONFIG_CLEAN_VPATH_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 AR = ar
 ARFLAGS = cru
-libdiod_a_AR = $(AR) $(ARFLAGS)
-libdiod_a_LIBADD =
-am_libdiod_a_OBJECTS = diod_log.$(OBJEXT) diod_conf.$(OBJEXT) \
-	diod_trans.$(OBJEXT) diod_upool.$(OBJEXT) diod_sock.$(OBJEXT)
-libdiod_a_OBJECTS = $(am_libdiod_a_OBJECTS)
+libixp_a_AR = $(AR) $(ARFLAGS)
+libixp_a_LIBADD =
+am_libixp_a_OBJECTS = client.$(OBJEXT) convert.$(OBJEXT) \
+	error.$(OBJEXT) map.$(OBJEXT) message.$(OBJEXT) \
+	request.$(OBJEXT) rpc.$(OBJEXT) server.$(OBJEXT) \
+	socket.$(OBJEXT) srv_util.$(OBJEXT) thread.$(OBJEXT) \
+	timer.$(OBJEXT) transport.$(OBJEXT) util.$(OBJEXT)
+libixp_a_OBJECTS = $(am_libixp_a_OBJECTS)
+PROGRAMS = $(noinst_PROGRAMS)
+am_ixpc_OBJECTS = ixpc.$(OBJEXT)
+ixpc_OBJECTS = $(am_ixpc_OBJECTS)
+ixpc_DEPENDENCIES = $(top_builddir)/libixp/libixp.a
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -68,8 +77,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(libdiod_a_SOURCES)
-DIST_SOURCES = $(libdiod_a_SOURCES)
+SOURCES = $(libixp_a_SOURCES) $(ixpc_SOURCES)
+DIST_SOURCES = $(libixp_a_SOURCES) $(ixpc_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -203,22 +212,29 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = @GCCWARN@
-AM_CPPFLAGS = \
-	-I../libnpfs -I../liblsd
+AM_CPPFLAGS = 
+noinst_LIBRARIES = libixp.a
+libixp_a_SOURCES = \
+	client.c \
+	convert.c \
+	error.c \
+	ixp.h \
+	ixp_local.h \
+	ixp_srvutil.h \
+	map.c \
+	message.c \
+	request.c \
+	rpc.c \
+	server.c \
+	socket.c \
+	srv_util.c \
+	thread.c \
+	timer.c \
+	transport.c \
+	util.c
 
-noinst_LIBRARIES = libdiod.a
-libdiod_a_SOURCES = \
-	diod_log.c \
-	diod_log.h \
-	diod_conf.c \
-	diod_conf.h \
-	diod_trans.c \
-	diod_trans.h \
-	diod_upool.c \
-	diod_upool.h \
-	diod_sock.c \
-	diod_sock.h 
-
+ixpc_LDADD = $(top_builddir)/libixp/libixp.a 
+ixpc_SOURCES = ixpc.c
 all: all-am
 
 .SUFFIXES:
@@ -232,9 +248,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu libdiod/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu libixp/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu libdiod/Makefile
+	  $(AUTOMAKE) --gnu libixp/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -256,10 +272,16 @@ $(am__aclocal_m4_deps):
 
 clean-noinstLIBRARIES:
 	-test -z "$(noinst_LIBRARIES)" || rm -f $(noinst_LIBRARIES)
-libdiod.a: $(libdiod_a_OBJECTS) $(libdiod_a_DEPENDENCIES) 
-	-rm -f libdiod.a
-	$(libdiod_a_AR) libdiod.a $(libdiod_a_OBJECTS) $(libdiod_a_LIBADD)
-	$(RANLIB) libdiod.a
+libixp.a: $(libixp_a_OBJECTS) $(libixp_a_DEPENDENCIES) 
+	-rm -f libixp.a
+	$(libixp_a_AR) libixp.a $(libixp_a_OBJECTS) $(libixp_a_LIBADD)
+	$(RANLIB) libixp.a
+
+clean-noinstPROGRAMS:
+	-test -z "$(noinst_PROGRAMS)" || rm -f $(noinst_PROGRAMS)
+ixpc$(EXEEXT): $(ixpc_OBJECTS) $(ixpc_DEPENDENCIES) 
+	@rm -f ixpc$(EXEEXT)
+	$(LINK) $(ixpc_OBJECTS) $(ixpc_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -267,11 +289,21 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_conf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_log.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_sock.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_trans.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_upool.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/client.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/convert.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/error.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ixpc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/map.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/message.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/request.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/server.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/socket.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/srv_util.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/thread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/timer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/transport.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -371,7 +403,7 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LIBRARIES)
+all-am: Makefile $(LIBRARIES) $(PROGRAMS)
 installdirs:
 install: install-am
 install-exec: install-exec-am
@@ -400,7 +432,8 @@ maintainer-clean-generic:
 	@echo "it deletes files that may require special tools to rebuild."
 clean: clean-am
 
-clean-am: clean-generic clean-noinstLIBRARIES mostlyclean-am
+clean-am: clean-generic clean-noinstLIBRARIES clean-noinstPROGRAMS \
+	mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -470,14 +503,14 @@ uninstall-am:
 .MAKE: install-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am check check-am clean clean-generic \
-	clean-noinstLIBRARIES ctags distclean distclean-compile \
-	distclean-generic distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-ps install-ps-am install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	clean-noinstLIBRARIES clean-noinstPROGRAMS ctags distclean \
+	distclean-compile distclean-generic distclean-tags distdir dvi \
+	dvi-am html html-am info info-am install install-am \
+	install-data install-data-am install-dvi install-dvi-am \
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic pdf pdf-am ps ps-am tags uninstall \
 	uninstall-am

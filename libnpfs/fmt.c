@@ -147,6 +147,7 @@ np_dump(FILE *f, u8 *data, int datalen)
 	return fprintf (f, "%s", s);
 }
 
+#if HAVE_DOTL
 static void
 _chomp(char *s)
 {
@@ -168,7 +169,6 @@ np_timestr(const u64 sec, const u64 nsec)
 	return s;
 }
 
-#if HAVE_DOTL
 static int
 np_printdents(char *s, int len, u8 *buf, int buflen)
 {

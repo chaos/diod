@@ -1,3 +1,8 @@
+2011-02-02 Jim Garlick <garlick@llnl.gov>
+
+	* libixp/* : Import clone from http://hg.suckless.org/libixp
+	to use for user space client testing.
+
 2011-02-01 Jim Garlick <garlick@llnl.gov>
 
 	* diod/ops.c, man/*, libnpfs/* : Code and documentation cleanup.

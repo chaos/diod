@@ -1,4 +1,4 @@
-SUBDIRS = liblsd libnpfs libdiod diod diodctl diodmount man scripts test
+SUBDIRS = liblsd libnpfs libdiod diod diodctl diodmount man scripts libixp test
 
 rpmdirs:
 	mkdir -p $(top_builddir)/rpm/SPECS

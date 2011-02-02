@@ -117,6 +117,7 @@ AC_CONFIG_FILES( \
   diod/Makefile \
   diodctl/Makefile \
   diodmount/Makefile \
+  libixp/Makefile \
 )
 
 AC_OUTPUT

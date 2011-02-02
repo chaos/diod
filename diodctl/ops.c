@@ -88,11 +88,14 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
          msg ("diodctl_attach: 9P Tauth is not supported");
         goto done;
     }
+#if 0
+    /* XXX ignore aname for compat with libixp */
     if (np_strcmp (aname, "/diodctl") != 0) {
         np_uerror (EPERM);
         msg ("diodctl_attach: mount attempt for aname other than /diodctl");
         goto done;
     }
+#endif
 #if HAVE_MUNGE
     /* Munge authentication involves the upool and trans layers:
      * - we ask the upool layer if the user now attaching has a munge cred
