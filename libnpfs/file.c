@@ -20,6 +20,10 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+/* dumbed down in the course of moving to 9p2000.L -jg 
+ */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -35,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/fcntl.h>
+#include <dirent.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfile.h"
@@ -152,13 +157,7 @@ npfile_decrefimpl(Npfile *f, int lock)
 
 	return ret;
 }
-#if 0
-static int
-npfile_decref_unlock(Npfile *f)
-{
-	return npfile_decrefimpl(f, 0);
-}
-#endif
+
 int
 npfile_decref(Npfile *f)
 {
@@ -232,6 +231,23 @@ npfile_find(Npfile *dir, char *name)
 	return f;
 }
 
+static void
+npfile_modified(Npfile *f, Npuser *u)
+{
+	// you better have the file locked ...
+	f->stat.st_mtim.tv_sec = time(NULL);
+	f->stat.st_mtim.tv_nsec = 0;
+	f->qid.version++;
+}
+
+static void
+npfile_accessed(Npfile *f, Npuser *u)
+{
+	// you better have the file locked ...
+	f->stat.st_atim.tv_sec = time(NULL);
+	f->stat.st_atim.tv_nsec = 0;
+}
+
 Npfilefid*
 npfile_fidalloc(Npfile *file, Npfid *fid) {
 	Npfilefid *f;
@@ -284,7 +300,6 @@ npfile_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname)
 	Npfilefid *f;
 	Npfcall *ret = NULL;
 
-	/* FIXME: lock? */
 	if (!(f = npfile_fidalloc(root, fid))) {
 		np_uerror(ENOMEM);
 		goto done;
@@ -376,11 +391,14 @@ npfile_lopen(Npfid *fid, u32 mode)
 	Npfileops *fops;
 	Npfcall *ret = NULL;
 
+	pthread_mutex_lock(&file->lock);
 	fops = file->ops;
 	if (!npfile_checkperm(file, fid->user, mode)) {
+		pthread_mutex_unlock(&file->lock);
 		np_uerror(EPERM);
 		goto done;
 	}
+	pthread_mutex_unlock(&file->lock);
 	if (S_ISDIR(file->stat.st_mode)) {
 		f->diroffset = 0;
 		f->dirent = NULL;
@@ -397,8 +415,6 @@ done:
 	return ret;
 }
 
-#if 0
-/* FIXME */
 Npfcall*
 npfile_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
@@ -407,71 +423,50 @@ npfile_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	Npfile *file = f->file;
 	Npfile *cf, *cf1;
 	Npdirops *dops;
-	Npfileops *fops;
 	Npfcall *ret;
-	Npwstat wstat;
 
-	if (!(ret = np_alloc_rread(count))) {
+	pthread_mutex_lock(&file->lock);
+	if (!(ret = np_create_rreaddir(count))) {
 		np_uerror(ENOMEM);
 		goto done;
 	}
-	if (S_ISDIR(file->mode)) {
-		pthread_mutex_lock(&file->lock);
-		dops = file->ops;
-		if (!dops->first || !dops->next) {
-			np_uerror(EPERM);
-			pthread_mutex_unlock(&file->lock);
-			goto done;
-		}
-		if (offset == 0) {
-			if (f->dirent)
-				npfile_decref(f->dirent);
-			f->dirent = (*dops->first)(file);
-			f->diroffset = 0;
-		}
-		n = 0;
-		cf = f->dirent;
-		while (n<count && cf!=NULL) {
-			file2wstat(cf, &wstat);
-			i = np_serialize_stat(&wstat, ret->data + n,
-				count - n - 1, np_conn_extend(fid->conn));
-			if (i==0)
-				break;
+	dops = file->ops;
+	if (!dops->first || !dops->next) {
+		np_uerror(EPERM);
+		goto done;
+	}
+	if (offset == 0) {
+		if (f->dirent)
+			npfile_decref(f->dirent);
+		f->dirent = (*dops->first)(file);
+		f->diroffset = 0;
+	}
+	n = 0;
+	cf = f->dirent;
+	while (n<count && cf!=NULL) {
+		i = np_serialize_p9dirent(&cf->qid, f->diroffset + n,
+			S_ISDIR(cf->stat.st_mode) ? DT_DIR : DT_REG, cf->name,
+			ret->u.rreaddir.data+n, count-n-1);
+		if (i==0)
+			break;
 
-			n += i;
-			cf1 = (dops->next)(file, cf);
-			npfile_decref(cf);
-			cf = cf1;
-		}
-
-		f->diroffset += n;
-		f->dirent = cf;
-		file->atime = time(NULL);
-		pthread_mutex_unlock(&file->lock);
-	} else {
-		fops = file->ops;
-		if (!fops->read) {
-			np_werror(Eperm, EPERM);
-			goto done;
-		}
-		n = (*fops->read)(f, offset, count, ret->data, req);
-		if (n < 0) {
-			free(ret);
-			ret = NULL;
-		}
-
-		pthread_mutex_lock(&file->lock);
-		file->atime = time(NULL);
-		pthread_mutex_unlock(&file->lock);
+		n += i;
+		cf1 = (dops->next)(file, cf);
+		npfile_decref(cf);
+		cf = cf1;
 	}
 
+	f->diroffset += n;
+	f->dirent = cf;
+	npfile_accessed(file, fid->user);
+
 	if (ret)
-		np_set_rread_count(ret, n);
+		np_finalize_rreaddir(ret, n);
 
 done:
+	pthread_mutex_unlock(&file->lock);
 	return ret;
 }
-#endif
 
 Npfcall*
 npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
@@ -505,6 +500,10 @@ npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		ret = NULL;
 		goto done;
 	}
+	pthread_mutex_lock(&file->lock);
+	npfile_accessed(file, fid->user);
+	pthread_mutex_unlock(&file->lock);
+
 	np_set_rread_count(ret, n);
 done:
 	return ret;
@@ -537,6 +536,10 @@ npfile_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 	n = (*fops->write)(f, offset, count, data, req);
 	if (n < 0)
 		goto done;
+	pthread_mutex_lock(&file->lock);
+	npfile_modified(file, fid->user);
+	pthread_mutex_unlock(&file->lock);
+
 	if (!(ret = np_create_rwrite(n))) {
 		np_uerror (ENOMEM);
 		goto done;
@@ -563,6 +566,7 @@ npfile_getattr(Npfid *fid, u64 request_mask)
 	u64 valid = request_mask;
 	Npfcall *ret = NULL;
 
+	pthread_mutex_lock(&file->lock);
 	if (!(ret = np_create_rgetattr(valid,
 					&file->qid,
 					file->stat.st_mode,
@@ -584,6 +588,7 @@ npfile_getattr(Npfid *fid, u64 request_mask)
 		goto done;
 	}
 done:
+	pthread_mutex_unlock(&file->lock);
 	return ret;
 }
 
@@ -598,6 +603,7 @@ npfile_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 	Npfile *file = f->file;
 	Npfcall *ret = NULL;
 
+	pthread_mutex_lock(&file->lock);
 	if (S_ISDIR(file->stat.st_mode)) {
 		np_uerror(EPERM);
 		goto done;
@@ -607,6 +613,7 @@ npfile_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 		goto done;
 	}
 done:
+	pthread_mutex_unlock(&file->lock);
 	return ret;
 }
 
@@ -618,7 +625,7 @@ npfile_init_srv(Npsrv *srv, Npfile *root)
 	srv->walk = npfile_walk;
 	srv->lopen = npfile_lopen;
 	srv->read = npfile_read;
-	//srv->readdir = npfile_readdir;
+	srv->readdir = npfile_readdir;
 	srv->write = npfile_write;
 	srv->clunk = npfile_clunk;
 	srv->getattr = npfile_getattr;
