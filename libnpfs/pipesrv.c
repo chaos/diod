@@ -91,9 +91,9 @@ np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts)
 	np_pipesrv_start(srv);
 
 	ps = srv->srvaux;
-	snprintf(options, sizeof(options), 
-		"msize=%d,name=%s,%s,proto=fd,rfdno=%d,wfdno=%d,%s",
-		srv->msize, user, np_srv_extend(srv)?"":"noextend",
+	snprintf(options, sizeof(options), "msize=%d,uname=%s,"
+		"version=9p2000.L,proto=fd,rfdno=%d,wfdno=%d,%s",
+		srv->msize, user,
 		ps->pipout[0], ps->pipin[1], opts);
  
 	n = mount("none", mntpt, "9p", mntflags, options);

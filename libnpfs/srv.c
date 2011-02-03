@@ -50,19 +50,14 @@ static Npfcall* np_default_attach(Npfid *, Npfid *, Npstr *, Npstr *);
 static void np_default_flush(Npreq *);
 static int np_default_clone(Npfid *, Npfid *);
 static int np_default_walk(Npfid *, Npstr*, Npqid *);
-static Npfcall* np_default_open(Npfid *, u8);
-static Npfcall* np_default_create(Npfid *, Npstr*, u32, u8, Npstr*);
 static Npfcall* np_default_read(Npfid *, u64, u32, Npreq *);
 static Npfcall* np_default_write(Npfid *, u64, u32, u8*, Npreq *);
 static Npfcall* np_default_clunk(Npfid *);
 static Npfcall* np_default_remove(Npfid *);
-static Npfcall* np_default_stat(Npfid *);
-static Npfcall* np_default_wstat(Npfid *, Npstat *);
 #if HAVE_LARGEIO
 static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
 static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
 #endif
-#if HAVE_DOTL
 static Npfcall* np_default_statfs(Npfid *);
 static Npfcall* np_default_lopen(Npfid *, u32);
 static Npfcall* np_default_lcreate(Npfid *, Npstr *, u32, u32, u32);
@@ -81,7 +76,6 @@ static Npfcall* np_default_lock(Npfid *, struct p9_flock*);
 static Npfcall* np_default_getlock(Npfid *, struct p9_getlock *);
 static Npfcall* np_default_link(Npfid *, Npfid *, Npstr *);
 static Npfcall* np_default_mkdir(Npfid *, Npstr *, u32, u32);
-#endif
 
 Npsrv*
 np_srv_create(int nwthread)
@@ -93,7 +87,6 @@ np_srv_create(int nwthread)
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	srv->msize = 8216;
-	srv->proto_version = p9_proto_legacy;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
 	srv->shuttingdown = 0;
@@ -111,20 +104,15 @@ np_srv_create(int nwthread)
 	srv->flush = np_default_flush;
 	srv->clone = np_default_clone;
 	srv->walk = np_default_walk;
-	srv->open = np_default_open;
-	srv->create = np_default_create;
 	srv->read = np_default_read;
 	srv->write = np_default_write;
 	srv->clunk = np_default_clunk;
 	srv->remove = np_default_remove;
-	srv->stat = np_default_stat;
-	srv->wstat = np_default_wstat;
 	srv->upool = NULL;
 #if HAVE_LARGEIO
 	srv->aread = np_default_aread;
 	srv->awrite = np_default_awrite;
 #endif
-#if HAVE_DOTL
 	srv->statfs = np_default_statfs;
 	srv->lopen = np_default_lopen;
 	srv->lcreate = np_default_lcreate;
@@ -142,7 +130,7 @@ np_srv_create(int nwthread)
 	srv->getlock = np_default_getlock;
 	srv->link = np_default_link;
 	srv->mkdir = np_default_mkdir;
-#endif
+
 	srv->conns = NULL;
 	srv->reqs_first = NULL;
 	srv->reqs_last = NULL;
@@ -327,16 +315,15 @@ np_process_request(Npreq *req)
 {
 	Npconn *conn;
 	Npfcall *tc, *rc;
-	char *ename, *op;
+	char *op;
 	int ecode;
 
 	conn = req->conn;
 	rc = NULL;
 	tc = req->tcall;
 
-	np_werror(NULL, 0);
+	np_uerror(0);
 	switch (tc->type) {
-#if HAVE_DOTL
 		case P9_TSTATFS:
 			rc = np_statfs(req, tc);
 			op = "statfs";
@@ -405,7 +392,6 @@ np_process_request(Npreq *req)
 			rc = np_mkdir(req, tc);
 			op = "mkdir";
 			break;
-#endif
 #if HAVE_LARGEIO
 		case P9_TAREAD:
 			rc = np_aread(req, tc);
@@ -436,14 +422,6 @@ np_process_request(Npreq *req)
 			rc = np_walk(req, tc);
 			op = "walk";
 			break;
-		case P9_TOPEN:
-			rc = np_open(req, tc);
-			op = "open";
-			break;
-		case P9_TCREATE:
-			rc = np_create(req, tc);
-			op = "create";
-			break;
 		case P9_TREAD:
 			rc = np_read(req, tc);
 			op = "read";
@@ -460,36 +438,19 @@ np_process_request(Npreq *req)
 			rc = np_remove(req, tc);
 			op = "remove";
 			break;
-		case P9_TSTAT:
-			rc = np_stat(req, tc);
-			op = "stat";
-			break;
-		case P9_TWSTAT:
-			rc = np_wstat(req, tc);
-			op = "wstat";
-			break;
 		default:
-			np_werror("unknown message type", ENOSYS);
+			np_uerror(ENOSYS);
 			op = "<unknown>";
 			break;
 	}
-	if (np_haserror()) {
-		np_rerror(&ename, &ecode);
+	if ((ecode = np_rerror())) {
 		if (rc)
 			free(rc);
-#if HAVE_DOTL
-		if (np_conn_proto_dotl(req->conn))
-			rc = np_create_rlerror(ecode);
-		else
-			rc = np_create_rerror(ename, ecode,
-					      np_conn_extend(conn));
-#else
-		rc = np_create_rerror(ename, ecode, np_conn_extend(conn));
-#endif
+		rc = np_create_rlerror(ecode);
 		if ((req->conn->srv->debuglevel & DEBUG_9P_ERRORS)
 		  			&& req->conn->srv->debugprintf) {
-			req->conn->srv->debugprintf ("%s error: %s", op,
-					ecode > 0 ? strerror(ecode) : ename);
+			req->conn->srv->debugprintf ("%s error: %s",
+					op, strerror(ecode));
 		}
 	}
 
@@ -557,9 +518,6 @@ np_respond(Npreq *req, Npfcall *rc)
 	pthread_mutex_lock(&req->lock);
 	req->rcall = rc;
 	if (req->rcall) {
-		if (req->rcall->type==P9_RREAD && req->fid->type & P9_QTDIR)
-			req->fid->diroffset = req->tcall->offset + req->rcall->count;
-
 		np_set_tag(req->rcall, req->tag);
 		if (req->fid != NULL) {
 			np_fid_decref(req->fid);
@@ -580,51 +538,23 @@ np_respond(Npreq *req, Npfcall *rc)
 	np_req_unref(req);
 }
 
-void
-np_respond_error(Npreq *req, char *ename, int ecode)
-{
-	Npfcall *rc;
-
-	rc = np_create_rerror(ename, ecode, np_conn_extend(req->conn));
-	np_respond(req, rc);
-}
-
 static Npfcall*
 np_default_version(Npconn *conn, u32 msize, Npstr *version) 
 {
-	int nver = -1;
 	Npfcall *rc = NULL;
-	char *s;
 
 	if (msize > conn->srv->msize)
 		msize = conn->srv->msize;
 	if (msize < P9_IOHDRSZ) {
-		np_werror("msize too small", EIO);
+		np_uerror(EIO);
 		goto done;
 	}
-
-	if (!np_strcmp(version, "9P2000"))
-		nver = p9_proto_legacy;
-	else if (!np_strcmp(version, "9P2000.u"))
-		nver = p9_proto_2000u;
-	else if (!np_strcmp(version, "9P2000.L"))
-		nver = p9_proto_2000L;
-
-	/* Requested protocol must match server supported protocol.
- 	 * There is no mechansim now for fallback.
- 	 */
-	if (nver == -1 || nver != conn->proto_version)	 {
-		np_werror("unsupported 9P version", EIO);
+	if (np_strcmp(version, "9P2000.L") != 0) {
+		np_uerror(EIO);
 		goto done;
 	}
-	np_conn_reset(conn, msize, nver);
-
-	if (!(s = malloc(version->len + 1)))
-		goto done;
-	memcpy(s, version->str, version->len);
-	s[version->len] = '\0';
-
-	if (!(rc = np_create_rversion(msize, s)))
+	np_conn_reset(conn, msize);
+	if (!(rc = np_create_rversion(msize, "9P2000.L")))
 		np_uerror(ENOMEM);
 done:
 	return rc;
@@ -633,7 +563,7 @@ done:
 static Npfcall*
 np_default_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname)
 {
-	np_werror(Enotimpl, EIO);
+	np_uerror(EIO);
 	return NULL;
 }
 
@@ -651,63 +581,35 @@ np_default_clone(Npfid *fid, Npfid *newfid)
 static int
 np_default_walk(Npfid *fid, Npstr* wname, Npqid *wqid)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return 0;
-}
-
-static Npfcall*
-np_default_open(Npfid *fid, u8 perm)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_create(Npfid *fid, Npstr *name, u32 mode, u8 perm, Npstr *extension)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
 }
 
 static Npfcall*
 np_default_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return NULL;
 }
 
 static Npfcall*
 np_default_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return NULL;
 }
 
 static Npfcall*
 np_default_clunk(Npfid *fid)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return NULL;
 }
 
 static Npfcall*
 np_default_remove(Npfid *fid)
 {
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_stat(Npfid *fid)
-{
-	np_werror(Enotimpl, ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_wstat(Npfid *fid, Npstat *stat)
-{
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return NULL;
 }
 
@@ -715,18 +617,17 @@ np_default_wstat(Npfid *fid, Npstat *stat)
 static Npfcall*
 np_default_aread(Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize, Npreq *req)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return NULL;
 }
 
 static Npfcall*
 np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
 {
-	np_werror(Enotimpl, ENOSYS);
+	np_uerror(ENOSYS);
 	return NULL;
 }
 #endif
-#if HAVE_DOTL
 static Npfcall*
 np_default_statfs(Npfid *fid)
 {
@@ -833,7 +734,6 @@ np_default_mkdir(Npfid *fid, Npstr *name, u32 mode, u32 gid)
 	np_uerror(ENOSYS);
 	return NULL;
 }
-#endif
 
 Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {
 	Npreq *req;

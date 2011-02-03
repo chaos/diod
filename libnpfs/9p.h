@@ -205,80 +205,6 @@ enum p9_msg_t {
 };
 
 /**
- * enum p9_open_mode_t - 9P open modes
- * @P9_OREAD: open file for reading only
- * @P9_OWRITE: open file for writing only
- * @P9_ORDWR: open file for reading or writing
- * @P9_OEXEC: open file for execution
- * @P9_OTRUNC: truncate file to zero-length before opening it
- * @P9_OREXEC: close the file when an exec(2) system call is made
- * @P9_ORCLOSE: remove the file when the file is closed
- * @P9_OAPPEND: open the file and seek to the end
- * @P9_OEXCL: only create a file, do not open it
- *
- * 9P open modes differ slightly from Posix standard modes.
- * In particular, there are extra modes which specify different
- * semantic behaviors than may be available on standard Posix
- * systems.  For example, @P9_OREXEC and @P9_ORCLOSE are modes that
- * most likely will not be issued from the Linux VFS client, but may
- * be supported by servers.
- *
- * See Also: http://plan9.bell-labs.com/magic/man2html/2/open
- */
-
-enum p9_open_mode_t {
-	P9_OREAD = 0x00,
-	P9_OWRITE = 0x01,
-	P9_ORDWR = 0x02,
-	P9_OEXEC = 0x03,
-	P9_OTRUNC = 0x10,
-	P9_OREXEC = 0x20,
-	P9_ORCLOSE = 0x40,
-	P9_OAPPEND = 0x80,
-	//P9_OEXCL = 0x1000,
-	P9_OEXCL = 0x4,
-};
-
-/**
- * enum p9_perm_t - 9P permissions
- * @P9_DMDIR: mode bite for directories
- * @P9_DMAPPEND: mode bit for is append-only
- * @P9_DMEXCL: mode bit for excluse use (only one open handle allowed)
- * @P9_DMMOUNT: mode bite for mount points
- * @P9_DMAUTH: mode bit for authentication file
- * @P9_DMTMP: mode bit for non-backed-up files
- * @P9_DMSYMLINK: mode bit for symbolic links (9P2000.u)
- * @P9_DMLINK: mode bit for hard-link (9P2000.u)
- * @P9_DMDEVICE: mode bit for device files (9P2000.u)
- * @P9_DMNAMEDPIPE: mode bit for named pipe (9P2000.u)
- * @P9_DMSOCKET: mode bit for socket (9P2000.u)
- * @P9_DMSETUID: mode bit for setuid (9P2000.u)
- * @P9_DMSETGID: mode bit for setgid (9P2000.u)
- * @P9_DMSETVTX: mode bit for sticky bit (9P2000.u)
- *
- * 9P permissions differ slightly from Posix standard modes.
- *
- * See Also: http://plan9.bell-labs.com/magic/man2html/2/stat
- */
-enum p9_perm_t {
-	P9_DMDIR = 0x80000000,
-	P9_DMAPPEND = 0x40000000,
-	P9_DMEXCL = 0x20000000,
-	P9_DMMOUNT = 0x10000000,
-	P9_DMAUTH = 0x08000000,
-	P9_DMTMP = 0x04000000,
-/* 9P2000.u extensions */
-	P9_DMSYMLINK = 0x02000000,
-	P9_DMLINK = 0x01000000,
-	P9_DMDEVICE = 0x00800000,
-	P9_DMNAMEDPIPE = 0x00200000,
-	P9_DMSOCKET = 0x00100000,
-	P9_DMSETUID = 0x00080000,
-	P9_DMSETGID = 0x00040000,
-	P9_DMSETVTX = 0x00010000,
-};
-
-/**
  * enum p9_qid_t - QID types
  * @P9_QTDIR: directory
  * @P9_QTAPPEND: append-only
@@ -359,47 +285,6 @@ struct p9_qid {
 	u8 type;
 	u32 version;
 	u64 path;
-};
-
-/**
- * struct p9_stat - file system metadata information
- * @size: length prefix for this stat structure instance
- * @type: the type of the server (equivilent to a major number)
- * @dev: the sub-type of the server (equivilent to a minor number)
- * @qid: unique id from the server of type &p9_qid
- * @mode: Plan 9 format permissions of type &p9_perm_t
- * @atime: Last access/read time
- * @mtime: Last modify/write time
- * @length: file length
- * @name: last element of path (aka filename) in type &p9_str
- * @uid: owner name in type &p9_str
- * @gid: group owner in type &p9_str
- * @muid: last modifier in type &p9_str
- * @extension: area used to encode extended UNIX support in type &p9_str
- * @n_uid: numeric user id of owner (part of 9p2000.u extension)
- * @n_gid: numeric group id (part of 9p2000.u extension)
- * @n_muid: numeric user id of laster modifier (part of 9p2000.u extension)
- *
- * See Also: http://plan9.bell-labs.com/magic/man2html/2/stat
- */
-
-struct p9_wstat {
-	u16 size;
-	u16 type;
-	u32 dev;
-	struct p9_qid qid;
-	u32 mode;
-	u32 atime;
-	u32 mtime;
-	u64 length;
-	char *name;
-	char *uid;
-	char *gid;
-	char *muid;
-	char *extension;	/* 9p2000.u extensions */
-	u32 n_uid;		/* 9p2000.u extensions */
-	u32 n_gid;		/* 9p2000.u extensions */
-	u32 n_muid;		/* 9p2000.u extensions */
 };
 
 /* Bit values for getattr valid field.
@@ -760,18 +645,6 @@ struct p9_tremove {
 	u32 fid;
 };
 struct p9_rremove {
-};
-struct p9_tstat {
-	u32 fid;
-};
-struct p9_rstat {
-	struct p9_wstat stat;
-};
-struct p9_twstat {
-	u32 fid;
-	struct p9_wstat stat;
-};
-struct p9_rwstat {
 };
 
 /**

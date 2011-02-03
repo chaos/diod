@@ -1003,7 +1003,6 @@ AC_SUBST([am__untar])
 
 m4_include([config/x_ac_check_cond_lib.m4])
 m4_include([config/x_ac_check_pthreads.m4])
-m4_include([config/x_ac_dotl.m4])
 m4_include([config/x_ac_expand_install_dirs.m4])
 m4_include([config/x_ac_largeio.m4])
 m4_include([config/x_ac_meta.m4])

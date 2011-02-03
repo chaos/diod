@@ -35,36 +35,6 @@
 #include "npfsimpl.h"
 
 static int
-np_printperm(char *s, int len, int perm)
-{
-	int n;
-	char b[10];
-
-	n = 0;
-	if (perm & P9_DMDIR)
-		b[n++] = 'd';
-	if (perm & P9_DMAPPEND)
-		b[n++] = 'a';
-	if (perm & P9_DMAUTH)
-		b[n++] = 'A';
-	if (perm & P9_DMEXCL)
-		b[n++] = 'l';
-	if (perm & P9_DMTMP)
-		b[n++] = 't';
-	if (perm & P9_DMDEVICE)
-		b[n++] = 'D';
-	if (perm & P9_DMSOCKET)
-		b[n++] = 'S';
-	if (perm & P9_DMNAMEDPIPE)
-		b[n++] = 'P';
-        if (perm & P9_DMSYMLINK)
-                b[n++] = 'L';
-        b[n] = '\0';
-
-        return snprintf(s, len, "%s%03o", b, perm&0777);
-}             
-
-static int
 np_printqid(char *s, int len, Npqid *q)
 {
 	int n;
@@ -86,36 +56,6 @@ np_printqid(char *s, int len, Npqid *q)
 	buf[n] = '\0';
 
 	return snprintf(s, len, "(%.16llx %x '%s')", (unsigned long long)q->path, q->version, buf);
-}
-
-int
-np_snprintstat(char *s, int len, Npstat *st, int dotu)
-{
-	int n;
-
-	n = snprintf(s, len, "'%.*s' '%.*s' '%.*s' '%.*s' q ", 
-		st->name.len, st->name.str, st->uid.len, st->uid.str,
-		st->gid.len, st->gid.str, st->muid.len, st->muid.str);
-
-	n += np_printqid(s + n, len - n, &st->qid);
-	n += snprintf(s + n, len - n, " m ");
-	n += np_printperm(s + n, len - n, st->mode);
-	n += snprintf(s + n, len - n, " at %d mt %d l %llu t %d d %d",
-		st->atime, st->mtime, (unsigned long long)st->length, st->type, st->dev);
-	if (dotu)
-		n += snprintf(s + n, len - n, " ext '%.*s'", st->extension.len, 
-			st->extension.str);
-
-	return n;
-}
-
-int
-np_printstat(FILE *f, Npstat *st, int dotu)
-{
-	char s[256];
-
-	np_snprintstat(s, sizeof(s), st, dotu);
-	return fprintf (f, "%s", s);
 }
 
 int
@@ -147,7 +87,6 @@ np_dump(FILE *f, u8 *data, int datalen)
 	return fprintf (f, "%s", s);
 }
 
-#if HAVE_DOTL
 static void
 _chomp(char *s)
 {
@@ -175,7 +114,6 @@ np_printdents(char *s, int len, u8 *buf, int buflen)
 	/* FIXME: decode directory entries here */
 	return np_sndump(s, len, buf, buflen < 64 ? buflen : 64);
 }
-#endif
 
 static int
 np_printdata(char *s, int len, u8 *buf, int buflen)
@@ -190,7 +128,7 @@ np_dumpdata(char *s, int len, u8 *buf, int buflen)
 }
 
 int
-np_snprintfcall(char *s, int len, Npfcall *fc, int dotu) 
+np_snprintfcall(char *s, int len, Npfcall *fc) 
 {
 	int i, n = 0;
 
@@ -198,7 +136,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		return snprintf(s, len, "NULL");
 
 	switch (fc->type) {
-#if HAVE_DOTL
 	case P9_TLERROR:
 		n += snprintf(s+n,len-n, "P9_TLERROR tag %u", fc->tag);
 		break;
@@ -487,7 +424,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RMKDIR tag %u qid ", fc->tag);
 		n += np_printqid(s+n, len-n, &fc->u.rmkdir.qid);
 		break;
-#endif
 #if HAVE_LARGEIO
 	case P9_TAREAD:
 		n += snprintf(s+n,len-n, "P9_TAREAD tag %u", fc->tag);
@@ -544,20 +480,11 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d uname %.*s aname %.*s",
 			fc->tag, fc->fid, fc->afid, fc->uname.len, fc->uname.str, 
 			fc->aname.len, fc->aname.str);
-		if (dotu)
-			n += snprintf(s+n,len-n, " n_uname %u", fc->n_uname);
 		break;
 
 	case P9_RATTACH:
 		n += snprintf(s+n,len-n, "P9_RATTACH tag %u qid ", fc->tag); 
 		n += np_printqid(s+n,len-n, &fc->qid);
-		break;
-
-	case P9_RERROR:
-		n += snprintf(s+n,len-n, "P9_RERROR tag %u ename %.*s", fc->tag, 
-			fc->ename.len, fc->ename.str);
-		if (dotu)
-			n += snprintf(s+n,len-n, " ecode %d", fc->ecode);
 		break;
 
 	case P9_TFLUSH:
@@ -582,29 +509,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 			n += np_printqid(s+n,len-n, &fc->wqids[i]);
 		break;
 		
-	case P9_TOPEN:
-		n += snprintf(s+n,len-n, "P9_TOPEN tag %u fid %d mode %d", fc->tag, fc->fid, 
-			fc->mode);
-		break;
-		
 	case P9_ROPEN:
 		n += snprintf(s+n,len-n, "P9_ROPEN tag %u qid ", fc->tag);
-		n += np_printqid(s+n,len-n, &fc->qid);
-		n += snprintf(s+n,len-n, " iounit %d", fc->iounit);
-		break;
-		
-	case P9_TCREATE:
-		n += snprintf(s+n,len-n, "P9_TCREATE tag %u fid %d name %.*s perm ",
-			fc->tag, fc->fid, fc->name.len, fc->name.str);
-		n += np_printperm(s+n,len-n, fc->perm);
-		n += snprintf(s+n,len-n, " mode %d", fc->mode);
-		if (dotu)
-			n += snprintf(s+n,len-n, " ext %.*s",
-				fc->extension.len, fc->extension.str);
-		break;
-		
-	case P9_RCREATE:
-		n += snprintf(s+n,len-n, "P9_RCREATE tag %u qid ", fc->tag);
 		n += np_printqid(s+n,len-n, &fc->qid);
 		n += snprintf(s+n,len-n, " iounit %d", fc->iounit);
 		break;
@@ -645,23 +551,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 		n += snprintf(s+n,len-n, "P9_RREMOVE tag %u", fc->tag);
 		break;
 		
-	case P9_TSTAT:
-		n += snprintf(s+n,len-n, "P9_TSTAT tag %u fid %d", fc->tag, fc->fid);
-		break;
-		
-	case P9_RSTAT:
-		n += snprintf(s+n,len-n, "P9_RSTAT tag %u ", fc->tag);
-		n += np_snprintstat(s+n,len-n, &fc->stat, dotu);
-		break;
-		
-	case P9_TWSTAT:
-		n += snprintf(s+n,len-n, "P9_TWSTAT tag %u fid %d ", fc->tag, fc->fid);
-		n += np_snprintstat(s+n,len-n, &fc->stat, dotu);
-		break;
-		
-	case P9_RWSTAT:
-		n += snprintf(s+n,len-n, "P9_RWSTAT tag %u", fc->tag);
-		break;
 	default:
 		n += snprintf(s+n,len-n, "unknown type %d", fc->type);
 		break;
@@ -671,11 +560,11 @@ np_snprintfcall(char *s, int len, Npfcall *fc, int dotu)
 }
 
 int
-np_printfcall(FILE *f, Npfcall *fc, int dotu)
+np_printfcall(FILE *f, Npfcall *fc)
 {
 	char s[256];
 
-	np_snprintfcall (s, sizeof(s), fc, dotu);
+	np_snprintfcall (s, sizeof(s), fc);
 
 	return fprintf (f, "%s", s);
 }

@@ -1,3 +1,7 @@
+2011-02-03 Jim Garlick <garlick@llnl.gov>
+
+	* : Remove 9p2000 and 9p2000.u support.  9P2000.L or bust.
+
 2011-02-02 Jim Garlick <garlick@llnl.gov>
 
 	* libixp/* : Import clone from http://hg.suckless.org/libixp

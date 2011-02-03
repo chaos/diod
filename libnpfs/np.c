@@ -163,32 +163,6 @@ buf_put_qid(struct cbuf *buf, Npqid *qid, Npqid *pqid)
 	buf_put_int64(buf, qid->path, &pqid->path);
 }
 
-static inline void
-buf_put_wstat(struct cbuf *bufp, Npwstat *wstat, Npstat* stat, int statsz, int extended)
-{
-	buf_put_int16(bufp, statsz, &stat->size);
-	buf_put_int16(bufp, wstat->type, &stat->type);
-	buf_put_int32(bufp, wstat->dev, &stat->dev);
-	buf_put_qid(bufp, &wstat->qid, &stat->qid);
-	buf_put_int32(bufp, wstat->mode, &stat->mode);
-	buf_put_int32(bufp, wstat->atime, &stat->atime);
-	buf_put_int32(bufp, wstat->mtime, &stat->mtime);
-	buf_put_int64(bufp, wstat->length, &stat->length);
-
-	buf_put_str(bufp, wstat->name, &stat->name);
-	buf_put_str(bufp, wstat->uid, &stat->uid);
-	buf_put_str(bufp, wstat->gid, &stat->gid);
-	buf_put_str(bufp, wstat->muid, &stat->muid);
-
-	if (extended) {
-		buf_put_str(bufp, wstat->extension, &stat->extension);
-		buf_put_int32(bufp, wstat->n_uid, &stat->n_uid);
-		buf_put_int32(bufp, wstat->n_gid, &stat->n_gid);
-		buf_put_int32(bufp, wstat->n_muid, &stat->n_muid);
-	} else
-		np_strzero(&stat->extension);
-}
-
 static inline u8
 buf_get_int8(struct cbuf *buf)
 {
@@ -265,32 +239,6 @@ buf_get_qid(struct cbuf *buf, Npqid *qid)
 }
 
 static inline void
-buf_get_stat(struct cbuf *buf, Npstat *stat, int extended)
-{
-	stat->size = buf_get_int16(buf);
-	stat->type = buf_get_int16(buf);
-	stat->dev = buf_get_int32(buf);
-	buf_get_qid(buf, &stat->qid);
-	stat->mode = buf_get_int32(buf);
-	stat->atime = buf_get_int32(buf);
-	stat->mtime = buf_get_int32(buf);
-	stat->length = buf_get_int64(buf);
-	buf_get_str(buf, &stat->name);
-	buf_get_str(buf, &stat->uid);
-	buf_get_str(buf, &stat->gid);
-	buf_get_str(buf, &stat->muid);
-
-	if (extended) {
-		buf_get_str(buf, &stat->extension);
-		stat->n_uid = buf_get_int32(buf);
-		stat->n_gid = buf_get_int32(buf);
-		stat->n_muid = buf_get_int32(buf);
-	} else
-		np_strzero(&stat->extension);
-}
-
-#if HAVE_DOTL
-static inline void
 buf_get_flock(struct cbuf *buf, struct p9_flock *fl)
 {
 	fl->type = buf_get_int8(buf);	
@@ -308,37 +256,6 @@ buf_get_getlock(struct cbuf *buf, struct p9_getlock *gl)
 	gl->length = buf_get_int64(buf);	
 	gl->proc_id = buf_get_int32(buf);	
 	buf_get_str(buf, &gl->client_id);	
-}
-#endif
-
-static int
-size_wstat(Npwstat *wstat, int extended)
-{
-	int size = 0;
-
-	if (wstat == NULL)
-		return 0;
-
-	size = 2 + 4 + 13 + 4 +  /* type[2] dev[4] qid[13] mode[4] */
-		4 + 4 + 8 + 	 /* atime[4] mtime[4] length[8] */
-		8;		 /* name[s] uid[s] gid[s] muid[s] */
-
-	if (wstat->name)
-		size += strlen(wstat->name);
-	if (wstat->uid)
-		size += strlen(wstat->uid);
-	if (wstat->gid)
-		size += strlen(wstat->gid);
-	if (wstat->muid)
-		size += strlen(wstat->muid);
-
-	if (extended) {
-		size += 4 + 4 + 4 + 2; /* n_uid[4] n_gid[4] n_muid[4] extension[s] */
-		if (wstat->extension)
-			size += strlen(wstat->extension);
-	}
-
-	return size;
 }
 
 void
@@ -463,53 +380,6 @@ np_create_rauth(Npqid *aqid)
 		return NULL;
 
 	buf_put_qid(bufp, aqid, &fc->qid);
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_rerror(char *ename, int ecode, int extended)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 2 + strlen(ename); /* ename[s] */
-	if (extended)
-		size += 4; /* ecode[4] */
-
-	fc = np_create_common(bufp, size, P9_RERROR);
-	if (!fc)
-		return NULL;
-
-	buf_put_str(bufp, ename, &fc->ename);
-	if (extended)
-		buf_put_int32(bufp, ecode, &fc->ecode);
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_rerror1(Npstr *ename, int ecode, int extended)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 2 + ename->len + (extended?4:0); /* ename[s] ecode[4] */
-	fc = np_create_common(bufp, size, P9_RERROR);
-	if (!fc)
-		return NULL;
-
-	fc->ename.len = ename->len;
-	fc->ename.str = buf_alloc(bufp, ename->len);
-	memmove(fc->ename.str, ename->str, ename->len);
-	if (extended)
-		buf_put_int32(bufp, ecode, &fc->ecode);
-
 	return np_post_check(fc, bufp);
 }
 
@@ -717,43 +587,6 @@ np_create_rremove(void)
 	return np_post_check(fc, bufp);
 }
 
-Npfcall *
-np_create_rstat(Npwstat *wstat, int extended)
-{
-	int size, statsz;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-
-	statsz = size_wstat(wstat, extended);
-	size = 2 + 2 + statsz; /* stat[n] */
-	fc = np_create_common(bufp, size, P9_RSTAT);
-	if (!fc)
-		return NULL;
-
-	buf_put_int16(bufp, statsz + 2, NULL);
-	buf_put_wstat(bufp, wstat, &fc->stat, statsz, extended);
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_rwstat(void)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, P9_RWSTAT);
-
-	return np_post_check(fc, bufp);
-}
-
 #if HAVE_LARGEIO
 /* N.B. srv->aread handler should
  * 1. call np_create_raread()
@@ -822,7 +655,6 @@ np_create_rawrite(u32 count)
 }
 #endif
 
-#if HAVE_DOTL
 Npfcall *
 np_create_rlerror(u32 ecode)
 {
@@ -1091,10 +923,9 @@ np_create_rmkdir(struct p9_qid *qid)
 
 	return np_post_check(fc, bufp);
 }
-#endif
 
 int
-np_deserialize(Npfcall *fc, u8 *data, int extended)
+np_deserialize(Npfcall *fc, u8 *data)
 {
 	int i;
 	struct cbuf buffer;
@@ -1127,10 +958,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
-		if(extended)
-			fc->n_uname = buf_get_int32(bufp);
-		else
-			fc->n_uname = ~0;
 		break;
 
 	case P9_TFLUSH:
@@ -1142,10 +969,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
-		if(extended)
-			fc->n_uname = buf_get_int32(bufp);
-		else
-			fc->n_uname = ~0;
 		break;
 
 	case P9_TWALK:
@@ -1158,22 +981,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		for(i = 0; i < fc->nwname; i++) {
 			buf_get_str(bufp, &fc->wnames[i]);
 		}
-		break;
-
-	case P9_TOPEN:
-		fc->fid = buf_get_int32(bufp);
-		fc->mode = buf_get_int8(bufp);
-		break;
-
-	case P9_TCREATE:
-		fc->fid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->name);
-		fc->perm = buf_get_int32(bufp);
-		fc->mode = buf_get_int8(bufp);
-		if (extended)
-			buf_get_str(bufp, &fc->extension);
-		else
-			np_strzero(&fc->extension);
 		break;
 
 	case P9_TREAD:
@@ -1190,15 +997,11 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		break;
 
 	case P9_TCLUNK:
-	case P9_TREMOVE:
-	case P9_TSTAT:
 		fc->fid = buf_get_int32(bufp);
 		break;
 
-	case P9_TWSTAT:
+	case P9_TREMOVE:
 		fc->fid = buf_get_int32(bufp);
-		buf_get_int16(bufp);
-		buf_get_stat(bufp, &fc->stat, extended);
 		break;
 #if HAVE_LARGEIO
 	case P9_TAREAD:
@@ -1218,7 +1021,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->u.tawrite.check = buf_get_int32(bufp);
 		break;
 #endif
-#if HAVE_DOTL
 	case P9_TSTATFS:
 		fc->u.tstatfs.fid = buf_get_int32(bufp);
 		break;
@@ -1304,7 +1106,6 @@ np_deserialize(Npfcall *fc, u8 *data, int extended)
 		fc->u.tmkdir.mode = buf_get_int32(bufp);
 		fc->u.tmkdir.gid = buf_get_int32(bufp);
 		break;
-#endif
 	}
 
 	if (buf_check_overflow(bufp))
@@ -1316,7 +1117,6 @@ error:
 	return 0;
 }
 
-#if HAVE_DOTL
 int
 np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
 		      u8 *buf, int buflen)
@@ -1335,29 +1135,6 @@ np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
 	buf_put_int8(bufp, type, NULL);
 	buf_put_str(bufp, name, &nstr);
 	
-	if (buf_check_overflow(bufp))
-		return 0;
-
-	return bufp->p - bufp->sp;
-}
-#endif
-
-int 
-np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int extended)
-{
-	struct cbuf buffer;
-	struct cbuf *bufp;
-	Npstat stat;
-	int statsz = size_wstat(wstat, extended);
-
-	if (statsz > buflen)
-		return 0;
-
-	bufp = &buffer;
-	buf_init(bufp, buf, buflen);
-
-	buf_put_wstat(bufp, wstat, &stat, statsz, extended);
-
 	if (buf_check_overflow(bufp))
 		return 0;
 

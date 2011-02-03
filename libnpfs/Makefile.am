@@ -1,6 +1,6 @@
 AM_CFLAGS = @GCCWARN@
 
-AM_CPPFLAGS = 
+AM_CPPFLAGS =
 
 noinst_LIBRARIES = libnpfs.a
 
@@ -10,7 +10,6 @@ libnpfs_a_SOURCES = \
 	fcall.c \
 	fdtrans.c \
 	fidpool.c \
-	file.c \
 	npfile.h \
 	fmt.c \
 	np.c \
@@ -18,6 +17,7 @@ libnpfs_a_SOURCES = \
 	srv.c \
 	trans.c \
 	user.c \
+	file.c \
 	npfs.h \
 	npfsimpl.h \
 	9p.h

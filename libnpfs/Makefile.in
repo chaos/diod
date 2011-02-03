@@ -41,7 +41,6 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in AUTHORS \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
-	$(top_srcdir)/config/x_ac_dotl.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_largeio.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
@@ -59,9 +58,9 @@ ARFLAGS = cru
 libnpfs_a_AR = $(AR) $(ARFLAGS)
 libnpfs_a_LIBADD =
 am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
-	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) file.$(OBJEXT) \
-	fmt.$(OBJEXT) np.$(OBJEXT) pipesrv.$(OBJEXT) srv.$(OBJEXT) \
-	trans.$(OBJEXT) user.$(OBJEXT)
+	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) fmt.$(OBJEXT) np.$(OBJEXT) \
+	pipesrv.$(OBJEXT) srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) \
+	file.$(OBJEXT)
 libnpfs_a_OBJECTS = $(am_libnpfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -214,7 +213,6 @@ libnpfs_a_SOURCES = \
 	fcall.c \
 	fdtrans.c \
 	fidpool.c \
-	file.c \
 	npfile.h \
 	fmt.c \
 	np.c \
@@ -222,6 +220,7 @@ libnpfs_a_SOURCES = \
 	srv.c \
 	trans.c \
 	user.c \
+	file.c \
 	npfs.h \
 	npfsimpl.h \
 	9p.h

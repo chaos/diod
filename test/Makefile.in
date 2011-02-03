@@ -39,16 +39,7 @@ check_PROGRAMS = tsetuid$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tstatfs$(EXEEXT) trename$(EXEEXT) tstat$(EXEEXT) \
 	tflock$(EXEEXT) tflock2$(EXEEXT) tfcntl2$(EXEEXT) \
 	tfcntl3$(EXEEXT) tconfig$(EXEEXT) tfsgid$(EXEEXT)
-@DOTL_FALSE@am__append_1 = \
-@DOTL_FALSE@	t11-mount-9P2000.L \
-@DOTL_FALSE@	t13-rename-across-dirs \
-@DOTL_FALSE@	t14-statfs \
-@DOTL_FALSE@	t18-flock-twoproc \
-@DOTL_FALSE@	t19-fcntl-twoproc \
-@DOTL_FALSE@	t23-fcntl-oneproc \
-@DOTL_FALSE@	t24-flock-oneproc
-
-@LARGEIO_FALSE@am__append_2 = \
+@LARGEIO_FALSE@am__append_1 = \
 @LARGEIO_FALSE@	t20-aread \
 @LARGEIO_FALSE@	t21-awrite
 
@@ -57,7 +48,6 @@ DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
-	$(top_srcdir)/config/x_ac_dotl.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_largeio.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
@@ -371,7 +361,9 @@ TESTS = \
 	t26-chgrp
 
 XFAIL_TESTS = t18-flock-twoproc t19-fcntl-twoproc t23-fcntl-oneproc \
-	t24-flock-oneproc $(am__append_1) $(am__append_2)
+	t24-flock-oneproc t11-mount-9P2000.L t13-rename-across-dirs \
+	t14-statfs t18-flock-twoproc t19-fcntl-twoproc \
+	t23-fcntl-oneproc t24-flock-oneproc $(am__append_1)
 CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \

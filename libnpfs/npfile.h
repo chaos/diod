@@ -31,16 +31,8 @@ struct Npfile {
 	int		refcount;
 	Npfile*		parent;
 	Npqid		qid;
-	u32		mode;
-	u32		atime;
-	u32		mtime;
-	u64		length;
 	char*		name;
-	Npuser*		uid;
-	Npgroup*	gid;
-	Npuser*		muid;
-	char*		extension;
-	int		excl;
+	struct stat	stat;
 	void*		ops;
 	void*		aux;
 
@@ -58,7 +50,7 @@ struct Npfileops {
 				u8 *data, Npreq *req);
 	int		(*write)(Npfilefid* file, u64 offset, u32 count, 
 				u8 *data, Npreq *req);
-	int		(*wstat)(Npfile*, Npstat*);
+	//int		(*wstat)(Npfile*, Npstat*);
 	void		(*destroy)(Npfile*);
 	int		(*openfid)(Npfilefid *);
 	void		(*closefid)(Npfilefid *);
@@ -71,7 +63,7 @@ struct Npdirops {
 				Npuser *uid, Npgroup *gid, char *extension);
 	Npfile*		(*first)(Npfile *dir);
 	Npfile*		(*next)(Npfile *dir, Npfile *prevchild);
-	int		(*wstat)(Npfile*, Npstat*);
+	//int		(*wstat)(Npfile*, Npstat*);
 	int		(*remove)(Npfile *dir, Npfile *file);
 	void		(*destroy)(Npfile*);
 	Npfilefid*	(*allocfid)(Npfile *);
@@ -93,7 +85,7 @@ Npfile* npfile_alloc(Npfile *parent, char *name, u32 mode, u64 qpath,
 void npfile_incref(Npfile *);
 int npfile_decref(Npfile *);
 Npfile *npfile_find(Npfile *, char *);
-int npfile_checkperm(Npfile *file, Npuser *user, int perm);
+int npfile_checkperm(Npfile *file, Npuser *user, u32 mode);
 void npfile_init_srv(Npsrv *, Npfile *);
 
 Npfilefid* npfile_fidalloc(Npfile *file, Npfid *fid); /* added jg */
@@ -107,5 +99,5 @@ Npfcall *npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall *npfile_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req);
 Npfcall *npfile_clunk(Npfid *fid);
 Npfcall *npfile_remove(Npfid *fid);
-Npfcall *npfile_stat(Npfid *fid);
-Npfcall *npfile_wstat(Npfid *fid, Npstat *stat);
+//Npfcall *npfile_stat(Npfid *fid);
+//Npfcall *npfile_wstat(Npfid *fid, Npstat *stat);

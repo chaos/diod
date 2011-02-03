@@ -59,7 +59,6 @@ X_AC_CHECK_COND_LIB(lua, luaL_newstate)
 ##
 # Check for package feature enablement
 ##
-X_AC_DOTL
 X_AC_MUNGE
 X_AC_LARGEIO
 

@@ -45,8 +45,8 @@
  *     No reply is sent.
  *
  * Error state set
- *     An Rerror message is sent, constructed from the thread-specific error
- *     state which is set with np_werror ().  Any (Npfcall *)returned is freed.
+ *     An Rlerror message is sent, constructed from the thread-specific error
+ *     state which is set with np_uerror ().  Any (Npfcall *)returned is freed.
  *  
  * Normally the wrapper passes through the registered srv->operation's return
  * value, except in special cases noted below (diod_walk).
@@ -94,7 +94,6 @@ typedef struct {
     int              fd;
     DIR             *dir;
     struct dirent   *dirent;
-    int              diroffset;
     struct stat      stat;
     /* atomic I/O */
     void            *rc_data;
@@ -116,16 +115,11 @@ typedef struct {
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
 int          diod_clone  (Npfid *fid, Npfid *newfid);
 int          diod_walk   (Npfid *fid, Npstr *wname, Npqid *wqid);
-Npfcall     *diod_open   (Npfid *fid, u8 mode);
-Npfcall     *diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, 
-                          Npstr *extension);
 Npfcall     *diod_read   (Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_write  (Npfid *fid, u64 offset, u32 count, u8 *data,
                           Npreq *req);
 Npfcall     *diod_clunk  (Npfid *fid);
 Npfcall     *diod_remove (Npfid *fid);
-Npfcall     *diod_stat   (Npfid *fid);
-Npfcall     *diod_wstat  (Npfid *fid, Npstat *stat);
 void         diod_flush  (Npreq *req);
 void         diod_fiddestroy(Npfid *fid);
 void         diod_connclose(Npconn *conn);
@@ -137,7 +131,6 @@ Npfcall     *diod_aread  (Npfid *fid, u8 datacheck, u64 offset, u32 count,
 Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
                           u8 *data, Npreq *req);
 #endif
-#if HAVE_DOTL
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
 Npfcall     *diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode,
@@ -156,26 +149,15 @@ Npfcall     *diod_lock (Npfid *fid, struct p9_flock *flock);
 Npfcall     *diod_getlock (Npfid *fid, struct p9_getlock *getlock);
 Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
-#endif
+
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
-static u32       _umode2npmode  (mode_t umode);
-static int       _ustat2npwstat (char *path, struct stat *st, Npwstat *wstat);
-static int       _omode2uflags  (u8 mode);
-static mode_t    _np2umode       (u32 mode, Npstr *extension);
 static void      _fidfree       (Fid *f);
-static u32       _read_dir      (Npfid *fid, u8* buf, u64 offset, u32 count);
-
-static int  _create_special     (Npfid *fid, char *path, u32 perm,
-                                 Npstr *extension);
 
 
 static pthread_mutex_t  conn_lock = PTHREAD_MUTEX_INITIALIZER;
 static int              conn_count = 0;
 static int              server_used = 0;
-
-char *Enoextension = "empty extension while creating special file";
-char *Eformat = "incorrect extension format";
 
 void
 diod_register_ops (Npsrv *srv)
@@ -185,14 +167,10 @@ diod_register_ops (Npsrv *srv)
     srv->attach = diod_attach;
     srv->clone = diod_clone;
     srv->walk = diod_walk;
-    srv->open = diod_open;
-    srv->create = diod_create;
     srv->read = diod_read;
     srv->write = diod_write;
     srv->clunk = diod_clunk;
     srv->remove = diod_remove;
-    srv->stat = diod_stat;
-    srv->wstat = diod_wstat;
     srv->flush = diod_flush;
     srv->fiddestroy = diod_fiddestroy;
     srv->debuglevel = diod_conf_get_debuglevel ();
@@ -203,7 +181,6 @@ diod_register_ops (Npsrv *srv)
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
 #endif
-#if HAVE_DOTL
     srv->statfs = diod_statfs;
     srv->lopen = diod_lopen;
     srv->lcreate = diod_lcreate;
@@ -221,10 +198,6 @@ diod_register_ops (Npsrv *srv)
     //srv->getlock = diod_getlock;
     srv->link = diod_link;
     srv->mkdir = diod_mkdir;
-    srv->proto_version = p9_proto_2000L;
-#else
-    srv->proto_version = p9_proto_2000u; /* legacy is unsupported */
-#endif
 }
 
 /* Update stat info contained in fid.
@@ -339,7 +312,6 @@ _fidalloc (void)
         f->path = NULL;
         f->fd = -1;
         f->dir = NULL;
-        f->diroffset = 0;
         f->dirent = NULL;
         f->rc_data = NULL;
         f->wc_data = NULL;
@@ -410,37 +382,6 @@ diod_fiddestroy (Npfid *fid)
     fid->aux = NULL;
 }
 
-/* Convert 9P open mode bits to UNIX open mode bits.
- */
-static int
-_omode2uflags (u8 mode)
-{
-    int ret = 0;
-
-    switch (mode & 3) {
-        case P9_OREAD:
-            ret = O_RDONLY;
-            break;
-        case P9_ORDWR:
-            ret = O_RDWR;
-            break;
-        case P9_OWRITE:
-            ret = O_WRONLY;
-            break;
-        case P9_OEXEC:
-            ret = O_RDONLY;
-            break;
-    }
-    if (mode & P9_OTRUNC)
-        ret |= O_TRUNC;
-    if (mode & P9_OAPPEND)
-        ret |= O_APPEND;
-    if (mode & P9_OEXCL)
-        ret |= O_EXCL;
-
-    return ret;
-}
-
 /* Create a 9P qid from a file's stat info.
  * N.B. v9fs maps st_ino = qid->path + 2, presumably since inode 0 and 1
  * are special for Linux but not for Plan 9.  For I/O forwarding we want
@@ -462,7 +403,6 @@ _ustat2qid (struct stat *st, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
-#if HAVE_DOTL
 static void
 _dirent2qid (struct dirent *d, Npqid *qid)
 {
@@ -477,121 +417,6 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTDIR;
     if (d->d_type == DT_LNK)
         qid->type |= P9_QTSYMLINK;
-}
-#endif
-
-/* Convert UNIX file mode bits to 9P file mode bits.
- */
-static u32
-_umode2npmode (mode_t umode)
-{
-    u32 ret = umode & 0777;
-
-    if (S_ISDIR (umode))
-        ret |= P9_DMDIR;
-
-    /* dotu */
-    if (S_ISLNK (umode))
-        ret |= P9_DMSYMLINK;
-    if (S_ISSOCK (umode))
-        ret |= P9_DMSOCKET;
-    if (S_ISFIFO (umode))
-        ret |= P9_DMNAMEDPIPE;
-    if (S_ISBLK (umode))
-        ret |= P9_DMDEVICE;
-    if (S_ISCHR (umode))
-        ret |= P9_DMDEVICE;
-    if (umode & S_ISUID)
-        ret |= P9_DMSETUID;
-    if (umode & S_ISGID)
-        ret |= P9_DMSETGID;
-
-    return ret;
-}
-
-/* Convert 9P file mode bits to UNIX mode bits.
- */
-static mode_t
-_np2umode (u32 mode, Npstr *extension)
-{
-    mode_t ret = mode & 0777;
-
-    if (mode & P9_DMDIR)
-        ret |= S_IFDIR;
-
-    /* dotu */
-    if (mode & P9_DMSYMLINK)
-        ret |= S_IFLNK;
-    if (mode & P9_DMSOCKET)
-        ret |= S_IFSOCK;
-    if (mode & P9_DMNAMEDPIPE)
-        ret |= S_IFIFO;
-    if (mode & P9_DMDEVICE) {
-        if (extension && extension->str[0] == 'c')
-            ret |= S_IFCHR;
-        else
-            ret |= S_IFBLK;
-    }
-
-    if (!(ret&~0777))
-        ret |= S_IFREG;
-    if (mode & P9_DMSETUID)
-        ret |= S_ISUID;
-    if (mode & P9_DMSETGID)
-        ret |= S_ISGID;
-
-    return ret;
-}
-
-/* Convert UNIX file stat info to Npwstat (approx. 9P stat structure).
- */
-static int
-_ustat2npwstat(char *path, struct stat *st, Npwstat *wstat)
-{
-    int err;
-    char ext[256];
-    char *s;
-    int ret = -1;
-
-    memset (wstat, 0, sizeof(*wstat));
-    _ustat2qid (st, &wstat->qid);
-    wstat->mode = _umode2npmode (st->st_mode);
-    wstat->atime = st->st_atime;
-    wstat->mtime = st->st_mtime;
-    wstat->length = st->st_size;
-
-    wstat->muid = "";
-    wstat->extension = NULL;
-
-    /* dotu */
-    wstat->uid = "???";
-    wstat->gid = "???";
-    wstat->n_uid = st->st_uid;
-    wstat->n_gid = st->st_gid;
-
-    if (wstat->mode & P9_DMSYMLINK) {
-        err = readlink (path, ext, sizeof(ext) - 1);
-        if (err < 0)
-            err = 0;
-        ext[err] = '\0';
-    } else if (wstat->mode & P9_DMDEVICE) {
-        snprintf (ext, sizeof(ext), "%c %u %u", 
-            S_ISCHR (st->st_mode)?'c':'b',
-            major (st->st_rdev), minor (st->st_rdev));
-    } else {
-        ext[0] = '\0';
-    }
-    if (!(wstat->extension = _strdup (ext)))
-        goto done;
-
-    s = strrchr (path, '/');
-    if (s)
-        wstat->name = s + 1;
-    else
-        wstat->name = path;
-    ret = 0;
-done:
-    return ret;
 }
 
 /* Exit on last connection close iff there has been some 9P spoken.
@@ -656,7 +481,7 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     uid_t runasuid;
 
     if (nafid) {    /* 9P Tauth not supported */
-        np_werror (Enoauth, EIO);
+        np_uerror (EIO);
         msg ("diod_attach: 9P Tauth is not supported");
         goto done;
     }
@@ -730,7 +555,7 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     _serverused ();
 
 done:
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         msg ("attach user %s path %.*s host %s(%s): DENIED",
              fid->user->uname, aname->len, aname->str, host, ip);
         if (f)
@@ -741,7 +566,7 @@ done:
 
 /* Twalk - walk a file path
  * Called from fcall.c::np_walk () to clone the fid.
- * On error, call np_werror () and return 0.
+ * On error, call np_uerror () and return 0.
  */
 int
 diod_clone (Npfid *fid, Npfid *newfid)
@@ -762,7 +587,7 @@ diod_clone (Npfid *fid, Npfid *newfid)
     ret = 1;
 
 done:   
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         if (nf)
             _fidfree (nf);
     }
@@ -771,7 +596,7 @@ done:
 
 /* Twalk - walk a file path
  * Called from fcall.c::np_walk () on each wname component in succession.
- * On error, call np_werror () and return 0.
+ * On error, call np_uerror () and return 0.
  */
 int
 diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
@@ -817,181 +642,10 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
     ret = 1;
 
 done:
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         if (path)
             free (path);
     }
-    return ret;
-}
-
-/* Topen - open a file by fid.
- */
-Npfcall*
-diod_open (Npfid *fid, u8 mode)
-{
-    Fid *f = fid->aux;
-    Npfcall *res = NULL;
-    Npqid qid;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_open: error switching user");
-        goto done;
-    }
-    if (_fidstat (f) < 0)
-        goto done;
-
-    if (S_ISDIR (f->stat.st_mode)) {
-        f->dir = opendir (f->path);
-        if (!f->dir) {
-            np_uerror (errno);
-            goto done;
-        }
-    } else {
-        f->fd = open (f->path, _omode2uflags(mode));
-        if (f->fd < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-    }
-    /* XXX is this really an error? */
-    if (_fidstat (f) < 0) {
-        err ("diod_open: could not stat file that we just opened");
-        goto done;
-    }
-    _ustat2qid (&f->stat, &qid);
-    if (!(res = np_create_ropen (&qid, 0))) {
-        np_uerror (ENOMEM);
-        msg ("diod_open: out of memory");
-        goto done;
-    }
-
-done:
-    if (np_haserror ()) {
-        if (f->dir) {
-            closedir (f->dir);
-            f->dir = NULL;
-        }
-        if (f->fd != -1) {
-            close (f->fd);
-            f->fd = -1;
-        }
-    }
-    return res;
-}
-
-/* Create a hard link.
- */
-static int
-_link (Npfid *fid, char *path, char *ext)
-{
-    Npfid *ofid;
-    Fid *of;
-    int nfid;
-    int ret = -1;
- 
-    if (sscanf (ext, "%d", &nfid) == 0) {
-        np_werror (Eformat, EIO);
-        msg ("diod_create: incorrect hard link extension format");
-        goto done;
-    }
-    ofid = np_fid_find (fid->conn, nfid);
-    if (!ofid) {
-        np_werror (Eunknownfid, EIO);
-        goto done;
-    }
-    of = ofid->aux;
-    if (link (of->path, path) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    ret = 0;
-done:
-    return ret;
-}
-
-/* Create a device.
- */
-static int
-_mknod (char *path, char *ext, u32 perm)
-{
-    int nmode, major, minor;
-    char ctype;
-    int ret = -1;
-
-    if (sscanf (ext, "%c %u %u", &ctype, &major, &minor) != 3) {
-        np_werror (Eformat, EIO);
-        msg ("diod_create: incorrect mknod extension format");
-        goto done;
-    }
-    nmode = 0;
-    switch (ctype) {
-        case 'c':
-            nmode = S_IFCHR;
-            break;
-        case 'b':
-            nmode = S_IFBLK;
-            break;
-        default:
-            np_werror (Eformat, EIO);
-            msg ("diod_create: incorrect mknod extension ctype");
-            goto done;
-    }
-    nmode |= (perm & 0777);
-    if (mknod (path, nmode, makedev(major, minor)) < 0) {
-        np_uerror(errno);
-        goto done;
-    }
-    ret = 0;
-done:
-    return ret;    
-}
-
-/* Create a named pipe, symlink, hardlink, or device - helper for diod_create()
- */
-static int
-_create_special (Npfid *fid, char *path, u32 perm, Npstr *extension)
-{
-    mode_t umode;
-    char *ext = NULL;
-    int ret = -1;
-
-    if (!(perm & P9_DMNAMEDPIPE) && !extension->len) {
-        np_werror (Enoextension, EIO);
-        msg ("diod_create: empty extension for named pipe");
-        goto done;
-    }
-
-    umode = _np2umode (perm, extension);
-    if (!(ext = _p9strdup (extension)))
-        goto done;
-    if (perm & P9_DMSYMLINK) {
-        if (symlink (ext, path) < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-    } else if (perm & P9_DMLINK) {
-        if (_link (fid, path, ext) < 0)
-            goto done;
-    } else if (perm & P9_DMDEVICE) {
-        if (_mknod (path, ext, perm) < 0)
-            goto done;
-    } else if (perm & P9_DMNAMEDPIPE) {
-        if (mknod (path, S_IFIFO | (umode & 0777), 0) < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-    }
-    if (!(perm & P9_DMSYMLINK)) {
-        if (chmod (path, umode) < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-    }
-    ret = 0;
-
-done:
-    if (ext)
-        free(ext);
     return ret;
 }
 
@@ -1006,156 +660,12 @@ _mkpath(char *dirname, Npstr *name)
     return s;
 }
 
-/* Tcreate - create + open (atomically) a new file.
- */
-Npfcall*
-diod_create (Npfid *fid, Npstr *name, u32 perm, u8 mode, Npstr *extension)
-{
-    Fid *f = fid->aux;
-    Npfcall *ret = NULL;
-    char *npath = NULL;
-    Npqid qid;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_create: error switching user");
-        goto done;
-    }
-    if (_fidstat (f) < 0)
-        goto done;
-    if (!(npath = _mkpath(f->path, name))) {
-        msg ("diod_create: out of memory");
-        goto done;
-    }
-    if (perm & P9_DMDIR) {
-        if (mkdir (npath, perm & 0777) < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-        if (lstat (npath, &f->stat) < 0) {
-            np_uerror (errno);
-            rmdir (npath);
-            goto done;
-        }
-        f->dir = opendir (npath);
-        if (!f->dir) {
-            np_uerror (errno);
-            remove (npath);
-            goto done;
-        }
-    } else if (perm & (P9_DMNAMEDPIPE|P9_DMSYMLINK|P9_DMLINK|P9_DMDEVICE)) {
-        if (_create_special (fid, npath, perm, extension) < 0)
-            goto done;
-
-        if (lstat (npath, &f->stat) < 0) {
-            np_uerror (errno);
-            remove (npath);
-            goto done;
-        }
-    } else {
-        f->fd = open (npath, O_CREAT|_omode2uflags (mode), perm & 0777);
-        if (f->fd < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-        if (lstat (npath, &f->stat) < 0) {
-            np_uerror(errno);
-            remove(npath);
-            goto done;
-        }
-    }
-    free (f->path);
-    f->path = npath;
-    npath = NULL;
-    _ustat2qid (&f->stat, &qid);
-    if (!((ret = np_create_rcreate (&qid, 0)))) {
-        np_uerror (ENOMEM);
-        msg ("diod_create: out of memory");
-        goto done;
-    }
-
-done:
-    if (npath)
-        free (npath);
-    return ret;
-}
-
-/* Form a path from <parent>/<child>, then copy its serialized wstat info
- * into buf.  Returns the number of bytes of buf consumed (0 if there was
- * not enough room).
- */
-static u32
-_copy_dirent (char *parent, int plen, char *child, u8 *buf, u32 buflen)
-{
-    char *path; 
-    int ret = 0;
-    struct stat st;
-    Npwstat wstat;
-
-    if (!(path = _malloc (plen + strlen (child) + 2))) {
-        msg ("diod_read: out of memory");
-        goto done;
-    }
-    sprintf (path, "%s/%s", parent, child);
-    if (lstat (path, &st) < 0) {
-        np_uerror (errno);
-        goto done;
-    }
-    if (_ustat2npwstat (path, &st, &wstat) < 0) {
-        msg ("diod_read: out of memory");
-        goto done;
-    }
-    ret = np_serialize_stat (&wstat, buf, buflen, 1); /* 1 for dotu */
-    free (wstat.extension);
-
-done:
-    if (path)
-        free (path);
-    return ret;
-}
-
-/* Read some number of dirents into buf.
- * If buf is too small, leave the last dirent in f->dirent for next time.
- */
-static u32
-_read_dir (Npfid *fid, u8* buf, u64 offset, u32 count)
-{
-    Fid *f = fid->aux;
-    int plen = strlen (f->path);
-    int i, n = 0;
-
-    if (count == 0 || (offset != f->diroffset && offset != 0)) {
-        np_uerror (EINVAL);
-        goto done;
-    }
-    if (offset == 0 && f->diroffset != 0) {
-        f->diroffset = 0;
-        f->dirent = NULL;
-        rewinddir (f->dir);
-    } 
-    do {
-        if (!f->dirent)
-            f->dirent = readdir (f->dir);
-        if (!f->dirent)
-                break;
-        i = _copy_dirent (f->path, plen, f->dirent->d_name,
-                          buf + n, count - n - 1);
-        if (i > 0)
-            f->dirent = NULL;
-        n += i;
-    } while (i > 0 && n < count);
-
-    f->diroffset += n;
-done:
-    return n;
-}
-
 /* Tread - read from a file or directory.
  */
 Npfcall*
 diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
     int n;
-    Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
     if (!diod_switch_user (fid->user, -1)) {
@@ -1167,11 +677,8 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
         msg ("diod_read: out of memory");
         goto done;
     }
-    if (f->dir)
-        n = _read_dir (fid, ret->data, offset, count);
-    else
-        n = _pread (fid, ret->data, count, offset);
-    if (np_haserror ()) {
+    n = _pread (fid, ret->data, count, offset);
+    if (np_rerror ()) {
         free (ret);
         ret = NULL;
     } else
@@ -1240,159 +747,6 @@ diod_remove (Npfid *fid)
         goto done;
     }
 done:
-    return ret;
-}
-
-/* Tstat - stat a file.
- */
-Npfcall*
-diod_stat (Npfid *fid)
-{
-    Fid *f = fid->aux;
-    Npfcall *ret = NULL;
-    Npwstat wstat;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_stat: error switching user");
-        goto done;
-    }
-    wstat.extension = NULL;
-    if (_fidstat (f) < 0)
-        goto done;
-    if (_ustat2npwstat (f->path, &f->stat, &wstat) < 0) {
-        msg ("diod_stat: out of memory");
-        goto done;
-    }
-    if (!(ret = np_create_rstat(&wstat, 1))) { /* 1 for dotu */
-        np_uerror (ENOMEM);
-        msg ("diod_stat: out of memory");
-        goto done;
-    }
-done:
-    if (wstat.extension)
-        free (wstat.extension);
-    return ret;
-}
-
-/* Twstat - update a file's metadata.
- */
-Npfcall*
-diod_wstat(Npfid *fid, Npstat *st)
-{
-    Fid *f = fid->aux;
-    Npfcall *ret = NULL;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_wstat: error switching user");
-        goto done;
-    }
-    if (_fidstat (f) < 0)
-        goto done;
-    if (!(ret = np_create_rwstat())) {
-        np_uerror (ENOMEM);
-        msg ("diod_wstat: out of memory");
-        goto done;
-    }
-
-    /* rename */
-    if (st->name.len != 0) {
-        char *p = strrchr(f->path, '/');
-        char *npath;
-
-        if (!p)
-            p = f->path + strlen(f->path);
-        if (!(npath = _malloc(st->name.len + (p - f->path) + 2))) {
-            msg ("diod_wstat: out of memory");
-            goto done;
-        }
-        memcpy(npath, f->path, p - f->path);
-        npath[p - f->path] = '/';
-        memcpy(npath + (p - f->path) + 1, st->name.str, st->name.len);
-        npath[(p - f->path) + 1 + st->name.len] = 0;
-        if (strcmp(npath, f->path) != 0) {
-            if (rename(f->path, npath) < 0) {
-                np_uerror (errno);
-                free (npath);
-                goto done;
-            }
-            free (f->path);
-            f->path = npath;
-        }
-    }
-
-    /* chmod */
-    if (st->mode != (u32)~0) {
-        mode_t umode = _np2umode(st->mode, &st->extension);
-
-        if ((st->mode & P9_DMDIR) && !S_ISDIR(f->stat.st_mode)) {
-            np_werror(Edirchange, EIO);
-            msg ("diod_wstat: Dmdir chmod on non-directory");
-            goto done;
-        }
-        if (chmod(f->path, umode) < 0) {
-            np_uerror(errno);
-            goto done;
-        }
-    }
-
-    /* utime */
-    if (st->mtime != (u32)~0 || st->atime != (u32)~0) {
-        struct utimbuf tb;
-        struct stat sb;
-
-        if (!(st->mtime != (u32)~0 && st->atime != (u32)~0)) {
-            if (stat(f->path, &sb) < 0) {
-                np_uerror(errno);
-                goto done;
-            }
-            tb.actime = sb.st_atime;
-            tb.modtime = sb.st_mtime;
-        }
-        if (st->mtime != (u32)~0)
-            tb.modtime = st->mtime;
-        if (st->atime != (u32)~0)
-            tb.actime = st->atime;
-        if (utime(f->path, &tb) < 0) {
-            np_uerror(errno);
-            goto done;
-        }
-    }
-
-    /* chgrp */
-    if (st->n_uid != (u32)~0 || st->n_gid != (u32)~0) {
-        uid_t uid = st->n_uid != (u32)~0 ? st->n_uid : -1;
-        gid_t gid = st->n_gid != (u32)~0 ? st->n_gid : -1;
-
-        if (chown(f->path, uid, gid) < 0) {
-            np_uerror(errno);
-            goto done;
-        }
-    }
-
-    /* truncate */
-    if (st->length != ~0) {
-        if (truncate(f->path, st->length) < 0) {
-            np_uerror(errno);
-            goto done;
-        }
-    }
-
-    /* fsync - designated by a "do nothing" wstat, see 9p.stat(5) */
-    if (st->mode == (u32)~0 && st->mtime == (u32)~0 && st->atime == (u32)~0
-                            && st->n_uid == (u32)~0 && st->n_gid == (u32)~0
-                            && st->length == ~0     && st->name.len == 0) {
-        if (fsync (f->fd) < 0) {
-            np_uerror (errno);
-            goto done;
-        }
-    }
-done:
-    if (np_haserror ()) {
-        if (ret) {
-            free (ret);
-            ret = NULL;
-        }
-    }
     return ret;
 }
 
@@ -1500,7 +854,7 @@ diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
                      (unsigned long long)offset);
         }
     }
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         if (ret) {
             free (ret);
             ret = NULL;
@@ -1617,7 +971,6 @@ done:
 }
 #endif
 
-#if HAVE_DOTL
 /* Tstatfs - read file system  information (9P2000.L)
  * N.B. must call statfs() and statvfs() as
  * only statvfs provides (unsigned long) f_fsid
@@ -1696,7 +1049,7 @@ diod_lopen (Npfid *fid, u32 mode)
     }
 
 done:
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         if (f->dir) {
             closedir (f->dir);
             f->dir = NULL;
@@ -1873,7 +1226,7 @@ diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
     free (f->path);
     f->path = newpath;
 done:
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         if (newpath)
             free (newpath);
         if (ret) {
@@ -2080,7 +1433,7 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
         goto done;
     }
     n = _read_dir_linux (f, ret->u.rreaddir.data, offset, count);
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         free (ret);
         ret = NULL;
     } else
@@ -2199,7 +1552,6 @@ done:
         free (npath);
     return ret;
 }
-#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

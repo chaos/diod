@@ -23,8 +23,6 @@
 
 typedef struct p9_str Npstr;
 typedef struct p9_qid Npqid;
-typedef struct Npstat Npstat;
-typedef struct p9_wstat Npwstat;
 typedef struct Npfcall Npfcall;
 typedef struct Npfid Npfid;
 typedef struct Npfidpool Npfidpool;
@@ -50,27 +48,6 @@ enum {
 
 #define FID_HTABLE_SIZE 64
 
-struct Npstat {
-	u16 		size;
-	u16 		type;
-	u32 		dev;
-	Npqid		qid;
-	u32 		mode;
-	u32 		atime;
-	u32 		mtime;
-	u64 		length;
-	Npstr		name;
-	Npstr		uid;
-	Npstr		gid;
-	Npstr		muid;
-
-	/* 9P2000.u extensions */
-	Npstr		extension;	/* XXX a char * in p9_wstat */
-	u32 		n_uid;
-	u32 		n_gid;
-	u32 		n_muid;
-};
- 
 struct Npfcall {
 	u32		size;
 	u8		type;
@@ -98,14 +75,12 @@ struct Npfcall {
 	u64		offset;			/* P9_TREAD, P9_TWRITE */
 	u32		count;			/* P9_TREAD, P9_RREAD, P9_TWRITE, P9_RWRITE */
 	u8*		data;			/* P9_RREAD, P9_TWRITE */
-	Npstat		stat;			/* P9_RSTAT, P9_TWSTAT */
 
 	/* 9P2000.u extensions */
 	u32		ecode;			/* P9_RERROR */
 	Npstr		extension;		/* P9_TCREATE */
 	u32		n_uname;
 	union {
-#if HAVE_DOTL
 	   struct p9_rlerror rlerror;
 	   struct p9_tstatfs tstatfs;
 	   struct p9_rstatfs rstatfs;
@@ -141,7 +116,6 @@ struct Npfcall {
 	   struct p9_rlink rlink;
 	   struct p9_tmkdir tmkdir;
 	   struct p9_rmkdir rmkdir;
-#endif
 #if HAVE_LARGEIO
 	   struct p9_tawrite tawrite;
 	   struct p9_rawrite rawrite;
@@ -158,10 +132,7 @@ struct Npfid {
 	Npconn*		conn;
 	u32		fid;
 	int		refcount;
-	u32		openmode;
-	u8		openmode_clear;
 	u8		type;
-	u32		diroffset;
 	Npuser*		user;
 	void*		aux;
 
@@ -200,7 +171,6 @@ struct Npconn {
 	pthread_cond_t	resetdonecond;
 
 	u32		msize;
-	int		proto_version;
 	int		shutdown;
 	Npsrv*		srv;
 	Nptrans*	trans;
@@ -253,7 +223,6 @@ enum {
 
 struct Npsrv {
 	u32		msize;
-	int		proto_version;
 	void*		srvaux;
 	void*		treeaux;
 	int		debuglevel;
@@ -275,17 +244,12 @@ struct Npsrv {
 	void		(*flush)(Npreq *req);
 	int		(*clone)(Npfid *fid, Npfid *newfid);
 	int		(*walk)(Npfid *fid, Npstr *wname, Npqid *wqid);
-	Npfcall*	(*open)(Npfid *fid, u8 mode);
-	Npfcall*	(*create)(Npfid *fid, Npstr* name, u32 perm, u8 mode, 
-				Npstr* extension);
 	Npfcall*	(*read)(Npfid *fid, u64 offset, u32 count, Npreq *req);
 	Npfcall*	(*write)(Npfid *fid, u64 offset, u32 count, u8 *data, 
 				Npreq *req);
 	Npfcall*	(*clunk)(Npfid *fid);
 	Npfcall*	(*remove)(Npfid *fid);
-	Npfcall*	(*stat)(Npfid *fid);
-	Npfcall*	(*wstat)(Npfid *fid, Npstat *stat);
-#if HAVE_DOTL
+
 	Npfcall*	(*statfs)(Npfid *);
 	Npfcall*	(*lopen)(Npfid *, u32);
 	Npfcall*	(*lcreate)(Npfid *, Npstr *, u32, u32, u32);
@@ -304,7 +268,7 @@ struct Npsrv {
 	Npfcall*	(*getlock)(Npfid *, struct p9_getlock *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
-#endif
+
 #if HAVE_LARGEIO
 	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
 				 u32 count, u32 rsize, Npreq *req);
@@ -389,7 +353,7 @@ void np_buf_set(Npbuf *, u8 *, u32);
 Npconn *np_conn_create(Npsrv *, Nptrans *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
-void np_conn_reset(Npconn *, u32, int);
+void np_conn_reset(Npconn *, u32);
 void np_conn_shutdown(Npconn *);
 void np_conn_respond(Npreq *req);
 void np_respond(Npreq *, Npfcall *);
@@ -408,13 +372,9 @@ void np_trans_destroy(Nptrans *);
 int np_trans_read(Nptrans *, u8 *, u32);
 int np_trans_write(Nptrans *, u8 *, u32);
 
-int np_deserialize(Npfcall*, u8*, int dotu);
-int np_serialize_stat(Npwstat *wstat, u8* buf, int buflen, int dotu);
-int np_deserialize_stat(Npstat *stat, u8* buf, int buflen, int dotu);
-#if HAVE_DOTL
+int np_deserialize(Npfcall*, u8*);
 int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,
                           int buflen);
-#endif
 
 void np_strzero(Npstr *str);
 char *np_strdup(Npstr *str);
@@ -424,8 +384,6 @@ int np_strncmp(Npstr *str, char *cs, int len);
 void np_set_tag(Npfcall *, u16);
 Npfcall *np_create_rversion(u32 msize, char *version);
 Npfcall *np_create_rauth(Npqid *aqid);
-Npfcall *np_create_rerror(char *ename, int ecode, int dotu);
-Npfcall *np_create_rerror1(Npstr *ename, int ecode, int dotu);
 Npfcall *np_create_rflush(void);
 Npfcall *np_create_rattach(Npqid *qid);
 Npfcall *np_create_rwalk(int nwqid, Npqid *wqids);
@@ -435,15 +393,13 @@ Npfcall *np_create_rread(u32 count, u8* data);
 Npfcall *np_create_rwrite(u32 count);
 Npfcall *np_create_rclunk(void);
 Npfcall *np_create_rremove(void);
-Npfcall *np_create_rstat(Npwstat *stat, int dotu);
-Npfcall *np_create_rwstat(void);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
 #if HAVE_LARGEIO
 Npfcall *np_create_raread(u32 count);
+void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
 Npfcall *np_create_rawrite(u32 count);
 #endif
-#if HAVE_DOTL
 Npfcall *np_create_rlerror(u32 ecode);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,
@@ -468,13 +424,9 @@ void np_finalize_rreaddir(Npfcall *fc, u32 count);
 Npfcall *np_create_rfsync(void);
 Npfcall *np_create_rmkdir(struct p9_qid *qid);
 Npfcall *np_create_rlink(void);
-#endif
-void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
 
-int np_printstat(FILE *f, Npstat *st, int dotu);
-int np_snprintstat(char *s, int len, Npstat *st, int dotu);
-int np_printfcall(FILE *f, Npfcall *fc, int dotu);
-int np_snprintfcall(char *s, int len, Npfcall *fc, int dotu);
+int np_printfcall(FILE *f, Npfcall *fc);
+int np_snprintfcall(char *s, int len, Npfcall *fc);
 
 void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
@@ -499,75 +451,7 @@ int np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *op
 
 Npsrv *np_rdmasrv_create(int nwthreads, int *port);
 
-void np_werror(char *ename, int ecode, ...);
-void np_rerror(char **ename, int *ecode);
-int np_haserror(void);
+int np_rerror(void);
 void np_uerror(int ecode);
-void np_suerror(char *s, int ecode);
 
 void *np_malloc(int);
-
-static inline int np_conn_extend (Npconn *conn)
-{
-	return (conn->proto_version == p9_proto_2000u
-	     || conn->proto_version == p9_proto_2000L);
-}
-static inline int np_srv_extend (Npsrv *srv)
-{
-	return (srv->proto_version == p9_proto_2000u
-	     || srv->proto_version == p9_proto_2000L);
-}
-static inline int np_conn_proto_dotl (Npconn *conn)
-{
-	return (conn->proto_version == p9_proto_2000L);
-}
-static inline int np_fid_proto_dotl (Npfid *fid)
-{
-	return np_conn_proto_dotl (fid->conn);
-}
-
-/* fid->openmode accessors - use them!
- * It can be interpreted as linux (9p2000.L) or Plan 9 (otherwise) bits.
- */
-static inline void np_fid_omode_clear(Npfid *fid)
-{
-	fid->openmode_clear = 1;
-}
-static inline int np_fid_omode_isclear(Npfid *fid)
-{
-	return fid->openmode_clear;
-}
-static inline void np_fid_omode_set(Npfid *fid, u32 omode)
-{
-	fid->openmode = omode;
-	fid->openmode_clear = 0;
-}
-#ifdef O_ACCMODE
-static inline int np_fid_omode_noread (Npfid *fid)
-{
-	int res;
-	if (np_fid_proto_dotl(fid))
-		res = ((fid->openmode & O_ACCMODE) == O_WRONLY);
-	else
-		res = ((fid->openmode & 3) == P9_OWRITE);
-	return res;
-}
-static inline int np_fid_omode_nowrite (Npfid *fid)
-{
-	int res;
-	if (np_fid_proto_dotl(fid))
-		res = ((fid->openmode & O_ACCMODE) == O_RDONLY);
-	else
-		res = ((fid->openmode & 3) == P9_OREAD);
-	return res;
-}
-#endif
-static inline int np_fid_omode_rclose (Npfid *fid)
-{
-	int res;
-	if (np_fid_proto_dotl(fid))
-		res = 0;
-	else
-		res = (fid->openmode == P9_ORCLOSE);
-	return res;
-}

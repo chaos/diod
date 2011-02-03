@@ -644,8 +644,6 @@ LARGEIO_TRUE
 MUNGE_FALSE
 MUNGE_TRUE
 LIBMUNGE
-DOTL_FALSE
-DOTL_TRUE
 LIBLUA
 LIBZ
 LIBWRAP
@@ -775,7 +773,6 @@ ac_user_opts='
 enable_option_checking
 enable_maintainer_mode
 enable_dependency_tracking
-enable_dotl
 enable_munge
 enable_largeio
 '
@@ -1423,7 +1420,6 @@ Optional Features:
 			  (and sometimes confusing) to the casual installer
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
-  --enable-dotl           Build to use 9P2000.L protocol
   --enable-munge          Build to use MUNGE authentication
   --enable-largeio        Build to use large I/O protocol extensions
 
@@ -5974,30 +5970,6 @@ fi
 # Check for package feature enablement
 ##
 
-  # Check whether --enable-dotl was given.
-if test "${enable_dotl+set}" = set; then
-  enableval=$enable_dotl; enable_dotl=$enableval
-else
-  enable_dotl=no
-fi
-
-  if test x$enable_dotl == xyes; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_DOTL 1
-_ACEOF
-
-  fi
-   if test x$enable_dotl == xyes; then
-  DOTL_TRUE=
-  DOTL_FALSE='#'
-else
-  DOTL_TRUE='#'
-  DOTL_FALSE=
-fi
-
-
-
   # Check whether --enable-munge was given.
 if test "${enable_munge+set}" = set; then
   enableval=$enable_munge; enable_munge=$enableval
@@ -6494,13 +6466,6 @@ Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
 
-if test -z "${DOTL_TRUE}" && test -z "${DOTL_FALSE}"; then
-  { { $as_echo "$as_me:$LINENO: error: conditional \"DOTL\" was never defined.
-Usually this means the macro was only invoked conditionally." >&5
-$as_echo "$as_me: error: conditional \"DOTL\" was never defined.
-Usually this means the macro was only invoked conditionally." >&2;}
-   { (exit 1); exit 1; }; }
-fi
 if test -z "${MUNGE_TRUE}" && test -z "${MUNGE_FALSE}"; then
   { { $as_echo "$as_me:$LINENO: error: conditional \"MUNGE\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5

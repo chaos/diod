@@ -202,7 +202,7 @@ _alloc_duser (struct passwd *pwd)
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
-    if (np_haserror () && d != NULL) {
+    if (np_rerror () && d != NULL) {
         _free_duser (d);
         d = NULL;
     }
@@ -285,7 +285,7 @@ _alloc_user (Npuserpool *up, struct passwd *pwd)
     u->ngroups = 0;         /* not used */
     u->next = NULL;         /* not used */
 done:
-    if (np_haserror () && u != NULL) {
+    if (np_rerror () && u != NULL) {
         if (u->aux)
             _free_duser (u->aux);
         if (u->uname)
@@ -464,7 +464,7 @@ _alloc_group (Npuserpool *up, struct group *gr)
     g->aux = NULL;          /* not used */
     g->next = NULL;         /* not used */
 done:
-    if (np_haserror () && g != NULL) {
+    if (np_rerror () && g != NULL) {
         if (g->gname)
             free (g->gname);
         free (g);

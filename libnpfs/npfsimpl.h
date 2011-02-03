@@ -35,9 +35,6 @@ Npfcall *np_read(Npreq *req, Npfcall *tc);
 Npfcall *np_write(Npreq *req, Npfcall *tc);
 Npfcall *np_clunk(Npreq *req, Npfcall *tc);
 Npfcall *np_remove(Npreq *req, Npfcall *tc);
-Npfcall *np_stat(Npreq *req, Npfcall *tc);
-Npfcall *np_wstat(Npreq *req, Npfcall *tc);
-#if HAVE_DOTL
 Npfcall *np_statfs(Npreq *req, Npfcall *tc);
 Npfcall *np_lopen(Npreq *req, Npfcall *tc);
 Npfcall *np_lcreate(Npreq *req, Npfcall *tc);
@@ -55,14 +52,12 @@ Npfcall *np_lock(Npreq *req, Npfcall *tc);
 Npfcall *np_getlock(Npreq *req, Npfcall *tc);
 Npfcall *np_link(Npreq *req, Npfcall *tc);
 Npfcall *np_mkdir(Npreq *req, Npfcall *tc);
-#endif
 #if HAVE_LARGEIO
 Npfcall *np_aread(Npreq *req, Npfcall *tc);
 Npfcall *np_awrite(Npreq *req, Npfcall *tc);
 #endif
 
 /* fmt.c */
-int np_printstat(FILE *f, Npstat *st, int dotu);
 int np_dump(FILE *f, u8 *data, int datalen);
 
 /* srv.c */

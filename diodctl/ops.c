@@ -43,6 +43,8 @@
 #include <sys/resource.h>
 #include <poll.h>
 #include <assert.h>
+#include <sys/stat.h>
+#include <sys/fcntl.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -84,7 +86,7 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     Npfilefid *f;
 
     if (nafid) {    /* 9P Tauth not supported */
-        np_werror (Enoauth, EIO);
+        np_uerror (EIO);
          msg ("diodctl_attach: 9P Tauth is not supported");
         goto done;
     }
@@ -150,8 +152,8 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
 done:
     msg ("attach user %s path %.*s host %s(%s): %s",
          fid->user->uname, aname->len, aname->str,
-         host, ip, np_haserror () ? "DENIED" : "ALLOWED");
-    if (np_haserror ())
+         host, ip, np_rerror () ? "DENIED" : "ALLOWED");
+    if (np_rerror ())
         npfile_fiddestroy (fid); /* frees fid->aux as Npfilefid* if not NULL */
     return ret;
 }
@@ -224,14 +226,6 @@ _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
     return ret;
 }
 
-/* A no-op (no error) wstat.
- */
-static int
-_noop_wstat (Npfile* file, Npstat* stat)
-{
-    return 1; /* 0 = fail */
-}
-
 static Npdirops root_ops = {
         .first = _root_first,
         .next =  _root_next,
@@ -244,7 +238,6 @@ static Npfileops server_ops = {
 };
 static Npfileops ctl_ops = {
         .write = _ctl_write,
-        .wstat = _noop_wstat, /* needed because mtime is set before a write */
 };
 
 /* Create the file system representation for /diodctl.
@@ -254,40 +247,30 @@ _ctl_root_create (void)
 {
     Npfile *root, *exports, *server, *ctl;
     Npuser *user;
-    char *tmpstr;
 
     if (!(user = diod_upool->uid2user (diod_upool, 0)))
         msg_exit ("out of memory");
 
-    if (!(tmpstr = strdup ("")))
-        msg_exit ("out of memory");
-    if (!(root = npfile_alloc (NULL, tmpstr, 0555|P9_DMDIR, 0, &root_ops, NULL)))
+    if (!(root = npfile_alloc (NULL, "", 0555|S_IFDIR, 0,
+                               &root_ops, NULL)))
         msg_exit ("out of memory");
     root->parent = root;
     npfile_incref(root);
-    root->atime = time(NULL);
-    root->mtime = root->atime;
-    root->uid = user;
-    root->gid = user->dfltgroup;
-    root->muid = user;
 
-    if (!(tmpstr = strdup ("exports")))
-        msg_exit ("out of memory");
-    if (!(exports = npfile_alloc(root, tmpstr, 0444, 1, &exports_ops, NULL)))
+    if (!(exports = npfile_alloc(root, "exports", 0444|S_IFREG, 1,
+                                 &exports_ops, NULL)))
         msg_exit ("out of memory");
     npfile_incref(exports);
     if (!(exports->aux = diod_conf_cat_exports ()))
         msg_exit ("out of memory");
 
-    if (!(tmpstr = strdup ("server")))
-        msg_exit ("out of memory");
-    if (!(server = npfile_alloc(root, tmpstr, 0444, 1, &server_ops, NULL)))
+    if (!(server = npfile_alloc(root, "server", 0444|S_IFREG, 2,
+                                &server_ops, NULL)))
         msg_exit ("out of memory");
     npfile_incref(server);
 
-    if (!(tmpstr = strdup ("ctl")))
-        msg_exit ("out of memory");
-    if (!(ctl = npfile_alloc(root, tmpstr, 0666, 1, &ctl_ops, NULL)))
+    if (!(ctl = npfile_alloc(root, "ctl", 0666|S_IFREG, 3,
+                             &ctl_ops, NULL)))
         msg_exit ("out of memory");
     npfile_incref(ctl);
 

@@ -56,7 +56,6 @@ XFAIL_TESTS = \
 	t19-fcntl-twoproc \
 	t23-fcntl-oneproc \
 	t24-flock-oneproc
-if ! DOTL
 XFAIL_TESTS += \
 	t11-mount-9P2000.L \
 	t13-rename-across-dirs \
@@ -65,7 +64,6 @@ XFAIL_TESTS += \
 	t19-fcntl-twoproc \
 	t23-fcntl-oneproc \
 	t24-flock-oneproc
-endif
 if ! LARGEIO
 XFAIL_TESTS += \
 	t20-aread \

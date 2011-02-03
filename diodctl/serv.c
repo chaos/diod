@@ -133,7 +133,7 @@ _alloc_server (uid_t uid, char *jobid)
         goto done;
     }
 done:
-    if (np_haserror () && s != NULL)
+    if (np_rerror () && s != NULL)
         _free_server (s);
     return s;
 }
@@ -428,7 +428,7 @@ _new_server (Npuser *user, char *jobid)
 done:
     for (i = 0; i < s->nfds; i++)
         close (s->fds[i].fd);
-    if (np_haserror ()) {
+    if (np_rerror ()) {
         if (s) {
             _free_server (s);
             s = NULL;

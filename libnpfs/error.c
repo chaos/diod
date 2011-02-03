@@ -35,7 +35,6 @@
 
 typedef struct Nperror Nperror;
 struct Nperror {
-	char*	ename;
 	int	ecode;
 };
 
@@ -48,7 +47,6 @@ np_destroy_error(void *a)
 	Nperror *err;
 
 	err = a;
-	free(err->ename);
 	free(err);
 }
 
@@ -59,7 +57,7 @@ np_malloc(int size)
 
 	ret = malloc(size);
 	if (!ret)
-		np_werror(Ennomem, ENOMEM);
+		np_uerror(ENOMEM);
 
 	return ret;
 }
@@ -70,33 +68,10 @@ np_init_error_key(void)
 	pthread_key_create(&error_key, np_destroy_error);
 }
 
-static void
-np_vwerror(Nperror *err, char *ename, int ecode, va_list ap)
-{
-	if (err->ename && err->ename != Ennomem) {
-		free(err->ename);
-		err->ename = NULL;
-	}
-
-	err->ecode = ecode;
-	if (ename) {
-		/* RHEL5 has issues
-		vasprintf(&err->ename, ename, ap);
-		  */
-		err->ename = malloc(1024);
-		if (!err->ename) {
-			err->ename = Ennomem;
-			err->ecode = ENOMEM;
-		} else
-			vsnprintf(err->ename, 1024, ename, ap);
-	} else
-		err->ename = NULL;
-}
 void
-np_werror(char *ename, int ecode, ...)
+np_uerror(int ecode)
 {
-	va_list ap;
-	Nperror *err;
+	struct Nperror *err;
 
 	pthread_once(&error_once, np_init_error_key);
 	err = pthread_getspecific(error_key);
@@ -106,62 +81,19 @@ np_werror(char *ename, int ecode, ...)
 			fprintf(stderr, "not enough memory\n");
 			return;
 		}
-
-		err->ename = NULL;
-		err->ecode = 0;
 		pthread_setspecific(error_key, err);
 	}
-
-	va_start(ap, ecode);
-	np_vwerror(err, ename, ecode, ap);
-	va_end(ap);
-}
-
-void
-np_rerror(char **ename, int *ecode)
-{
-	Nperror *err;
-
-	pthread_once(&error_once, np_init_error_key);
-	err = pthread_getspecific(error_key);
-	if (err) {
-		*ename = err->ename;
-		*ecode = err->ecode;
-	} else {
-		*ename = NULL;
-		*ecode = 0;
-	}
+	err->ecode = ecode;
 }
 
 int
-np_haserror()
+np_rerror(void)
 {
 	Nperror *err;
 
 	pthread_once(&error_once, np_init_error_key);
 	err = pthread_getspecific(error_key);
-	if (err)
-		return (err->ename != NULL || err->ecode != 0);
-	else
-		return 0;
+
+	return err ? err->ecode : 0;
 }
 
-void
-np_uerror(int ecode)
-{
-	char buf[256];
-
-	strerror_r(ecode, buf, sizeof(buf));
-	np_werror(buf, ecode);
-}
-
-void
-np_suerror(char *s, int ecode)
-{
-	char err[256];
-	char buf[512];
-
-	strerror_r(ecode, err, sizeof(err));
-	snprintf(buf, sizeof(buf), "%s: %s", s, err);
-	np_werror(buf, ecode);
-}

@@ -23,7 +23,7 @@ system for I/O forwarding on Linux clusters.
 %setup -q
 
 %build
-%configure --enable-dotl
+%configure
 make
 
 %install
