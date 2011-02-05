@@ -489,16 +489,17 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 			n += snprintf(s+n,len-n, " uname %.*s",
 					fc->uname.len, fc->uname.str);
 		else
-#if DOTU_ATTACH_HACK
-			n += snprintf(s+n,len-n, " uname (%u)", fc->n_uname);
-#else
 			n += snprintf(s+n,len-n, " uname <empty>");
-#endif
 		if (fc->aname.len > 0)
 			n += snprintf(s+n,len-n, " aname %.*s",
 					fc->aname.len, fc->aname.str);
 		else
 			n += snprintf(s+n,len-n, " aname <empty>");
+		if (fc->n_uname != P9_NONUNAME)
+			n += snprintf(s+n,len-n, " n_uname %u", fc->n_uname);
+		else
+			n += snprintf(s+n,len-n, " n_uname <NONUNAME>");
+			
 		break;
 
 	case P9_RATTACH:

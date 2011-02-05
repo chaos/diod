@@ -75,7 +75,7 @@ np_auth(Npreq *req, Npfcall *tc)
 	else
 		np_fid_incref(afid);
 
-	if (tc->uname.len && tc->n_uname==~0) {
+	if (tc->uname.len && tc->n_uname==P9_NONUNAME) {
 		uname = np_strdup(&tc->uname);
 		if (!uname) 
 			goto done;
@@ -163,7 +163,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		np_fid_incref(afid);
 	}
 
-	if (tc->uname.len && tc->n_uname==~0) {
+	if (tc->uname.len && tc->n_uname==NO_NUNAME) {
 		uname = np_strdup(&tc->uname);
 		if (!uname) 
 			goto done;

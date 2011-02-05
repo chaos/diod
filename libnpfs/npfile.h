@@ -80,8 +80,8 @@ struct Npfilefid {
 	Npfile*		dirent;
 };
 
-Npfile* npfile_alloc(Npfile *parent, char *name, u32 mode, u64 qpath, 
-	void *ops, void *aux);
+Npfile *npfile_alloc(Npfile *parent, char *name, mode_t mode, ino_t inum, 
+                     void *ops, void *aux);
 void npfile_incref(Npfile *);
 int npfile_decref(Npfile *);
 Npfile *npfile_find(Npfile *, char *);

@@ -549,12 +549,11 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 		np_uerror(EIO);
 		goto done;
 	}
-	if (np_strcmp(version, "9P2000.L") != 0) {
-		np_uerror(EIO);
-		goto done;
-	}
-	np_conn_reset(conn, msize);
-	if (!(rc = np_create_rversion(msize, "9P2000.L")))
+	if (np_strcmp(version, "9P2000.L") == 0)
+		rc = np_create_rversion(msize, "9P2000.L");
+	else
+		rc = np_create_rversion(msize, "unknown");
+	if (rc == NULL)
 		np_uerror(ENOMEM);
 done:
 	return rc;

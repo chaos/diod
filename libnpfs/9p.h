@@ -238,6 +238,7 @@ enum p9_qid_t {
 /* 9P Magic Numbers */
 #define P9_NOTAG	(u16)(~0)
 #define P9_NOFID	(u32)(~0)
+#define P9_NONUNAME	(u32)(~0)
 #define P9_MAXWELEM	16
 
 /* ample room for P9_TWRITE/P9_RREAD header */

@@ -918,6 +918,7 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
+		fc->n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
 
 	case P9_TFLUSH:
@@ -929,9 +930,7 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
-#if DOTU_ATTACH_HACK
-		fc->n_uname = buf_get_int32(bufp);
-#endif
+		fc->n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
 
 	case P9_TWALK:
