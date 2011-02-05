@@ -407,7 +407,7 @@ npfile_lopen(Npfid *fid, u32 mode)
 			goto done;
 	}
 	f->omode = mode;
-	if (!(ret = np_create_ropen(&file->qid, 0))) {
+	if (!(ret = np_create_rlopen(&file->qid, 0))) {
 		np_uerror(ENOMEM);
 		goto done;
 	}

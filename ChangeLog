@@ -1,3 +1,14 @@
+2011-02-04 Jim Garlick <garlick@llnl.gov>
+
+	* man/9p-*.in : Remove man pages in favor of protocol wiki page.
+
+	* libnpfs/fmt.c : Fix some errant debug formatting.
+
+	* libnpfs/np.c : Fix incorrect lcreate response code.
+	Handle n_uname, a dotu artifact, in attach if uname is nil.
+
+	* libnpfs/file.c : Fix incorrect lopen respose code.
+
 2011-02-03 Jim Garlick <garlick@llnl.gov>
 
 	* : Remove 9p2000 and 9p2000.u support.  It's 9P2000.L or bust.

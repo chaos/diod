@@ -111,14 +111,22 @@ np_timestr(const u64 sec, const u64 nsec)
 static int
 np_printdents(char *s, int len, u8 *buf, int buflen)
 {
+	int n = 0;
+
+	if (buflen > 0)	
+		n += snprintf(s+n,len-n, "\n");
 	/* FIXME: decode directory entries here */
-	return np_sndump(s, len, buf, buflen < 64 ? buflen : 64);
+	return np_sndump(s+n, len-n, buf, buflen < 64 ? buflen : 64);
 }
 
 static int
 np_printdata(char *s, int len, u8 *buf, int buflen)
 {
-	return np_sndump(s, len, buf, buflen<64?buflen:64);
+	int n = 0;
+
+	if (buflen > 0)	
+		n += snprintf(s+n, len-n, "\n");
+	return np_sndump(s+n, len-n, buf, buflen < 64 ? buflen : 64);
 }
 
 int
@@ -436,7 +444,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_RAREAD:
 		n += snprintf(s+n,len-n, "P9_RAREAD tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.raread.count);
-		n += snprintf(s+n,len-n, " DATA ");
 		n += np_printdata(s+n,len-n, fc->u.raread.data, fc->u.raread.count);
 		break;
 		
@@ -447,7 +454,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		n += snprintf(s+n,len-n, " offset %"PRIu64, fc->u.tawrite.offset);
 		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.tawrite.count);
 		n += snprintf(s+n,len-n, " rsize %"PRIu32, fc->u.tawrite.rsize);
-		n += snprintf(s+n,len-n, " DATA ");
 		n += np_printdata(s+n,len-n, fc->u.tawrite.data, fc->u.tawrite.rsize);
 		break;
 	case P9_RAWRITE:
@@ -477,9 +483,22 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 
 	case P9_TATTACH:
-		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d uname %.*s aname %.*s",
-			fc->tag, fc->fid, fc->afid, fc->uname.len, fc->uname.str, 
-			fc->aname.len, fc->aname.str);
+		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d",
+				fc->tag, fc->fid, fc->afid);
+		if (fc->uname.len > 0)
+			n += snprintf(s+n,len-n, " uname %.*s",
+					fc->uname.len, fc->uname.str);
+		else
+#if DOTU_ATTACH_HACK
+			n += snprintf(s+n,len-n, " uname (%u)", fc->n_uname);
+#else
+			n += snprintf(s+n,len-n, " uname <empty>");
+#endif
+		if (fc->aname.len > 0)
+			n += snprintf(s+n,len-n, " aname %.*s",
+					fc->aname.len, fc->aname.str);
+		else
+			n += snprintf(s+n,len-n, " aname <empty>");
 		break;
 
 	case P9_RATTACH:
@@ -521,12 +540,12 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 		
 	case P9_RREAD:
-		n += snprintf(s+n,len-n, "P9_RREAD tag %u count %u data ", fc->tag, fc->count);
+		n += snprintf(s+n,len-n, "P9_RREAD tag %u count %u", fc->tag, fc->count);
 		n += np_printdata(s+n,len-n, fc->data, fc->count);
 		break;
 		
 	case P9_TWRITE:
-		n += snprintf(s+n,len-n, "P9_TWRITE tag %u fid %d offset %llu count %u data ",
+		n += snprintf(s+n,len-n, "P9_TWRITE tag %u fid %d offset %llu count %u",
 			fc->tag, fc->fid, (unsigned long long)fc->offset, fc->count);
 		n += np_printdata(s+n,len-n, fc->data, fc->count);
 		break;

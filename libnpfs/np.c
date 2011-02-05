@@ -446,46 +446,6 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 }
 
 Npfcall *
-np_create_ropen(Npqid *qid, u32 iounit)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 13 + 4; /* qid[13] iounit[4] */
-	fc = np_create_common(bufp, size, P9_ROPEN);
-	if (!fc)
-		return NULL;
-
-	buf_put_qid(bufp, qid, &fc->qid);
-	buf_put_int32(bufp, iounit, &fc->iounit);
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
-np_create_rcreate(Npqid *qid, u32 iounit)
-{
-	int size;
-	Npfcall *fc;
-	struct cbuf buffer;
-	struct cbuf *bufp;
-
-	bufp = &buffer;
-	size = 13 + 4; /* qid[13] iounit[4] */
-	fc = np_create_common(bufp, size, P9_RCREATE);
-	if (!fc)
-		return NULL;
-
-	buf_put_qid(bufp, qid, &fc->qid);
-	buf_put_int32(bufp, iounit, &fc->iounit);
-
-	return np_post_check(fc, bufp);
-}
-
-Npfcall *
 np_alloc_rread(u32 count)
 {
 	int size;
@@ -720,7 +680,7 @@ np_create_rlcreate(struct p9_qid *qid, u32 iounit)
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
-	if (!(fc = np_create_common(bufp, size, P9_RCREATE)))
+	if (!(fc = np_create_common(bufp, size, P9_RLCREATE)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rlcreate.qid);
 	buf_put_int32(bufp, iounit, &fc->u.rlcreate.iounit);
@@ -969,6 +929,9 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
+#if DOTU_ATTACH_HACK
+		fc->n_uname = buf_get_int32(bufp);
+#endif
 		break;
 
 	case P9_TWALK:

@@ -205,7 +205,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = @GCCWARN@
-AM_CPPFLAGS = 
+AM_CPPFLAGS = -DDOTU_ATTACH_HACK=1
 noinst_LIBRARIES = libnpfs.a
 libnpfs_a_SOURCES = \
 	conn.c \
