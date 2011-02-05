@@ -1,5 +1,7 @@
 2011-02-05 Jim Garlick <garlick@llnl.gov>
 
+	* libnpfs/fmt.c : Make printing of p9_str types more uniform.
+
 	* libnpfs/srv.c : Return "unknown" in attach response for unknown
 	protocol versions instead of error, per fourth edition version(5).
 

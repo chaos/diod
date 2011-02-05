@@ -35,6 +35,12 @@
 #include "npfsimpl.h"
 
 static int
+np_printstr(char *s, int len, char *label, Npstr *str)
+{
+	return snprintf(s,len, " %s '%.*s'", label, str->len, str->str);
+}
+
+static int
 np_printqid(char *s, int len, Npqid *q)
 {
 	int n;
@@ -180,8 +186,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TLCREATE:
 		n += snprintf(s+n,len-n, "P9_TLCREATE tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlcreate.fid);
-		n += snprintf(s+n,len-n, " name %.*s",
-			fc->u.tlcreate.name.len, fc->u.tlcreate.name.str);
+		n += np_printstr(s+n,len-n, "name", &fc->u.tlcreate.name);
 		n += snprintf(s+n,len-n, " flags 0x%"PRIx32, fc->u.tlcreate.flags);
 		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tlcreate.mode);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tlcreate.gid);
@@ -194,10 +199,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TSYMLINK:
 		n += snprintf(s+n,len-n, "P9_TSYMLINK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tsymlink.fid);
-		n += snprintf(s+n,len-n, " name %.*s",
-			fc->u.tsymlink.name.len, fc->u.tsymlink.name.str);
-		n += snprintf(s+n,len-n, " symtgt %.*s",
-			fc->u.tsymlink.symtgt.len, fc->u.tsymlink.symtgt.str);
+		n += np_printstr(s+n,len-n, "name", &fc->u.tsymlink.name);
+		n += np_printstr(s+n,len-n, "symtgt", &fc->u.tsymlink.symtgt);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tsymlink.gid);
 		break;
 	case P9_RSYMLINK:
@@ -207,8 +210,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TMKNOD:
 		n += snprintf(s+n,len-n, "P9_TMKNOD tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tmknod.fid);
-		n += snprintf(s+n,len-n, " name %.*s",
-			fc->u.tmknod.name.len, fc->u.tmknod.name.str);
+		n += np_printstr(s+n,len-n, "name", &fc->u.tmknod.name);
 		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tmknod.mode);
 		n += snprintf(s+n,len-n, " major %"PRIu32, fc->u.tmknod.major);
 		n += snprintf(s+n,len-n, " minor %"PRIu32, fc->u.tmknod.minor);
@@ -222,8 +224,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		n += snprintf(s+n,len-n, "P9_TRENAME tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.trename.fid);
 		n += snprintf(s+n,len-n, " newdirfid %"PRIu32, fc->u.trename.newdirfid);
-		n += snprintf(s+n,len-n, " name %.*s",
-			fc->u.trename.name.len, fc->u.trename.name.str);
+		n += np_printstr(s+n,len-n, "name", &fc->u.trename.name);
 		break;
 	case P9_RRENAME:
 		n += snprintf(s+n,len-n, "P9_RRENAME tag %u", fc->tag);
@@ -234,8 +235,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 	case P9_RREADLINK:
 		n += snprintf(s+n,len-n, "P9_RREADLINK tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " target %.*s",
-			fc->u.rreadlink.target.len, fc->u.rreadlink.target.str);
+		n += np_printstr(s+n,len-n, "target", &fc->u.rreadlink.target);
 		break;
 	case P9_TGETATTR:
 		n += snprintf(s+n,len-n, "P9_TGETATTR tag %u", fc->tag);
@@ -414,8 +414,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		n += snprintf(s+n,len-n, "P9_TLINK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " dfid %"PRIu32, fc->u.tlink.dfid);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlink.fid);
-		n += snprintf(s+n,len-n, " name %.*s",
-			fc->u.tlink.name.len, fc->u.tlink.name.str);
+		n += np_printstr(s+n,len-n, "name", &fc->u.tlink.name);
 		break;
 	case P9_RLINK:
 		n += snprintf(s+n,len-n, "P9_RLINK tag %u", fc->tag);
@@ -423,8 +422,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TMKDIR:
 		n += snprintf(s+n,len-n, "P9_TMKDIR tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tmkdir.fid);
-		n += snprintf(s+n,len-n, " name %.*s",
-			fc->u.tmkdir.name.len, fc->u.tmkdir.name.str);
+		n += np_printstr(s+n,len-n, "name", &fc->u.tmkdir.name);
 		n += snprintf(s+n,len-n, " mode 0%"PRIo32, fc->u.tmkdir.mode);
 		n += snprintf(s+n,len-n, " gid %"PRIu32, fc->u.tmkdir.gid);
 		break;
@@ -462,19 +460,22 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 #endif
 	case P9_TVERSION:
-		n += snprintf(s+n,len-n, "P9_TVERSION tag %u msize %u version '%.*s'", 
-			fc->tag, fc->msize, fc->version.len, fc->version.str);
+		n += snprintf(s+n,len-n, "P9_TVERSION tag %u msize %u",
+			fc->tag, fc->msize);
+		n += np_printstr(s+n,len-n, "version", &fc->version);
 		break;
 
 	case P9_RVERSION:
-		n += snprintf(s+n,len-n, "P9_RVERSION tag %u msize %u version '%.*s'", 
-			fc->tag, fc->msize, fc->version.len, fc->version.str);
+		n += snprintf(s+n,len-n, "P9_RVERSION tag %u msize %u",
+			fc->tag, fc->msize);
+		n += np_printstr(s+n,len-n, "version", &fc->version);
 		break;
 
 	case P9_TAUTH:
-		n += snprintf(s+n,len-n, "P9_TAUTH tag %u afid %d uname %.*s aname %.*s",
-			fc->tag, fc->afid, fc->uname.len, fc->uname.str, 
-			fc->aname.len, fc->aname.str);
+		n += snprintf(s+n,len-n, "P9_TAUTH tag %u afid %d",
+			fc->tag, fc->afid);
+		n += np_printstr(s+n,len-n, "uname", &fc->uname);
+		n += np_printstr(s+n,len-n, "aname", &fc->aname);
 		break;
 
 	case P9_RAUTH:
@@ -485,20 +486,12 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TATTACH:
 		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d",
 				fc->tag, fc->fid, fc->afid);
-		if (fc->uname.len > 0)
-			n += snprintf(s+n,len-n, " uname %.*s",
-					fc->uname.len, fc->uname.str);
-		else
-			n += snprintf(s+n,len-n, " uname <empty>");
-		if (fc->aname.len > 0)
-			n += snprintf(s+n,len-n, " aname %.*s",
-					fc->aname.len, fc->aname.str);
-		else
-			n += snprintf(s+n,len-n, " aname <empty>");
+		n += np_printstr(s+n,len-n, "uname", &fc->uname);
+		n += np_printstr(s+n,len-n, "aname", &fc->aname);
 		if (fc->n_uname != P9_NONUNAME)
 			n += snprintf(s+n,len-n, " n_uname %u", fc->n_uname);
 		else
-			n += snprintf(s+n,len-n, " n_uname <NONUNAME>");
+			n += snprintf(s+n,len-n, " n_uname P9_NONUNAME");
 			
 		break;
 
