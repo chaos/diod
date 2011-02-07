@@ -70,6 +70,7 @@
 #include "list.h"
 #include "diod_log.h"
 #include "diod_upool.h"
+#include "diod_sock.h"
 #include "opt.h"
 
 typedef struct {
@@ -101,11 +102,11 @@ static const struct option longopts[] = {
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
 
-static query_t *_diodctl_query (char *ip, char *opts, int vopt, int getparent,
+static query_t *_diodctl_query (char *host, char *opts, int vopt, int getparent,
                                 char *payload, char *opt_debug);
 static void  _free_query       (query_t *r);
-static void  _parse_device     (char *device, char **anamep, char **ipp);
-static void  _diod_mount       (char *ip, char *dir, char *aname, char *port,
+static void  _parse_device     (char *device, char **anamep, char **hostp);
+static void  _diod_mount       (char *host, char *dir, char *aname, char *port,
                                 char *opts, int vopt, int fopt,
                                 char *opt_debug);
 static void  _umount           (const char *target);
@@ -113,7 +114,6 @@ static int   _update_mtab      (char *dev, char *dir, char *opt);
 static void _update_mtab_entries (char *host, char *root, List dirs, char *opt);
 static void _verify_mountpoint (char *path, int Dopt);
 static void _verify_mountpoints (List dirs, char *root, int Dopt);
-static char *_name2ip          (char *name);
 static char *_parse_debug      (char *s);
 
 static void
@@ -142,7 +142,7 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    char *dir = NULL, *ip;
+    char *dir = NULL, *host = NULL;
     char *aname = NULL;
     char *device;
     int c;
@@ -214,13 +214,14 @@ main (int argc, char *argv[])
         device = argv[optind++];
         if (optind != argc)
             dir = argv[optind++];
-        ip = _name2ip (device);
+        if (!(host = strdup (device)))
+            msg_exit ("out of memory");
     } else {          /* Usage: diodmount [options] hostname:/aname directory */
         if (optind != argc - 2)
             usage ();
         device = argv[optind++];
         dir = argv[optind++];
-        _parse_device (device, &aname, &ip);
+        _parse_device (device, &aname, &host);
     }
     opt_debug = _parse_debug (xopt);
 
@@ -237,7 +238,7 @@ main (int argc, char *argv[])
      * If -D option, create mount points as needed.
      */
     if (aopt) {
-        query_t *ctl = _diodctl_query (ip, Oopt, vopt, aopt, jopt, opt_debug);
+        query_t *ctl = _diodctl_query (host, Oopt, vopt, aopt, jopt, opt_debug);
         ListIterator itr;
         char *el;
 
@@ -249,7 +250,7 @@ main (int argc, char *argv[])
             char path[PATH_MAX];
 
             snprintf (path, sizeof (path), "%s%s", dir ? dir : "", el);
-            _diod_mount (ip, path, el, ctl->port, oopt, vopt, fopt, opt_debug);
+            _diod_mount (host, path, el, ctl->port, oopt, vopt, fopt, opt_debug);
         }
         list_iterator_destroy (itr);
 
@@ -267,8 +268,8 @@ main (int argc, char *argv[])
         _verify_mountpoint (dir, Dopt);
 
         if (!dopt)
-            ctl = _diodctl_query (ip, Oopt, vopt, 1, jopt, opt_debug);
-        _diod_mount (ip, dir, aname, dopt ? NULL : ctl->port, oopt, vopt,
+            ctl = _diodctl_query (host, Oopt, vopt, 1, jopt, opt_debug);
+        _diod_mount (host, dir, aname, dopt ? NULL : ctl->port, oopt, vopt,
                      fopt, opt_debug);
         if (!dopt)
             _free_query (ctl);
@@ -281,7 +282,7 @@ main (int argc, char *argv[])
         }
     }
 
-    free (ip);
+    free (host);
     if (aname)
         free (aname);
     exit (0);
@@ -547,26 +548,30 @@ _create_user (void)
 }
 #endif
 
-/* Mount diod file system specified by [ip], [port], [aname] on [dir].
+/* Mount diod file system specified by [host], [port], [aname] on [dir].
  * Default mount options can be overridden by a comma separated list [opts].
  * If [vopt], say what we're doing before we do it.
  * If [fopt], don't actually perform the mount.
  * Exit on error.
  */
 static void
-_diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
+_diod_mount (char *host, char *dir, char *aname, char *port, char *opts,
              int vopt, int fopt, char *opt_debug)
 {
     Opt o = opt_create ();
     char *options, *cred;
+    int fd;
 #if HAVE_MUNGE
     cred = _create_mungecred (NULL);
 #else
     cred = _create_user ();
 #endif
     opt_add (o, "uname=%s", cred);
-    if (port)
-        opt_add (o, "port=%s", port);
+    if ((fd = diod_sock_connect (host, port ? port : "564", 1, 0)) < 0)
+        err_exit ("connect failed");
+    opt_add (o, "rfdno=%d", fd);
+    opt_add (o, "wfdno=%d", fd);
+    opt_add (o, "trans=fd");
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
     opt_add (o, "version=9p2000.L");
@@ -581,30 +586,36 @@ _diod_mount (char *ip, char *dir, char *aname, char *port, char *opts,
     opt_destroy (o);
 
     if (vopt)
-        msg ("mount %s %s -o%s", ip, dir, options);
+        msg ("mount %s %s -o%s", host, dir, options);
     if (!fopt)
-        _mount (ip, dir, options);
+        _mount (host, dir, options);
     free (options);
+    close (fd);
 }
 
-/* Mount diodctl file running on [ip] on [dir].
+/* Mount diodctl file running on [host] on [dir].
  * Default mount options can be overridden by a comma separated list [opts].
  * If [vopt], say what we're doing before we do it.
  * Exit on error.
  */
 static void
-_diodctl_mount (char *ip, char *dir, char *opts, int vopt, char *opt_debug,
+_diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
                 char *payload)
 {
     Opt o = opt_create ();
     char *options, *cred;
+    int fd;
 #if HAVE_MUNGE
     cred = _create_mungecred (payload);
 #else
     cred = _create_user ();
 #endif
     opt_add (o, "uname=%s", cred);
-    opt_add (o, "port=10005");
+    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
+        err_exit ("connect failed");
+    opt_add (o, "rfdno=%d", fd);
+    opt_add (o, "wfdno=%d", fd);
+    opt_add (o, "trans=fd");
     opt_add (o, "aname=/diodctl");
     opt_add (o, "version=9p2000.L");
     if (opt_debug)
@@ -618,9 +629,10 @@ _diodctl_mount (char *ip, char *dir, char *opts, int vopt, char *opt_debug,
     opt_destroy (o);
 
     if (vopt)
-        msg ("mount %s %s -o%s", ip, dir, options);
-    _mount (ip, dir, options);
+        msg ("mount %s %s -o%s", host, dir, options);
+    _mount (host, dir, options);
     free (options);
+    close (fd);
 }
 
 /* Read file [path] to stdout.
@@ -765,7 +777,7 @@ done:
  * N.B. mount is always cleaned up because it's in a private namespace.
  */
 static query_t *
-_diodctl_query (char *ip, char *opts, int vopt, int getport, char *payload,
+_diodctl_query (char *host, char *opts, int vopt, int getport, char *payload,
                 char *opt_debug)
 {
     char tmppath[] = "/tmp/diodmount.XXXXXX";
@@ -788,7 +800,7 @@ _diodctl_query (char *ip, char *opts, int vopt, int getport, char *payload,
             if (dup2 (pfd[1], STDOUT_FILENO) < 0)
                 err_exit ("failed to dup stdout");
             _unshare ();
-            _diodctl_mount (ip, tmpdir, opts, vopt, opt_debug, payload);
+            _diodctl_mount (host, tmpdir, opts, vopt, opt_debug, payload);
             if (getport) {
                 snprintf (path, sizeof (path), "%s/ctl", tmpdir);
                 _puts_file (path, "new");
@@ -815,47 +827,14 @@ _diodctl_query (char *ip, char *opts, int vopt, int getport, char *payload,
     return res;
 }
 
-/* Obtain the IP address for [name] and return it as a string the caller
- * must free.  Exit on error.
- */
-static char *
-_name2ip (char *name)
-{
-    char buf[NI_MAXHOST], *ip;
-    struct addrinfo hints, *res;
-    int error;
-
-    memset (&hints, 0, sizeof(hints));
-    hints.ai_family = PF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-
-    if ((error = getaddrinfo (name, NULL, &hints, &res)))
-        err_exit ("getaddrinfo: %s: %s", name, gai_strerror(error));
-    if (!res)
-        err_exit ("%s has no address info", name);
-
-    /* FIXME: we take the first entry in the res array.
-     * Should we loop through them and take the first one that works?
-     */
-    if (getnameinfo (res->ai_addr, res->ai_addrlen, buf, sizeof (buf),
-                     NULL, 0, NI_NUMERICHOST) < 0)
-        err_exit ("%s has no address", name);
-    freeaddrinfo (res);
-    if (!(ip = strdup (buf)))
-        msg_exit ("out of memory");
-    return ip;
-}
-
-/* Given [device] in host:aname format, parse out the host (converting
- * to ip address for in-kernel v9fs which can't handle hostnames) and
- * storing in [ipp], and the aname, storing in [anamep].
+/* Given [device] in host:aname format, parse out the host and aname.
  * Caller must free the resulting strings.
  * Exit on error.
  */
 static void
-_parse_device (char *device, char **anamep, char **ipp)
+_parse_device (char *device, char **anamep, char **hostp)
 {
-    char *host, *ip, *p, *aname;
+    char *host, *p, *aname;
 
     if (!(host = strdup (device)))
         msg_exit ("out of memory");
@@ -864,10 +843,8 @@ _parse_device (char *device, char **anamep, char **ipp)
     *p++ = '\0';
     if (!(aname = strdup (p)))
         msg_exit ("out of memory");
-    ip = _name2ip (host);
-    free (host);
     
-    *ipp = ip;
+    *hostp = host;
     *anamep = aname;
 }
 

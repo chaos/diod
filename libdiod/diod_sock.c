@@ -290,13 +290,15 @@ diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
     /*NOTREACHED*/
 }
 
-/* Try to connect to host:port.  Return 1 on success, 0 on failure.
+/* Try to connect to host:port.
+ * Return fd on success, -1 on failure.
  */
-static int
-_connect_one (char *host, char *port)
+int
+diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
 {
     int error, fd = -1;
     struct addrinfo hints, *res = NULL, *r;
+    int i;
 
     memset (&hints, 0, sizeof (hints));
     hints.ai_family = PF_UNSPEC;
@@ -310,33 +312,34 @@ _connect_one (char *host, char *port)
         msg ("could not look up %s:%s", host, port);
         goto done;
     }
-    for (r = res; r != NULL && fd == -1; r = r->ai_next) {
-        if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
-            continue;
-        if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
-            close (fd);
-            fd = -1;
+    for (i = 0; i < maxtries; i++) {
+        if (i > 0)
+            usleep (1000 * retry_wait_ms);
+        for (r = res; r != NULL; r = r->ai_next) {
+            if (fd != -1)
+                close (fd);
+            if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
+                continue;
+            if (connect (fd, r->ai_addr, r->ai_addrlen) >= 0)
+                break;
         }
     }
     if (res)
         freeaddrinfo (res);
 done:
-    if (fd != -1) {
-        close (fd);
-        return 1;
-    }
-    return 0;
+    return fd;
 }
 
 /* Try to connect to any members of host:port list.
  * If nport is non-NULL, substitute that for :port.
  * Make maxtries attempts, waiting retry_wait_ms milliseconds between attempts.
+ * Close any opened connections immediately - this is just a test.
  * Return 1 on success, 0 on failure.
  */
 int
 diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
 {
-    int i, res = 0;
+    int i, fd, res = 0;
     char *hostport, *host, *port;
     ListIterator itr;
 
@@ -359,10 +362,11 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
             *port++ = '\0';
             if (nport)
                 port = nport;
-            res = _connect_one (host, port);
-            free (host);
-            if (res != 0)
+            if ((fd = diod_sock_connect (host, port, 1, 0)) >= 0) {
+                close (fd);
+                res = 1;
                 goto done;
+            }
         }
     }
 done:
@@ -370,6 +374,7 @@ done:
         list_iterator_destroy(itr);
     return res;
 }
+
     
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
