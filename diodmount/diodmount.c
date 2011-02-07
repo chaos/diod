@@ -559,7 +559,7 @@ _diod_mount (char *host, char *dir, char *aname, char *port, char *opts,
              int vopt, int fopt, char *opt_debug)
 {
     Opt o = opt_create ();
-    char *options, *cred;
+    char *options, *cred, *dev;
     int fd;
 #if HAVE_MUNGE
     cred = _create_mungecred (NULL);
@@ -585,11 +585,15 @@ _diod_mount (char *host, char *dir, char *aname, char *port, char *opts,
     options = opt_string (o);
     opt_destroy (o);
 
+    if (!(dev = malloc (strlen (host) + strlen (aname) + 2)))
+        msg_exit ("out of memory");
+    sprintf (dev, "%s:%s", host, aname);
     if (vopt)
-        msg ("mount %s %s -o%s", host, dir, options);
+        msg ("mount %s %s -o%s", dev, dir, options);
     if (!fopt)
-        _mount (host, dir, options);
+        _mount (dev, dir, options);
     free (options);
+    free (dev);
     close (fd);
 }
 
@@ -603,7 +607,7 @@ _diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
                 char *payload)
 {
     Opt o = opt_create ();
-    char *options, *cred;
+    char *options, *cred, *dev;
     int fd;
 #if HAVE_MUNGE
     cred = _create_mungecred (payload);
@@ -628,10 +632,14 @@ _diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
     options = opt_string (o);
     opt_destroy (o);
 
+    if (!(dev = malloc (strlen (host) + strlen ("/diodctl") + 2)))
+        msg_exit ("out of memory");
+    sprintf (dev, "%s:%s", host, "/diodctl");
     if (vopt)
-        msg ("mount %s %s -o%s", host, dir, options);
-    _mount (host, dir, options);
+        msg ("mount %s %s -o%s", dev, dir, options);
+    _mount (dev, dir, options);
     free (options);
+    free (dev);
     close (fd);
 }
 

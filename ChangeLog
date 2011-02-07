@@ -1,8 +1,10 @@
 2011-02-07 Jim Garlick <garlick@llnl.gov>
 
-	* diodctl/diodctl.c, libdiod/diod_sock.[ch] : Connect to server
+	* diodmount/diodmount.c, libdiod/diod_sock.[ch] : Connect to server
 	in user space and pass trans=fd,rfdno=xx,wfdno=xx instead of
-	passing in ip and port with default trans=sock.
+	passing in ip and port with default trans=sock.  Also use host:/aname
+	format in mount command now that we can put anything there we want,
+	so /proc/mounts looks more "normal".
 
 2011-02-05 Jim Garlick <garlick@llnl.gov>
 
