@@ -238,26 +238,6 @@ buf_get_qid(struct cbuf *buf, Npqid *qid)
 	qid->path = buf_get_int64(buf);
 }
 
-static inline void
-buf_get_flock(struct cbuf *buf, struct p9_flock *fl)
-{
-	fl->type = buf_get_int8(buf);	
-	fl->flags = buf_get_int32(buf);	
-	fl->start = buf_get_int64(buf);	
-	fl->length = buf_get_int64(buf);	
-	fl->proc_id = buf_get_int32(buf);	
-	buf_get_str(buf, &fl->client_id);	
-}
-static inline void
-buf_get_getlock(struct cbuf *buf, struct p9_getlock *gl)
-{
-	gl->type = buf_get_int8(buf);	
-	gl->start = buf_get_int64(buf);	
-	gl->length = buf_get_int64(buf);	
-	gl->proc_id = buf_get_int32(buf);	
-	buf_get_str(buf, &gl->client_id);	
-}
-
 void
 np_strzero(Npstr *str)
 {
@@ -1013,7 +993,7 @@ np_deserialize(Npfcall *fc, u8 *data)
 		break;
 	case P9_TRENAME:
 		fc->u.trename.fid = buf_get_int32(bufp);
-		fc->u.trename.newdirfid = buf_get_int32(bufp);
+		fc->u.trename.dfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.trename.name);
 		break;
 	case P9_TREADLINK:
@@ -1051,11 +1031,20 @@ np_deserialize(Npfcall *fc, u8 *data)
 		break;
 	case P9_TLOCK:
 		fc->u.tlock.fid = buf_get_int32(bufp);
-		buf_get_flock(bufp, &fc->u.tlock.fl);
+		fc->u.tlock.type = buf_get_int8(bufp);	
+		fc->u.tlock.flags = buf_get_int32(bufp);	
+		fc->u.tlock.start = buf_get_int64(bufp);	
+		fc->u.tlock.length = buf_get_int64(bufp);	
+		fc->u.tlock.proc_id = buf_get_int32(bufp);	
+		buf_get_str(bufp, &fc->u.tlock.client_id);	
 		break;
 	case P9_TGETLOCK:
 		fc->u.tgetlock.fid = buf_get_int32(bufp);
-		buf_get_getlock(bufp, &fc->u.tgetlock.gl);
+		fc->u.tgetlock.type = buf_get_int8(bufp);	
+		fc->u.tgetlock.start = buf_get_int64(bufp);	
+		fc->u.tgetlock.length = buf_get_int64(bufp);	
+		fc->u.tgetlock.proc_id = buf_get_int32(bufp);	
+		buf_get_str(bufp, &fc->u.tgetlock.client_id);	
 		break;
 	case P9_TLINK:
 		fc->u.tlink.dfid = buf_get_int32(bufp);

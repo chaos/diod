@@ -264,8 +264,8 @@ struct Npsrv {
 	Npfcall*	(*xattrcreate)(void); /* FIXME */
 	Npfcall*	(*readdir)(Npfid *, u64, u32, Npreq *);
 	Npfcall*	(*fsync)(Npfid *);
-	Npfcall*	(*llock)(Npfid *, struct p9_flock*);
-	Npfcall*	(*getlock)(Npfid *, struct p9_getlock *);
+	Npfcall*	(*llock)(Npfid *, u8, u32, u64, u64, u32, Npstr *);
+	Npfcall*	(*getlock)(Npfid *, u8 type, u64, u64, u32, Npstr *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
 

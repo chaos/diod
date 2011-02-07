@@ -72,8 +72,8 @@ static Npfcall* np_default_xattrwalk(void); /* FIXME */
 static Npfcall* np_default_xattrcreate(void); /* FIXME */
 static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
 static Npfcall* np_default_fsync(Npfid *);
-static Npfcall* np_default_lock(Npfid *, struct p9_flock*);
-static Npfcall* np_default_getlock(Npfid *, struct p9_getlock *);
+static Npfcall* np_default_lock(Npfid *, u8, u32, u64, u64, u32, Npstr *);
+static Npfcall* np_default_getlock(Npfid *, u8, u64, u64, u32, Npstr *);
 static Npfcall* np_default_link(Npfid *, Npfid *, Npstr *);
 static Npfcall* np_default_mkdir(Npfid *, Npstr *, u32, u32);
 
@@ -659,7 +659,7 @@ np_default_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor,
 	return NULL;
 }
 static Npfcall*
-np_default_rename(Npfid *fid, Npfid *newdirfid, Npstr *newname)
+np_default_rename(Npfid *fid, Npfid *dfid, Npstr *name)
 {
 	np_uerror(ENOSYS);
 	return NULL;
@@ -710,13 +710,15 @@ np_default_fsync(Npfid *fid)
 	return NULL;
 }
 static Npfcall*
-np_default_lock(Npfid *fid, struct p9_flock *flock)
+np_default_lock(Npfid *fid, u8 type, u32 flags, u64 start, u64 length,
+		u32 proc_id, Npstr *client_id)
 {
 	np_uerror(ENOSYS);
 	return NULL;
 }
 static Npfcall*
-np_default_getlock(Npfid *fid, struct p9_getlock *getlock)
+np_default_getlock(Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
+		   Npstr *client_id)
 {
 	np_uerror(ENOSYS);
 	return NULL;

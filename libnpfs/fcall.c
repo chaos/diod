@@ -652,20 +652,19 @@ Npfcall *
 np_rename(Npreq *req, Npfcall *tc)
 {
 	Npfid *fid = _getfid_incref(req, tc->u.trename.fid);
-	Npfid *newdirfid = NULL;
+	Npfid *dfid = NULL;
 	Npfcall *rc = NULL;
 
 	if (!fid)
 		goto done;
-	if (!(newdirfid = np_fid_find(req->conn, tc->u.trename.newdirfid))) {
+	if (!(dfid = np_fid_find(req->conn, tc->u.trename.dfid))) {
 		np_uerror(EIO);
 		goto done;
 	}
-	np_fid_incref(newdirfid);
-	rc = (*req->conn->srv->rename)(fid, newdirfid,
-					&tc->u.trename.name);
+	np_fid_incref(dfid);
+	rc = (*req->conn->srv->rename)(fid, dfid, &tc->u.trename.name);
 done:
-	np_fid_decref(newdirfid);
+	np_fid_decref(dfid);
 	return rc;
 }
 
@@ -769,7 +768,13 @@ np_lock(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	rc = (*req->conn->srv->llock)(fid, &tc->u.tlock.fl);
+	rc = (*req->conn->srv->llock)(fid,
+					tc->u.tlock.type,
+					tc->u.tlock.flags,
+					tc->u.tlock.start,
+					tc->u.tlock.length,
+					tc->u.tlock.proc_id,
+					&tc->u.tlock.client_id);
 done:
 	return rc;
 }
@@ -782,7 +787,12 @@ np_getlock(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	rc = (*req->conn->srv->getlock)(fid, &tc->u.tgetlock.gl);
+	rc = (*req->conn->srv->getlock)(fid,
+					tc->u.tgetlock.type,
+					tc->u.tgetlock.start,
+					tc->u.tgetlock.length,
+					tc->u.tgetlock.proc_id,
+					&tc->u.tgetlock.client_id);
 done:
 	return rc;
 }

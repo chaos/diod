@@ -321,47 +321,17 @@ struct p9_qid {
 #define P9_SETATTR_ATIME_SET	0x00000080UL
 #define P9_SETATTR_MTIME_SET	0x00000100UL
 
+/* Bit values for lock status.
+ */
 #define P9_LOCK_SUCCESS 0
 #define P9_LOCK_BLOCKED 1
 #define P9_LOCK_ERROR 2
 #define P9_LOCK_GRACE 3
 
+/* Bit values for lock flags.
+ */
 #define P9_LOCK_FLAGS_BLOCK 1
 #define P9_LOCK_FLAGS_RECLAIM 2
-
-/* struct p9_flock: POSIX lock structure
- * @type - type of lock
- * @flags - lock flags
- * @start - starting offset of the lock
- * @length - number of bytes
- * @proc_id - process id which wants to take lock
- * @client_id - client id
- */
-
-struct p9_flock {
-	u8 type;
-	u32 flags;
-	u64 start;
-	u64 length;
-	u32 proc_id;
-	struct p9_str client_id;
-};
-
-/* struct p9_getlock: getlock structure
- * @type - type of lock
- * @start - starting offset of the lock
- * @length - number of bytes
- * @proc_id - process id which wants to take lock
- * @client_id - client id
- */
-
-struct p9_getlock {
-	u8 type;
-	u64 start;
-	u64 length;
-	u32 proc_id;
-	struct p9_str client_id;
-};
 
 /* Structures for Protocol Operations */
 struct p9_rlerror {
@@ -422,7 +392,7 @@ struct p9_rmknod {
 };
 struct p9_trename {
 	u32 fid;
-	u32 newdirfid;
+	u32 dfid;
 	struct p9_str name;
 };
 struct p9_rrename {
@@ -501,17 +471,30 @@ struct p9_rfsync {
 };
 struct p9_tlock {
 	u32 fid;
-	struct p9_flock fl;
+	u8 type;
+	u32 flags;
+	u64 start;
+	u64 length;
+	u32 proc_id;
+	struct p9_str client_id;
 };
 struct p9_rlock {
 	u8 status;
 };
 struct p9_tgetlock {
 	u32 fid;
-	struct p9_getlock gl;
+	u8 type;
+	u64 start;
+	u64 length;
+	u32 proc_id;
+	struct p9_str client_id;
 };
 struct p9_rgetlock {
-	struct p9_getlock gl;
+	u8 type;
+	u64 start;
+	u64 length;
+	u32 proc_id;
+	struct p9_str client_id;
 };
 struct p9_tlink {
 	u32 dfid;
@@ -646,33 +629,6 @@ struct p9_tremove {
 	u32 fid;
 };
 struct p9_rremove {
-};
-
-/**
- * struct p9_fcall - primary packet structure
- * @size: prefixed length of the structure
- * @id: protocol operating identifier of type &p9_msg_t
- * @tag: transaction id of the request
- * @offset: used by marshalling routines to track currentposition in buffer
- * @capacity: used by marshalling routines to track total capacity
- * @sdata: payload
- *
- * &p9_fcall represents the structure for all 9P RPC
- * transactions.  Requests are packaged into fcalls, and reponses
- * must be extracted from them.
- *
- * See Also: http://plan9.bell-labs.com/magic/man2html/2/fcall
- */
-
-struct p9_fcall {
-	u32 size;
-	u8 id;
-	u16 tag;
-
-	size_t offset;
-	size_t capacity;
-
-	uint8_t *sdata;
 };
 
 #endif /* NET_9P_H */

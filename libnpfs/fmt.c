@@ -223,7 +223,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TRENAME:
 		n += snprintf(s+n,len-n, "P9_TRENAME tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.trename.fid);
-		n += snprintf(s+n,len-n, " newdirfid %"PRIu32, fc->u.trename.newdirfid);
+		n += snprintf(s+n,len-n, " dfid%"PRIu32, fc->u.trename.dfid);
 		n += np_printstr(s+n,len-n, "name", &fc->u.trename.name);
 		break;
 	case P9_RRENAME:
@@ -379,13 +379,13 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TLOCK:
 		n += snprintf(s+n,len-n, "P9_TLOCK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlock.fid);
-		n += snprintf(s+n,len-n, " type %u", fc->u.tlock.fl.type);
-		n += snprintf(s+n,len-n, " flags %"PRIu32, fc->u.tlock.fl.flags);
-		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tlock.fl.start);
-		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tlock.fl.length);
-		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tlock.fl.proc_id);
+		n += snprintf(s+n,len-n, " type %u", fc->u.tlock.type);
+		n += snprintf(s+n,len-n, " flags %"PRIu32, fc->u.tlock.flags);
+		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tlock.start);
+		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tlock.length);
+		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tlock.proc_id);
 		n += snprintf(s+n,len-n, " client_id %.*s",
-			fc->u.tlock.fl.client_id.len, fc->u.tlock.fl.client_id.str);
+			fc->u.tlock.client_id.len, fc->u.tlock.client_id.str);
 		break;
 	case P9_RLOCK:
 		n += snprintf(s+n,len-n, "P9_RLOCK tag %u", fc->tag);
@@ -394,21 +394,21 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TGETLOCK:
 		n += snprintf(s+n,len-n, "P9_TGETLOCK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tgetlock.fid);
-		n += snprintf(s+n,len-n, " type %u", fc->u.tgetlock.gl.type);
-		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tgetlock.gl.start);
-		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tgetlock.gl.length);
-		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tgetlock.gl.proc_id);
+		n += snprintf(s+n,len-n, " type %u", fc->u.tgetlock.type);
+		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tgetlock.start);
+		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tgetlock.length);
+		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tgetlock.proc_id);
 		n += snprintf(s+n,len-n, " client_id %.*s",
-			fc->u.tgetlock.gl.client_id.len, fc->u.tgetlock.gl.client_id.str);
+			fc->u.tgetlock.client_id.len, fc->u.tgetlock.client_id.str);
 		break;
 	case P9_RGETLOCK:
 		n += snprintf(s+n,len-n, "P9_RGETLOCK tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " type %u", fc->u.rgetlock.gl.type);
-		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.rgetlock.gl.start);
-		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.rgetlock.gl.length);
-		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.rgetlock.gl.proc_id);
+		n += snprintf(s+n,len-n, " type %u", fc->u.rgetlock.type);
+		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.rgetlock.start);
+		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.rgetlock.length);
+		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.rgetlock.proc_id);
 		n += snprintf(s+n,len-n, " client_id %.*s",
-			fc->u.rgetlock.gl.client_id.len, fc->u.rgetlock.gl.client_id.str);
+			fc->u.rgetlock.client_id.len, fc->u.rgetlock.client_id.str);
 		break;
 	case P9_TLINK:
 		n += snprintf(s+n,len-n, "P9_TLINK tag %u", fc->tag);

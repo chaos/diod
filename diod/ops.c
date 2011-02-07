@@ -138,15 +138,17 @@ Npfcall     *diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode,
 Npfcall     *diod_symlink(Npfid *dfid, Npstr *name, Npstr *symtgt, u32 gid);
 Npfcall     *diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major,
                         u32 minor, u32 gid);
-Npfcall     *diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname);
+Npfcall     *diod_rename (Npfid *fid, Npfid *dfid, Npstr *name);
 Npfcall     *diod_readlink(Npfid *fid);
 Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
 Npfcall     *diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                         u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec);
 Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall     *diod_fsync (Npfid *fid);
-Npfcall     *diod_lock (Npfid *fid, struct p9_flock *flock);
-Npfcall     *diod_getlock (Npfid *fid, struct p9_getlock *getlock);
+Npfcall     *diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length,
+                        u32 proc_id, Npstr *client_id);
+Npfcall     *diod_getlock (Npfid *fid, u8 type, u64 start, u64 length,
+                        u32 proc_id, Npstr *client_id);
 Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
 
@@ -1196,10 +1198,10 @@ done:
 /* Trename - rename a file, potentially to another directory (9P2000.L)
  */
 Npfcall*
-diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
+diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
 {
     Fid *f = fid->aux;
-    Fid *d = newdirfid->aux;
+    Fid *d = dfid->aux;
     Npfcall *ret = NULL;
     char *newpath = NULL;
     int newpathlen;
@@ -1213,12 +1215,12 @@ diod_rename (Npfid *fid, Npfid *newdirfid, Npstr *newname)
         msg ("diod_rename: out of memory");
         goto done;
     }
-    newpathlen = newname->len + strlen (d->path) + 2;
+    newpathlen = name->len + strlen (d->path) + 2;
     if (!(newpath = _malloc (newpathlen))) {
         msg ("diod_rename: out of memory");
         goto done;
     }
-    snprintf (newpath, newpathlen, "%s/%s", d->path, newname->str);
+    snprintf (newpath, newpathlen, "%s/%s", d->path, name->str);
     if (rename (f->path, newpath) < 0) {
         np_uerror (errno);
         goto done;
@@ -1355,6 +1357,16 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             goto done;
         }
     }
+
+    /* ctime - updated as a side effect of above changes.
+     * Tricky if stand-alone update is required.
+     */
+    if (valid == P9_SETATTR_CTIME) {
+        msg ("diod_setattr: FIXME: unhandled stand-alone ctime update request");
+        np_uerror(EINVAL);
+        goto done;
+    }
+
     if (!(ret = np_create_rsetattr())) {
         np_uerror (ENOMEM);
         msg ("diod_setattr: out of memory");
@@ -1470,13 +1482,15 @@ done:
 }
 
 Npfcall*
-diod_lock (Npfid *fid, struct p9_flock *flock)
+diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
+           Npstr *client_id)
 {
    return NULL; /* FIXME */
 }
 
 Npfcall*
-diod_getlock (Npfid *fid, struct p9_getlock *getlock)
+diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
+             Npstr *client_id)
 {
    return NULL; /* FIXME */
 }
