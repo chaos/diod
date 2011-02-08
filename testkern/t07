@@ -7,8 +7,8 @@ doit ()
         $PATH_DIOD -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
         sleep 1
         echo mounting
-        $PATH_DIODMOUNT -d -o uname=root,port=2006 -n 127.0.0.1:$PATH_EXPDIR \
-                        $PATH_MNTDIR
+        $PATH_DIODMOUNT -d2006 -ouname=root \
+			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
 
         echo creating file in diod file system
         if ! dd status=noxfer if=/dev/zero of=$PATH_MNTDIR/a count=128; then
@@ -31,6 +31,7 @@ doit ()
 
 TEST=$(basename $0 | cut -d- -f1)
 test $(id -u) == 0 || exit 77 #skip if not root
+modprobe 9p || exit 77 #skip if no 9p
 
 doit >$TEST.out 2>&1
 

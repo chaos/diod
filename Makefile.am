@@ -8,7 +8,8 @@ SUBDIRS = \
 	scripts \
 	diodctl \
 	libixp \
-	test
+	test \
+	testkern 
 
 rpmdirs:
 	mkdir -p $(top_builddir)/rpm/SPECS

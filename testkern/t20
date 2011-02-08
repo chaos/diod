@@ -6,8 +6,8 @@ doit ()
         $PATH_DIOD -s $1 -d 4 -A 1 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
         sleep 1
         echo mounting
-        $PATH_DIODMOUNT -d -o uname=root,port=2006 -n 127.0.0.1:$PATH_EXPDIR \
-                        $PATH_MNTDIR
+        $PATH_DIODMOUNT -d2006 -o uname=root \
+			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
 
 	echo creating file in regular file system
 	dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_EXPDIR/a count=4
@@ -25,6 +25,7 @@ doit ()
 
 TEST=$(basename $0 | cut -d- -f1)
 test $(id -u) == 0 || exit 77 #skip if not root
+modprobe 9p || exit 77 #skip if no 9p
 
 doit $TEST.stats >$TEST.out 2>&1
 

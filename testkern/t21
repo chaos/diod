@@ -2,21 +2,17 @@
 
 doit ()
 {
-        echo starting diod
-        $PATH_DIOD -s $1 -d 0x04 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
+        echo starting diod with max 1mb atomic transfers
+        $PATH_DIOD -s $1 -d 0x04 -A 1 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
         sleep 1
         echo mounting
-        $PATH_DIODMOUNT -d -o uname=root,port=2006 -n 127.0.0.1:$PATH_EXPDIR \
-                        $PATH_MNTDIR
+        $PATH_DIODMOUNT -d2006 -o uname=root \
+			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
 
-	echo writing 4k file
-	dd status=noxfer bs=4096 if=/dev/zero of=$PATH_MNTDIR/a count=1
-	echo appending 3 bytes
-	echo -n foo >>$PATH_MNTDIR/a
-	echo verifying
+	echo writing file with 1mb transfers and verifying
+	dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_MNTDIR/a count=4
 	cmp $PATH_EXPDIR/a $PATH_MNTDIR/a
 	echo "size is `stat -c "%s" $PATH_EXPDIR/a`"
-	hexdump -C $PATH_EXPDIR/a
 
         echo unmounting
         umount $PATH_MNTDIR
@@ -28,6 +24,7 @@ doit ()
 
 TEST=$(basename $0 | cut -d- -f1)
 test $(id -u) == 0 || exit 77 #skip if not root
+modprobe 9p || exit 77 #skip if no 9p
 
 doit $TEST.stats >$TEST.out 2>&1
 

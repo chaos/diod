@@ -3,17 +3,18 @@
 doit ()
 {
 	echo starting diod
-	$PATH_DIOD -s $1 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
+	$PATH_DIOD -s $1 -d 0x08 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
 	sleep 1
 	echo mounting
-	$PATH_DIODMOUNT -d -o uname=root,port=2006 \
+	$PATH_DIODMOUNT -d2006 -o uname=root \
 			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
 
-	echo writing file with fsync
-	dd if=/dev/zero of=$PATH_MNTDIR/a count=1024 conv=fsync status=noxfer
-	cmp $PATH_MNTDIR/a $PATH_EXPDIR/a
+	dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
+	echo testing host file system
+	./tfcntl2 $PATH_EXPDIR/a || :
+	echo testing diod file system
+	./tfcntl2 $PATH_MNTDIR/a || :
 	rm -f $PATH_MNTDIR/a
-
 	echo unmounting
 	umount $PATH_MNTDIR
 	echo waiting for diod to terminate
@@ -22,6 +23,7 @@ doit ()
 
 TEST=$(basename $0 | cut -d- -f1)
 test $(id -u) == 0 || exit 77 #skip if not root
+modprobe 9p || exit 77 #skip if no 9p
 
 doit $TEST.stats >$TEST.out 2>&1
 

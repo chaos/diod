@@ -1,5 +1,14 @@
 2011-02-08 Jim Garlick <garlick@llnl.gov>
 
+	* testkern : Split off tests that involve mounting the file system.
+	Don't run tests if 9p.ko is unavailable.  Mount file system using
+	diodmount -d PORT option.
+
+	* diodmount/diodmount.c : Have -d take a port argument instead of
+	requiring an additional -oport=PORT.
+
+2011-02-08 Jim Garlick <garlick@llnl.gov>
+
 	* diod/ops.c : Fix some freshly introduced bugs:
 	- diod_readlink(): add missing string term to symtgt.
 	- diod_setattr(): use lchown() not chown()
@@ -7,7 +16,7 @@
 	- diod_setattr(): return EINVAL on symlink mode/size update.
 
 	* libnpfs/npfs.h, libnpfs/np.c, libnpfs/fcall.c, libnpfs/file.c,
-	libnpfs/fmt.c : Change NPfcall to use union structs, not shared
+	libnpfs/fmt.c : Change Npfcall to use union structs, not shared
 	variables for all ops.
 
 	* libnpfs/np.c : Fix ordering of args in getattr() serialization.

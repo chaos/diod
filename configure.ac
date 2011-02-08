@@ -84,11 +84,12 @@ AC_CONFIG_FILES( \
   man/diodctl.conf.5 \
   scripts/Makefile \
   scripts/diodctl.init \
-  test/Makefile \
   diod/Makefile \
   diodctl/Makefile \
   diodmount/Makefile \
   libixp/Makefile \
+  test/Makefile \
+  testkern/Makefile \
 )
 
 AC_OUTPUT

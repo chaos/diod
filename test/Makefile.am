@@ -1,79 +1,6 @@
-check_PROGRAMS = \
-	tsetuid \
-	tsetfsuid \
-	tsetfsuidsupp \
-	tsuppgrp \
-	tfcntl \
-	tstatfs \
-	trename \
-	tstat \
-	tflock \
-	tflock2 \
-	tfcntl2 \
-	tfcntl3 \
-	tconfig \
-	tfsgid
+check_PROGRAMS = tfcntl tsetfsuid tsetfsuidsupp tsetuid tsuppgrp
 
-TESTS_ENVIRONMENT = env
-TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
-TESTS_ENVIRONMENT += "PATH_DIODCTL=$(top_builddir)/diodctl/diodctl"
-TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/diodmount/diodmount"
-TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
-TESTS_ENVIRONMENT += "PATH_MNTDIR=$(shell readlink -f mnt.d)"
-TESTS_ENVIRONMENT += "PATH_EXPDIR=$(shell readlink -f exp.d)"
-
-TESTS = \
-	t00-pthreads-setfsuid \
-	t01-setfsuid-setgroups \
-	t02-pthreads-setgroups \
-	t03-pthreads-seteuid \
-	t04-pthreads-fcntl \
-	t05-mount-sanity \
-	t06-read-sanity \
-	t07-write-sanity \
-	t08-option-parse \
-	t09-mount-9P2000 \
-	t10-mount-9P2000.u \
-	t11-mount-9P2000.L \
-	t12-mount-bogus \
-	t13-rename-across-dirs \
-	t14-statfs \
-	t15-fsync \
-	t16-stat \
-	t17-chmod \
-	t18-flock-twoproc \
-	t19-fcntl-twoproc \
-	t20-aread \
-	t21-awrite \
-	t22-append \
-	t23-fcntl-oneproc \
-	t24-flock-oneproc \
-	t25-create-gid \
-	t26-chgrp
-
-XFAIL_TESTS = \
-	t18-flock-twoproc \
-	t19-fcntl-twoproc \
-	t23-fcntl-oneproc \
-	t24-flock-oneproc
-XFAIL_TESTS += \
-	t11-mount-9P2000.L \
-	t13-rename-across-dirs \
-	t14-statfs \
-	t18-flock-twoproc \
-	t19-fcntl-twoproc \
-	t23-fcntl-oneproc \
-	t24-flock-oneproc
-if ! LARGEIO
-XFAIL_TESTS += \
-	t20-aread \
-	t21-awrite
-endif
-
-$(TESTS): mnt.d exp.d
-
-mnt.d exp.d:
-	mkdir -p $@
+TESTS = t00 t01 t02 t03 t04 t05
 
 CLEANFILES = *.out *.diff *.stats
 
@@ -96,12 +23,3 @@ tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
-tstatfs_SOURCES = tstatfs.c $(common_sources)
-trename_SOURCES = trename.c $(common_sources)
-tstat_SOURCES = tstat.c $(common_sources)
-tflock_SOURCES = tflock.c $(common_sources)
-tfsgid_SOURCES = tfsgid.c $(common_sources)
-
-clean: clean-am
-	-rmdir mnt.d
-	-rmdir exp.d

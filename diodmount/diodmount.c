@@ -78,7 +78,7 @@ typedef struct {
     char *port;
 } query_t;
 
-#define OPTIONS "au:no:O:TvdfDj:x:"
+#define OPTIONS "au:no:O:Tvd:fDj:x:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -89,7 +89,7 @@ static const struct option longopts[] = {
     {"diodctl-options", required_argument,   0, 'O'},
     {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
-    {"direct",          no_argument,         0, 'd'},
+    {"diod-port",       required_argument,   0, 'd'},
     {"fake-mount",      no_argument,         0, 'f'},
     {"create-directories", no_argument,      0, 'D'},
 #if HAVE_MUNGE
@@ -127,7 +127,7 @@ usage (void)
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
 "   -v,--verbose                  be verbose about what is going on\n"
-"   -d,--direct                   mount diod directly (requires -o port=N)\n"
+"   -d,--diod-port PORT           mount diod directly on specified port num\n"
 "   -f,--fake-mount               do everything but the actual diod mount(s)\n"
 "   -D,--create-directories       create mount directories as needed\n"
 "   -x,--debug flag[,flag...]     set v9fs debugging flags [error,9p,vfs,\n"
@@ -149,9 +149,9 @@ main (int argc, char *argv[])
     int aopt = 0;
     int nopt = 0;
     int vopt = 0;
-    int dopt = 0;
     int fopt = 0;
     int Dopt = 0;
+    char *dopt = NULL;
     char *uopt = NULL;
     char *oopt = NULL;
     char *Oopt = NULL;
@@ -185,8 +185,8 @@ main (int argc, char *argv[])
             case 'v':   /* --verbose */
                 vopt = 1;
                 break;
-            case 'd':   /* --direct */
-                dopt = 1;
+            case 'd':   /* --diod-port */
+                dopt = optarg;
                 break;
             case 'f':   /* --fake-mount */
                 fopt = 1;
@@ -207,7 +207,7 @@ main (int argc, char *argv[])
         }
     }
     if (aopt && dopt)
-        msg_exit ("--all and --direct are incompatible options");
+        msg_exit ("--all and --diod-port are incompatible options");
     if (aopt) {/* Usage: diodmount [options] -a hostname [dir] */
         if (optind != argc - 1 && optind != argc - 2)
             usage ();
@@ -258,21 +258,31 @@ main (int argc, char *argv[])
             _update_mtab_entries (device, dir, ctl->exports, MNTOPT_DEFAULTS);
         _free_query (ctl);
 
+    /* Mount one file system, obtaining port number from command line.
+     * If -D option, create mount point as needed.
+     */
+    } else if (dopt) {
+
+        _verify_mountpoint (dir, Dopt);
+        _diod_mount (host, dir, aname, dopt, oopt, vopt, fopt, opt_debug);
+
+        if (!nopt) {
+            if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {
+                _umount (dir);
+                exit (1);
+            }
+        }
+
     /* Mount one file system, obtaining port number from diodctl.
-     * If -d option, skip diodctl and hope the user specified -o port=N.
      * If -D option, create mount point as needed.
      */
     } else {
         query_t *ctl;
 
         _verify_mountpoint (dir, Dopt);
-
-        if (!dopt)
-            ctl = _diodctl_query (host, Oopt, vopt, 1, jopt, opt_debug);
-        _diod_mount (host, dir, aname, dopt ? NULL : ctl->port, oopt, vopt,
-                     fopt, opt_debug);
-        if (!dopt)
-            _free_query (ctl);
+        ctl = _diodctl_query (host, Oopt, vopt, 1, jopt, opt_debug);
+        _diod_mount (host, dir, aname, ctl->port, oopt, vopt, fopt, opt_debug);
+        _free_query (ctl);
 
         if (!nopt) {
             if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {

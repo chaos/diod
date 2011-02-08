@@ -1,7 +1,0 @@
-starting diod
-mounting with version=BOGUS
-diodmount: mount: Invalid argument
-mount failed, retrying with no version
-mount successful
-unmounting
-waiting for diod to terminate
