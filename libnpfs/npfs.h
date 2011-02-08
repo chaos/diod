@@ -382,34 +382,52 @@ int np_strcmp(Npstr *str, char *cs);
 int np_strncmp(Npstr *str, char *cs, int len);
 
 void np_set_tag(Npfcall *, u16);
+Npfcall *np_create_tversion(u32 msize, char *version);
 Npfcall *np_create_rversion(u32 msize, char *version);
+Npfcall *np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname);
 Npfcall *np_create_rauth(Npqid *aqid);
+Npfcall *np_create_tflush(u16 oldtag);
 Npfcall *np_create_rflush(void);
+Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname);
 Npfcall *np_create_rattach(Npqid *qid);
+Npfcall *np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames);
 Npfcall *np_create_rwalk(int nwqid, Npqid *wqids);
-Npfcall *np_create_ropen(Npqid *qid, u32 iounit);
-Npfcall *np_create_rcreate(Npqid *qid, u32 iounit);
+Npfcall *np_create_tread(u32 fid, u64 offset, u32 count);
 Npfcall *np_create_rread(u32 count, u8* data);
+Npfcall *np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data);
 Npfcall *np_create_rwrite(u32 count);
+Npfcall *np_create_tclunk(u32 fid);
 Npfcall *np_create_rclunk(void);
+Npfcall *np_create_tremove(u32 fid);
 Npfcall *np_create_rremove(void);
+Npfcall *np_create_tread(u32 fid, u64 offset, u32 count);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
 #if HAVE_LARGEIO
+Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize);
 Npfcall *np_create_raread(u32 count);
 void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
+Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize, u8 *data);
 Npfcall *np_create_rawrite(u32 count);
 #endif
 Npfcall *np_create_rlerror(u32 ecode);
+Npfcall *np_create_tstatfs(u32 fid);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,
 		u64 files, u64 ffree, u64 fsid, u32 namelen);
+Npfcall *np_create_tlopen(u32 fid, u32 mode);
 Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
+Npfcall *np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid);
 Npfcall *np_create_rlcreate(struct p9_qid *qid, u32 iounit);
+Npfcall *np_create_tsymlink(u32 fid, char *name, char *symtgt, u32 gid);
 Npfcall *np_create_rsymlink (struct p9_qid *qid);
+Npfcall *np_create_treadlink(u32 fid);
 Npfcall *np_create_rreadlink(char *symtgt);
+Npfcall *np_create_tmknod(u32 dfid, char *name, u32 mode, u32 major, u32 minor, u32 gid);
 Npfcall *np_create_rmknod (struct p9_qid *qid);
+Npfcall *np_create_trename(u32 fid, u32 dfid, char *name);
 Npfcall *np_create_rrename(void);
+Npfcall *np_create_tgetattr(u32 fid, u64 request_mask);
 Npfcall *np_create_rgetattr(u64 valid, struct p9_qid *qid,
 		u32 mode, u32 uid, u32 gid, u64 nlink, u64 rdev,
                 u64 size, u64 blksize, u64 st_blocks,
@@ -418,12 +436,17 @@ Npfcall *np_create_rgetattr(u64 valid, struct p9_qid *qid,
                 u64 ctime_sec, u64 ctime_nsec,
                 u64 btime_sec, u64 btime_nsec,
                 u64 gen, u64 data_version);
+Npfcall *np_create_tsetattr(u32 fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size);
 Npfcall *np_create_rsetattr(void);
+Npfcall *np_create_treaddir(u32 fid, u64 offset, u32 count);
 Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);
+Npfcall *np_create_tfsync(u32 fid);
 Npfcall *np_create_rfsync(void);
-Npfcall *np_create_rmkdir(struct p9_qid *qid);
+Npfcall *np_create_tlink(u32 dfid, u32 fid, char *name);
 Npfcall *np_create_rlink(void);
+Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
+Npfcall *np_create_rmkdir(struct p9_qid *qid);
 
 int np_printfcall(FILE *f, Npfcall *fc);
 int np_snprintfcall(char *s, int len, Npfcall *fc);

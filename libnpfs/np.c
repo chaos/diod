@@ -326,6 +326,26 @@ np_post_check(Npfcall *fc, struct cbuf *bufp)
 }
 
 Npfcall *
+np_create_tversion(u32 msize, char *version)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 4 + 2 + strlen(version); /* msize[4] version[s] */
+        fc = np_create_common(bufp, size, P9_TVERSION);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, msize, &fc->msize);
+        buf_put_str(bufp, version, &fc->version);
+
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rversion(u32 msize, char *version)
 {
 	int size;
@@ -343,6 +363,34 @@ np_create_rversion(u32 msize, char *version)
 	buf_put_str(bufp, version, &fc->version);
 
 	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 4 + 2 + 2; /* fid[4] uname[s] aname[s] */
+        if (uname)
+                size += strlen(uname);
+
+        if (aname)
+                size += strlen(aname);
+
+        fc = np_create_common(bufp, size, P9_TAUTH);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_str(bufp, uname, &fc->uname);
+        buf_put_str(bufp, aname, &fc->aname);
+        buf_put_int32(bufp, n_uname, &fc->n_uname);
+
+        return np_post_check(fc, bufp);
 }
 
 Npfcall *
@@ -364,6 +412,24 @@ np_create_rauth(Npqid *aqid)
 }
 
 Npfcall *
+np_create_tflush(u16 oldtag)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 2;
+        fc = np_create_common(bufp, size, P9_TFLUSH);
+        if (!fc)
+                return NULL;
+
+        buf_put_int16(bufp, oldtag, &fc->oldtag);
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rflush(void)
 {
 	int size;
@@ -378,6 +444,36 @@ np_create_rflush(void)
 		return NULL;
 
 	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 4 + 4 + 2 + 2; /* fid[4] afid[4] uname[s] aname[s] */
+        if (uname)
+                size += strlen(uname);
+
+        if (aname)
+                size += strlen(aname);
+
+        size += 4; /* n_uname[4] */
+
+        fc = np_create_common(bufp, size, P9_TATTACH);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_int32(bufp, afid, &fc->afid);
+        buf_put_str(bufp, uname, &fc->uname);
+        buf_put_str(bufp, aname, &fc->aname);
+        buf_put_int32(bufp, n_uname, &fc->n_uname);
+        return np_post_check(fc, bufp);
 }
 
 Npfcall *
@@ -396,6 +492,37 @@ np_create_rattach(Npqid *qid)
 
 	buf_put_qid(bufp, qid, &fc->qid);
 	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
+{
+        int i, size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        if (nwname > P9_MAXWELEM) {
+                fprintf(stderr, "nwqid > P9_MAXWELEM\n");
+                return NULL;
+        }
+
+        bufp = &buffer;
+        size = 4 + 4 + 2 + nwname * 2; /* fid[4] newfid[4] nwname[2] nwname*wname[s] */
+        for(i = 0; i < nwname; i++)
+                size += strlen(wnames[i]);
+
+        fc = np_create_common(bufp, size, P9_TWALK);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_int32(bufp, newfid, &fc->newfid);
+        buf_put_int16(bufp, nwname, &fc->nwname);
+        for(i = 0; i < nwname; i++)
+                buf_put_str(bufp, wnames[i], &fc->wnames[i]);
+
+        return np_post_check(fc, bufp);
 }
 
 Npfcall *
@@ -423,6 +550,26 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 	}
 
 	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tread(u32 fid, u64 offset, u32 count)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 4 + 8 + 4; /* fid[4] offset[8] count[4] */
+        fc = np_create_common(bufp, size, P9_TREAD);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_int64(bufp, offset, &fc->offset);
+        buf_put_int32(bufp, count, &fc->count);
+        return np_post_check(fc, bufp);
 }
 
 Npfcall *
@@ -477,6 +624,32 @@ np_set_rread_count(Npfcall *fc, u32 count)
 }
 
 Npfcall *
+np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+        void *p;
+
+        bufp = &buffer;
+        size = 4 + 8 + 4 + count; /* fid[4] offset[8] count[4] data[count] */
+        fc = np_create_common(bufp, size, P9_TWRITE);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_int64(bufp, offset, &fc->offset);
+        buf_put_int32(bufp, count, &fc->count);
+        p = buf_alloc(bufp, count);
+        fc->data = p;
+        if (fc->data)
+                memmove(fc->data, data, count);
+
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rwrite(u32 count)
 {
 	int size;
@@ -496,6 +669,24 @@ np_create_rwrite(u32 count)
 }
 
 Npfcall *
+np_create_tclunk(u32 fid)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 4;       /* fid[4] */
+        fc = np_create_common(bufp, size, P9_TCLUNK);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rclunk(void)
 {
 	int size;
@@ -510,6 +701,24 @@ np_create_rclunk(void)
 		return NULL;
 
 	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tremove(u32 fid)
+{
+        int size;
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp;
+
+        bufp = &buffer;
+        size = 4;       /* fid[4] */
+        fc = np_create_common(bufp, size, P9_TREMOVE);
+        if (!fc)
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->fid);
+        return np_post_check(fc, bufp);
 }
 
 Npfcall *
@@ -533,6 +742,27 @@ np_create_rremove(void)
  * 2. fill in fc->data
  * 3. call np_finalize_raread() 
 */
+
+Npfcall *
+np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize)
+{
+        Npfcall *fc;
+        struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	int size = sizeof(u32) + sizeof(u8) + sizeof(u64) + sizeof(u32)
+			+ sizeof(u32);
+
+        if (!(fc = np_create_common(bufp, size, P9_TAREAD)))
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->u.taread.fid);
+        buf_put_int8(bufp, datacheck, &fc->u.taread.datacheck);
+        buf_put_int64(bufp, offset, &fc->u.taread.offset);
+        buf_put_int32(bufp, count, &fc->u.taread.count);
+        buf_put_int32(bufp, rsize, &fc->u.taread.rsize);
+
+        return np_post_check(fc, bufp);
+}
 
 Npfcall *
 np_create_raread(u32 count)
@@ -578,6 +808,33 @@ np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck)
 }
 
 Npfcall *
+np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
+                  u8 *data)
+{
+        Npfcall *fc;
+        struct cbuf buffer;
+        struct cbuf *bufp = &buffer;
+        int size = sizeof(u32) + sizeof(u8) + sizeof(u64) + sizeof(u32)
+			+ sizeof(u32) + rsize;
+        void *p;
+
+        if (!(fc = np_create_common(bufp, size, P9_TAWRITE)))
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->u.tawrite.fid);
+        buf_put_int8(bufp, datacheck, &fc->u.tawrite.datacheck);
+        buf_put_int64(bufp, offset, &fc->u.tawrite.offset);
+        buf_put_int32(bufp, count, &fc->u.tawrite.count);
+        buf_put_int32(bufp, rsize, &fc->u.tawrite.rsize);
+        p = buf_alloc(bufp, rsize);
+        fc->u.tawrite.data = p;
+        if (fc->u.tawrite.data)
+                memmove(fc->u.tawrite.data, data, rsize);
+
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rawrite(u32 count)
 {
 	int size = sizeof(u32);
@@ -589,7 +846,7 @@ np_create_rawrite(u32 count)
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, count, &fc->count);
+	buf_put_int32(bufp, count, &fc->u.rawrite.count);
 
 	return np_post_check(fc, bufp);
 }
@@ -888,23 +1145,28 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fprintf(stderr, "unhandled op: %d\n", fc->type);
 		fflush(stderr);
 		goto error;
-
 	case P9_TVERSION:
 		fc->msize = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->version);
 		break;
-
+	case P9_RVERSION:
+                fc->msize = buf_get_int32(bufp);
+                buf_get_str(bufp, &fc->version);
+                break;
 	case P9_TAUTH:
 		fc->afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->uname);
 		buf_get_str(bufp, &fc->aname);
 		fc->n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
-
+	case P9_RAUTH:
+                buf_get_qid(bufp, &fc->qid);
+                break;
 	case P9_TFLUSH:
 		fc->oldtag = buf_get_int16(bufp);
 		break;
-
+	case P9_RFLUSH:
+		break;
 	case P9_TATTACH:
 		fc->fid = buf_get_int32(bufp);
 		fc->afid = buf_get_int32(bufp);
@@ -912,7 +1174,9 @@ np_deserialize(Npfcall *fc, u8 *data)
 		buf_get_str(bufp, &fc->aname);
 		fc->n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
-
+	case P9_RATTACH:
+		buf_get_qid(bufp, &fc->qid);
+                break;
 	case P9_TWALK:
 		fc->fid = buf_get_int32(bufp);
 		fc->newfid = buf_get_int32(bufp);
@@ -924,26 +1188,40 @@ np_deserialize(Npfcall *fc, u8 *data)
 			buf_get_str(bufp, &fc->wnames[i]);
 		}
 		break;
-
+	case P9_RWALK:
+		fc->nwqid = buf_get_int16(bufp);
+                if (fc->nwqid > P9_MAXWELEM)
+                        goto error;
+                for(i = 0; i < fc->nwqid; i++)
+                        buf_get_qid(bufp, &fc->wqids[i]);
+                break;
 	case P9_TREAD:
 		fc->fid = buf_get_int32(bufp);
 		fc->offset = buf_get_int64(bufp);
 		fc->count = buf_get_int32(bufp);
 		break;
-
+	case P9_RREAD:
+		fc->count = buf_get_int32(bufp);
+                fc->data = buf_alloc(bufp, fc->count);
+                break;
 	case P9_TWRITE:
 		fc->fid = buf_get_int32(bufp);
 		fc->offset = buf_get_int64(bufp);
 		fc->count = buf_get_int32(bufp);
 		fc->data = buf_alloc(bufp, fc->count);
 		break;
-
+	case P9_RWRITE:
+		fc->count = buf_get_int32(bufp);
+                break;
 	case P9_TCLUNK:
 		fc->fid = buf_get_int32(bufp);
 		break;
-
+	case P9_RCLUNK:
+		break;
 	case P9_TREMOVE:
 		fc->fid = buf_get_int32(bufp);
+		break;
+	case P9_RREMOVE:
 		break;
 #if HAVE_LARGEIO
 	case P9_TAREAD:
@@ -953,6 +1231,11 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.taread.count = buf_get_int32(bufp);
 		fc->u.taread.rsize = buf_get_int32(bufp);
 		break;
+	case P9_RAREAD:
+		fc->u.raread.count = buf_get_int32(bufp);
+                fc->u.raread.data = buf_alloc(bufp, fc->u.raread.count);
+                fc->u.raread.check = buf_get_int32(bufp);
+                break;
 	case P9_TAWRITE:
 		fc->u.tawrite.fid = buf_get_int32(bufp);
 		fc->u.tawrite.datacheck = buf_get_int8(bufp);
@@ -962,13 +1245,31 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tawrite.data = buf_alloc(bufp, fc->u.tawrite.rsize);
 		fc->u.tawrite.check = buf_get_int32(bufp);
 		break;
+	case P9_RAWRITE:
+                fc->u.rawrite.count = buf_get_int32(bufp);
+                break;
 #endif
 	case P9_TSTATFS:
 		fc->u.tstatfs.fid = buf_get_int32(bufp);
 		break;
+	case P9_RSTATFS:
+       		fc->u.rstatfs.type = buf_get_int32(bufp);
+                fc->u.rstatfs.bsize = buf_get_int32(bufp);
+                fc->u.rstatfs.blocks = buf_get_int64(bufp);
+                fc->u.rstatfs.bfree = buf_get_int64(bufp);
+                fc->u.rstatfs.bavail = buf_get_int64(bufp);
+                fc->u.rstatfs.files = buf_get_int64(bufp);
+                fc->u.rstatfs.ffree = buf_get_int64(bufp);
+                fc->u.rstatfs.fsid = buf_get_int64(bufp);
+                fc->u.rstatfs.namelen = buf_get_int32(bufp);
+                break;
 	case P9_TLOPEN:
 		fc->u.tlopen.fid = buf_get_int32(bufp);
 		fc->u.tlopen.mode = buf_get_int32(bufp);
+		break;
+	case P9_RLOPEN:
+		buf_get_qid(bufp, &fc->u.rlopen.qid);
+                fc->u.rlopen.iounit = buf_get_int32(bufp);
 		break;
 	case P9_TLCREATE:
 		fc->u.tlcreate.fid = buf_get_int32(bufp);
@@ -977,11 +1278,18 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tlcreate.mode = buf_get_int32(bufp);
 		fc->u.tlcreate.gid = buf_get_int32(bufp);
 		break;
+	case P9_RLCREATE:
+		buf_get_qid(bufp, &fc->u.rlcreate.qid);
+                fc->u.rlcreate.iounit = buf_get_int32(bufp);
+		break;
 	case P9_TSYMLINK:
 		fc->u.tsymlink.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tsymlink.name);
 		buf_get_str(bufp, &fc->u.tsymlink.symtgt);
 		fc->u.tsymlink.gid = buf_get_int32(bufp);
+		break;
+	case P9_RSYMLINK:
+		buf_get_qid(bufp, &fc->u.rsymlink.qid);
 		break;
 	case P9_TMKNOD:
 		fc->u.tmknod.fid = buf_get_int32(bufp);
@@ -991,18 +1299,47 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tmknod.minor = buf_get_int32(bufp);
 		fc->u.tmknod.gid = buf_get_int32(bufp);
 		break;
+	case P9_RMKNOD:
+		buf_get_qid(bufp, &fc->u.rmknod.qid);
+		break;
 	case P9_TRENAME:
 		fc->u.trename.fid = buf_get_int32(bufp);
 		fc->u.trename.dfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.trename.name);
 		break;
+	case P9_RRENAME:
+		break;
 	case P9_TREADLINK:
 		fc->u.treadlink.fid = buf_get_int32(bufp);
+		break;
+	case P9_RREADLINK:
+		buf_get_str(bufp, &fc->u.rreadlink.target);
 		break;
 	case P9_TGETATTR:
 		fc->u.tgetattr.fid = buf_get_int32(bufp);
 		fc->u.tgetattr.request_mask = buf_get_int64(bufp);
 		break;
+	case P9_RGETATTR:
+		fc->u.rgetattr.valid = buf_get_int64(bufp);
+		buf_get_qid(bufp, &fc->u.rgetattr.qid);
+		fc->u.rgetattr.mode = buf_get_int32(bufp);
+		fc->u.rgetattr.nlink = buf_get_int64(bufp);
+		fc->u.rgetattr.uid = buf_get_int32(bufp);
+		fc->u.rgetattr.gid = buf_get_int32(bufp);
+		fc->u.rgetattr.rdev = buf_get_int64(bufp);
+		fc->u.rgetattr.size = buf_get_int64(bufp);
+		fc->u.rgetattr.blksize = buf_get_int64(bufp);
+		fc->u.rgetattr.blocks = buf_get_int64(bufp);
+		fc->u.rgetattr.atime_sec = buf_get_int64(bufp);
+		fc->u.rgetattr.atime_nsec = buf_get_int64(bufp);
+		fc->u.rgetattr.mtime_sec = buf_get_int64(bufp);
+		fc->u.rgetattr.mtime_nsec = buf_get_int64(bufp);
+		fc->u.rgetattr.ctime_sec = buf_get_int64(bufp);
+		fc->u.rgetattr.ctime_nsec = buf_get_int64(bufp);
+		fc->u.rgetattr.btime_sec = buf_get_int64(bufp);
+		fc->u.rgetattr.btime_nsec = buf_get_int64(bufp);
+		fc->u.rgetattr.gen = buf_get_int64(bufp);
+		fc->u.rgetattr.data_version = buf_get_int64(bufp);
 	case P9_TSETATTR:
 		fc->u.tsetattr.fid = buf_get_int32(bufp);
 		fc->u.tsetattr.valid = buf_get_int32(bufp);
@@ -1015,10 +1352,12 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tsetattr.mtime_sec = buf_get_int64(bufp);
 		fc->u.tsetattr.mtime_nsec = buf_get_int64(bufp);
 		break;
-	case P9_TXATTRWALK:
-		assert(0); /* FIXME */
+	case P9_RSETATTR:
 		break;
+	case P9_TXATTRWALK:
+	case P9_RXATTRWALK:
 	case P9_TXATTRCREATE:
+	case P9_RXATTRCREATE:
 		assert(0); /* FIXME */
 		break;
 	case P9_TREADDIR:
@@ -1026,8 +1365,14 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.treaddir.offset = buf_get_int64(bufp);
 		fc->u.treaddir.count = buf_get_int32(bufp);
 		break;
+	case P9_RREADDIR:
+		fc->u.rreaddir.count = buf_get_int32(bufp);
+                fc->u.rreaddir.data = buf_alloc(bufp, fc->u.rreaddir.count);
+		break;
 	case P9_TFSYNC:
 		fc->u.tfsync.fid = buf_get_int32(bufp);
+		break;
+	case P9_RFSYNC:
 		break;
 	case P9_TLOCK:
 		fc->u.tlock.fid = buf_get_int32(bufp);
@@ -1038,6 +1383,9 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tlock.proc_id = buf_get_int32(bufp);	
 		buf_get_str(bufp, &fc->u.tlock.client_id);	
 		break;
+	case P9_RLOCK:
+		fc->u.rlock.status = buf_get_int8(bufp);
+		break;
 	case P9_TGETLOCK:
 		fc->u.tgetlock.fid = buf_get_int32(bufp);
 		fc->u.tgetlock.type = buf_get_int8(bufp);	
@@ -1046,10 +1394,19 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tgetlock.proc_id = buf_get_int32(bufp);	
 		buf_get_str(bufp, &fc->u.tgetlock.client_id);	
 		break;
+	case P9_RGETLOCK:
+		fc->u.rgetlock.type = buf_get_int8(bufp);	
+		fc->u.rgetlock.start = buf_get_int64(bufp);	
+		fc->u.rgetlock.length = buf_get_int64(bufp);	
+		fc->u.rgetlock.proc_id = buf_get_int32(bufp);	
+		buf_get_str(bufp, &fc->u.rgetlock.client_id);	
+		break;
 	case P9_TLINK:
 		fc->u.tlink.dfid = buf_get_int32(bufp);
 		fc->u.tlink.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tlink.name);
+		break;
+	case P9_RLINK:
 		break;
 	case P9_TMKDIR:
 		fc->u.tmkdir.fid = buf_get_int32(bufp);
@@ -1057,6 +1414,9 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.tmkdir.mode = buf_get_int32(bufp);
 		fc->u.tmkdir.gid = buf_get_int32(bufp);
 		break;
+	case P9_RMKDIR:
+		buf_get_qid(bufp, &fc->u.rmkdir.qid);
+		break;	
 	}
 
 	if (buf_check_overflow(bufp))

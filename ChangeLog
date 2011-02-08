@@ -6,6 +6,9 @@
 	format in mount command now that we can put anything there we want,
 	so /proc/mounts looks more "normal".
 
+	* libnpfs/npfs.h, libnpfs/np.c : Begin to add back user space client
+	functions.
+
 2011-02-05 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/fmt.c : Make printing of p9_str types more uniform.
