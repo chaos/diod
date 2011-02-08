@@ -1,3 +1,17 @@
+2011-02-08 Jim Garlick <garlick@llnl.gov>
+
+	* diod/ops.c : Fix some freshly introduced bugs:
+	- diod_readlink(): add missing string term to symtgt.
+	- diod_setattr(): use lchown() not chown()
+	- diod_setattr(): add utimensat AT_SYMLINK_NOFOLLOW flag
+	- diod_setattr(): return EINVAL on symlink mode/size update.
+
+	* libnpfs/npfs.h, libnpfs/np.c, libnpfs/fcall.c, libnpfs/file.c,
+	libnpfs/fmt.c : Change NPfcall to use union structs, not shared
+	variables for all ops.
+
+	* libnpfs/np.c : Fix ordering of args in getattr() serialization.
+
 2011-02-07 Jim Garlick <garlick@llnl.gov>
 
 	* diodmount/diodmount.c, libdiod/diod_sock.[ch] : Connect to server

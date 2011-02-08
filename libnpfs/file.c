@@ -494,7 +494,7 @@ npfile_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		np_uerror(ENOMEM);
 		goto done;
 	}
-	n = (*fops->read)(f, offset, count, ret->data, req);
+	n = (*fops->read)(f, offset, count, ret->u.rread.data, req);
 	if (n < 0) {
 		free(ret);
 		ret = NULL;

@@ -577,11 +577,11 @@ struct p9_twalk {
 	u32 fid;
 	u32 newfid;
 	u16 nwname;
-	struct p9_str wnames[16];
+	struct p9_str wnames[P9_MAXWELEM];
 };
 struct p9_rwalk {
 	u16 nwqid;
-	struct p9_qid wqids[16];
+	struct p9_qid wqids[P9_MAXWELEM];
 };
 struct p9_topen {
 	u32 fid;

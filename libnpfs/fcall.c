@@ -39,12 +39,14 @@
 Npfcall *
 np_version(Npreq *req, Npfcall *tc)
 {
-	if (tc->msize < P9_IOHDRSZ + 1) {
+	if (tc->u.tversion.msize < P9_IOHDRSZ + 1) {
 		np_uerror(EIO);
 		return NULL;
 	}
 
-	return (*req->conn->srv->version)(req->conn, tc->msize, &tc->version);
+	return (*req->conn->srv->version)(req->conn,
+				tc->u.tversion.msize,
+				&tc->u.tversion.version);
 }
 
 Npfcall *
@@ -63,20 +65,20 @@ np_auth(Npreq *req, Npfcall *tc)
 	aname = NULL;
 	conn = req->conn;
 	srv = conn->srv;
-	afid = np_fid_find(conn, tc->afid);
+	afid = np_fid_find(conn, tc->u.tauth.afid);
 	if (afid) {
 		np_uerror(EIO);
 		goto done;
 	}
 
-	afid = np_fid_create(conn, tc->afid, NULL);
+	afid = np_fid_create(conn, tc->u.tauth.afid, NULL);
 	if (!afid)
 		goto done;
 	else
 		np_fid_incref(afid);
 
-	if (tc->uname.len && tc->n_uname==P9_NONUNAME) {
-		uname = np_strdup(&tc->uname);
+	if (tc->u.tauth.uname.len && tc->u.tauth.n_uname==P9_NONUNAME) {
+		uname = np_strdup(&tc->u.tauth.uname);
 		if (!uname) 
 			goto done;
 
@@ -86,17 +88,17 @@ np_auth(Npreq *req, Npfcall *tc)
 			np_uerror(EIO);
 			goto done;
 		}
-		tc->n_uname = user->uid;
+		tc->u.tauth.n_uname = user->uid;
 	} else {
-		user = (*srv->upool->uid2user)(srv->upool, tc->n_uname);
+		user = (*srv->upool->uid2user)(srv->upool, tc->u.tauth.n_uname);
 		if (!user) {
 			np_uerror(EIO);
 			goto done;
 		}
 	}
 
-	if (tc->aname.len) {
-		aname = np_strdup(&tc->aname);
+	if (tc->u.tauth.aname.len) {
+		aname = np_strdup(&tc->u.tauth.aname);
 		if (!aname)
 			goto done;
 	} else
@@ -136,22 +138,22 @@ np_attach(Npreq *req, Npfcall *tc)
 	conn = req->conn;
 	srv = conn->srv;
 	afid = NULL;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.tattach.fid);
 	if (fid) {
 		np_uerror(EIO);
 		goto done;
 	}
 
-	fid = np_fid_create(conn, tc->fid, NULL);
+	fid = np_fid_create(conn, tc->u.tattach.fid, NULL);
 	if (!fid)
 		goto done;
 	else 
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	afid = np_fid_find(conn, tc->afid);
+	afid = np_fid_find(conn, tc->u.tattach.afid);
 	if (!afid) {
-		if (tc->afid != P9_NOFID) {
+		if (tc->u.tattach.afid != P9_NOFID) {
 			np_uerror(EIO);
 			goto done;
 		}
@@ -163,8 +165,8 @@ np_attach(Npreq *req, Npfcall *tc)
 		np_fid_incref(afid);
 	}
 
-	if (tc->uname.len && tc->n_uname==P9_NONUNAME) {
-		uname = np_strdup(&tc->uname);
+	if (tc->u.tattach.uname.len && tc->u.tattach.n_uname==P9_NONUNAME) {
+		uname = np_strdup(&tc->u.tattach.uname);
 		if (!uname) 
 			goto done;
 
@@ -175,9 +177,9 @@ np_attach(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 
-		tc->n_uname = user->uid;
+		tc->u.tattach.n_uname = user->uid;
 	} else {
-		user = srv->upool->uid2user(srv->upool, tc->n_uname);
+		user = srv->upool->uid2user(srv->upool, tc->u.tattach.n_uname);
 		if (!user) {
 			np_uerror(EIO);
 			goto done;
@@ -185,8 +187,8 @@ np_attach(Npreq *req, Npfcall *tc)
 	}
 
 	fid->user = user;
-	if (tc->aname.len) {
-		aname = np_strdup(&tc->aname);
+	if (tc->u.tattach.aname.len) {
+		aname = np_strdup(&tc->u.tattach.aname);
 		if (!aname)
 			goto done;
 	} else
@@ -196,7 +198,9 @@ np_attach(Npreq *req, Npfcall *tc)
 	&& !(*conn->srv->auth->checkauth)(fid, afid, aname))
 		goto done;
 
-	rc = (*conn->srv->attach)(fid, afid, &tc->uname, &tc->aname);
+	rc = (*conn->srv->attach)(fid, afid,
+					&tc->u.tattach.uname,
+					&tc->u.tattach.aname);
 
 done:
 	free(aname);
@@ -214,7 +218,7 @@ np_flush(Npreq *req, Npfcall *tc)
 
 	ret = NULL;
 	conn = req->conn;
-	oldtag = tc->oldtag;
+	oldtag = tc->u.tflush.oldtag;
 	pthread_mutex_lock(&conn->srv->lock);
 	// check pending requests
 	for(creq = conn->srv->reqs_first; creq != NULL; creq = creq->next) {
@@ -272,7 +276,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	rc = NULL;
 	conn = req->conn;
 	newfid = NULL;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.twalk.fid);
 	if (!fid) {
 		np_uerror(EIO);
 		goto done;
@@ -287,19 +291,19 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 #endif
 	/* FIXME: error if fid has been opened */
-	if (tc->nwname > P9_MAXWELEM) {
+	if (tc->u.twalk.nwname > P9_MAXWELEM) {
 		np_uerror(EIO);
 		goto done;
 	}
 
-	if (tc->fid != tc->newfid) {
+	if (tc->u.twalk.fid != tc->u.twalk.newfid) {
 //		printf("newfid conn %p fid %d\n", conn, tc->newfid); 
-		newfid = np_fid_find(conn, tc->newfid);
+		newfid = np_fid_find(conn, tc->u.twalk.newfid);
 		if (newfid) {
 			np_uerror(EIO);
 			goto done;
 		}
-		newfid = np_fid_create(conn, tc->newfid, NULL);
+		newfid = np_fid_create(conn, tc->u.twalk.newfid, NULL);
 		if (!newfid) {
 			np_uerror(ENOMEM);
 			goto done;
@@ -315,21 +319,22 @@ np_walk(Npreq *req, Npfcall *tc)
 		newfid = fid;
 
 	np_fid_incref(newfid);
-	for(i = 0; i < tc->nwname;) {
-		if (!(*conn->srv->walk)(newfid, &tc->wnames[i], &wqids[i]))
+	for(i = 0; i < tc->u.twalk.nwname;) {
+		if (!(*conn->srv->walk)(newfid, &tc->u.twalk.wnames[i],
+					&wqids[i]))
 			break;
 
 		newfid->type = wqids[i].type;
 		i++;
-		if (i<(tc->nwname) && !(newfid->type & P9_QTDIR))
+		if (i<(tc->u.twalk.nwname) && !(newfid->type & P9_QTDIR))
 			break;
 	}
 
-	if (i==0 && tc->nwname!=0)
+	if (i==0 && tc->u.twalk.nwname!=0)
 		goto done;
 
 	np_uerror(0);
-	if (tc->fid != tc->newfid)
+	if (tc->u.twalk.fid != tc->u.twalk.newfid)
 		np_fid_incref(newfid);
 	rc = np_create_rwalk(i, wqids);
 
@@ -348,7 +353,7 @@ np_read(Npreq *req, Npfcall *tc)
 
 	rc = NULL;
 	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.tread.fid);
 	if (!fid) {
 		np_uerror(EIO);
 		goto done;
@@ -356,18 +361,18 @@ np_read(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
-	if (tc->count + P9_IOHDRSZ > conn->msize) {
+	if (tc->u.tread.count + P9_IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		goto done;
 	}
 
 	if (fid->type & P9_QTAUTH) {
 		if (conn->srv->auth) {
-			rc = np_alloc_rread(tc->count);
+			rc = np_alloc_rread(tc->u.tread.count);
 			if (!rc)
 				goto done;
 
-			n = conn->srv->auth->read(fid, tc->offset, tc->count, rc->data);
+			n = conn->srv->auth->read(fid, tc->u.tread.offset, tc->u.tread.count, rc->u.rread.data);
 			if (n >= 0) 
 				np_set_rread_count(rc, n);
 			else {
@@ -383,7 +388,7 @@ np_read(Npreq *req, Npfcall *tc)
 		np_uerror(EIO);
 		goto done;
 	}
-	rc = (*conn->srv->read)(fid, tc->offset, tc->count, req);
+	rc = (*conn->srv->read)(fid, tc->u.tread.offset, tc->u.tread.count, req);
 
 done:
 	return rc;
@@ -399,7 +404,7 @@ np_write(Npreq *req, Npfcall *tc)
 
 	rc = NULL;
 	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.twrite.fid);
 	if (!fid) {
 		np_uerror(EIO);
 		goto done;
@@ -409,8 +414,8 @@ np_write(Npreq *req, Npfcall *tc)
 	req->fid = fid;
 	if (fid->type & P9_QTAUTH) {
 		if (conn->srv->auth) {
-			n = conn->srv->auth->write(fid, tc->offset,
-				tc->count, tc->data);
+			n = conn->srv->auth->write(fid, tc->u.twrite.offset,
+				tc->u.twrite.count, tc->u.twrite.data);
 			if (n >= 0)
 				rc = np_create_rwrite(n);
 
@@ -424,12 +429,13 @@ np_write(Npreq *req, Npfcall *tc)
 		np_uerror(EPERM);
 		goto done;
 	}
-	if (tc->count + P9_IOHDRSZ > conn->msize) {
+	if (tc->u.twrite.count + P9_IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		goto done;
 	}
 
-	rc = (*conn->srv->write)(fid, tc->offset, tc->count, tc->data, req);
+	rc = (*conn->srv->write)(fid, tc->u.twrite.offset, tc->u.twrite.count,
+				tc->u.twrite.data, req);
 
 done:
 	return rc;
@@ -445,7 +451,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 	rc = NULL;
 	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.tclunk.fid);
 	if (!fid) {
 		np_uerror(EIO);
 		goto done;
@@ -481,7 +487,7 @@ np_remove(Npreq *req, Npfcall *tc)
 
 	rc = NULL;
 	conn = req->conn;
-	fid = np_fid_find(conn, tc->fid);
+	fid = np_fid_find(conn, tc->u.tremove.fid);
 	if (!fid) {
 		np_uerror(EIO);
 		goto done;

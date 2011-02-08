@@ -339,8 +339,8 @@ np_create_tversion(u32 msize, char *version)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, msize, &fc->msize);
-        buf_put_str(bufp, version, &fc->version);
+        buf_put_int32(bufp, msize, &fc->u.tversion.msize);
+        buf_put_str(bufp, version, &fc->u.tversion.version);
 
         return np_post_check(fc, bufp);
 }
@@ -359,8 +359,8 @@ np_create_rversion(u32 msize, char *version)
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, msize, &fc->msize);
-	buf_put_str(bufp, version, &fc->version);
+	buf_put_int32(bufp, msize, &fc->u.rversion.msize);
+	buf_put_str(bufp, version, &fc->u.rversion.version);
 
 	return np_post_check(fc, bufp);
 }
@@ -385,10 +385,10 @@ np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
-        buf_put_str(bufp, uname, &fc->uname);
-        buf_put_str(bufp, aname, &fc->aname);
-        buf_put_int32(bufp, n_uname, &fc->n_uname);
+        buf_put_int32(bufp, fid, &fc->u.tauth.afid);
+        buf_put_str(bufp, uname, &fc->u.tauth.uname);
+        buf_put_str(bufp, aname, &fc->u.tauth.aname);
+        buf_put_int32(bufp, n_uname, &fc->u.tauth.n_uname);
 
         return np_post_check(fc, bufp);
 }
@@ -407,7 +407,7 @@ np_create_rauth(Npqid *aqid)
 	if (!fc)
 		return NULL;
 
-	buf_put_qid(bufp, aqid, &fc->qid);
+	buf_put_qid(bufp, aqid, &fc->u.rauth.qid);
 	return np_post_check(fc, bufp);
 }
 
@@ -425,7 +425,7 @@ np_create_tflush(u16 oldtag)
         if (!fc)
                 return NULL;
 
-        buf_put_int16(bufp, oldtag, &fc->oldtag);
+        buf_put_int16(bufp, oldtag, &fc->u.tflush.oldtag);
         return np_post_check(fc, bufp);
 }
 
@@ -468,11 +468,11 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
-        buf_put_int32(bufp, afid, &fc->afid);
-        buf_put_str(bufp, uname, &fc->uname);
-        buf_put_str(bufp, aname, &fc->aname);
-        buf_put_int32(bufp, n_uname, &fc->n_uname);
+        buf_put_int32(bufp, fid, &fc->u.tattach.fid);
+        buf_put_int32(bufp, afid, &fc->u.tattach.afid);
+        buf_put_str(bufp, uname, &fc->u.tattach.uname);
+        buf_put_str(bufp, aname, &fc->u.tattach.aname);
+        buf_put_int32(bufp, n_uname, &fc->u.tattach.n_uname);
         return np_post_check(fc, bufp);
 }
 
@@ -490,7 +490,7 @@ np_create_rattach(Npqid *qid)
 	if (!fc)
 		return NULL;
 
-	buf_put_qid(bufp, qid, &fc->qid);
+	buf_put_qid(bufp, qid, &fc->u.rattach.qid);
 	return np_post_check(fc, bufp);
 }
 
@@ -516,11 +516,11 @@ np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
-        buf_put_int32(bufp, newfid, &fc->newfid);
-        buf_put_int16(bufp, nwname, &fc->nwname);
+        buf_put_int32(bufp, fid, &fc->u.twalk.fid);
+        buf_put_int32(bufp, newfid, &fc->u.twalk.newfid);
+        buf_put_int16(bufp, nwname, &fc->u.twalk.nwname);
         for(i = 0; i < nwname; i++)
-                buf_put_str(bufp, wnames[i], &fc->wnames[i]);
+                buf_put_str(bufp, wnames[i], &fc->u.twalk.wnames[i]);
 
         return np_post_check(fc, bufp);
 }
@@ -544,9 +544,9 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 	if (!fc)
 		return NULL;
 
-	buf_put_int16(bufp, nwqid, &fc->nwqid);
+	buf_put_int16(bufp, nwqid, &fc->u.rwalk.nwqid);
 	for(i = 0; i < nwqid; i++) {
-		buf_put_qid(bufp, &wqids[i], &fc->wqids[i]);
+		buf_put_qid(bufp, &wqids[i], &fc->u.rwalk.wqids[i]);
 	}
 
 	return np_post_check(fc, bufp);
@@ -566,9 +566,9 @@ np_create_tread(u32 fid, u64 offset, u32 count)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
-        buf_put_int64(bufp, offset, &fc->offset);
-        buf_put_int32(bufp, count, &fc->count);
+        buf_put_int32(bufp, fid, &fc->u.tread.fid);
+        buf_put_int64(bufp, offset, &fc->u.tread.offset);
+        buf_put_int32(bufp, count, &fc->u.tread.count);
         return np_post_check(fc, bufp);
 }
 
@@ -587,9 +587,9 @@ np_alloc_rread(u32 count)
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, count, &fc->count);
+	buf_put_int32(bufp, count, &fc->u.rread.count);
 	p = buf_alloc(bufp, count);
-	fc->data = p;
+	fc->u.rread.data = p;
 
 	return np_post_check(fc, bufp);
 }
@@ -600,8 +600,8 @@ np_create_rread(u32 count, u8* data)
 	Npfcall *fc;
 
 	fc = np_alloc_rread(count);
-	if (fc->data)
-		memmove(fc->data, data, count);
+	if (fc->u.rread.data)
+		memmove(fc->u.rread.data, data, count);
 
 	return fc;
 }
@@ -613,14 +613,14 @@ np_set_rread_count(Npfcall *fc, u32 count)
 	struct cbuf buffer;
 	struct cbuf *bufp;
 
-	assert(count <= fc->count);
+	assert(count <= fc->u.rread.count);
 	bufp = &buffer;
 	size = 4 + 1 + 2 + 4 + count; /* size[4] id[1] tag[2] count[4] data[count] */
 
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
-	buf_put_int32(bufp, count, &fc->count);
+	buf_put_int32(bufp, count, &fc->u.rread.count);
 }
 
 Npfcall *
@@ -638,13 +638,13 @@ np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
-        buf_put_int64(bufp, offset, &fc->offset);
-        buf_put_int32(bufp, count, &fc->count);
+        buf_put_int32(bufp, fid, &fc->u.twrite.fid);
+        buf_put_int64(bufp, offset, &fc->u.twrite.offset);
+        buf_put_int32(bufp, count, &fc->u.twrite.count);
         p = buf_alloc(bufp, count);
-        fc->data = p;
-        if (fc->data)
-                memmove(fc->data, data, count);
+        fc->u.twrite.data = p;
+        if (fc->u.twrite.data)
+                memmove(fc->u.twrite.data, data, count);
 
         return np_post_check(fc, bufp);
 }
@@ -663,7 +663,7 @@ np_create_rwrite(u32 count)
 	if (!fc)
 		return NULL;
 
-	buf_put_int32(bufp, count, &fc->count);
+	buf_put_int32(bufp, count, &fc->u.rwrite.count);
 
 	return np_post_check(fc, bufp);
 }
@@ -682,7 +682,7 @@ np_create_tclunk(u32 fid)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_int32(bufp, fid, &fc->u.tclunk.fid);
         return np_post_check(fc, bufp);
 }
 
@@ -717,7 +717,7 @@ np_create_tremove(u32 fid)
         if (!fc)
                 return NULL;
 
-        buf_put_int32(bufp, fid, &fc->fid);
+        buf_put_int32(bufp, fid, &fc->u.tremove.fid);
         return np_post_check(fc, bufp);
 }
 
@@ -984,7 +984,7 @@ np_create_rreadlink(char *target)
 }
 
 Npfcall *
-np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 mode,
+np_create_rgetattr(u64 valid, struct p9_qid *qid, u32 mode,
   		u32 uid, u32 gid, u64 nlink, u64 rdev,
 		u64 size, u64 blksize, u64 blocks,
 		u64 atime_sec, u64 atime_nsec,
@@ -1001,7 +1001,7 @@ np_create_rgetattr(u64 response_mask, struct p9_qid *qid, u32 mode,
 	if (!(fc = np_create_common(bufp, bufsize, P9_RGETATTR)))
 		return NULL;
 
-	buf_put_int64(bufp, response_mask, &fc->u.rgetattr.valid);
+	buf_put_int64(bufp, valid, &fc->u.rgetattr.valid);
 	buf_put_qid(bufp, qid, &fc->u.rgetattr.qid);
 	buf_put_int32(bufp, mode, &fc->u.rgetattr.mode);
 	buf_put_int32(bufp, uid, &fc->u.rgetattr.uid);
@@ -1138,7 +1138,6 @@ np_deserialize(Npfcall *fc, u8 *data)
 	buf_init(bufp, data + 4, fc->size - 4);
 	fc->type = buf_get_int8(bufp);
 	fc->tag = buf_get_int16(bufp);
-	fc->fid = fc->afid = fc->newfid = P9_NOFID;
 
 	switch (fc->type) {
 	default:
@@ -1146,80 +1145,80 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fflush(stderr);
 		goto error;
 	case P9_TVERSION:
-		fc->msize = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->version);
+		fc->u.tversion.msize = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tversion.version);
 		break;
 	case P9_RVERSION:
-                fc->msize = buf_get_int32(bufp);
-                buf_get_str(bufp, &fc->version);
+                fc->u.rversion.msize = buf_get_int32(bufp);
+                buf_get_str(bufp, &fc->u.rversion.version);
                 break;
 	case P9_TAUTH:
-		fc->afid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->uname);
-		buf_get_str(bufp, &fc->aname);
-		fc->n_uname = buf_get_int32(bufp); /* .u extension */
+		fc->u.tauth.afid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tauth.uname);
+		buf_get_str(bufp, &fc->u.tauth.aname);
+		fc->u.tauth.n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
 	case P9_RAUTH:
-                buf_get_qid(bufp, &fc->qid);
+                buf_get_qid(bufp, &fc->u.rauth.qid);
                 break;
 	case P9_TFLUSH:
-		fc->oldtag = buf_get_int16(bufp);
+		fc->u.tflush.oldtag = buf_get_int16(bufp);
 		break;
 	case P9_RFLUSH:
 		break;
 	case P9_TATTACH:
-		fc->fid = buf_get_int32(bufp);
-		fc->afid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->uname);
-		buf_get_str(bufp, &fc->aname);
-		fc->n_uname = buf_get_int32(bufp); /* .u extension */
+		fc->u.tattach.fid = buf_get_int32(bufp);
+		fc->u.tattach.afid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tattach.uname);
+		buf_get_str(bufp, &fc->u.tattach.aname);
+		fc->u.tattach.n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
 	case P9_RATTACH:
-		buf_get_qid(bufp, &fc->qid);
+		buf_get_qid(bufp, &fc->u.rattach.qid);
                 break;
 	case P9_TWALK:
-		fc->fid = buf_get_int32(bufp);
-		fc->newfid = buf_get_int32(bufp);
-		fc->nwname = buf_get_int16(bufp);
-		if (fc->nwname > P9_MAXWELEM)
+		fc->u.twalk.fid = buf_get_int32(bufp);
+		fc->u.twalk.newfid = buf_get_int32(bufp);
+		fc->u.twalk.nwname = buf_get_int16(bufp);
+		if (fc->u.twalk.nwname > P9_MAXWELEM)
 			goto error;
 
-		for(i = 0; i < fc->nwname; i++) {
-			buf_get_str(bufp, &fc->wnames[i]);
+		for(i = 0; i < fc->u.twalk.nwname; i++) {
+			buf_get_str(bufp, &fc->u.twalk.wnames[i]);
 		}
 		break;
 	case P9_RWALK:
-		fc->nwqid = buf_get_int16(bufp);
-                if (fc->nwqid > P9_MAXWELEM)
+		fc->u.rwalk.nwqid = buf_get_int16(bufp);
+                if (fc->u.rwalk.nwqid > P9_MAXWELEM)
                         goto error;
-                for(i = 0; i < fc->nwqid; i++)
-                        buf_get_qid(bufp, &fc->wqids[i]);
+                for(i = 0; i < fc->u.rwalk.nwqid; i++)
+                        buf_get_qid(bufp, &fc->u.rwalk.wqids[i]);
                 break;
 	case P9_TREAD:
-		fc->fid = buf_get_int32(bufp);
-		fc->offset = buf_get_int64(bufp);
-		fc->count = buf_get_int32(bufp);
+		fc->u.tread.fid = buf_get_int32(bufp);
+		fc->u.tread.offset = buf_get_int64(bufp);
+		fc->u.tread.count = buf_get_int32(bufp);
 		break;
 	case P9_RREAD:
-		fc->count = buf_get_int32(bufp);
-                fc->data = buf_alloc(bufp, fc->count);
+		fc->u.rread.count = buf_get_int32(bufp);
+                fc->u.rread.data = buf_alloc(bufp, fc->u.rread.count);
                 break;
 	case P9_TWRITE:
-		fc->fid = buf_get_int32(bufp);
-		fc->offset = buf_get_int64(bufp);
-		fc->count = buf_get_int32(bufp);
-		fc->data = buf_alloc(bufp, fc->count);
+		fc->u.twrite.fid = buf_get_int32(bufp);
+		fc->u.twrite.offset = buf_get_int64(bufp);
+		fc->u.twrite.count = buf_get_int32(bufp);
+		fc->u.twrite.data = buf_alloc(bufp, fc->u.twrite.count);
 		break;
 	case P9_RWRITE:
-		fc->count = buf_get_int32(bufp);
+		fc->u.rwrite.count = buf_get_int32(bufp);
                 break;
 	case P9_TCLUNK:
-		fc->fid = buf_get_int32(bufp);
+		fc->u.tclunk.fid = buf_get_int32(bufp);
 		break;
 	case P9_RCLUNK:
 		break;
 	case P9_TREMOVE:
-		fc->fid = buf_get_int32(bufp);
+		fc->u.tremove.fid = buf_get_int32(bufp);
 		break;
 	case P9_RREMOVE:
 		break;
@@ -1323,9 +1322,9 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.rgetattr.valid = buf_get_int64(bufp);
 		buf_get_qid(bufp, &fc->u.rgetattr.qid);
 		fc->u.rgetattr.mode = buf_get_int32(bufp);
-		fc->u.rgetattr.nlink = buf_get_int64(bufp);
 		fc->u.rgetattr.uid = buf_get_int32(bufp);
 		fc->u.rgetattr.gid = buf_get_int32(bufp);
+		fc->u.rgetattr.nlink = buf_get_int64(bufp);
 		fc->u.rgetattr.rdev = buf_get_int64(bufp);
 		fc->u.rgetattr.size = buf_get_int64(bufp);
 		fc->u.rgetattr.blksize = buf_get_int64(bufp);
@@ -1340,6 +1339,7 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fc->u.rgetattr.btime_nsec = buf_get_int64(bufp);
 		fc->u.rgetattr.gen = buf_get_int64(bufp);
 		fc->u.rgetattr.data_version = buf_get_int64(bufp);
+		break;
 	case P9_TSETATTR:
 		fc->u.tsetattr.fid = buf_get_int32(bufp);
 		fc->u.tsetattr.valid = buf_get_int32(bufp);

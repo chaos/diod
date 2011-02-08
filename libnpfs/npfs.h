@@ -53,33 +53,6 @@ struct Npfcall {
 	u8		type;
 	u16		tag;
 	u8*		pkt;
-
-	u32		fid;
-	u32		msize;			/* P9_TVERSION, P9_RVERSION */
-	Npstr		version;		/* P9_TVERSION, P9_RVERSION */
-	u32		afid;			/* P9_TAUTH, P9_TATTACH */
-	Npstr		uname;			/* P9_TAUTH, P9_TATTACH */
-	Npstr		aname;			/* P9_TAUTH, P9_TATTACH */
-	Npqid		qid;			/* P9_RAUTH, P9_RATTACH, P9_ROPEN, P9_RCREATE */
-	Npstr		ename;			/* P9_RERROR */
-	u16		oldtag;			/* P9_TFLUSH */
-	u32		newfid;			/* P9_TWALK */
-	u16		nwname;			/* P9_TWALK */
-	Npstr		wnames[P9_MAXWELEM];	/* P9_TWALK */
-	u16		nwqid;			/* P9_RWALK */
-	Npqid		wqids[P9_MAXWELEM];	/* P9_RWALK */
-	u8		mode;			/* P9_TOPEN, P9_TCREATE */
-	u32		iounit;			/* P9_ROPEN, P9_RCREATE */
-	Npstr		name;			/* P9_TCREATE */
-	u32		perm;			/* P9_TCREATE */
-	u64		offset;			/* P9_TREAD, P9_TWRITE */
-	u32		count;			/* P9_TREAD, P9_RREAD, P9_TWRITE, P9_RWRITE */
-	u8*		data;			/* P9_RREAD, P9_TWRITE */
-
-	/* 9P2000.u extensions */
-	u32		ecode;			/* P9_RERROR */
-	Npstr		extension;		/* P9_TCREATE */
-	u32		n_uname;
 	union {
 	   struct p9_rlerror rlerror;
 	   struct p9_tstatfs tstatfs;
@@ -122,6 +95,24 @@ struct Npfcall {
 	   struct p9_taread taread;
 	   struct p9_raread raread;
 #endif
+	   struct p9_tversion tversion;
+	   struct p9_rversion rversion;
+	   struct p9_tauth tauth;
+	   struct p9_rauth rauth;
+	   struct p9_tattach tattach;
+	   struct p9_rattach rattach;
+	   struct p9_tflush tflush;
+	   struct p9_rflush rflush;
+	   struct p9_twalk twalk;
+	   struct p9_rwalk rwalk;
+	   struct p9_tread tread;
+	   struct p9_rread rread;
+	   struct p9_twrite twrite;
+	   struct p9_rwrite rwrite;
+	   struct p9_tclunk tclunk;
+	   struct p9_rclunk rclunk;
+	   struct p9_tremove tremove;
+	   struct p9_rremove rremove;
 	} u;
 	Npfcall*	next;
 };
@@ -323,23 +314,6 @@ struct Npuserpool {
 	void		(*gdestroy)(Npuserpool *, Npgroup *g);
 };
 
-extern char *Eunknownfid;
-extern char *Ennomem;
-extern char *Enoauth;
-extern char *Enotimpl;
-extern char *Einuse;
-extern char *Ebadusefid;
-extern char *Enotdir;
-extern char *Etoomanywnames;
-extern char *Eperm;
-extern char *Etoolarge;
-extern char *Ebadoffset;
-extern char *Edirchange;
-extern char *Enotfound;
-extern char *Eopen;
-extern char *Eexist;
-extern char *Enotempty;
-extern char *Eunknownuser;
 extern Npuserpool *np_default_users;
 
 Npsrv *np_srv_create(int nwthread);

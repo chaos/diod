@@ -203,7 +203,6 @@ diod_register_ops (Npsrv *srv)
 }
 
 /* Update stat info contained in fid.
- * The 9P spec says directories have no length so we fix that up here.
  * Set npfs error state on error.
  */
 static int
@@ -213,9 +212,6 @@ _fidstat (Fid *fid)
         np_uerror (errno);
         return -1;
     }
-    if (S_ISDIR (fid->stat.st_mode))
-        fid->stat.st_size = 0;
-
     return 0;
 }
 
@@ -679,7 +675,7 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
         msg ("diod_read: out of memory");
         goto done;
     }
-    n = _pread (fid, ret->data, count, offset);
+    n = _pread (fid, ret->u.rread.data, count, offset);
     if (np_rerror ()) {
         free (ret);
         ret = NULL;
@@ -1245,15 +1241,17 @@ diod_readlink(Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     char target[PATH_MAX + 1];
+    int n;
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_readlink: error switching user");
         goto done;
     }
-    if (readlink (f->path, target, sizeof(target)) < 0) {
+    if ((n = readlink (f->path, target, sizeof(target))) < 0) {
         np_uerror (errno);
         goto done;
     }
+    target[n] = '\0';
     if (!(ret = np_create_rreadlink(target))) {
         np_uerror (ENOMEM);
         msg ("diod_readlink: out of memory");
@@ -1279,12 +1277,22 @@ diod_getattr(Npfid *fid, u64 request_mask)
     if (_fidstat (f) < 0)
         goto done;
     _ustat2qid (&f->stat, &qid);
-    if (!(ret = np_create_rgetattr(valid, &qid, f->stat.st_mode,
-            f->stat.st_uid, f->stat.st_gid, f->stat.st_nlink, f->stat.st_rdev,
-            f->stat.st_size, f->stat.st_blksize, f->stat.st_blocks,
-            f->stat.st_atim.tv_sec, f->stat.st_atim.tv_nsec,
-            f->stat.st_mtim.tv_sec, f->stat.st_mtim.tv_nsec,
-            f->stat.st_ctim.tv_sec, f->stat.st_ctim.tv_nsec, 0, 0, 0, 0))) {
+    if (!(ret = np_create_rgetattr(valid, &qid,
+                                    f->stat.st_mode,
+                                    f->stat.st_uid,
+                                    f->stat.st_gid,
+                                    f->stat.st_nlink,
+                                    f->stat.st_rdev,
+                                    f->stat.st_size,
+                                    f->stat.st_blksize,
+                                    f->stat.st_blocks,
+                                    f->stat.st_atim.tv_sec,
+                                    f->stat.st_atim.tv_nsec,
+                                    f->stat.st_mtim.tv_sec,
+                                    f->stat.st_mtim.tv_nsec,
+                                    f->stat.st_ctim.tv_sec,
+                                    f->stat.st_ctim.tv_nsec,
+                                    0, 0, 0, 0))) {
         np_uerror (ENOMEM);
         msg ("diod_getattr: out of memory");
         goto done;
@@ -1305,7 +1313,17 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         goto done;
     }
 
-    /* chmod */
+    if ((valid & P9_SETATTR_MODE) || (valid & P9_SETATTR_SIZE)) {
+        if (_fidstat(f) < 0)
+            goto done;
+        if (S_ISLNK(f->stat.st_mode)) {
+            msg ("diod_setattr: unhandled mode/size update on symlink");
+            np_uerror(EINVAL);
+            goto done;
+        }
+    }
+
+    /* chmod (N.B. dereferences symlinks) */
     if ((valid & P9_SETATTR_MODE) && chmod (f->path, mode) < 0) {
         np_uerror(errno);
         goto done;
@@ -1313,14 +1331,14 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 
     /* chown */
     if ((valid & P9_SETATTR_UID) || (valid & P9_SETATTR_GID)) {
-        if (chown (f->path, (valid & P9_SETATTR_UID) ? uid : -1,
-                            (valid & P9_SETATTR_GID) ? gid : -1) < 0) {
+        if (lchown (f->path, (valid & P9_SETATTR_UID) ? uid : -1,
+                             (valid & P9_SETATTR_GID) ? gid : -1) < 0) {
             np_uerror(errno);
             goto done;
         }
     }
 
-    /* truncate */
+    /* truncate (N.B. dereferences symlinks */
     if ((valid & P9_SETATTR_SIZE) && truncate (f->path, size) < 0) {
         np_uerror(errno);
         goto done;
@@ -1352,7 +1370,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             ts[1].tv_nsec = mtime_nsec;
         }
 
-        if (utimensat(-1, f->path, ts, 0) < 0) {
+        if (utimensat(-1, f->path, ts, AT_SYMLINK_NOFOLLOW) < 0) {
             np_uerror(errno);
             goto done;
         }

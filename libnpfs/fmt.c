@@ -444,7 +444,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		n += snprintf(s+n,len-n, " count %"PRIu32, fc->u.raread.count);
 		n += np_printdata(s+n,len-n, fc->u.raread.data, fc->u.raread.count);
 		break;
-		
 	case P9_TAWRITE:
 		n += snprintf(s+n,len-n, "P9_TAWRITE tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tawrite.fid);
@@ -460,96 +459,88 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 #endif
 	case P9_TVERSION:
-		n += snprintf(s+n,len-n, "P9_TVERSION tag %u msize %u",
-			fc->tag, fc->msize);
-		n += np_printstr(s+n,len-n, "version", &fc->version);
+		n += snprintf(s+n,len-n, "P9_TVERSION tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " msize %u", fc->u.tversion.msize);
+		n += np_printstr(s+n,len-n, "version", &fc->u.tversion.version);
 		break;
-
 	case P9_RVERSION:
 		n += snprintf(s+n,len-n, "P9_RVERSION tag %u msize %u",
-			fc->tag, fc->msize);
-		n += np_printstr(s+n,len-n, "version", &fc->version);
+			fc->tag, fc->u.rversion.msize);
+		n += np_printstr(s+n,len-n, "version", &fc->u.rversion.version);
 		break;
-
 	case P9_TAUTH:
 		n += snprintf(s+n,len-n, "P9_TAUTH tag %u afid %d",
-			fc->tag, fc->afid);
-		n += np_printstr(s+n,len-n, "uname", &fc->uname);
-		n += np_printstr(s+n,len-n, "aname", &fc->aname);
+			fc->tag, fc->u.tauth.afid);
+		n += np_printstr(s+n,len-n, "uname", &fc->u.tauth.uname);
+		n += np_printstr(s+n,len-n, "aname", &fc->u.tauth.aname);
 		break;
-
 	case P9_RAUTH:
 		n += snprintf(s+n,len-n, "P9_RAUTH tag %u qid ", fc->tag); 
-		n += np_printqid(s+n, len-n, &fc->qid);
+		n += np_printqid(s+n, len-n, &fc->u.rauth.qid);
 		break;
-
 	case P9_TATTACH:
-		n += snprintf(s+n,len-n, "P9_TATTACH tag %u fid %d afid %d",
-				fc->tag, fc->fid, fc->afid);
-		n += np_printstr(s+n,len-n, "uname", &fc->uname);
-		n += np_printstr(s+n,len-n, "aname", &fc->aname);
-		if (fc->n_uname != P9_NONUNAME)
-			n += snprintf(s+n,len-n, " n_uname %u", fc->n_uname);
+		n += snprintf(s+n,len-n, "P9_TATTACH tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " fid %d afid %d",
+				fc->u.tattach.fid, fc->u.tattach.afid);
+		n += np_printstr(s+n,len-n, "uname", &fc->u.tattach.uname);
+		n += np_printstr(s+n,len-n, "aname", &fc->u.tattach.aname);
+		if (fc->u.tattach.n_uname != P9_NONUNAME)
+			n += snprintf(s+n,len-n, " n_uname %u",
+					fc->u.tattach.n_uname);
 		else
 			n += snprintf(s+n,len-n, " n_uname P9_NONUNAME");
 			
 		break;
-
 	case P9_RATTACH:
 		n += snprintf(s+n,len-n, "P9_RATTACH tag %u qid ", fc->tag); 
-		n += np_printqid(s+n,len-n, &fc->qid);
+		n += np_printqid(s+n,len-n, &fc->u.rattach.qid);
 		break;
-
 	case P9_TFLUSH:
-		n += snprintf(s+n,len-n, "P9_TFLUSH tag %u oldtag %u", fc->tag, fc->oldtag);
+		n += snprintf(s+n,len-n, "P9_TFLUSH tag %u oldtag %u",
+				fc->tag, fc->u.tflush.oldtag);
 		break;
-
 	case P9_RFLUSH:
 		n += snprintf(s+n,len-n, "P9_RFLUSH tag %u", fc->tag);
 		break;
-
 	case P9_TWALK:
 		n += snprintf(s+n,len-n, "P9_TWALK tag %u fid %d newfid %d nwname %d", 
-			fc->tag, fc->fid, fc->newfid, fc->nwname);
-		for(i = 0; i < fc->nwname; i++)
+			fc->tag, fc->u.twalk.fid, fc->u.twalk.newfid, fc->u.twalk.nwname);
+		for(i = 0; i < fc->u.twalk.nwname; i++)
 			n += snprintf(s+n,len-n, " '%.*s'",
-				fc->wnames[i].len, fc->wnames[i].str);
+				fc->u.twalk.wnames[i].len, fc->u.twalk.wnames[i].str);
 		break;
-		
 	case P9_RWALK:
-		n += snprintf(s+n,len-n, "P9_RWALK tag %u nwqid %d", fc->tag, fc->nwqid);
-		for(i = 0; i < fc->nwqid; i++)
-			n += np_printqid(s+n,len-n, &fc->wqids[i]);
-		break;
-		
-	case P9_ROPEN:
-		n += snprintf(s+n,len-n, "P9_ROPEN tag %u qid ", fc->tag);
-		n += np_printqid(s+n,len-n, &fc->qid);
-		n += snprintf(s+n,len-n, " iounit %d", fc->iounit);
+		n += snprintf(s+n,len-n, "P9_RWALK tag %u nwqid %d", fc->tag, fc->u.rwalk.nwqid);
+		for(i = 0; i < fc->u.rwalk.nwqid; i++)
+			n += np_printqid(s+n,len-n, &fc->u.rwalk.wqids[i]);
 		break;
 		
 	case P9_TREAD:
 		n += snprintf(s+n,len-n, "P9_TREAD tag %u fid %d offset %llu count %u", 
-			fc->tag, fc->fid, (unsigned long long)fc->offset, fc->count);
+			fc->tag, fc->u.tread.fid, (unsigned long long)fc->u.tread.offset, fc->u.tread.count);
 		break;
 		
 	case P9_RREAD:
-		n += snprintf(s+n,len-n, "P9_RREAD tag %u count %u", fc->tag, fc->count);
-		n += np_printdata(s+n,len-n, fc->data, fc->count);
+		n += snprintf(s+n,len-n, "P9_RREAD tag %u count %u", fc->tag, fc->u.rread.count);
+		n += np_printdata(s+n,len-n, fc->u.rread.data, fc->u.rread.count);
 		break;
 		
 	case P9_TWRITE:
-		n += snprintf(s+n,len-n, "P9_TWRITE tag %u fid %d offset %llu count %u",
-			fc->tag, fc->fid, (unsigned long long)fc->offset, fc->count);
-		n += np_printdata(s+n,len-n, fc->data, fc->count);
+		n += snprintf(s+n,len-n, "P9_TWRITE tag %u", fc->tag);
+		n += snprintf(s+n,len-n, " fid %d", fc->u.twrite.fid);
+		n += snprintf(s+n,len-n, " offset %"PRIu64,
+					fc->u.twrite.offset);
+		n += snprintf(s+n,len-n, " count %u", fc->u.twrite.count);
+		n += np_printdata(s+n,len-n, fc->u.twrite.data, fc->u.twrite.count);
 		break;
 		
 	case P9_RWRITE:
-		n += snprintf(s+n,len-n, "P9_RWRITE tag %u count %u", fc->tag, fc->count);
+		n += snprintf(s+n,len-n, "P9_RWRITE tag %u count %u", fc->tag, fc->u.rwrite.count);
 		break;
 		
 	case P9_TCLUNK:
-		n += snprintf(s+n,len-n, "P9_TCLUNK tag %u fid %d", fc->tag, fc->fid);
+		n += snprintf(s+n,len-n, "P9_TCLUNK tag %u fid %d", fc->tag,
+				fc->u.tclunk.fid);
 		break;
 		
 	case P9_RCLUNK:
@@ -557,7 +548,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 		
 	case P9_TREMOVE:
-		n += snprintf(s+n,len-n, "P9_TREMOVE tag %u fid %d", fc->tag, fc->fid);
+		n += snprintf(s+n,len-n, "P9_TREMOVE tag %u fid %d", fc->tag,
+					fc->u.tremove.fid);
 		break;
 		
 	case P9_RREMOVE:
