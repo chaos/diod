@@ -1090,8 +1090,40 @@ np_create_rfsync(void)
 	return np_post_check(fc, bufp);
 }
 
-/* FIXME: Npfcall * np_create_rlock() */
-/* FIXME: Npfcall * np_create_rgetlock() */
+Npfcall *
+np_create_rlock(u8 status)
+{
+	int size = sizeof(u8);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_RLOCK)))
+		return NULL;
+	buf_put_int8(bufp, status, &fc->u.rlock.status);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_rgetlock(u8 type, u64 start, u64 length, u32 proc_id, char *client_id)
+{
+	int size = sizeof(u8) + sizeof(u64) + sizeof(u64) + sizeof(u32)
+			+ strlen(client_id) + 2;
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_RGETLOCK)))
+		return NULL;
+	buf_put_int8(bufp, type, &fc->u.rgetlock.type);
+	buf_put_int64(bufp, start, &fc->u.rgetlock.start);
+	buf_put_int64(bufp, length, &fc->u.rgetlock.length);
+	buf_put_int32(bufp, proc_id, &fc->u.rgetlock.proc_id);
+	buf_put_str(bufp, client_id, &fc->u.rgetlock.client_id);
+
+	return np_post_check(fc, bufp);
+}
 
 Npfcall *
 np_create_rlink(void)

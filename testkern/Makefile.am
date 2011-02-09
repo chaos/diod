@@ -22,7 +22,7 @@ TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t20 t21 t22 \
 	t23 t24 t25 t26 
 
 XFAIL_TESTS = t18 t19 t23 t24
-XFAIL_TESTS += t11 t13 t14 t18 t19 t23 t24
+XFAIL_TESTS += t14 t18 t19 t23 t24
 if ! LARGEIO
 XFAIL_TESTS += t20 t21
 endif

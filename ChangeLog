@@ -7,6 +7,9 @@
 	* diodmount/diodmount.c : Have -d take a port argument instead of
 	requiring an additional -oport=PORT.
 
+	* diod/ops.c, libnpfs/np.c : Arrange to return P9_LOCK_ERROR to
+	lock request instead of ENOSYS to avoid a BUG() in v9fs.
+
 2011-02-08 Jim Garlick <garlick@llnl.gov>
 
 	* diod/ops.c : Fix some freshly introduced bugs:

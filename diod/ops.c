@@ -196,8 +196,8 @@ diod_register_ops (Npsrv *srv)
     //srv->xattrcreate = diod_xattrcreate;
     srv->readdir = diod_readdir;
     srv->fsync = diod_fsync;
-    //srv->llock = diod_lock;
-    //srv->getlock = diod_getlock;
+    srv->llock = diod_lock;
+    srv->getlock = diod_getlock;
     srv->link = diod_link;
     srv->mkdir = diod_mkdir;
 }
@@ -1503,14 +1503,42 @@ Npfcall*
 diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
            Npstr *client_id)
 {
-   return NULL; /* FIXME */
+    Npfcall *ret = NULL;
+    //Fid *f = fid->aux;
+
+    /* FIXME: server not implemented.
+     * ENOSYS triggers BUG() in v9fs, so return failure in status byte.
+     * FIXME: Locks are granted when we return this. v9fs bug?
+     */
+    if (!((ret = np_create_rlock(P9_LOCK_ERROR)))) {
+        np_uerror (ENOMEM);
+        msg ("diod_lock: out of memory");
+        goto done;
+    }
+done:
+    return ret;
 }
 
 Npfcall*
 diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
              Npstr *client_id)
 {
-   return NULL; /* FIXME */
+    Npfcall *ret = NULL;
+    char *cid = _p9strdup (client_id);
+    //Fid *f = fid->aux;
+
+    if (!cid)
+        goto done;
+    /* FIXME: server not implemented.
+     * This response means lock is held by another (foo:pid+1)
+     */
+    if (!((ret = np_create_rgetlock(type, start, length, proc_id+1, "foo")))) {
+        np_uerror (ENOMEM);
+        msg ("diod_getlock: out of memory");
+        goto done;
+    }
+done:
+    return ret;
 }
 
 Npfcall*

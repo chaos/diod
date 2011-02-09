@@ -417,6 +417,9 @@ Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);
 Npfcall *np_create_tfsync(u32 fid);
 Npfcall *np_create_rfsync(void);
+Npfcall *np_create_rlock(u8 status);
+Npfcall *np_create_rgetlock(u8 type, u64 start, u64 length, u32 proc_id, char *client_id);
+
 Npfcall *np_create_tlink(u32 dfid, u32 fid, char *name);
 Npfcall *np_create_rlink(void);
 Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
