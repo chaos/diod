@@ -1,3 +1,12 @@
+2011-02-09 Jim Garlick <garlick@llnl.gov>
+
+	* diodmount/diodmount.c : Set access=user when needed rather than
+	assuming that is the default.  Always set access=<euid> for diodctl.
+
+	* diodmount/diodmount.c, diodmount/diodmount.8.in : Rename options:
+	- -d,--diod-port to -p,--diod-port
+	- -x,--debug     to -d,--v9fs-debug.
+
 2011-02-08 Jim Garlick <garlick@llnl.gov>
 
 	* libixp : Drop aborted attempt to integrate into test suite.

@@ -585,10 +585,12 @@ _diod_mount (char *host, char *dir, char *aname, char *port, char *opts,
     opt_add (o, "aname=%s", aname);
     opt_add (o, "msize=65560");
     opt_add (o, "version=9p2000.L");
-    if (opt_debug)
-        opt_add (o, opt_debug);
     if (geteuid () != 0)
         opt_add (o, "access=%d", geteuid ());
+    else
+        opt_add (o, "access=user");
+    if (opt_debug)
+        opt_add (o, opt_debug);
     if (opts)
         opt_add_cslist_override (o, opts);
     free (cred);
@@ -632,10 +634,9 @@ _diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
     opt_add (o, "trans=fd");
     opt_add (o, "aname=/diodctl");
     opt_add (o, "version=9p2000.L");
+    opt_add (o, "access=%d", geteuid ());
     if (opt_debug)
         opt_add (o, opt_debug);
-    if (geteuid () != 0)
-        opt_add (o, "access=%d", geteuid ());
     if (opts)
         opt_add_cslist_override (o, opts);
     free (cred);
