@@ -3,61 +3,28 @@ crashing or hanging the machine running them.
 
 All require root and return NOTRUN if run as an unprivileged user.
 
-t05
-	Simple mount/unmount sanity test for diod (default options).
-
-t06
-	Simple mount/read/unmount sanity test for diod
-
-t07
-	Simple mount/write/unmount sanity test for diod
-
-t13
-	Demonstrate that rename works across directories.
-
-t14
-	Demonstrate that statfs returns correct data.
-
-t15
-	Demonstrate that fsync does not return an error.
-
-t16
-	Create files and compare their stat(2) results.
-
-t17
-	Set all the mode bits (7777) on a file and directory on server
+t05	Simple mount/unmount sanity test for diod (default options).
+t06	Simple mount/read/unmount sanity test for diod
+t07	Simple mount/write/unmount sanity test for diod
+t13	Demonstrate that rename works across directories.
+t14	Demonstrate that statfs returns correct data.
+t15	Demonstrate that fsync does not return an error.
+t16	Create files and compare their stat(2) results.
+t17	Set all the mode bits (7777) on a file and directory on server
 	and verify that they are reflected in client stat, the do the reverse.
-
-t18
-	Simple test to check that BSD advisory file locks are properly
+t18	Simple test to check that BSD advisory file locks are properly
 	arbitrated between two processes.
-
-t19
-	Simple test to check that POSIX advisory record locks are properly
+t19	Simple test to check that POSIX advisory record locks are properly
 	arbitrated between two processes.
-
-t20
-	Read a 4MB file with 1MB I/O's with debugging on.
-
-t21
-	Write a 4MB file with 1MB I/O's with debugging on.
-
-t22
-	Append to a file.  I added this test because I was momentarily
+t20	Read a 4MB file with 1MB I/O's with debugging on.
+t21	Write a 4MB file with 1MB I/O's with debugging on.
+t22	Append to a file.  I added this test because I was momentarily
 	freaked out by a pwrite at offset 0 during an append, but it turns
 	out this is OK when the device is opened in append mode.
-
-t23
-	Simple test to check that POSIX advisory record locks are handled
+t23	Simple test to check that POSIX advisory record locks are handled
 	as advertised within one process.
-
-t24
-	Simple test to check that BSD advisory file locks are handled
+t24	Simple test to check that BSD advisory file locks are handled
 	as advertised within one process.
-
-t25
-	Verify that files are created with the users effective gid.
+t25	Verify that files are created with the users effective gid.
 	Verify that files created in a setgid directory have the parent gid.
-
-t26
-	Verify that chgrp works.
+t26	Verify that chgrp works.

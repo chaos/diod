@@ -1,33 +1,21 @@
 These are all unit tests that can be run without risk of crashing
 the machine they are running on.
 
-
-t00(*)
-	Show that pthreads can independently setfsuid/setfsgid.
+t00(*)	Show that pthreads can independently setfsuid/setfsgid.
 	This is a strategy for handling the I/O of multiple users in
 	threaded work crew.
-
-t01(*)
-	Show that supplementary groups work as advertised when
+t01(*)	Show that supplementary groups work as advertised when
 	setfsuid/setfsgid being used.
-
-t02(*)
-	Check that pthreads can independently setgroups.
+t02(*)	Check that pthreads can independently setgroups.
 	This is a strategy for handling the I/O of multiple users in
 	a threaded work crew.
-
-t03(*)
-	Demonstrate that pthreads cannot independently seteuid/setegid.
+t03(*)	Demonstrate that pthreads cannot independently seteuid/setegid.
 	This was the original npfs strategy for handing I/O of multiple
 	users in a threaded work crew.  Not valid post-linuxthreads.
-
-t04
-	Demonstrate that fcntl advisory locking does not treat threads
+t04	Demonstrate that fcntl advisory locking does not treat threads
 	like individual procesess, e.g. locks are shared among threads.
 	This means a threaded work crew cannot manage fcntl locks on behalf
 	of multiple remote processes.
-
-t05
-	Unit test for diodmount option handling module.
+t05	Unit test for diodmount option handling module.
 
 (*) Requires root, will be marked as NOTRUN if run as an unprivileged user.
