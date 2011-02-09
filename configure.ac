@@ -87,7 +87,6 @@ AC_CONFIG_FILES( \
   diod/Makefile \
   diodctl/Makefile \
   diodmount/Makefile \
-  libixp/Makefile \
   test/Makefile \
   testkern/Makefile \
 )

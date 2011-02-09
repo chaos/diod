@@ -1,5 +1,7 @@
 2011-02-08 Jim Garlick <garlick@llnl.gov>
 
+	* libixp : Drop aborted attempt to integrate into test suite.
+
 	* testkern : Split off tests that involve mounting the file system.
 	Don't run tests if 9p.ko is unavailable.  Mount file system using
 	diodmount -d PORT option.

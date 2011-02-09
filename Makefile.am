@@ -7,7 +7,6 @@ SUBDIRS = \
 	man \
 	scripts \
 	diodctl \
-	libixp \
 	test \
 	testkern 
 
