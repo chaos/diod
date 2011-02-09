@@ -78,7 +78,7 @@ typedef struct {
     char *port;
 } query_t;
 
-#define OPTIONS "au:no:O:Tvd:fDj:x:"
+#define OPTIONS "au:no:O:Tvp:fDj:d:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -89,13 +89,13 @@ static const struct option longopts[] = {
     {"diodctl-options", required_argument,   0, 'O'},
     {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
-    {"diod-port",       required_argument,   0, 'd'},
+    {"diod-port",       required_argument,   0, 'p'},
     {"fake-mount",      no_argument,         0, 'f'},
     {"create-directories", no_argument,      0, 'D'},
 #if HAVE_MUNGE
     {"jobid",           required_argument ,  0, 'j'},
 #endif
-    {"debug",           required_argument ,  0, 'x'},
+    {"v9fs-debug",      required_argument ,  0, 'd'},
     {0, 0, 0, 0},
 };
 #else
@@ -127,11 +127,11 @@ usage (void)
 "   -o,--diod-options OPT[,...]   additional mount options for diod\n"
 "   -O,--diodctl-option OPT[,...] additional mount options for diodctl\n"
 "   -v,--verbose                  be verbose about what is going on\n"
-"   -d,--diod-port PORT           mount diod directly on specified port num\n"
+"   -p,--diod-port PORT           mount diod directly on specified port num\n"
 "   -f,--fake-mount               do everything but the actual diod mount(s)\n"
 "   -D,--create-directories       create mount directories as needed\n"
-"   -x,--debug flag[,flag...]     set v9fs debugging flags [error,9p,vfs,\n"
-"                                  conv,mux,trans,slabs,fcall,fid,pkt,fsc]\n"
+"   -d,--v9fs-debug flag[,flag...] set v9fs debugging flags [error,9p,vfs,\n"
+"                                 conv,mux,trans,slabs,fcall,fid,pkt,fsc]\n"
 #if HAVE_MUNGE
 "   -j,--jobid STR                set job id string\n"
 #endif
@@ -151,12 +151,12 @@ main (int argc, char *argv[])
     int vopt = 0;
     int fopt = 0;
     int Dopt = 0;
-    char *dopt = NULL;
+    char *popt = NULL;
     char *uopt = NULL;
     char *oopt = NULL;
     char *Oopt = NULL;
     char *jopt = NULL;
-    char *xopt = NULL;
+    char *dopt = NULL;
     char *opt_debug = NULL;
 
     diod_log_init (argv[0]);
@@ -185,8 +185,8 @@ main (int argc, char *argv[])
             case 'v':   /* --verbose */
                 vopt = 1;
                 break;
-            case 'd':   /* --diod-port */
-                dopt = optarg;
+            case 'p':   /* --diod-port */
+                popt = optarg;
                 break;
             case 'f':   /* --fake-mount */
                 fopt = 1;
@@ -194,8 +194,8 @@ main (int argc, char *argv[])
             case 'T':   /* --test-opt */
                 opt_test ();
                 exit (0);
-            case 'x':   /* --debug flag[,flag...] */
-                xopt = optarg;
+            case 'd':   /* --v9fs-debug flag[,flag...] */
+                dopt = optarg;
                 break;
 #if HAVE_MUNGE
             case 'j':   /* --jobid STR */
@@ -206,7 +206,7 @@ main (int argc, char *argv[])
                 usage ();
         }
     }
-    if (aopt && dopt)
+    if (aopt && popt)
         msg_exit ("--all and --diod-port are incompatible options");
     if (aopt) {/* Usage: diodmount [options] -a hostname [dir] */
         if (optind != argc - 1 && optind != argc - 2)
@@ -223,7 +223,7 @@ main (int argc, char *argv[])
         dir = argv[optind++];
         _parse_device (device, &aname, &host);
     }
-    opt_debug = _parse_debug (xopt);
+    opt_debug = _parse_debug (dopt);
 
     /* Must start out with effective root id.
      * We drop euid = root but preserve ruid = root for mount, etc.
@@ -261,10 +261,10 @@ main (int argc, char *argv[])
     /* Mount one file system, obtaining port number from command line.
      * If -D option, create mount point as needed.
      */
-    } else if (dopt) {
+    } else if (popt) {
 
         _verify_mountpoint (dir, Dopt);
-        _diod_mount (host, dir, aname, dopt, oopt, vopt, fopt, opt_debug);
+        _diod_mount (host, dir, aname, popt, oopt, vopt, fopt, opt_debug);
 
         if (!nopt) {
             if (!_update_mtab (device, dir, MNTOPT_DEFAULTS)) {

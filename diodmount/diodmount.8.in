@@ -51,9 +51,14 @@ These options override the ones \fBdiodmount\fR sets up internally.
 .I "-v, --verbose"
 Be verbose about what is going on.
 .TP
-.I "-d, --direct"
-Mount the \fBdiod\fR server directly without first mounting \fBdiodctl\fR
-to determine the port.  This must be used with \fI-o port=PORT\fR.
+.I "-p, --diod-port PORT"
+Mount the \fBdiod\fR server on the specified port.
+Do not contact \fBdiodctl\fR.
+.TP
+.I "-d, --v9fs-debug flag[,flag...]"
+Set the specified global v9fs debug flags at mount time.
+The following flags are valid:
+error, 9p, vfs, conv, mux, trans, slabs, fcall, fid, pkt, fsc.
 .TP
 .I "-j, --jobid STRING"
 Pass a jobid or other arbitrary string to the \fBdiodctl\fR server.
