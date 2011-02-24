@@ -246,6 +246,8 @@ ctl_query (char *host, char *opts, int vopt, int getport, char *jobid,
                     err_exit ("error opening %s", path);
                 if (fprintf (f, "%s", jobid ? jobid : "nojob") < 0)
                     err_exit ("error writing to %s", path);
+                fflush (f);
+                rewind (f); 
                 _cat_file (f);
                 fclose (f);
             }
