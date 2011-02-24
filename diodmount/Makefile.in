@@ -55,7 +55,8 @@ CONFIG_CLEAN_FILES = diodmount.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am_diodmount_OBJECTS = diodmount.$(OBJEXT) opt.$(OBJEXT)
+am_diodmount_OBJECTS = diodmount.$(OBJEXT) auth.$(OBJEXT) \
+	util.$(OBJEXT) ctl.$(OBJEXT) opt.$(OBJEXT)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
 am__DEPENDENCIES_1 =
 diodmount_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
@@ -154,7 +155,6 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
@@ -242,6 +242,12 @@ diodmount_LDADD = \
 
 diodmount_SOURCES = \
 	diodmount.c \
+	auth.c \
+	auth.h \
+	util.c \
+	util.h \
+	ctl.c \
+	ctl.h \
 	opt.c \
 	opt.h
 
@@ -331,8 +337,11 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/auth.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

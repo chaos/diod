@@ -89,6 +89,7 @@ AC_CONFIG_FILES( \
   diodmount/Makefile \
   test/Makefile \
   testkern/Makefile \
+  testuser/Makefile \
 )
 
 AC_OUTPUT

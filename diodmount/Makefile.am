@@ -13,6 +13,12 @@ diodmount_LDADD = \
 
 diodmount_SOURCES = \
 	diodmount.c \
+	auth.c \
+	auth.h \
+	util.c \
+	util.h \
+	ctl.c \
+	ctl.h \
 	opt.c \
 	opt.h
 

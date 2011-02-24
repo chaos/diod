@@ -2,10 +2,9 @@
 .SH NAME
 diodmount \- mount diod file systems
 .SH SYNOPSIS
-.B diodmount
-.I "[OPTIONS]"
-.I HOST[:aname]
-.I [dir]
+\fBdiodmount\fR \fI[OPTIONS] host:aname dir\fR
+.nf
+\fBdiodmount\fR \fI[OPTIONS] -a host [dir-prefix]\fR
 .SH DESCRIPTION
 .B diodmount
 is the mount utility for the distributed I/O daemon, which is an I/O
@@ -19,16 +18,18 @@ This command must be run as root.
 .SH OPTIONS
 .TP
 .I "-a, --all"
-Mount all file systems exported by HOST (omit aname path).
+Mount all file systems exported by \fIHOST\fR (omit aname path).
 If a directory argument is specified, it will be prepended to
-the mount points.
+the server directory names when constructing mount points.
 .TP
 .I "-u, --mount-user USER"
-Start a private server for USER if one is not already running,
-and mount so that only USER can access the file system.
+Start a private server for \fIUSER\fR if one is not already running,
+and mount so that only \fIUSER\fR can access the file system
+(-o access=<uid>, where <uid> is \fIUSER\fR's uid).
 The default (eqivalent to -u root) is to start a shared server as root
 if one is not already running,
-and mount so that any user can access the file system.
+and mount so that any user can access the file system
+(-o access=user).
 .TP
 .I "-D, --create-directories"
 Recursively create mount point directories as needed, mode 0755.
@@ -36,6 +37,33 @@ Recursively create mount point directories as needed, mode 0755.
 .I "-n, --no-mtab"
 Do not update /etc/mtab.  This may be appropriate, for example, when
 the file system is mounted in a private name space.
+.TP
+.I "-j, --jobid STRING"
+Pass a jobid or other arbitrary string to the \fBdiodctl\fR server.
+The server uses the uid plus this string, if specified, as a unique key
+to look up an existing \fBdiod\fR server that can handle the mount request.
+This is intended for a batch cluster environment where one 
+I/O forwarding server per job is desired, not the default of one per user.
+.SH TESTING OPTIONS
+The following options are mainly intended for testing.
+.TP
+.I "-s, --server CMD"
+Start the \fBdiod\fR server as a child of \fBdiodmount\fR using \fICMD\fR.
+The server should expect to inherit a connected socket on file descriptor 0.
+The server is terminated when \fBdiodmount\fR exits, thus to be useful,
+this command would normally be used with \fI-x\fR or \fI-c\fR.
+If \fI-u\fR is used, run CMD as USER.
+.TP
+.I "-x, --exec CMD"
+Perform the mount(s) in a private name space, execute \fICMD\fR as a child
+of \fBdiodmount\fR, then unmount and exit.
+If \fI-u\fR is used, run \fICMD\fR as \fIUSER\fR.
+.TP
+.I "-c, --client CMD"
+Instead of mounting the server via the kernel 9p file system,
+execute a user space client \fICMD\fR as a child of \fBdiodmount\fR.
+The client should expect to inherit a connected socket on file descriptor 0.
+If \fI-u\fR is used, run \fICMD\fR as \fIUSER\fR.
 .TP
 .I "-f, --fake-mount"
 Do everything but actually perform the diod mount/unmount.
@@ -56,16 +84,9 @@ Mount the \fBdiod\fR server on the specified port.
 Do not contact \fBdiodctl\fR.
 .TP
 .I "-d, --v9fs-debug flag[,flag...]"
-Set the specified global v9fs debug flags at mount time.
+Set the specified global kernel 9p file system debug flags at mount time.
 The following flags are valid:
 error, 9p, vfs, conv, mux, trans, slabs, fcall, fid, pkt, fsc.
-.TP
-.I "-j, --jobid STRING"
-Pass a jobid or other arbitrary string to the \fBdiodctl\fR server.
-The server uses the uid plus this string, if specified, as a unique key
-to look up an existing \fBdiod\fR server that can handle the mount request.
-This is intended for a batch cluster environment where one 
-I/O forwarding server per job is desired, not the default of one per user.
 .SH "EXAMPLES"
 .LP
 Mount /g/g99 from tycho42, so that all users can access it:

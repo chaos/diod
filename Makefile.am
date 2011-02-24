@@ -8,7 +8,8 @@ SUBDIRS = \
 	scripts \
 	diodctl \
 	test \
-	testkern 
+	testkern \
+	testuser
 
 rpmdirs:
 	mkdir -p $(top_builddir)/rpm/SPECS
