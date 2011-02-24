@@ -390,10 +390,11 @@ _diod_mount (char *host, char *dir, char *aname, char *port, char *opts,
              int vopt, int fopt, char *opt_debug)
 {
     Opt o = opt_create ();
-    char *options, *cred, *dev;
+    char *options, *dev;
+    char *u = auth_mkuser ();
     int fd;
-    cred = auth_mkuser (NULL);
-    opt_add (o, "uname=%s", cred);
+
+    opt_add (o, "uname=%s", u);
     if ((fd = diod_sock_connect (host, port ? port : "564", 1, 0)) < 0)
         err_exit ("connect failed");
     opt_add (o, "rfdno=%d", fd);
@@ -410,7 +411,7 @@ _diod_mount (char *host, char *dir, char *aname, char *port, char *opts,
         opt_add (o, opt_debug);
     if (opts)
         opt_add_cslist_override (o, opts);
-    free (cred);
+    free (u);
     options = opt_string (o);
     opt_destroy (o);
 

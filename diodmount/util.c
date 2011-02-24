@@ -36,20 +36,13 @@
 #include <sys/mount.h>
 #include <string.h>
 #include <errno.h>
-#include <ctype.h>
 #include <libgen.h>
-
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
 
 #include "9p.h"
 #include "npfs.h"
 #include "list.h"
 #include "diod_log.h"
-//#include "diod_upool.h"
-//#include "diod_sock.h"
-#include "opt.h"
+
 #include "util.h"
 
 typedef struct {

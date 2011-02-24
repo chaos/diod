@@ -27,9 +27,8 @@ char *diod_trans_get_host (Nptrans *trans);
 char *diod_trans_get_ip (Nptrans *trans);
 char *diod_trans_get_svc (Nptrans *trans);
 #if HAVE_MUNGE
-void diod_trans_set_authuser (Nptrans *trans, uid_t uid, char *jobid);
+void diod_trans_set_authuser (Nptrans *trans, uid_t uid);
 int diod_trans_get_authuser (Nptrans *trans, uid_t *uidp);
-char *diod_trans_get_jobid (Nptrans *trans);
 #endif
 
 /*

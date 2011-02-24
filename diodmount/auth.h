@@ -1,1 +1,1 @@
-char *auth_mkuser (char *payload);
+char *auth_mkuser (void);

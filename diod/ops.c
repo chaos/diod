@@ -505,9 +505,9 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     if (diod_conf_get_munge ()) {
         int authenticated;
 
-        (void) diod_user_get_authinfo (fid->user, &authenticated, NULL);
+        (void) diod_user_get_authinfo (fid->user, &authenticated);
         if (authenticated) {
-            diod_trans_set_authuser (fid->conn->trans, fid->user->uid, NULL);
+            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
         } else {
             uid_t auid;
 

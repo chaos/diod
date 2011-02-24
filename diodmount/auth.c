@@ -64,17 +64,16 @@
  * that must be freed by the caller.
  */
 char *
-auth_mkuser (char *payload)
+auth_mkuser (void)
 {
     char *u;
 #if HAVE_MUNGE
-    int paylen = payload ? strlen(payload) + 1 : 0;
     munge_ctx_t ctx;
     munge_err_t err;
 
     if (!(ctx = munge_ctx_create ()))
         msg_exit ("out of memory");
-    err = munge_encode (&u, ctx, payload, paylen);
+    err = munge_encode (&u, ctx, NULL, 0);
     if (err != EMUNGE_SUCCESS)
         msg_exit ("munge_encode: %s", munge_strerror (err));
     munge_ctx_destroy (ctx);

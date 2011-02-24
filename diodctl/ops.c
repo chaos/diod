@@ -90,14 +90,11 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
          msg ("diodctl_attach: 9P Tauth is not supported");
         goto done;
     }
-#if 0
-    /* XXX ignore aname for compat with libixp */
-    if (np_strcmp (aname, "/diodctl") != 0) {
-        np_uerror (EPERM);
-        msg ("diodctl_attach: mount attempt for aname other than /diodctl");
-        goto done;
-    }
-#endif
+
+    /* Not all 9P libraries (e.g. libixp) send the aname, so ignore it
+     * since we only offer one (/diodctl).
+     */
+
 #if HAVE_MUNGE
     /* Munge authentication involves the upool and trans layers:
      * - we ask the upool layer if the user now attaching has a munge cred
@@ -106,16 +103,15 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
      * By the time we get here, invalid munge creds have already been rejected.
      */
     if (diod_conf_get_munge ()) {
-        char *jobid;
         int authenticated;
 
-        if (diod_user_get_authinfo (fid->user, &authenticated, &jobid) < 0) {
+        if (diod_user_get_authinfo (fid->user, &authenticated) < 0) {
             np_uerror (ENOMEM);
             msg ("diodctl_attach: out of memory");
             goto done;
         }
         if (authenticated) {
-            diod_trans_set_authuser (fid->conn->trans, fid->user->uid, jobid);
+            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
         } else {
             uid_t auid;
 
@@ -196,33 +192,45 @@ _exports_read (Npfilefid *f, u64 offset, u32 count, u8 *data, Npreq *req)
     return cpylen;
 }
 
-/* Handle a read from the 'server' file.
+/* Handle a read from the 'ctl' file.
  */
 static int
-_server_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
+_ctl_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
-    char *jobid = NULL;
-#if HAVE_MUNGE
-    jobid = diod_trans_get_jobid (fid->conn->trans);
-#endif
-    return diodctl_serv_getname (fid->user, jobid, offset, count, data);
+    int ret;
+
+    ret = diodctl_serv_getname (fid->user, file->aux, offset, count, data);
+    if (file->aux) {
+        free (file->aux);
+        file->aux = NULL;
+    }
+    return ret;
 }
 
 /* Handle a write to the 'ctl' file.
- * Content of the write is ignored since we only have one action.
+ * We are expecting the jobid string - assume it comes in one message.
  */
 static int
 _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
-    char *jobid = NULL;
+    char *jobid = file->aux;
     int ret = 0;
-#if HAVE_MUNGE
-    jobid = diod_trans_get_jobid (fid->conn->trans);
-#endif
+
+    if (offset > 0)
+        return 0;
+    if (jobid)
+        free (jobid);
+    if (!(jobid = malloc (count + 1)))
+        msg_exit ("out of memory");
+    memcpy (jobid, data, count);
+    jobid[count] = '\0';
+    file->aux = jobid;
+        
     if (diodctl_serv_create (fid->user, jobid))
         ret = count;
+
     return ret;
 }
 
@@ -233,11 +241,9 @@ static Npdirops root_ops = {
 static Npfileops exports_ops = {
         .read  = _exports_read,
 };
-static Npfileops server_ops = {
-        .read  = _server_read,
-};
 static Npfileops ctl_ops = {
         .write = _ctl_write,
+        .read  = _ctl_read,
 };
 
 /* Create the file system representation for /diodctl.
@@ -245,7 +251,7 @@ static Npfileops ctl_ops = {
 static Npfile *
 _ctl_root_create (void)
 {
-    Npfile *root, *exports, *server, *ctl;
+    Npfile *root, *exports, *ctl;
     Npuser *user;
 
     if (!(user = diod_upool->uid2user (diod_upool, 0)))
@@ -264,19 +270,13 @@ _ctl_root_create (void)
     if (!(exports->aux = diod_conf_cat_exports ()))
         msg_exit ("out of memory");
 
-    if (!(server = npfile_alloc(root, "server", 0444|S_IFREG, 2,
-                                &server_ops, NULL)))
-        msg_exit ("out of memory");
-    npfile_incref(server);
-
     if (!(ctl = npfile_alloc(root, "ctl", 0666|S_IFREG, 3,
                              &ctl_ops, NULL)))
         msg_exit ("out of memory");
     npfile_incref(ctl);
 
     root->dirfirst = exports;
-    exports->next = server;
-    server->next = ctl;
+    exports->next = ctl;
     root->dirlast = ctl;
 
     return root;

@@ -60,15 +60,14 @@
  * Exit on error.
  */
 static void
-_diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
-                char *jobid)
+_diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug)
 {
     Opt o = opt_create ();
-    char *options, *cred, *dev;
+    char *options, *dev;
+    char *u = auth_mkuser ();
     int fd;
 
-    cred = auth_mkuser (jobid);
-    opt_add (o, "uname=%s", cred);
+    opt_add (o, "uname=%s", u);
     if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
         err_exit ("connect failed");
     opt_add (o, "rfdno=%d", fd);
@@ -81,7 +80,7 @@ _diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
         opt_add (o, opt_debug);
     if (opts)
         opt_add_cslist_override (o, opts);
-    free (cred);
+    free (u);
     options = opt_string (o);
     opt_destroy (o);
 
@@ -96,38 +95,15 @@ _diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug,
     close (fd);
 }
 
-/* Read file [path] to stdout.
- * Exit on error.
- */
 static void
-_cat_file (char *path)
+_cat_file (FILE *f)
 {
     char buf[PATH_MAX];
-    FILE *f;
 
-    if (!(f = fopen (path, "r")))
-        err_exit ("error opening %s", path);
     while (fgets (buf, sizeof (buf), f))
         printf ("%s%s", buf, buf[strlen (buf) - 1] == '\n' ? "" : "\n");
     if (ferror (f))
-        errn_exit (ferror (f), "error reading %s", path);
-    fclose (f);
-}
-
-/* Put string [s] to file.
- * Exit on error.
- */
-static void
-_puts_file (char *path, char *s)
-{
-    FILE *f;
-
-    if (!(f = fopen (path, "w")))
-        err_exit ("error opening %s", path);
-    if (fprintf (f, "%s", s) < 0)
-        err_exit ("error writing to %s", path);
-    if (fclose (f) != 0)
-        err_exit ("error writing to %s", path);
+        errn_exit (ferror (f), "read error");
 }
 
 /* Allocate and initialize a query_t struct.
@@ -238,7 +214,7 @@ done:
  * N.B. mount is always cleaned up because it's in a private namespace.
  */
 query_t *
-ctl_query (char *host, char *opts, int vopt, int getport, char *payload,
+ctl_query (char *host, char *opts, int vopt, int getport, char *jobid,
                 char *opt_debug)
 {
     char tmppath[] = "/tmp/diodmount.XXXXXX";
@@ -247,6 +223,8 @@ ctl_query (char *host, char *opts, int vopt, int getport, char *payload,
     int pfd[2];
     pid_t pid;
     char *tmpdir;
+    FILE *f;
+
 
     if (pipe (pfd) < 0)
         err_exit ("pipe");
@@ -261,15 +239,21 @@ ctl_query (char *host, char *opts, int vopt, int getport, char *payload,
             if (dup2 (pfd[1], STDOUT_FILENO) < 0)
                 err_exit ("failed to dup stdout");
             util_unshare ();
-            _diodctl_mount (host, tmpdir, opts, vopt, opt_debug, payload);
+            _diodctl_mount (host, tmpdir, opts, vopt, opt_debug);
             if (getport) {
                 snprintf (path, sizeof (path), "%s/ctl", tmpdir);
-                _puts_file (path, "new");
-                snprintf (path, sizeof (path), "%s/server", tmpdir);
-                _cat_file (path);
+                if (!(f = fopen (path, "r+")))
+                    err_exit ("error opening %s", path);
+                if (fprintf (f, "%s", jobid ? jobid : "nojob") < 0)
+                    err_exit ("error writing to %s", path);
+                _cat_file (f);
+                fclose (f);
             }
             snprintf (path, sizeof (path), "%s/exports", tmpdir);
-            _cat_file (path);
+            if (!(f = fopen (path, "r")))
+                err_exit ("error opening %s", path);
+            _cat_file (f);
+            fclose (f);
             fflush (stdout);
             util_umount (tmpdir);
             exit (0); 

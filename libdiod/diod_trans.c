@@ -27,6 +27,9 @@
  *   Copyright (C) 2005 by Latchesar Ionkov <lucho@ionkov.net>
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -53,7 +56,6 @@ typedef struct {
 #if HAVE_MUNGE
     int              authenticated;
     uid_t            authuser;
-    char            *jobid;
 #endif
 } DTrans;
 
@@ -75,7 +77,6 @@ diod_trans_create (int fd, char *host, char *ip, char *svc)
     dt->fd = fd;
 #if HAVE_MUNGE
     dt->authenticated = 0;
-    dt->jobid = NULL;
 #endif
     if (!(dt->host = strdup (host))) {
         diod_trans_destroy (dt);
@@ -115,10 +116,6 @@ diod_trans_destroy (void *a)
         free (dt->ip);
     if (dt->svc)
         free (dt->svc);
-#if HAVE_MUNGE
-    if (dt->jobid)
-        free (dt->jobid);
-#endif
     free (dt);
 }
 
@@ -174,7 +171,7 @@ diod_trans_get_svc (Nptrans *trans)
 
 #if HAVE_MUNGE
 void
-diod_trans_set_authuser (Nptrans *trans, uid_t uid, char *jobid)
+diod_trans_set_authuser (Nptrans *trans, uid_t uid)
 {
     DTrans *dt = trans->aux;
 
@@ -182,8 +179,6 @@ diod_trans_set_authuser (Nptrans *trans, uid_t uid, char *jobid)
 
     dt->authuser = uid;
     dt->authenticated = 1;
-    dt->jobid = jobid;
-            
 }
 
 int
@@ -200,16 +195,6 @@ diod_trans_get_authuser (Nptrans *trans, uid_t *uidp)
     }
 
     return ret;
-}
-
-char *
-diod_trans_get_jobid (Nptrans *trans)
-{
-    DTrans *dt = trans->aux;
-
-    assert (dt->magic == DIOD_TRANS_MAGIC);
-
-    return dt->jobid;
 }
 #endif
 

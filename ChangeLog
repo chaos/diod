@@ -1,3 +1,17 @@
+2011-02-23 Jim Garlick <garlick@llnl.gov>
+
+	* libdiod/diod_upool.[ch], libdiod/diod_trans.[ch] : Remove jobid.
+	Also clean up conditional munge code.
+
+	* diodmount/ctl.c, diodctl/ops.c : Drop server file and simply
+	read port from ctl file.  This makes stashing the jobid across
+	a write/read easier since we can attach it to the ctl fid.
+
+	* diodmount/auth.[ch], diodmount/ctl.c : Rather than send jobid
+	with munge credential, echo it into the ctl file instead of "new".
+
+	* diodmount/* : Split into multiple files.
+
 2011-02-09 Jim Garlick <garlick@llnl.gov>
 
 	* diodmount/diodmount.c : Set access=user when needed rather than

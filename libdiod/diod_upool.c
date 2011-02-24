@@ -103,10 +103,7 @@ static Npuserpool upool = {
 #define DUSER_MAGIC 0x3455DDDF
 typedef struct {
     int         magic;
-#if HAVE_MUNGE
     int         munged;         /* user supplied a valid munge cred */
-    char       *jobid;          /* munge payload (if any) */
-#endif
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
 } Duser;
@@ -145,16 +142,6 @@ done:
     return ret;
 }
 
-static void
-_free_duser (Duser *d)
-{
-#if HAVE_MUNGE
-    if (d->jobid)
-        free (d->jobid);
-#endif
-    free (d);
-}
-
 int
 _getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 {
@@ -184,26 +171,19 @@ _getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 }
 
 static Duser *
-#if HAVE_MUNGE
-_alloc_duser (struct passwd *pwd, int munged, char *jobid)
-#else
-_alloc_duser (struct passwd *pwd)
-#endif
+_alloc_duser (struct passwd *pwd, int munged)
 {
     Duser *d = NULL;
 
     if (!(d = np_malloc (sizeof (*d))))
         goto done;
     d->magic = DUSER_MAGIC;
-#if HAVE_MUNGE
     d->munged = munged;
-    d->jobid = jobid;
-#endif
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
     if (np_rerror () && d != NULL) {
-        _free_duser (d);
+        free (d);
         d = NULL;
     }
     return d;
@@ -251,22 +231,14 @@ diod_become_user (char *name, uid_t uid, int realtoo)
 
 
 static Npuser *
-#if HAVE_MUNGE
-_alloc_user (Npuserpool *up, struct passwd *pwd, int munged, char *jobid)
-#else
-_alloc_user (Npuserpool *up, struct passwd *pwd)
-#endif
+_alloc_user (Npuserpool *up, struct passwd *pwd, int munged)
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
-#if HAVE_MUNGE
-    if (!(u->aux = _alloc_duser (pwd, munged, jobid)))
-#else
-    if (!(u->aux = _alloc_duser (pwd)))
-#endif
+    if (!(u->aux = _alloc_duser (pwd, munged)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -287,7 +259,7 @@ _alloc_user (Npuserpool *up, struct passwd *pwd)
 done:
     if (np_rerror () && u != NULL) {
         if (u->aux)
-            _free_duser (u->aux);
+            free (u->aux);
         if (u->uname)
             free (u->uname);
         free (u);
@@ -302,36 +274,26 @@ static void
 diod_udestroy (Npuserpool *up, Npuser *u)
 {
     if (u->aux)
-        _free_duser (u->aux);
+        free (u->aux);
     if (u->uname)
         free (u->uname);
     /* caller frees u */
 }
 
-#if HAVE_MUNGE
 int
-diod_user_get_authinfo (Npuser *u, int *authenticated, char **jobidp)
+diod_user_get_authinfo (Npuser *u, int *authenticated)
 {
     Duser *d = u->aux;
-    char *cpy = NULL;
     int res = 0;
 
     assert (d->magic == DUSER_MAGIC);
-
-    if (d->munged && jobidp) {
-        if (d->jobid && !(cpy = strdup (d->jobid))) {
-            res = -1;
-            goto done;
-        }
-        *jobidp = cpy;
-    }
     *authenticated = d->munged;
-done:
     return res;
 }
 
+#if HAVE_MUNGE
 static int
-_decode_mungecred (char *uname, uid_t *uidp, void **pp, int *lp)
+_decode_mungecred (char *uname, uid_t *uidp)
 {
     int ret = -1;
     munge_ctx_t ctx;
@@ -342,7 +304,7 @@ _decode_mungecred (char *uname, uid_t *uidp, void **pp, int *lp)
         np_uerror (ENOMEM);
         goto done;
     }
-    err = munge_decode (uname, ctx, pp, lp, &uid, NULL);
+    err = munge_decode (uname, ctx, NULL, 0, &uid, NULL);
     memset (uname, 0, strlen (uname));
     /* FIXME: there is another copy in Npfcall->uname to sanitize */
     /* FIXME: the cred will be logged if DEBUG_9P_TRACE is enabled */
@@ -369,43 +331,35 @@ diod_uname2user (Npuserpool *up, char *uname)
     int err;
     struct passwd pw, *pwd = NULL;
     char buf[PASSWD_BUFSIZE];
-#if HAVE_MUNGE
+    int munged = 0;
 
     if (diod_conf_get_munge () && strncmp (uname, "MUNGE:", 6) == 0) {
+#if HAVE_MUNGE
         uid_t uid;
-        int munged = 0;
-        void *payload = NULL;
-        int paylen = 0;
 
-        if (_decode_mungecred (uname, &uid, &payload, &paylen) < 0)
+        if (_decode_mungecred (uname, &uid) < 0)
             goto done;
-        if (paylen > 0 && ((char *)payload)[paylen - 1] != '\0') {
-            msg ("malformed munge payload");
-            goto done;
-        }
         if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);
             goto done;
         }
         munged = 1;
-    } else {
+#else
+        msg ("server not built with --enable-munge");
+        np_uerror (EPERM);
+        goto done;
 #endif
+    } else {
         if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
             np_uerror (err);
             goto done;
         }
-#if HAVE_MUNGE
     }
-#endif
     if (!pwd) {
         np_uerror (ESRCH);
         goto done;
     }
-#if HAVE_MUNGE
-    if (!(u = _alloc_user (up, pwd, munged, (char *)payload)))
-#else
-    if (!(u = _alloc_user (up, pwd)))
-#endif
+    if (!(u = _alloc_user (up, pwd, munged)))
         goto done;
     np_user_incref (u);
 done:
@@ -431,11 +385,7 @@ diod_uid2user(Npuserpool *up, u32 uid)
         np_uerror (ESRCH);
         goto done;
     }
-#if HAVE_MUNGE
-    if (!(u = _alloc_user (up, pwd, 0, NULL)))
-#else
-    if (!(u = _alloc_user (up, pwd)))
-#endif
+    if (!(u = _alloc_user (up, pwd, 0)))
         goto done;
 done:
     np_user_incref (u);
