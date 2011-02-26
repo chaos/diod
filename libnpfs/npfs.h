@@ -325,6 +325,7 @@ void np_buf_init(Npbuf *, void *, void (*)(void *), void (*)(void *, int));
 void np_buf_set(Npbuf *, u8 *, u32);
 
 Npconn *np_conn_create(Npsrv *, Nptrans *);
+void np_conn_waitdone(Npconn *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
 void np_conn_reset(Npconn *, u32);

@@ -44,29 +44,23 @@ The server uses the uid plus this string, if specified, as a unique key
 to look up an existing \fBdiod\fR server that can handle the mount request.
 This is intended for a batch cluster environment where one 
 I/O forwarding server per job is desired, not the default of one per user.
+.TP
+.I "-f, --fake-mount"
+Do everything but actually perform the diod mount/unmount.
 .SH TESTING OPTIONS
 The following options are mainly intended for testing.
 .TP
 .I "-s, --server CMD"
 Start the \fBdiod\fR server as a child of \fBdiodmount\fR using \fICMD\fR.
-The server should expect to inherit a connected socket on file descriptor 0.
-The server is terminated when \fBdiodmount\fR exits, thus to be useful,
-this command would normally be used with \fI-x\fR or \fI-c\fR.
+The server should be called with \fI--fdno=0\fR and \fI--exit-on-lastuse\fR.
+The server is terminated when \fBdiodmount\fR exits.
+This command would normally be used with \fI-x\fR.
 If \fI-u\fR is used, run CMD as USER.
 .TP
 .I "-x, --exec CMD"
 Perform the mount(s) in a private name space, execute \fICMD\fR as a child
 of \fBdiodmount\fR, then unmount and exit.
 If \fI-u\fR is used, run \fICMD\fR as \fIUSER\fR.
-.TP
-.I "-c, --client CMD"
-Instead of mounting the server via the kernel 9p file system,
-execute a user space client \fICMD\fR as a child of \fBdiodmount\fR.
-The client should expect to inherit a connected socket on file descriptor 0.
-If \fI-u\fR is used, run \fICMD\fR as \fIUSER\fR.
-.TP
-.I "-f, --fake-mount"
-Do everything but actually perform the diod mount/unmount.
 .TP
 .I "-o, --diod-options OPT,[OPT,...]"
 Pass additional 9P mount options when mounting the \fBdiod\fR server.

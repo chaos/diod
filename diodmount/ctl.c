@@ -189,7 +189,7 @@ _query_parent (int fd, pid_t pid, query_t *r, int getport)
     }
     if (WIFEXITED (status)) {
         if (WEXITSTATUS (status) != 0) {
-            err ("child exited with %d", WEXITSTATUS (status));
+            msg ("child exited with rc=%d", WEXITSTATUS (status));
             goto done;
         }
     } else if (WIFSIGNALED (status)) {
@@ -257,7 +257,7 @@ ctl_query (char *host, char *opts, int vopt, int getport, char *jobid,
             _cat_file (f);
             fclose (f);
             fflush (stdout);
-            util_umount (tmpdir);
+            /* ummount is implicit when we exit */
             exit (0); 
         default:    /* parent */
             close (pfd[1]);

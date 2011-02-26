@@ -1,3 +1,13 @@
+2011-02-25 Jim Garlick <garlick@llnl.gov>
+
+	* diod/diod.c : Add --fdno option.
+
+	* libdiod/diod_sock.[ch] : Add diod_sock_startfd ().
+
+	* libnpfs/conn.c : Add np_conn_waitdone ().
+
+	* diodmount/* : Add --server and --exec options.
+
 2011-02-23 Jim Garlick <garlick@llnl.gov>
 
 	* libdiod/diod_upool.[ch], libdiod/diod_trans.[ch] : Remove jobid.

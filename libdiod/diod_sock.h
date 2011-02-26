@@ -7,6 +7,9 @@ struct pollfd;
 int  diod_sock_listen_nfds  (struct pollfd **fdsp, int *nfdsp, int nfds,
                              int starting);
 
+void diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
+                        int blocking);
+
 int  diod_sock_listen_hostport_list (List l, struct pollfd **fdsp, int *nfdsp,
                                      char *nport, int flags);
 

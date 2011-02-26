@@ -205,6 +205,34 @@ done:
     return ret;
 }
 
+void
+diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
+                   int blocking)
+{
+    Npconn *conn;
+    Nptrans *trans;
+
+    trans = diod_trans_create (fd, host, ip, svc);
+    if (!trans) {
+        msg ("diod_trans_create failure: %s:%s", host, svc);
+        close (fd);
+        return;
+    }
+                 
+    conn = np_conn_create (srv, trans);
+    if (!conn) {
+        msg ("np_conn_create failure: %s%s", host, svc);
+        diod_trans_destroy (trans);
+        return;
+    }
+
+    if (blocking)
+        np_conn_waitdone (conn);
+    /* FIXME: this never unblocks. 
+     * workaround is to force on diod -x option when --fdno is used
+     */
+}
+
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
  * This is a helper for diod_sock_accept_loop ().
  */
@@ -215,8 +243,6 @@ _accept_one (Npsrv *srv, int fd, int wrap)
     socklen_t addr_size = sizeof(addr);
     char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
     int res;
-    Npconn *conn;
-    Nptrans *trans;
 
     fd = accept (fd, (struct sockaddr *)&addr, &addr_size);
     if (fd < 0) {
@@ -248,19 +274,7 @@ _accept_one (Npsrv *srv, int fd, int wrap)
         }
     }
 #endif
-    trans = diod_trans_create (fd, host, ip, svc);
-    if (!trans) {
-        msg ("connect denied by diod_trans_create failure: %s:%s", host, svc);
-        close (fd);
-        return;
-    }
-                 
-    conn = np_conn_create (srv, trans);
-    if (!conn) {
-        msg ("connect denied by np_conn_create failure: %s%s", host, svc);
-        diod_trans_destroy (trans);
-        return;
-    }
+    diod_sock_startfd (srv, fd, host, ip, svc, 0);
 }
  
 /* Loop accepting and handling new 9P connections.

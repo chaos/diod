@@ -27,7 +27,9 @@
 #define _GNU_SOURCE     /* asprintf, unshare */
 #include <sched.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -44,11 +46,6 @@
 #include "diod_log.h"
 
 #include "util.h"
-
-typedef struct {
-    List exports;
-    char *port;
-} query_t;
 
 /* Create a directory, recursively creating parents as needed.
  * Return success (0) if the directory already exists, or creation was
@@ -191,6 +188,62 @@ util_parse_device (char *device, char **anamep, char **hostp)
     
     *hostp = host;
     *anamep = aname;
+}
+
+/* Like popen () but create bidirectional socketpair.
+ */
+int
+util_spopen (char *cmd, pid_t *pidp, int clonens)
+{
+    int s, sp[2];
+    pid_t pid;
+    uid_t saved_euid = geteuid ();
+
+    if (seteuid (0) < 0)
+        err_exit ("failed to set effective uid to root");
+    if (socketpair (AF_LOCAL, SOCK_STREAM, 0, sp) < 0)
+        err_exit ("socketpair");
+    switch ((pid = fork ())) {
+        case -1:
+            err_exit ("fork");
+        case 0:     /* child */
+            close (sp[0]);
+            if (dup2 (sp[1], 0) < 0)
+                err_exit ("dup2 on socket");
+            if (!clonens)
+                util_unshare ();
+            if ((s = system (cmd)) == -1)
+                err_exit ("fork");
+            if (!WIFEXITED (s))
+                msg_exit ("child %d terminated abnormally", pid);
+            if (WEXITSTATUS (s) != 0)
+                msg_exit ("child %d exited with rc=%d", pid, WEXITSTATUS (s));
+            exit (0);
+        default:    /* parent */
+            close (sp[1]);
+            break;
+    }
+    if (seteuid (saved_euid) < 0)
+        err_exit ("failed to restore effective uid to %d", saved_euid);
+    if (pidp)
+        *pidp = pid;
+    return sp[0];
+}
+
+int
+util_runcmd (char *cmd)
+{
+    int s;
+
+    if ((s = system (cmd)) < 0) {
+        err ("fork");
+        return 1;
+    }
+    if (!WIFEXITED (s)) {
+        msg ("command terminated abnormally");
+        return 1;
+    }
+    return WEXITSTATUS (s);
 }
 
 /*

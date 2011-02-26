@@ -71,6 +71,12 @@ np_conn_create(Npsrv *srv, Nptrans *trans)
 }
 
 void
+np_conn_waitdone(Npconn *conn)
+{
+	pthread_join(conn->rthread, NULL);
+}
+
+void
 np_conn_incref(Npconn *conn)
 {
 	pthread_mutex_lock(&conn->lock);
