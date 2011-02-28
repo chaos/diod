@@ -58,7 +58,6 @@ typedef struct {
     int          foreground;
     int          munge;
     int          tcpwrappers;
-    int          exit_on_lastuse;
     uid_t        runasuid;
     int          runasuid_valid;
     char        *diodpath;
@@ -75,7 +74,6 @@ static Conf config = {
     .foreground     = 0,
     .munge          = 1,
     .tcpwrappers    = 1,
-    .exit_on_lastuse= 0,
     .runasuid_valid = 0,
     .diodpath       = NULL, /* diod_conf_init initializes */
     .diodlisten     = NULL, /* diod_conf_init initializes */
@@ -151,18 +149,6 @@ void
 diod_conf_set_tcpwrappers (int i)
 {
     config.tcpwrappers = i;
-}
-
-int
-diod_conf_get_exit_on_lastuse (void)
-{
-    return config.exit_on_lastuse;
-}
-
-void
-diod_conf_set_exit_on_lastuse (int i)
-{
-    config.exit_on_lastuse = i;
 }
 
 int

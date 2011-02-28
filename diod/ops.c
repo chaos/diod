@@ -122,8 +122,6 @@ Npfcall     *diod_clunk  (Npfid *fid);
 Npfcall     *diod_remove (Npfid *fid);
 void         diod_flush  (Npreq *req);
 void         diod_fiddestroy(Npfid *fid);
-void         diod_connclose(Npconn *conn);
-void         diod_connopen (Npconn *conn);
 
 #if HAVE_LARGEIO
 Npfcall     *diod_aread  (Npfid *fid, u8 datacheck, u64 offset, u32 count,
@@ -157,10 +155,6 @@ static void      _ustat2qid     (struct stat *st, Npqid *qid);
 static void      _fidfree       (Fid *f);
 
 
-static pthread_mutex_t  conn_lock = PTHREAD_MUTEX_INITIALIZER;
-static int              conn_count = 0;
-static int              server_used = 0;
-
 void
 diod_register_ops (Npsrv *srv)
 {
@@ -177,8 +171,6 @@ diod_register_ops (Npsrv *srv)
     srv->fiddestroy = diod_fiddestroy;
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->debugprintf = msg;
-    srv->connclose = diod_connclose;
-    srv->connopen = diod_connopen;
 #if HAVE_LARGEIO
     srv->aread = diod_aread;
     srv->awrite = diod_awrite;
@@ -417,54 +409,6 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
-/* Exit on last connection close iff there has been some 9P spoken.
- * This is so we can tell the difference between an actual mount
- * and a simple connection attempt by diodctl to test our listen port.
- */
-void
-diod_connclose (Npconn *conn)
-{
-    int errnum;
-
-    if (!diod_conf_get_exit_on_lastuse ())
-        return;
-    if ((errnum = pthread_mutex_lock (&conn_lock)))
-        errn_exit (errnum, "diod_connclose: could not take conn_lock mutex");
-    conn_count--;
-    if (conn_count == 0 && server_used)
-        exit (0);
-    if ((errnum = pthread_mutex_unlock (&conn_lock)))
-        errn_exit (errnum, "diod_connclose: could not drop conn_lock mutex");
-}
-
-void
-diod_connopen (Npconn *conn)
-{
-    int errnum;
-
-    if (!diod_conf_get_exit_on_lastuse ())
-        return;
-    if ((errnum = pthread_mutex_lock (&conn_lock)))
-        errn_exit (errnum, "diod_connopen: could not take conn_lock mutex");
-    conn_count++; 
-    if ((errnum = pthread_mutex_unlock (&conn_lock)))
-        errn_exit (errnum, "diod_connopen: could not drop conn_lock mutex");
-}
-
-static void
-_serverused (void)
-{
-    int errnum;
-
-    if (!diod_conf_get_exit_on_lastuse ())
-        return;
-    if ((errnum = pthread_mutex_lock (&conn_lock)))
-        errn_exit (errnum, "_serverused: could not take conn_lock mutex");
-    server_used = 1; 
-    if ((errnum = pthread_mutex_unlock (&conn_lock)))
-        errn_exit (errnum, "_serverused: could not drop conn_lock mutex");
-}
-
 /* Tattach - announce a new user, and associate her fid with the root dir.
  */
 Npfcall*
@@ -550,7 +494,6 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     }
     fid->aux = f;
     np_fid_incref (fid);
-    _serverused ();
 
 done:
     if (np_rerror ()) {

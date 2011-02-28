@@ -219,7 +219,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
         return;
     }
                  
-    conn = np_conn_create (srv, trans);
+    conn = np_conn_create (srv, trans, blocking);
     if (!conn) {
         msg ("np_conn_create failure: %s%s", host, svc);
         diod_trans_destroy (trans);
@@ -227,7 +227,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
     }
 
     if (blocking)
-        np_conn_waitdone (conn); /* FIXME: this never unblocks */
+        np_conn_waitdone (conn);
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.

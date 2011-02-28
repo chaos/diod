@@ -57,7 +57,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:axF:u:A:L:s:m"
+#define OPTIONS "d:l:w:e:E:aF:u:A:L:s:m"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -69,7 +69,6 @@ static const struct option longopts[] = {
     {"export-file",     required_argument,  0, 'E'},
     {"allowany",        no_argument,        0, 'a'},
     {"no-munge-auth",   no_argument,        0, 'm'},
-    {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"atomic-max",      required_argument,  0, 'A'},
@@ -94,7 +93,6 @@ usage()
 #if HAVE_MUNGE
 "   -m,--no-munge-auth     do not require munge authentication\n"
 #endif
-"   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
@@ -166,9 +164,6 @@ main(int argc, char **argv)
                 break;
             case 'm':   /* --no-munge-auth */
                 diod_conf_set_munge (0);
-                break;
-            case 'x':   /* --exit-on-lastuse */
-                diod_conf_set_exit_on_lastuse (1);
                 break;
             case 'F':   /* --listen-fds N */
                 Fopt = strtoul (optarg, NULL, 10);

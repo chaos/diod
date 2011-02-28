@@ -46,9 +46,6 @@ void    diod_conf_set_tcpwrappers (int i);
 int     diod_conf_get_munge (void);
 void    diod_conf_set_munge (int i);
 
-int     diod_conf_get_exit_on_lastuse (void);
-void    diod_conf_set_exit_on_lastuse (int i);
-
 int     diod_conf_get_runasuid (uid_t *uidp);
 void    diod_conf_set_runasuid (uid_t uid);
 

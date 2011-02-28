@@ -52,10 +52,9 @@ The following options are mainly intended for testing.
 .TP
 .I "-s, --server CMD"
 Start the \fBdiod\fR server as a child of \fBdiodmount\fR using \fICMD\fR.
-The server should be called with \fI--exit-on-lastuse\fR.  It is mounted
-in a private namespace so there is an implicit unmount when \fBdiodmount\fR
-exits.  This command would normally be used with \fI-x\fR.
-If \fI-u\fR is used, run CMD as USER.
+It is mounted in a private namespace so there is an implicit unmount
+when \fBdiodmount\fR exits.  This command would normally be used with
+\fI-x\fR.  If \fI-u\fR is used, run CMD as USER.
 .TP
 .I "-x, --exec CMD"
 Perform the mount(s) in a private name space, execute \fICMD\fR as a child

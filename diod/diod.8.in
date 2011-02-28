@@ -13,24 +13,23 @@ Usually diod is spawned by the \fBdiodctl\fR, but it can be run standalone
 if required.
 .SH OPTIONS
 .TP
-.I "-d, --debug MASK"
-Set the debug mask.  The bit values are:
-0x1 log decoded 9P protocol messages;
-0x2 log any 9P operation errors.
-.TP
 .I "-l, --listen IP:PORT"
 Set the listen address.
 This option may be specified more than once.
-The default is to assume a client is already connectedo on file descriptor
-zero.
+The default is to assume a client is already connected on file descriptor zero.
 .TP
-.I "-w, --nwthreads INT"
-Set the number of worker threads to spawn to handle 9P operations.
-The default is 16.
+.I "-F, --listen-fds N"
+Listen for connection on file descriptors zero through N.
+This is the mechanism that \fBdiodctl\fR uses to pass dynamically
+allocated ports to \fBdiod\fR.
 .TP
 .I "-e, --export PATH"
 Set the file system to be exported.
 This option may be specified more than once and in combination with \fI-E\fR.
+.TP
+.I "-w, --nwthreads INT"
+Set the number of worker threads to spawn to handle 9P operations.
+The default is 16.
 .TP
 .I "-E, --export-file PATH"
 Read the file system(s) to be exported from PATH.
@@ -42,14 +41,6 @@ Override TCP wrappers checks and allow any client to connect.
 .I "-m, --no-munge-auth"
 This option allows users to attach without security credentials.
 It only is relevant if \fBdiod\fR was built with \fI--enable-munge\fR.
-.TP
-.I "-x, --exit-on-lastuse"
-Exit when the last connection drops, if clients have successfully attached.
-.TP
-.I "-F, --listen-fds N"
-Listen for connection on file descriptors zero through N.
-This is the mechanism that \fBdiodctl\fR uses to pass dynamically
-allocated ports to \fBdiod\fR.
 .TP
 .I "-u, --runas-uid UID"
 Run the server as UID and only allow that user to attach.
@@ -66,6 +57,11 @@ Each line represents one file I/O session and is of the form:
 path:read-ops:read-bytes:write-ops:write-bytes:time-seconds
 
 .fi
+.TP
+.I "-d, --debug MASK"
+Set the debug mask.  The bit values are:
+0x1 log decoded 9P protocol messages;
+0x2 log any 9P operation errors.
 .SH "LOGGING"
 \fBdiod\fR logs all messages to the LOG_DAEMON syslog facility
 at LOG_ERR severity.

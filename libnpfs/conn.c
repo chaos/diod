@@ -41,9 +41,10 @@ static void np_conn_free_incall(Npconn *, Npfcall *, int);
 static void *np_conn_read_proc(void *);
 
 Npconn*
-np_conn_create(Npsrv *srv, Nptrans *trans)
+np_conn_create(Npsrv *srv, Nptrans *trans, int joinable)
 {
 	Npconn *conn;
+	pthread_attr_t attr;
 
 	conn = malloc(sizeof(*conn));
 	if (!conn)
@@ -66,7 +67,10 @@ np_conn_create(Npsrv *srv, Nptrans *trans)
 	conn->freerclist = NULL;
 	np_srv_add_conn(srv, conn);
 
-	pthread_create(&conn->rthread, NULL, np_conn_read_proc, conn);
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, joinable ? PTHREAD_CREATE_JOINABLE
+						    : PTHREAD_CREATE_DETACHED);
+	pthread_create(&conn->rthread, &attr, np_conn_read_proc, conn);
 	return conn;
 }
 
@@ -127,7 +131,6 @@ np_conn_read_proc(void *a)
 	Npreq *req;
 	Npfcall *fc, *fc1;
 
-	pthread_detach(pthread_self());
 	conn = a;
 	np_conn_incref(conn);
 	srv = conn->srv;
@@ -161,7 +164,7 @@ again:
 			int n = 0;
 			int len = sizeof(s);
 			
-			n += snprintf(s+n, len-n, "<<< (%p) ", conn);
+			//n += snprintf(s+n, len-n, "<<< (%p) ", conn);
 			n += np_snprintfcall(s+n, len-n, fc);
 			conn->srv->debugprintf(s);
 		}
@@ -356,7 +359,7 @@ np_conn_respond(Npreq *req)
 			int n = 0;
 			int len = sizeof(s);
 			
-			n += snprintf(s+n, len-n, ">>> (%p) ", conn);
+			//n += snprintf(s+n, len-n, ">>> (%p) ", conn);
 			n += np_snprintfcall(s+n, len-n, rc);
 			conn->srv->debugprintf(s);
 		}
