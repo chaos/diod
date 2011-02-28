@@ -57,7 +57,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:axF:u:A:L:s:mSf:"
+#define OPTIONS "d:l:w:e:E:axF:u:A:L:s:m"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -72,11 +72,9 @@ static const struct option longopts[] = {
     {"exit-on-lastuse", no_argument,        0, 'x'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
-    {"runas-self",      no_argument,        0, 'S'},
     {"atomic-max",      required_argument,  0, 'A'},
     {"log-to",          required_argument,  0, 'L'},
     {"stats",           required_argument,  0, 's'},
-    {"fdno",              required_argument,  0, 'f'},
     {0, 0, 0, 0},
 };
 #else
@@ -99,12 +97,10 @@ usage()
 "   -x,--exit-on-lastuse   exit when transport count decrements to zero\n"
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
-"   -S,--runas-self        only allow user running diod to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
 "   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
 "   -s,--stats FILE        log detailed I/O stats to FILE\n"
-"   -f,--fdno FD           begin communicating on pre-connected fd\n"
     );
     exit (1);
 }
@@ -117,7 +113,6 @@ main(int argc, char **argv)
     int Fopt = 0;
     int eopt = 0;
     int lopt = 0;
-    int fopt = -1;
     struct pollfd *fds = NULL;
     int nfds = 0;
     uid_t uid;
@@ -187,9 +182,6 @@ main(int argc, char **argv)
                     msg_exit ("error parsing --runas-uid argument");
                 diod_conf_set_runasuid (uid);
                 break;
-            case 'S':   /* --runas-self */
-                diod_conf_set_runasuid (geteuid ());
-                break;
             case 'A':   /* --atomic-max INT */
                 errno = 0;
                 amax = strtoul (optarg, &end, 10);
@@ -205,15 +197,6 @@ main(int argc, char **argv)
             case 's':   /* --stats PATH */
                 diod_conf_set_statslog (optarg);
                 break;
-            case 'f':   /* --fdno FD */
-                errno = 0;
-                fopt = strtoul (optarg, &end, 10);
-                if (errno != 0)
-                    err_exit ("error parsing --fd argument");
-                if (*end != '\0')
-                    msg_exit ("error parsing --fd argument");
-                diod_conf_set_exit_on_lastuse (1); /* FIXME: hack so we exit */
-                break;
             default:
                 usage();
         }
@@ -221,39 +204,39 @@ main(int argc, char **argv)
     if (optind < argc)
         usage();
 
-    /* sane config? */
-    if (!diod_conf_get_diodlisten () && Fopt == 0 && fopt == -1)
-        msg_exit ("no listen address or fd specified");
     diod_conf_validate_exports ();
 #if ! HAVE_TCP_WRAPPERS
     if (diod_conf_get_tcpwrappers ())
         msg_exit ("no TCP wrapper support, yet config enables it");
 #endif
-
-    /* drop privileges, unless running for multiple users */
+    if (diod_conf_get_runasuid (&uid)) {
+        if (geteuid () != 0 && geteuid () != uid)
+            msg_exit ("must be root to run diod as another user");
+    } else {
+        if (geteuid () != 0)
+            diod_conf_set_runasuid (geteuid ());
+    }
     if (diod_conf_get_runasuid (&uid)) {
         if (uid != geteuid ())
-            diod_become_user (NULL, uid, 1);
-    } else if (geteuid () != 0)
-        msg_exit ("if not running as root, you must specify --runas-self or --runas-uid");
+            diod_become_user (NULL, uid, 1); /* exits on error */
+    }
 
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
         msg_exit ("out of memory");
     diod_register_ops (srv);
 
-    if (fopt == -1) {
-        if (Fopt) {
-            if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
-                msg_exit ("failed to set up listen ports");
-        } else {
-            hplist = diod_conf_get_diodlisten ();
-            if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
-                msg_exit ("failed to set up listen ports");
-        }
+    if (Fopt) {
+        if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
+            msg_exit ("failed to set up listen ports");
         diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
-    } else 
-        diod_sock_startfd (srv, fopt, "local", "0.0.0.0", "0", 1);
+    } else if ((hplist = diod_conf_get_diodlisten ())) {
+        if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
+            msg_exit ("failed to set up listen ports");
+        diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
+    } else {
+        diod_sock_startfd (srv, 0, "stdin", "0.0.0.0", "0", 1);
+    }
     /*NOTREACHED*/
 
     exit (0);

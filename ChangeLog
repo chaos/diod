@@ -1,3 +1,12 @@
+2011-02-28 Jim Garlick <garlick@llnl.gov>
+
+	* testkern/* : Run tests using safer private server scheme.
+
+	* diod/diod.c : Drop --fdno option and make fd=0 the default.
+	Also drop --runas-self and make that the default if not run as root.
+
+	* libdiod/diod_conf.c : Make there be no default 'diodlisten' value.
+
 2011-02-25 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c : Add --fdno option.

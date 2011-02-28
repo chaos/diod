@@ -21,6 +21,8 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+/* ctl.c - manipulate diodctl pseudo-files system */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif

@@ -90,7 +90,6 @@ void
 diod_conf_init (void)
 {
     diod_conf_add_diodctllisten ("0.0.0.0:10005");
-    diod_conf_add_diodlisten ("0.0.0.0:10006");
     diod_conf_set_diodpath (X_SBINDIR "/diod");
 }
 

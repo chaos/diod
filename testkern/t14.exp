@@ -1,6 +1,3 @@
-starting diod
-mounting
 running statfs comparison
-0 differences
-unmounting
-waiting for diod to terminate
+f_type differs
+1 differences

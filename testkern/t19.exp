@@ -1,36 +1,51 @@
-starting diod
-mounting
 1024+0 records in
 1024+0 records out
 testing host file system
-tfcntl2: fd: blocking exclusive request succeeded
-tfcntl2: fd2: exclusive request succeeded (expected for non-diod)
-tfcntl2: fd2(child1): exclusive request failed: Resource temporarily unavailable
-tfcntl2: child1 exited normally
-tfcntl2: fd: unlock succeeded
-tfcntl2: fd2(child2): exclusive request succeeded
-tfcntl2: child2 exited normally
-tfcntl2: fd2: exclusive request succeeded
-tfcntl2: fd2: unlock succeeded
-tfcntl2: cleaning up
+tfcntl2: 1. Conflicting write locks cannot be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: write-lock failed: Resource temporarily unavailable
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 2. Conflicting read and write locks cannot be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: read-lock failed: Resource temporarily unavailable
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 3. Conflicting read locks CAN be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: read-locked
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: read-locked
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 4. Non-conflicting write locks CAN be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked 1 byte
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: write-locked rest of file
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 5. Non-conflicting read and write locks CAN be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked 1 byte
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: read-locked rest of file
+tfcntl2: child exited normally
+tfcntl2: fd: closed
 testing diod file system
-diod: diod_lock: converting SETLKW to SETLK
-diod: flock LOCK_EX | LOCK_NB: Success
-tfcntl2: fd: blocking exclusive request succeeded
-diod: flock LOCK_EX | LOCK_NB: Resource temporarily unavailable
-tfcntl2: fd2: exclusive request failed (expected for diod): Resource temporarily unavailable
-diod: flock LOCK_EX | LOCK_NB: Resource temporarily unavailable
-tfcntl2: fd2(child1): exclusive request failed: Resource temporarily unavailable
-tfcntl2: child1 exited normally
-diod: flock LOCK_UN: Success
-tfcntl2: fd: unlock succeeded
-diod: flock LOCK_EX | LOCK_NB: Success
-tfcntl2: fd2(child2): exclusive request succeeded
-tfcntl2: child2 exited normally
-diod: flock LOCK_EX | LOCK_NB: Success
-tfcntl2: fd2: exclusive request succeeded
-diod: flock LOCK_UN: Success
-tfcntl2: fd2: unlock succeeded
-tfcntl2: cleaning up
-unmounting
-waiting for diod to terminate
+tfcntl2: 1. Conflicting write locks cannot be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: write-locked
+tfcntl2: child exited with 1, aborting  # broke

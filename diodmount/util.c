@@ -21,6 +21,8 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+/* util.c - misc. utility functions for diodmount */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -191,16 +193,15 @@ util_parse_device (char *device, char **anamep, char **hostp)
 }
 
 /* Like popen () but create bidirectional socketpair.
+ * If clonens is 0, unshare fs namespace in the child.
+ * Exit on error.
  */
 int
 util_spopen (char *cmd, pid_t *pidp, int clonens)
 {
     int s, sp[2];
     pid_t pid;
-    uid_t saved_euid = geteuid ();
 
-    if (seteuid (0) < 0)
-        err_exit ("failed to set effective uid to root");
     if (socketpair (AF_LOCAL, SOCK_STREAM, 0, sp) < 0)
         err_exit ("socketpair");
     switch ((pid = fork ())) {
@@ -223,8 +224,6 @@ util_spopen (char *cmd, pid_t *pidp, int clonens)
             close (sp[1]);
             break;
     }
-    if (seteuid (saved_euid) < 0)
-        err_exit ("failed to restore effective uid to %d", saved_euid);
     if (pidp)
         *pidp = pid;
     return sp[0];

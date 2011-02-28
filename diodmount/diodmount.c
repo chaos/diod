@@ -264,7 +264,6 @@ main (int argc, char *argv[])
         }
         list_iterator_destroy (itr);
 
-
     /* Mount one file system.
      * If -D option, create mount point as needed.
      */

@@ -1,32 +1,7 @@
 #!/bin/bash -e
 
-doit ()
-{
-        echo starting diod with max 1mb atomic transfers
-        $PATH_DIOD -s $1 -d 4 -A 1 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
-        sleep 1
-        echo mounting
-        $PATH_DIODMOUNT -d2006 -o uname=root \
-			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
+echo creating file in regular file system
+dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_EXPDIR/a count=4
 
-	echo creating file in regular file system
-	dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_EXPDIR/a count=4
-
-	echo reading file with 1mb transfers
-	dd status=noxfer bs=1048576 of=/dev/null if=$PATH_MNTDIR/a
-
-        echo unmounting
-        umount $PATH_MNTDIR
-	rm -f $PATH_EXPDIR/a
-        echo waiting for diod to terminate
-        wait
-}
-
-
-TEST=$(basename $0 | cut -d- -f1)
-test $(id -u) == 0 || exit 77 #skip if not root
-modprobe 9p || exit 77 #skip if no 9p
-
-doit $TEST.stats >$TEST.out 2>&1
-
-diff $TEST.exp $TEST.out >$TEST.diff
+echo reading file with 1mb transfers
+dd status=noxfer bs=1048576 of=/dev/null if=$PATH_MNTDIR/a

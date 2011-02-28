@@ -17,12 +17,13 @@ TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/diodmount/diodmount"
 TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
 TESTS_ENVIRONMENT += "PATH_MNTDIR=$(shell readlink -f mnt.d)"
 TESTS_ENVIRONMENT += "PATH_EXPDIR=$(shell readlink -f exp.d)"
+TESTS_ENVIRONMENT += "./runtest"
 
 TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t20 t21 t22 \
 	t23 t24 t25 t26 
 
-XFAIL_TESTS = t18 t19 t23 t24
-XFAIL_TESTS += t14 t18 t19 t23 t24
+XFAIL_TESTS = t16 t17
+XFAIL_TESTS += t18 t19 t23 t24
 if ! LARGEIO
 XFAIL_TESTS += t20 t21
 endif
@@ -32,7 +33,7 @@ $(TESTS): mnt.d exp.d
 mnt.d exp.d:
 	mkdir -p $@
 
-CLEANFILES = *.out *.diff *.stats
+CLEANFILES = *.out *.diff *.stats *.diod
 
 AM_CFLAGS = @GCCWARN@
 

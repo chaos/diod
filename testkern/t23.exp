@@ -1,5 +1,3 @@
-starting diod
-mounting
 1024+0 records in
 1024+0 records out
 testing host file system
@@ -66,24 +64,50 @@ tfcntl3: child exited normally
 testing diod file system
 tfcntl3: 1. Upgrade read lock to write lock (one fd)
 tfcntl3: fd: open O_RDWR
-diod: flock fid 3 (fd=7) LOCK_SH | LOCK_NB: Success
 tfcntl3: fd: read-locked
-diod: flock fid 3 (fd=7) LOCK_EX | LOCK_NB: Success
 tfcntl3: fd: write-locked
 tfcntl3: fd: closed
 tfcntl3: 2. Upgrade read lock to write lock (two fds)
 tfcntl3: fd: open O_RDWR
-diod: flock fid 3 (fd=7) LOCK_SH | LOCK_NB: Success
 tfcntl3: fd: read-locked
 tfcntl3: fd2: open O_RDWR
-diod: flock fid 4 (fd=8) LOCK_EX | LOCK_NB: Success
 tfcntl3: fd2: write-locked
 tfcntl3: fd2: closed
 tfcntl3: fd: closed
 tfcntl3: 3. Upgrade byte range of write lock (one fd)
 tfcntl3: fd: open O_RDWR
-diod: diod_lock: record locking not implemented yet
-tfcntl3: fd: fcntl F_SETLK wrlock (1 byte) failed: Invalid argument
-unmounting
-waiting for diod to terminate
-THIS IS WRONG.  NEED THE RIGHT OUTPUT
+tfcntl3: fd: write-locked 1 byte
+tfcntl3: fd: write-locked entire file
+tfcntl3: fd: closed
+tfcntl3: 4. Downgrade byte range of write lock (one fd)
+tfcntl3: fd: open O_RDWR
+tfcntl3: fd: write-locked entire file
+tfcntl3: fd: write-locked 1 byte
+tfcntl3: fd: closed
+tfcntl3: 5. Downgrade write lock to read lock (one fd)
+tfcntl3: fd: open O_RDWR
+tfcntl3: fd: write-locked
+tfcntl3: fd: read-locked
+tfcntl3: fd: closed
+tfcntl3: 6. Read lock with O_RDONLY should succeed
+tfcntl3: fd: open O_RDONLY
+tfcntl3: fd: read-locked
+tfcntl3: fd: closed
+tfcntl3: 7. Read lock with O_WRONLY should fail
+tfcntl3: fd: open O_WRONLY
+tfcntl3: fd: fcntl F_SETLK rdlock failed: Bad file descriptor
+tfcntl3: fd: closed
+tfcntl3: 8. Write lock with O_RDONLY should fail
+tfcntl3: fd: open O_RDONLY
+tfcntl3: fd: fcntl F_SETLK wrlock failed: Bad file descriptor
+tfcntl3: fd: closed
+tfcntl3: 9. Write lock with O_WRONLY should succeed
+tfcntl3: fd: open O_WRONLY
+tfcntl3: fd: write-locked
+tfcntl3: fd: closed
+tfcntl3: 10. Write lock is not inherited across a fork
+tfcntl3: fd: open O_RDWR
+tfcntl3: fd: write-locked
+tfcntl3: child forked
+tfcntl3: fd: read-locked (child)
+tfcntl3: child exited with 1, aborting  # ERror

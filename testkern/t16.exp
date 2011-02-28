@@ -1,25 +1,12 @@
-starting diod
-mounting
-creating files
+creating objects
 1024+0 records in
 1024+0 records out
 comparing stat(2) results for file
 st_dev differs
-st_blksize differs (4096 != 2097152)
-st_blocks differs (1024 != 0)
-3 differences
+1 differences
 comparing stat(2) results for hard link
 st_dev differs
-st_nlink differs (1 != 2)
-st_blksize differs (4096 != 2097152)
-st_blocks differs (1024 != 0)
-4 differences
+1 differences
 comparing stat(2) results for directory
 st_dev differs
-st_nlink differs (1 != 2)
-st_size differs (0 != 4096)
-st_blocks differs (0 != 8)
-4 differences
-removing files
-unmounting
-waiting for diod to terminate
+1 differences

@@ -1,5 +1,3 @@
-starting diod
-mounting
 1024+0 records in
 1024+0 records out
 testing host file system
@@ -30,13 +28,8 @@ tflock: fd: closed
 testing diod file system
 tflock: 1. Conflicting write locks cannot be held by two processes
 tflock: fd: open
-diod: flock fid 3 (fd=7) LOCK_EX | LOCK_NB: Success
 tflock: fd: write-locked
 tflock: child forked
 tflock: fd2: open (child)
-diod: flock fid 4 (fd=8) LOCK_EX | LOCK_NB: Success
 tflock: fd2: write-locked
-tflock: child exited with 1, aborting
-unmounting
-waiting for diod to terminate
-THIS IS NOT RIGHT
+tflock: child exited with 1, aborting  # WHOOPS broken

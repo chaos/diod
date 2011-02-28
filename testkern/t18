@@ -1,30 +1,7 @@
 #!/bin/bash -e
 
-doit ()
-{
-	echo starting diod
-	$PATH_DIOD -s $1 -d 0x08 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
-	sleep 1
-	echo mounting
-	$PATH_DIODMOUNT -d2006 -o uname=root \
-			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
-
-	dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
-	echo testing host file system
-	./tflock $PATH_EXPDIR/a || :
-	echo testing diod file system
-	./tflock $PATH_MNTDIR/a || :
-	rm -f $PATH_MNTDIR/a
-	echo unmounting
-	umount $PATH_MNTDIR
-	echo waiting for diod to terminate
-	wait
-}
-
-TEST=$(basename $0 | cut -d- -f1)
-test $(id -u) == 0 || exit 77 #skip if not root
-modprobe 9p || exit 77 #skip if no 9p
-
-doit $TEST.stats >$TEST.out 2>&1
-
-diff $TEST.exp $TEST.out >$TEST.diff
+dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
+echo testing host file system
+./tflock $PATH_EXPDIR/a || :
+echo testing diod file system
+./tflock $PATH_MNTDIR/a || :

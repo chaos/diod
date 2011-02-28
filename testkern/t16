@@ -1,57 +1,19 @@
 #!/bin/bash -e
 
-doit ()
-{
-	local rc=0
+rc=0
 
-	echo starting diod
-	$PATH_DIOD -s $1 -l "127.0.0.1:2006" -x -e $PATH_EXPDIR &
-	sleep 1
-	echo mounting
-	$PATH_DIODMOUNT -d2006 -o uname=root \
-			-n 127.0.0.1:$PATH_EXPDIR $PATH_MNTDIR
+echo "creating objects"
+mkdir $PATH_MNTDIR/b
+dd if=/dev/zero of=$PATH_MNTDIR/b/a count=1024 status=noxfer
+ln $PATH_EXPDIR/b/a $PATH_EXPDIR/b/c
 
-	echo "creating files"
-	mkdir $PATH_MNTDIR/b
-	if ! dd if=/dev/zero of=$PATH_MNTDIR/b/a count=1024 status=noxfer; then
-		rc=1
-	fi
+echo "comparing stat(2) results for file"
+./tstat $PATH_MNTDIR/b/a $PATH_EXPDIR/b/a || rc=1
 
-	echo "comparing stat(2) results for file"
-	if ! ./tstat $PATH_MNTDIR/b/a $PATH_EXPDIR/b/a; then
-		rc=1
-	fi
-	echo "comparing stat(2) results for hard link"
-	if ! ln $PATH_EXPDIR/b/a $PATH_EXPDIR/b/c; then
-		rc=1
-	fi
-	if ! ./tstat $PATH_MNTDIR/b/c $PATH_EXPDIR/b/c; then
-		rc=1
-	fi
+echo "comparing stat(2) results for hard link"
+./tstat $PATH_MNTDIR/b/c $PATH_EXPDIR/b/c || rc=1
 
-	echo "comparing stat(2) results for directory"
-	if ! ./tstat $PATH_MNTDIR/b $PATH_EXPDIR/b; then
-		rc=1
-	fi
+echo "comparing stat(2) results for directory"
+./tstat $PATH_MNTDIR/b $PATH_EXPDIR/b || rc=1
 
-	echo "removing files"
-	rm -f $PATH_MNTDIR/b/a $PATH_MNTDIR/b/c
-	if ! rmdir $PATH_MNTDIR/b; then
-		rc=1
-	fi
-
-	echo unmounting
-	umount $PATH_MNTDIR
-	echo waiting for diod to terminate
-	wait
-
-	return $rc
-}
-
-TEST=$(basename $0 | cut -d- -f1)
-test $(id -u) == 0 || exit 77 #skip if not root
-modprobe 9p || exit 77 #skip if no 9p
-
-doit $TEST.stats >$TEST.out 2>&1
-
-diff $TEST.exp $TEST.out >$TEST.diff
+exit $rc

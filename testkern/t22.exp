@@ -1,28 +1,10 @@
-starting diod
-mounting
 writing 4k file
-diod: awrite: rsize 4096 count 4096 offset 0
-diod: awrite: directly wrote 4096 bytes at offset 0
 1+0 records in
 1+0 records out
 appending 3 bytes
-diod: awrite: rsize 3 count 3 offset 0
-diod: awrite: directly wrote 3 bytes at offset 0
 verifying
-diod: aread: rsize 65503 count 2097152 offset 0
-diod: aread:  allocated 2097152 byte cache
-diod: aread:   read 4099 bytes at offset 0
-diod: aread:   read 4099 bytes from cache
-diod: aread:   freed 4099 byte cache
-diod: aread: rsize 65503 count 2093053 offset 4099
-diod: aread:  allocated 2093053 byte cache
-diod: aread:   read 0 bytes at offset 4099
-diod: aread:   read 0 bytes from cache
-diod: aread:   freed 0 byte cache
 size is 4099
 00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
 *
 00001000  66 6f 6f                                          |foo|
 00001003
-unmounting
-waiting for diod to terminate

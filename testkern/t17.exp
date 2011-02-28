@@ -1,42 +1,37 @@
-starting diod
-mounting
 creating file and directory
 testing file server to client
 0
-111
+1111
 2222
-2333
+3333
 4444
-4555
+5555
 6666
-6777
+7777
 testing file client to server
 0
-111
+1111
 2222
-2333
+3333
 4444
-4555
+5555
 6666
-6777
+7777
 testing directory server to client
 0
-111
+1111
 2222
-2333
+3333
 4444
-4555
+5555
 6666
-6777
+7777
 testing directory client to server
 0
-111
+1111
 2222
-2333
+3333
 4444
-4555
+5555
 6666
-6777
-removing file and directory
-unmounting
-waiting for diod to terminate
+7777

@@ -227,10 +227,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
     }
 
     if (blocking)
-        np_conn_waitdone (conn);
-    /* FIXME: this never unblocks. 
-     * workaround is to force on diod -x option when --fdno is used
-     */
+        np_conn_waitdone (conn); /* FIXME: this never unblocks */
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.

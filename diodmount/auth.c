@@ -21,6 +21,10 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
+/* auth.c - authentication functions */
+
+/* FIXME: implement Tauth in user space here */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif

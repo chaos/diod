@@ -1,0 +1,36 @@
+#!/bin/bash
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+if [ $# -ne 1 ]; then
+    echo "Usage runtest test" 2>&1
+    exit 1
+fi
+TEST=$1
+
+rm -rf $PATH_EXPDIR/*
+rm -f $TEST.diod $TEST.out
+
+if test $(id -u) != 0; then
+    echo "not root - skipping" >$TEST.out
+    exit 77
+fi
+if ! modprobe 9p; then
+    echo "9p not loaded - skipping" >$TEST.out
+    exit 77
+fi
+if ! test -d $PATH_EXPDIR; then
+    echo "test directory vanished" >$TEST.out
+    exit 77
+fi
+
+$PATH_DIODMOUNT -x "$TEST" -s \
+    "$PATH_DIOD -d 0x3 -L $TEST.diod -x -e $PATH_EXPDIR -s $TEST.stats" \
+    nohost:$PATH_EXPDIR $PATH_MNTDIR  >$TEST.out 2>&1
+rc=$?
+if [ $rc != 0 ]; then
+    echo "test exited with $rc" >>$TEST.out
+    exit $rc
+fi
+
+diff $TEST.exp $TEST.out >$TEST.diff
+exit $?

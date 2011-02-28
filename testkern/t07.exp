@@ -1,8 +1,4 @@
-starting diod
-mounting
 creating file in diod file system
 128+0 records in
 128+0 records out
 comparing file in regular and diod file systems
-unmounting
-waiting for diod to terminate

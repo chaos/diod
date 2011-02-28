@@ -1,5 +1,3 @@
-starting diod with max 1mb atomic transfers
-mounting
 writing file with 1mb transfers and verifying
 diod: awrite: rsize 65503 count 1048576 offset 0
 diod: awrite:  allocated 1048576 byte cache
