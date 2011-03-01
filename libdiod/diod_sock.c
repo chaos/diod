@@ -45,6 +45,7 @@
 #include <tcpd.h>
 #endif
 #include <poll.h>
+#include <pthread.h>
 #include <assert.h>
 
 #include "9p.h"
@@ -219,15 +220,14 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
         return;
     }
                  
-    conn = np_conn_create (srv, trans, blocking);
+    conn = np_conn_create (srv, trans);
     if (!conn) {
         msg ("np_conn_create failure: %s%s", host, svc);
         diod_trans_destroy (trans);
         return;
     }
-
     if (blocking)
-        np_conn_waitdone (conn);
+        np_srv_wait_zeroconns (srv);
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
@@ -274,8 +274,8 @@ _accept_one (Npsrv *srv, int fd, int wrap)
     diod_sock_startfd (srv, fd, host, ip, svc, 0);
 }
  
-/* Loop accepting and handling new 9P connections.
- * This comprises the main service loop in diod and diodctl daemons.
+/* Loop forever, accepting and handling new 9P connections.
+ * This comprises the main service loop in diod -L and diodctl daemons.
  */
 void
 diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
@@ -299,6 +299,40 @@ diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
         }
     }
     /*NOTREACHED*/
+}
+
+/* Glue so diod_sock_accept_batch can start diod_sock_accept_loop thread.
+ */
+typedef struct  {
+    Npsrv *srv;
+    struct pollfd *fds;
+    int nfds;
+    int wrap;
+} ala_t;
+
+static void *
+_accept_thread (void *ap)
+{
+    ala_t *a = ap;
+    diod_sock_accept_loop (a->srv, a->fds, a->nfds, a->wrap);
+    return NULL;
+}
+
+/* Loop accepting and handling new 9P connections.
+ * Quit once connection count goes above zero then drops to zero again.
+ */
+void
+diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
+{
+    ala_t a;
+    pthread_t thd;
+
+    a.srv = srv;
+    a.fds = fds;
+    a.nfds = nfds;
+    a.wrap = wrap;
+    pthread_create (&thd, NULL, _accept_thread, &a);
+    np_srv_wait_zeroconns (srv);
 }
 
 /* Try to connect to host:port.

@@ -118,7 +118,7 @@ np_pipesrv_start(Npsrv *srv)
 
 	ps = srv->srvaux;
 	trans = np_fdtrans_create(ps->fdin, ps->fdout);
-	conn = np_conn_create(srv, trans, 0);
+	conn = np_conn_create(srv, trans);
 	np_srv_add_conn(srv, conn);
 }
 

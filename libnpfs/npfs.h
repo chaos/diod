@@ -269,6 +269,7 @@ struct Npsrv {
 	/* implementation specific */
 	pthread_mutex_t	lock;
 	pthread_cond_t	reqcond;
+	pthread_cond_t	zeroconnscond;
 	int		shuttingdown;
 	Npconn*		conns;
 	int		nwthread;
@@ -321,11 +322,12 @@ void np_srv_remove_conn(Npsrv *, Npconn *);
 void np_srv_start(Npsrv *);
 void np_srv_shutdown(Npsrv *, int wait);
 int np_srv_add_conn(Npsrv *, Npconn *);
+void np_srv_wait_zeroconns(Npsrv *);
 void np_buf_init(Npbuf *, void *, void (*)(void *), void (*)(void *, int));
 void np_buf_set(Npbuf *, u8 *, u32);
 
-Npconn *np_conn_create(Npsrv *, Nptrans *, int);
-void np_conn_waitdone(Npconn *);
+
+Npconn *np_conn_create(Npsrv *, Nptrans *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
 void np_conn_reset(Npconn *, u32);

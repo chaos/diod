@@ -224,7 +224,7 @@ main(int argc, char **argv)
     if (Fopt) {
         if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
             msg_exit ("failed to set up listen ports");
-        diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
+        diod_sock_accept_batch (srv, fds, nfds, diod_conf_get_tcpwrappers ());
     } else if ((hplist = diod_conf_get_diodlisten ())) {
         if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
             msg_exit ("failed to set up listen ports");

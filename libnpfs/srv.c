@@ -86,6 +86,7 @@ np_srv_create(int nwthread)
 	srv = malloc(sizeof(*srv));
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
+	pthread_cond_init(&srv->zeroconnscond, NULL);
 	srv->msize = 8216;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
@@ -221,7 +222,19 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 	np_conn_decref(conn);
 	if (srv->shuttingdown && !srv->conns)
 		np_srv_destroy(srv);
+	if (!srv->conns)
+		pthread_cond_signal(&srv->zeroconnscond);
+	pthread_mutex_unlock(&srv->lock);
+}
 
+void
+np_srv_wait_zeroconns(Npsrv *srv)
+{
+	pthread_mutex_lock(&srv->lock);
+	while (!srv->conns)
+		pthread_cond_wait(&srv->zeroconnscond, &srv->lock);
+	while (srv->conns)
+		pthread_cond_wait(&srv->zeroconnscond, &srv->lock);
 	pthread_mutex_unlock(&srv->lock);
 }
 

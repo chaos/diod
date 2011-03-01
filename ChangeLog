@@ -1,5 +1,13 @@
 2011-02-28 Jim Garlick <garlick@llnl.gov>
 
+	* diodctl/serv.c : Drop -x argument to diod.
+
+	* diod/diod.c, libdiod/diod_sock.[ch] : 
+	When diod is called with -F, exit when last conn drops.
+
+	* libnpfs/srv.c, libnpfs/conn.c, libnpfs/npfs.h :
+	Add np_srv_wait_zeroconns(), drop np_conn_waitdone().
+
 	* libnpfs/conn.c : Drop connection pointer val in debug output.
 
 	* diod/ops.c, diod/diod.c, libdiod/diod_conf.[ch] : Remove support

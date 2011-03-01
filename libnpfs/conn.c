@@ -41,10 +41,9 @@ static void np_conn_free_incall(Npconn *, Npfcall *, int);
 static void *np_conn_read_proc(void *);
 
 Npconn*
-np_conn_create(Npsrv *srv, Nptrans *trans, int joinable)
+np_conn_create(Npsrv *srv, Nptrans *trans)
 {
 	Npconn *conn;
-	pthread_attr_t attr;
 
 	conn = malloc(sizeof(*conn));
 	if (!conn)
@@ -67,17 +66,8 @@ np_conn_create(Npsrv *srv, Nptrans *trans, int joinable)
 	conn->freerclist = NULL;
 	np_srv_add_conn(srv, conn);
 
-	pthread_attr_init(&attr);
-	pthread_attr_setdetachstate(&attr, joinable ? PTHREAD_CREATE_JOINABLE
-						    : PTHREAD_CREATE_DETACHED);
-	pthread_create(&conn->rthread, &attr, np_conn_read_proc, conn);
+	pthread_create(&conn->rthread, NULL, np_conn_read_proc, conn);
 	return conn;
-}
-
-void
-np_conn_waitdone(Npconn *conn)
-{
-	pthread_join(conn->rthread, NULL);
 }
 
 void
@@ -131,6 +121,7 @@ np_conn_read_proc(void *a)
 	Npreq *req;
 	Npfcall *fc, *fc1;
 
+	pthread_detach(pthread_self());
 	conn = a;
 	np_conn_incref(conn);
 	srv = conn->srv;

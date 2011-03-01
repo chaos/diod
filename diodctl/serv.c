@@ -286,8 +286,6 @@ _build_server_args (Server *s)
         r = _append_arg (s, "diod-uid-%lu", (unsigned long)s->uid);
     if (r < 0)
             goto done;
-    if (_append_arg (s, "-x") < 0)
-        goto done;
     if (s->uid != 0 && _append_arg (s, "-u%d", s->uid) < 0)
         goto done;
     if (_append_arg (s, "-F%d", s->nfds) < 0)
