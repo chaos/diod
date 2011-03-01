@@ -77,6 +77,7 @@ AC_CONFIG_FILES( \
   libdiod/Makefile \
   liblsd/Makefile \
   libnpfs/Makefile \
+  libnpclient/Makefile \
   man/Makefile \
   diod/diod.8 \
   diodctl/diodctl.8 \

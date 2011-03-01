@@ -250,7 +250,7 @@ SUBDIRS = \
 	diodctl \
 	test \
 	testkern \
-	testuser
+	testuser 
 
 EXTRA_DIST = META diod.spec
 all: all-recursive
@@ -737,6 +737,7 @@ uninstall-am:
 	maintainer-clean-generic mostlyclean mostlyclean-generic pdf \
 	pdf-am ps ps-am tags tags-recursive uninstall uninstall-am
 
+#	libnpclient
 
 rpmdirs:
 	mkdir -p $(top_builddir)/rpm/SPECS

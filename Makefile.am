@@ -9,7 +9,8 @@ SUBDIRS = \
 	diodctl \
 	test \
 	testkern \
-	testuser
+	testuser 
+#	libnpclient
 
 rpmdirs:
 	mkdir -p $(top_builddir)/rpm/SPECS
