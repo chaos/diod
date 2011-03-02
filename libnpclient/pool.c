@@ -20,12 +20,20 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdint.h>
+#include <inttypes.h>
+
+#include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -72,7 +80,7 @@ npc_create_pool(u32 maxid)
 
 	p = malloc(sizeof(*p));
 	if (!p) {
-		np_werror(Ennomem, ENOMEM);
+		np_uerror(ENOMEM);
 		return NULL;
 	}
 
@@ -82,7 +90,7 @@ npc_create_pool(u32 maxid)
 	p->msize = 32;	/* 256 ids */
 	p->map = malloc(p->msize);
 	if (!p->map) {
-		np_werror(Ennomem, ENOMEM);
+		np_uerror(ENOMEM);
 		free(p);
 		return NULL;
 	}

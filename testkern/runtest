@@ -7,6 +7,23 @@ if [ $# -ne 1 ]; then
 fi
 TEST=$1
 
+if [ -z "$PATH_EXPDIR" ]; then
+    echo "PATH_EXPDIR is not set" 2>&1
+    exit 1
+fi
+if [ -z "$PATH_MNTDIR" ]; then
+    echo "PATH_MNTDIR is not set" 2>&1
+    exit 1
+fi
+if [ -z "$PATH_DIODMOUNT" ]; then
+    echo "PATH_DIODMOUNT is not set" 2>&1
+    exit 1
+fi
+if [ -z "$PATH_DIOD" ]; then
+    echo "PATH_DIOD is not set" 2>&1
+    exit 1
+fi
+
 rm -rf $PATH_EXPDIR/*
 rm -f $TEST.diod $TEST.out
 
@@ -23,9 +40,10 @@ if ! test -d $PATH_EXPDIR; then
     exit 77
 fi
 
-$PATH_DIODMOUNT -x "$TEST" -s \
-    "$PATH_DIOD -d 0x3 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
-    nohost:$PATH_EXPDIR $PATH_MNTDIR  >$TEST.out 2>&1
+$PATH_DIODMOUNT -x "$TEST" \
+    -s "$PATH_DIOD -d 0x3 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    nohost:$PATH_EXPDIR $PATH_MNTDIR  \
+    >$TEST.out 2>&1
 rc=$?
 if [ $rc != 0 ]; then
     echo "test exited with $rc" >>$TEST.out

@@ -1,6 +1,7 @@
 SUBDIRS = \
 	liblsd \
 	libnpfs \
+	libnpclient \
 	libdiod \
 	diod \
 	diodmount \
@@ -9,8 +10,7 @@ SUBDIRS = \
 	diodctl \
 	test \
 	testkern \
-	testuser 
-#	libnpclient
+	testuser
 
 rpmdirs:
 	mkdir -p $(top_builddir)/rpm/SPECS

@@ -56,11 +56,9 @@ AR = ar
 ARFLAGS = cru
 libnpclient_a_AR = $(AR) $(ARFLAGS)
 libnpclient_a_LIBADD =
-am_libnpclient_a_OBJECTS = dirread.$(OBJEXT) fid.$(OBJEXT) \
-	fsys.$(OBJEXT) mount.$(OBJEXT) netmount.$(OBJEXT) \
-	open.$(OBJEXT) pool.$(OBJEXT) read.$(OBJEXT) remove.$(OBJEXT) \
-	stat2wstat.$(OBJEXT) stat.$(OBJEXT) walk.$(OBJEXT) \
-	write.$(OBJEXT)
+am_libnpclient_a_OBJECTS = fid.$(OBJEXT) fsys.$(OBJEXT) \
+	mount.$(OBJEXT) open.$(OBJEXT) pool.$(OBJEXT) read.$(OBJEXT) \
+	walk.$(OBJEXT) write.$(OBJEXT)
 libnpclient_a_OBJECTS = $(am_libnpclient_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -210,19 +208,14 @@ AM_CPPFLAGS = \
 
 noinst_LIBRARIES = libnpclient.a
 libnpclient_a_SOURCES = \
-	dirread.c \
 	fid.c \
 	fsys.c \
 	mount.c \
-	netmount.c \
 	npcimpl.h \
 	npclient.h \
 	open.c \
 	pool.c \
 	read.c \
-	remove.c \
-	stat2wstat.c \
-	stat.c \
 	walk.c \
 	write.c
 
@@ -274,17 +267,12 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dirread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fsys.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/netmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/open.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/read.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/remove.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stat.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stat2wstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/walk.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/write.Po@am__quote@
 

@@ -20,6 +20,10 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,6 +31,10 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/socket.h>
+#include <stdint.h>
+#include <inttypes.h>
+
+#include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -42,16 +50,12 @@ npc_mount(int fd, char *aname, Npuser *user,
 	if (!fs)
 		return NULL;
 
-	tc = np_create_tversion(8216, "9P2000.u");
+	tc = np_create_tversion(8216, "9P2000.L");
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
 
-	if (rc->version.len==8 && !memcmp(rc->version.str, "9P2000.u", 8)) {
-		fs->dotu = 1;
-	} else if (rc->version.len==6 && !memcmp(rc->version.str, "9P2000", 6)) {
-		fs->dotu = 0;
-	} else {
-		np_werror("unsupported 9P version", EIO);
+	if (np_strcmp(&rc->u.rversion.version, "9P2000.L") != 0) {
+		np_uerror(EIO);
 		goto error;
 	}
 	free(tc);
@@ -63,13 +67,13 @@ npc_mount(int fd, char *aname, Npuser *user,
 		if (!fs->afid)
 			goto error;
 
-		tc = np_create_tauth(fs->afid->fid, user?user->uname:NULL, aname, 
-			user?user->uid:-1, fs->dotu);
+		tc = np_create_tauth(fs->afid->fid, user ? user->uname : NULL,
+				     aname, user ? user->uid : P9_NONUNAME);
 		if (npc_rpc(fs, tc, &rc) < 0) {
 			npc_fid_free(fs->afid);
 			fs->afid = NULL;
 		} else if ((*auth)(fs->afid, user, aux) < 0)
-				goto error;
+			goto error;
 
 		free(tc);
 		free(rc);
@@ -80,8 +84,9 @@ npc_mount(int fd, char *aname, Npuser *user,
 	if (!fs->root) 
 		goto error;
 
-	tc = np_create_tattach(fs->root->fid, fs->afid?fs->afid->fid:NOFID, 
-		user->uname, aname, user->uid, fs->dotu);
+	tc = np_create_tattach(fs->root->fid,
+			       fs->afid ? fs->afid->fid : P9_NOFID, 
+			       user->uname, aname, user->uid);
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
 

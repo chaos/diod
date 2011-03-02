@@ -32,7 +32,6 @@ struct Npcreq {
 	Npfcall*	rc;
 
 	int		ecode;
-	char*		ename;
 
 	void		(*cb)(Npcreq *, void *);
 	void*		cba;
@@ -54,7 +53,6 @@ struct Npcfsys {
 	pthread_mutex_t	lock;
 	pthread_cond_t	cond;
 	int		fd;
-	int		dotu;
 	u32		msize;
 	Nptrans*	trans;
 	Npcfid*		root;
@@ -76,7 +74,7 @@ Npcfsys *npc_create_fsys(int fd, int msize);
 void npc_disconnect_fsys(Npcfsys *fs);
 void npc_incref_fsys(Npcfsys *fs);
 void npc_decref_fsys(Npcfsys *fs);
-int npc_cancel_fid_requests(Npcfid *fid);
+//int npc_cancel_fid_requests(Npcfid *fid);
 
 Npcpool *npc_create_pool(u32 maxid);
 void npc_destroy_pool(Npcpool *p);
@@ -90,6 +88,6 @@ int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
 int npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba);
 
 Npcfid *npc_walk(Npcfsys *fs, char *path);
-int npc_wstatlen(Npstat *st);
-void npc_stat2wstat(Npstat *st, Npwstat *wst, char **sbuf);
+//int npc_wstatlen(Npstat *st);
+//void npc_stat2wstat(Npstat *st, Npwstat *wst, char **sbuf);
 

@@ -207,6 +207,7 @@ util_spopen (char *cmd, pid_t *pidp, int clonens)
     switch ((pid = fork ())) {
         case -1:
             err_exit ("fork");
+            /*NOTREACHED*/
         case 0:     /* child */
             close (sp[0]);
             if (dup2 (sp[1], 0) < 0)
@@ -220,6 +221,7 @@ util_spopen (char *cmd, pid_t *pidp, int clonens)
             if (WEXITSTATUS (s) != 0)
                 msg_exit ("child %d exited with rc=%d", pid, WEXITSTATUS (s));
             exit (0);
+            /*NOTREACHED*/
         default:    /* parent */
             close (sp[1]);
             break;

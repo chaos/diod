@@ -36,19 +36,9 @@ struct Npcfid {
 Npcfsys* npc_mount(int fd, char *aname, Npuser *user, 
 	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux);
 void npc_umount(Npcfsys *fs);
-struct addrinfo *npc_netaddr(char *address, int dfltport);
-Npcfsys * npc_netmount(struct addrinfo *address, Npuser *user, int dfltport, 
-	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux);
-Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, int mode);
-Npcfid* npc_open(Npcfsys *fs, char *path, int mode);
+
+Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, u32 mode);
+Npcfid* npc_open(Npcfsys *fs, char *path, u32 mode);
 int npc_close(Npcfid *fid);
-int npc_remove(Npcfsys *fs, char *path);
 int npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset);
 int npc_write(Npcfid *fid, u8 *buf, u32 count, u64 offset);
-int npc_dirread(Npcfid *fid, Npwstat **stat);
-Npwstat *npc_stat(Npcfsys *fs, char *path);
-
-int npc_readnb(Npcfid *fid, u8 *buf, u32 count, u64 offset,
-	void (*cb)(void *cba, u32 count), void *cba);
-int npc_writenb(Npcfid *fid, u8 *buf, u32 count, u64 offset, 
-	void (*cb)(void *cba, u32 count), void *cba);

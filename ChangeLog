@@ -1,3 +1,9 @@
+2011-03-01 Jim Garlick <garlick@llnl.gov>
+
+	* libnpclient/* : Port subset of npfs client to .L.
+
+	* testuser/conjoin.c : Add code to support testing with user clients.
+
 2011-02-28 Jim Garlick <garlick@llnl.gov>
 
 	* diodctl/serv.c : Drop -x argument to diod.

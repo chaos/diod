@@ -20,12 +20,22 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include <unistd.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <errno.h>
+#include <stdint.h>
+#include <inttypes.h>
+
+#include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -33,10 +43,10 @@
 static int npc_clunk(Npcfid *fid);
 
 Npcfid*
-npc_create(Npcfsys *fs, char *path, u32 perm, int mode)
+npc_create(Npcfsys *fs, char *path, u32 flags, u32 mode)
 {
 	char *fname, *pname;
-	Npfcall *tc, *rc;
+	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid;
 
 	pname = strdup(path);
@@ -59,13 +69,15 @@ npc_create(Npcfsys *fs, char *path, u32 perm, int mode)
 	if (!fid) 
 		goto error;
 
-	tc = np_create_tcreate(fid->fid, fname, perm, mode);
+	tc = np_create_tlcreate(fid->fid, fname, flags, mode, getegid());
+	if (!tc)
+		goto error;
 	if (npc_rpc(fs, tc, &rc) < 0)
 		goto error;
 
-	fid->iounit = rc->iounit;
-	if (!fid->iounit || fid->iounit>fid->fsys->msize-IOHDRSZ)
-		fid->iounit = fid->fsys->msize-IOHDRSZ;
+	fid->iounit = rc->u.rlcreate.iounit;
+	if (!fid->iounit || fid->iounit > fid->fsys->msize - P9_IOHDRSZ)
+		fid->iounit = fid->fsys->msize - P9_IOHDRSZ;
 
 	free(tc);
 	free(rc);
@@ -73,13 +85,12 @@ npc_create(Npcfsys *fs, char *path, u32 perm, int mode)
 		free(pname);
 	else
 		free(fname);
-
 	return fid;
 
 error:
 	npc_clunk(fid);
-
-	free(tc);
+	if (tc)
+		free(tc);
 	if (pname)
 		free(pname);
 	else
@@ -89,56 +100,64 @@ error:
 }
 
 Npcfid*
-npc_open(Npcfsys *fs, char *path, int mode)
+npc_open(Npcfsys *fs, char *path, u32 mode)
 {
-	Npfcall *tc, *rc;
+	Npfcall *tc = NULL;
+	Npfcall *rc = NULL;
 	Npcfid *fid;
 
-	fid = npc_walk(fs, path);
-	if (!fid)
-		return NULL;
+	if (!(fid = npc_walk(fs, path)))
+		goto error;
+	if (!(tc = np_create_tlopen(fid->fid, mode)))
+		goto error;
+	if (npc_rpc(fs, tc, &rc) < 0)
+		goto error;
 
-	tc = np_create_topen(fid->fid, mode);
-	if (npc_rpc(fs, tc, &rc) < 0) {
-		npc_clunk(fid);
-		free(tc);
-		return NULL;
-	}
-
-	fid->iounit = rc->iounit;
-	if (!fid->iounit || fid->iounit>fid->fsys->msize-IOHDRSZ)
-		fid->iounit = fid->fsys->msize-IOHDRSZ;
+	fid->iounit = rc->u.rlopen.iounit;
+	if (!fid->iounit || fid->iounit > fid->fsys->msize - P9_IOHDRSZ)
+		fid->iounit = fid->fsys->msize - P9_IOHDRSZ;
 
 	free(tc);
 	free(rc);
 
+	return fid;
+error:
+	if (fid)
+		npc_clunk(fid);
+	if (tc)
+		free(tc);
+	if (rc)
+		free(rc);
 	return fid;
 }
 
 static int
 npc_clunk(Npcfid *fid)
 {
-	Npfcall *tc, *rc;
-	Npcfsys *fs;
+	Npfcall *tc = NULL;
+	Npfcall *rc = NULL;
 
-	fs = fid->fsys;
-	tc = np_create_tclunk(fid->fid);
-	if (npc_rpc(fid->fsys, tc, &rc) < 0) {
-		free(tc);
-		return -1;
-	}
-
+	if (!(tc = np_create_tclunk(fid->fid)))
+		goto error;
+	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+		goto error;
 	npc_fid_free(fid);
 	free(tc);
 	free(rc);
 
 	return 0;
+error:
+	if (tc)
+		free(tc);
+	if (rc)
+		free(rc);
+	return -1;
 }
 
 int
 npc_close(Npcfid *fid)
 {
-	npc_cancel_fid_requests(fid);
+	//npc_cancel_fid_requests(fid);
 	return npc_clunk(fid);
 }
 

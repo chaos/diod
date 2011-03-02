@@ -893,6 +893,23 @@ np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 fi
 }
 
 Npfcall *
+np_create_tlopen(u32 fid, u32 mode)
+{
+        struct cbuf buffer;
+        struct cbuf *bufp = &buffer;
+        int size = sizeof(u32) + sizeof(u32);
+        Npfcall *fc;
+
+        if (!(fc = np_create_common(bufp, size, P9_TLOPEN)))
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->u.tlopen.fid);
+        buf_put_int32(bufp, mode, &fc->u.tlopen.mode);
+
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rlopen(Npqid *qid, u32 iounit)
 {
 	int size = sizeof(*qid) + sizeof(u32);
@@ -907,6 +924,27 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 	buf_put_int32(bufp, iounit, &fc->u.rlopen.iounit);
 
 	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
+{
+        struct cbuf buffer;
+        struct cbuf *bufp = &buffer;
+        int size = sizeof(u32) + sizeof(u32) + strlen(name) + sizeof(u32)
+		 + sizeof(u32) + sizeof(u32);
+        Npfcall *fc;
+
+        if (!(fc = np_create_common(bufp, size, P9_TLCREATE)))
+                return NULL;
+
+        buf_put_int32(bufp, fid, &fc->u.tlcreate.fid);
+        buf_put_str(bufp, name, &fc->u.tlcreate.name);
+        buf_put_int32(bufp, fid, &fc->u.tlcreate.flags);
+        buf_put_int32(bufp, fid, &fc->u.tlcreate.mode);
+        buf_put_int32(bufp, fid, &fc->u.tlcreate.gid);
+
+        return np_post_check(fc, bufp);
 }
 
 Npfcall *

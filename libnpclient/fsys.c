@@ -20,6 +20,10 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -28,6 +32,10 @@
 #include <errno.h>
 #include <sys/socket.h>
 #include <assert.h>
+#include <stdint.h>
+#include <inttypes.h>
+
+#include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -36,16 +44,12 @@ typedef struct Npcrpc Npcrpc;
 struct Npcrpc {
 	pthread_mutex_t	lock;
 	pthread_cond_t	cond;
-	char*		ename;
 	u32		ecode;
 	Npfcall*	tc;
 	Npfcall*	rc;
 };
 
 int npc_chatty;
-
-char *Econn = "connection closed";
-static char *Emismatch = "response mismatch";
 
 static Npcreq *npc_reqalloc();
 static void npc_reqfree(Npcreq *req);
@@ -61,14 +65,13 @@ npc_create_fsys(int fd, int msize)
 
 	fs = malloc(sizeof(*fs));
 	if (!fs) {
-		np_werror(Ennomem, ENOMEM);
+		np_uerror(ENOMEM);
 		return NULL;
 	}
 
 	pthread_mutex_init(&fs->lock, NULL);
 	pthread_cond_init(&fs->cond, NULL);
 	fs->fd = fd;
-	fs->dotu = 0;
 	fs->msize = msize;
 	fs->trans = NULL;
 	fs->root = NULL;
@@ -83,19 +86,19 @@ npc_create_fsys(int fd, int msize)
 
 	fs->trans = np_fdtrans_create(fd, fd);
 	if (!fs->trans) {
-		np_werror("cannot create transport", EIO);
+		np_uerror(EIO);
 		goto error;
 	}
 
-	fs->tagpool = npc_create_pool(NOTAG);
+	fs->tagpool = npc_create_pool(P9_NOTAG);
 	if (!fs->tagpool) {
-		np_werror("cannot create tag pool", EIO);
+		np_uerror(EIO);
 		goto error;
 	}
 		
-	fs->fidpool = npc_create_pool(NOFID);
+	fs->fidpool = npc_create_pool(P9_NOFID);
 	if (!fs->fidpool) {
-		np_werror("cannot create fid pool", EIO);
+		np_uerror(EIO);
 		goto error;
 	}
 
@@ -174,6 +177,7 @@ npc_decref_fsys(Npcfsys *fs)
 	free(fs);
 }
 
+#if 0
 int
 npc_cancel_fid_requests(Npcfid *fid)
 {
@@ -213,7 +217,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 
 	ftags = malloc(n * sizeof(u16));
 	if (!ftags) {
-		np_werror(Ennomem, ENOMEM);
+		np_uerror(ENOMEM);
 		pthread_mutex_unlock(&fs->lock);
 		return -1;
 	}
@@ -270,12 +274,12 @@ npc_cancel_fid_requests(Npcfid *fid)
 
 	return 0;
 }
+#endif
 
 static void*
 npc_read_proc(void *a)
 {
 	int i, n, size, msize;
-	char *ename;
 	Npfcall *fc, *fc1;
 	Npcreq *req, *req1, *unsent, *pend, *preq;
 	Npcfsys *fs;
@@ -295,12 +299,12 @@ again:
 		if (n < size)
 			continue;
 
-		if (!np_deserialize(fc, fc->pkt, fs->dotu))
+		if (!np_deserialize(fc, fc->pkt))
 			break;
 
 		if (npc_chatty) {
 			fprintf(stderr, ">>> ");
-			np_printfcall(stderr, fc, fs->dotu);
+			np_printfcall(stderr, fc);
 			fprintf(stderr, "\n");
 		}
 
@@ -318,21 +322,16 @@ again:
 					fs->pend_first = req->next;
 
 				pthread_mutex_unlock(&fs->lock);
-				ename = NULL;
 				req->rc = fc;
-				if (fc->type == Rerror) {
-					ename = np_strdup(&fc->ename);
-					req->ename = ename;
-					req->ecode = fc->ecode;
+				if (fc->type == P9_RLERROR) {
+					req->ecode = fc->u.rlerror.ecode;
 				} else if (fc->type != req->tc->type+1) {
-					req->ename = Emismatch;
 					req->ecode = EIO;
 				}
 
 				if (req->cb) 
 					(*req->cb)(req, req->cba);
 
-//				free(ename);
 				if (!req->flushed)
 					npc_put_id(fs->tagpool, req->tag);
 				npc_reqfree(req);
@@ -343,7 +342,7 @@ again:
 		if (!req) {
 			pthread_mutex_unlock(&fs->lock);
 			fprintf(stderr, "unmatched response: ");
-			np_printfcall(stderr, fc, fs->dotu);
+			np_printfcall(stderr, fc);
 			fprintf(stderr, "\n");
 			free(fc);
 		}
@@ -368,7 +367,6 @@ again:
 	req = unsent;
 	while (req != NULL) {
 		req->ecode = ECONNABORTED;
-		req->ename = strdup(Econn);
 		req1 = req->next;
 
 		if (req->cb)
@@ -381,7 +379,6 @@ again:
 	req = pend;
 	while (req != NULL) {
 		req->ecode = ECONNABORTED;
-		req->ename = strdup(Econn);
 		req1 = req->next;
 
 		if (req->cb)
@@ -426,7 +423,7 @@ npc_write_proc(void *a)
 		if (fs->trans) {
 			if (npc_chatty) {
 				fprintf(stderr, "<<< ");
-				np_printfcall(stderr, req->tc, fs->dotu);
+				np_printfcall(stderr, req->tc);
 				fprintf(stderr, "\n");
 			}
 			n = np_trans_write(fs->trans, req->tc->pkt, req->tc->size);
@@ -452,7 +449,7 @@ npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba)
 	Npcreq *req;
 
 	if (!fs->trans) {
-		np_werror(Econn, ECONNABORTED);
+		np_uerror(ECONNABORTED);
 		return -1;
 	}
 
@@ -460,7 +457,7 @@ npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba)
 	if (!req) 
 		return -1;
 
-	if (tc->type != Tversion) {
+	if (tc->type != P9_TVERSION) {
 		tc->tag = npc_get_id(fs->tagpool);
 		np_set_tag(tc, tc->tag);
 	}
@@ -492,7 +489,6 @@ npc_rpc_cb(Npcreq *req, void *cba)
 
 	r = cba;
 	pthread_mutex_lock(&r->lock);
-	r->ename = req->ename;
 	r->ecode = req->ecode;
 	r->rc = req->rc;
 	pthread_cond_broadcast(&r->cond);
@@ -509,7 +505,6 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc)
 		*rc = NULL;
 
 	r.ecode = 0;
-	r.ename = NULL;
 	r.tc = tc;
 	r.rc = NULL;
 	pthread_mutex_init(&r.lock, NULL);
@@ -520,29 +515,15 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc)
 		return n;
 
 	pthread_mutex_lock(&r.lock);
-	while (!r.ename && !r.rc)
+	while (!r.ecode && !r.rc)
 		pthread_cond_wait(&r.cond, &r.lock);
 	pthread_mutex_unlock(&r.lock);
 
-	if (r.ename) {
-		np_werror(r.ename, r.ecode);
-		free(r.ename);
+	if (r.ecode) {
+		np_uerror(r.ecode);
 		free(r.rc);
 		return -1;
 	}
-/*
-	if (r.rc->type == Rerror) {
-		ename = np_strdup(&r.rc->ename);
-		np_werror(ename, r.rc->ecode);
-		free(ename);
-		free(r.rc);
-		return -1;
-	} else if (r.tc->type+1 != r.rc->type) {
-		np_werror(Emismatch, EIO);
-		free(r.rc);
-		return -1;
-	}
-*/
 
 	if (rc)
 		*rc = r.rc;
@@ -559,14 +540,13 @@ npc_reqalloc()
 
 	req = malloc(sizeof(*req));
 	if (!req)
-		np_werror(Ennomem, ENOMEM);
+		np_uerror(ENOMEM);
 
 	req->fsys = NULL;
-	req->tag = NOTAG;
+	req->tag = P9_NOTAG;
 	req->tc = NULL;
 	req->rc = NULL;
 	req->ecode = 0;
-	req->ename = NULL;
 	req->cb = NULL;
 	req->cba = NULL;
 	req->next = NULL;
