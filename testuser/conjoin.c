@@ -41,28 +41,40 @@ main (int argc, char *argv[])
         case -1:
             err_exit ("fork");
             /*NOTREACHED*/
-        case 0:     /* child */
+        case 0:     /* child (normally diod server) */
             close (s[0]);
             if (dup2 (s[1], 0) < 0)
-                err_exit ("dup2");
+                err_exit ("cmd2 dup2");
             if ((cs = system (cmd2)) == -1)
-                err_exit ("fork");
-            if (!WIFEXITED (cs) || WEXITSTATUS (cs) != 0)
-                msg_exit ("error running '%s'", cmd2);
+                err_exit ("cmd2 fork");
+            if (!WIFEXITED (cs))
+                msg_exit ("cmd2 terminated abnormally");
+            if (WEXITSTATUS (cs) != 0)
+                msg_exit ("cmd2 exited with rc=%d", WEXITSTATUS (cs));
             exit (0);
             /*NOTREACHED*/
-        default:    /* parent */
+        default:    /* parent (normally user space client) */
             close (s[1]);
-            if (dup2 (s[0], 0) < 0)
-                err_exit ("dup2");
-            if ((cs = system (cmd1)) == -1)
-                err_exit ("fork");
-            if (!WIFEXITED (cs) || WEXITSTATUS (cs) != 0)
-                msg_exit ("error running '%s'", cmd1);
+            if (dup2 (s[0], 0) < 0) {
+                err ("cmd1 dup2");
+                break;
+            }
             close (s[0]);
-            close (0);
+            if ((cs = system (cmd1)) == -1) {
+                err ("cmd1 fork");
+                break;
+            }
+            if (!WIFEXITED (cs)) {
+                msg ("cmd1 terminated abnormally");
+                break;
+            }
+            if (WEXITSTATUS (cs) != 0)
+                msg ("cmd1 exited with rc=%d", WEXITSTATUS (cs));
             break;
     }
+
+    /* reap child */
+    close (0);
     if (waitpid (pid, &cs, 0) < 0)
         err_exit ("waitpid");
     exit (0);
