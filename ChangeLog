@@ -1,3 +1,14 @@
+2011-03-03 Jim Garlick <garlick@llnl.gov>
+
+	* libnpfs/np.c : Fix serialization bug in np_create_tlcreate ().
+	Add missing client-side serialization functions.
+
+	* diod/ops.c : diod_lopen: EINVAL on mode & O_CREAT.
+
+	* libnpclient/* : Add mkdir, stat, create, readp, writep; fix bugs.
+
+	* testuser/* : Add more user space tests.
+
 2011-03-02 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/* : Get working with tests.

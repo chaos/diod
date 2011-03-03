@@ -33,6 +33,7 @@ struct Npcfid {
 	u64		offset;
 };
 
+/* mount.c */
 Npcfsys* npc_start(int fd, int msize);
 void npc_finish (Npcfsys *fs);
 int npc_attach(Npcfsys *fs, char *aname, uid_t uid);
@@ -40,8 +41,26 @@ int npc_clunk(Npcfid *fid);
 Npcfsys* npc_mount(int fd, int msize, char *aname, uid_t uid);
 int npc_umount(Npcfsys *fs);
 
-Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, u32 mode);
+/* open.c */
 Npcfid* npc_open(Npcfsys *fs, char *path, u32 mode);
+Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, u32 mode);
 int npc_close(Npcfid *fid);
-int npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset);
-int npc_write(Npcfid *fid, u8 *buf, u32 count, u64 offset);
+u64 npc_lseek(Npcfid *fid, u64 offset, int whence);
+
+/* read.c */
+int npc_pread(Npcfid *fid, u8 *buf, u32 count, u64 offset);
+int npc_read(Npcfid *fid, u8 *buf, u32 count);
+
+/* write.c */
+int npc_pwrite(Npcfid *fid, u8 *buf, u32 count, u64 offset);
+int npc_write(Npcfid *fid, u8 *buf, u32 count);
+
+/* walk.c */
+Npcfid *npc_walk(Npcfsys *fs, char *path);
+
+/* mkdir.c */
+int npc_mkdir (Npcfsys *fs, char *path, u32 mode);
+
+/* stat.c */
+struct stat;
+int npc_stat (Npcfsys *fs, char *path, struct stat *sb);

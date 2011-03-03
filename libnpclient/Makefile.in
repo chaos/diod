@@ -58,7 +58,7 @@ libnpclient_a_AR = $(AR) $(ARFLAGS)
 libnpclient_a_LIBADD =
 am_libnpclient_a_OBJECTS = fid.$(OBJEXT) fsys.$(OBJEXT) \
 	mount.$(OBJEXT) open.$(OBJEXT) pool.$(OBJEXT) read.$(OBJEXT) \
-	walk.$(OBJEXT) write.$(OBJEXT)
+	walk.$(OBJEXT) write.$(OBJEXT) mkdir.$(OBJEXT) stat.$(OBJEXT)
 libnpclient_a_OBJECTS = $(am_libnpclient_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -217,7 +217,9 @@ libnpclient_a_SOURCES = \
 	pool.c \
 	read.c \
 	walk.c \
-	write.c
+	write.c \
+	mkdir.c \
+	stat.c 
 
 all: all-am
 
@@ -269,10 +271,12 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fsys.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mkdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/open.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/read.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/walk.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/write.Po@am__quote@
 

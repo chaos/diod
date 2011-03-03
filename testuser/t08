@@ -1,0 +1,7 @@
+#!/bin/bash -e
+
+echo creating file
+cp $PATH_DIOD $PATH_EXPDIR/testfile
+echo comparing status
+./tstat "$@" testfile $PATH_EXPDIR/testfile
+exit 0

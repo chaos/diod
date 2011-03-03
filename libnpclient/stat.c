@@ -24,6 +24,9 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,43 +35,64 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <libgen.h>
 
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
 
-int
-npc_pwrite(Npcfid *fid, u8 *buf, u32 count, u64 offset)
+static int
+_fidstat (Npcfid *fid, struct stat *sb)
 {
-	int maxio = fid->fsys->msize - P9_IOHDRSZ;
+	u64 request_mask = P9_GETATTR_BASIC;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
 	errno = 0;
-	if (count > maxio)
-		count = maxio;	
-	if (!(tc = np_create_twrite(fid->fid, offset, count, buf)))
+	if (!(tc = np_create_tgetattr (fid->fid, request_mask)))
 		goto done;
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
-	ret = rc->u.rwrite.count;
+	sb->st_dev = 0;
+	sb->st_ino = rc->u.rgetattr.qid.path;
+	sb->st_mode = rc->u.rgetattr.mode;
+	sb->st_uid = rc->u.rgetattr.uid;
+	sb->st_gid = rc->u.rgetattr.gid;
+	sb->st_nlink = rc->u.rgetattr.nlink;
+	sb->st_rdev = rc->u.rgetattr.rdev;
+	sb->st_size = rc->u.rgetattr.size;
+	sb->st_blksize = rc->u.rgetattr.blksize;
+	sb->st_blocks = rc->u.rgetattr.blocks;
+	sb->st_atime = rc->u.rgetattr.atime_sec;
+	sb->st_atim.tv_nsec = rc->u.rgetattr.atime_nsec;
+	sb->st_mtime = rc->u.rgetattr.mtime_sec;
+	sb->st_mtim.tv_nsec = rc->u.rgetattr.mtime_nsec;
+	sb->st_ctime = rc->u.rgetattr.ctime_sec;
+	sb->st_ctim.tv_nsec = rc->u.rgetattr.ctime_nsec;
+	ret = 0;
 done:
 	errno = np_rerror ();
 	if (tc)
 		free(tc);
 	if (rc)
-		free(rc);
+		free(rc);	
 	return ret;
 }
 
 int
-npc_write(Npcfid *fid, u8 *buf, u32 count)
+npc_stat (Npcfsys *fs, char *path, struct stat *sb)
 {
-	int ret;
+	Npcfid *fid;
+	int saved_errno;
+	int ret = -1;
 
-	ret = npc_pwrite (fid, buf, count, fid->offset);
-	if (ret > 0)
-		fid->offset += ret;
+	if (!(fid = npc_walk (fs, path)))
+		return -1;
+	ret = _fidstat (fid, sb);
+	saved_errno = errno;
+	(void)npc_clunk (fid);
+	errno = saved_errno;
+
 	return ret;
 }

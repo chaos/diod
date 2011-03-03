@@ -931,8 +931,8 @@ np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
 {
         struct cbuf buffer;
         struct cbuf *bufp = &buffer;
-        int size = sizeof(u32) + sizeof(u32) + strlen(name) + sizeof(u32)
-		 + sizeof(u32) + sizeof(u32);
+        int size = sizeof(u32) + sizeof(u16) + strlen(name) 
+		 + sizeof(u32) + sizeof(u32) + sizeof(u32);
         Npfcall *fc;
 
         if (!(fc = np_create_common(bufp, size, P9_TLCREATE)))
@@ -940,9 +940,9 @@ np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
 
         buf_put_int32(bufp, fid, &fc->u.tlcreate.fid);
         buf_put_str(bufp, name, &fc->u.tlcreate.name);
-        buf_put_int32(bufp, fid, &fc->u.tlcreate.flags);
-        buf_put_int32(bufp, fid, &fc->u.tlcreate.mode);
-        buf_put_int32(bufp, fid, &fc->u.tlcreate.gid);
+        buf_put_int32(bufp, flags, &fc->u.tlcreate.flags);
+        buf_put_int32(bufp, mode, &fc->u.tlcreate.mode);
+        buf_put_int32(bufp, gid, &fc->u.tlcreate.gid);
 
         return np_post_check(fc, bufp);
 }
@@ -1017,6 +1017,22 @@ np_create_rreadlink(char *target)
 	if (!(fc = np_create_common(bufp, size, P9_RREADLINK)))
 		return NULL;
 	buf_put_str(bufp, target, &fc->u.rreadlink.target);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tgetattr(u32 fid, u64 request_mask)
+{
+	int size = sizeof(u32) + sizeof(u64);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TGETATTR)))
+		return NULL;
+	buf_put_int32(bufp, fid, &fc->u.tgetattr.fid);
+	buf_put_int64(bufp, request_mask, &fc->u.tgetattr.request_mask);
 
 	return np_post_check(fc, bufp);
 }
@@ -1172,6 +1188,24 @@ np_create_rlink(void)
 
 	if (!(fc = np_create_common(bufp, 0, P9_RLINK)))
 		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid)
+{
+	int size = sizeof(u32) + 2 + strlen(name) + sizeof(u32) + sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TMKDIR)))
+		return NULL;
+	buf_put_int32(bufp, dfid, &fc->u.tmkdir.fid);
+	buf_put_str(bufp, name, &fc->u.tmkdir.name);
+	buf_put_int32(bufp, mode, &fc->u.tmkdir.mode);
+	buf_put_int32(bufp, gid, &fc->u.tmkdir.gid);
 
 	return np_post_check(fc, bufp);
 }

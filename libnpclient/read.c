@@ -39,20 +39,20 @@
 #include "npcimpl.h"
 
 int
-npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset)
+npc_pread(Npcfid *fid, u8 *buf, u32 count, u64 offset)
 {
-	int maxread = fid->fsys->msize - P9_IOHDRSZ;
+	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	if (count > maxread)
-		count = maxread;
+	if (count > maxio)
+		count = maxio;
 	if (!(tc = np_create_tread(fid->fid, offset, count)))
 		goto done;
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
+	memmove(buf, rc->u.rread.data, rc->u.rread.count);
 	ret = rc->u.rread.count;
-	memmove(buf, rc->u.rread.data, ret);
 done:
 	if (rc)
 		free(rc);
@@ -60,5 +60,16 @@ done:
 		free(tc);
 	errno = np_rerror ();
 
+	return ret;
+}
+
+int
+npc_read(Npcfid *fid, u8 *buf, u32 count)
+{
+	int ret;
+
+	ret = npc_pread (fid, buf, count, fid->offset);
+	if (ret > 0)
+		fid->offset += ret;
 	return ret;
 }

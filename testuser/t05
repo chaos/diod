@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+echo writing testfile
+./twrite "$@" $PATH_DIOD testfile
+echo comparing result
+if ! cmp $PATH_EXPDIR/testfile $PATH_DIOD; then
+    echo results differ
+    exit 1
+fi
+exit 0

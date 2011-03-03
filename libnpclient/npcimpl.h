@@ -86,8 +86,3 @@ void npc_fid_free(Npcfid *fid);
 
 int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
 int npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba);
-
-Npcfid *npc_walk(Npcfsys *fs, char *path);
-//int npc_wstatlen(Npstat *st);
-//void npc_stat2wstat(Npstat *st, Npwstat *wst, char **sbuf);
-

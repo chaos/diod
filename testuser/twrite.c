@@ -24,27 +24,26 @@
 static void
 usage (void)
 {
-    fprintf (stderr, "Usage: tread aname infile outfile\n");
+    fprintf (stderr, "Usage: twrite aname infile outfile\n");
     exit (1);
 }
 
 static void
-_cat_9tounix (Npcfid *fid, int fd)
+_cat_unixto9 (int fd, Npcfid *fid)
 {
     int n, m, done;
     u8 buf[65536];
 
-    while ((n = npc_read (fid, buf, sizeof (buf))) > 0) {
+    while ((n = read (fd, buf, sizeof (buf))) > 0) {
         done = 0;
         do {
-            if ((m = write (fd, buf + done, n - done)) < 0)
-                err_exit ("write");
+            if ((m = npc_write (fid, buf + done, n - done)) < 0)
+                err_exit ("npc_write");
             done += m;
         } while (done < n);
-    
     }
     if (n < 0)
-        err_exit ("npc_read");
+        err_exit ("read");
 }            
 
 int
@@ -63,15 +62,15 @@ main (int argc, char *argv[])
     infile = argv[2];
     outfile = argv[3];
 
-    if ((fd = open (outfile, O_WRONLY | O_CREAT)) < 0)
+    if ((fd = open (infile, O_RDONLY)) < 0)
         err_exit ("open");
 
     if (!(fs = npc_mount (0, 65536+24, aname, geteuid ())))
         err_exit ("npc_mount");
-    if (!(fid = npc_open (fs, infile, O_RDONLY)))
-        err_exit ("npc_open");
+    if (!(fid = npc_create (fs, outfile, O_WRONLY, 0644)))
+        err_exit ("npc_create");
 
-    _cat_9tounix (fid, fd);
+    _cat_unixto9 (fd, fid);
 
     if (npc_close (fid) < 0)
         err_exit ("npc_close");

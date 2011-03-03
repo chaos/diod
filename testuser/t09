@@ -1,0 +1,13 @@
+#!/bin/bash -e
+
+# P9_MAXWELEM = 16
+FN=1/2/3/4/5/6/7/8/9/a/b/c/d/e/f/10/11/12/13/14/15/16/17/18/19/1a/1b/1c/1d/1e/1f
+
+echo creating file
+./tmkdir "$@" $FN
+echo verifying existance
+if ! [ -e $PATH_EXPDIR/$FN ]; then
+    echo file does not exist
+    exit 1
+fi
+exit 0

@@ -15,4 +15,6 @@ libnpclient_a_SOURCES = \
 	pool.c \
 	read.c \
 	walk.c \
-	write.c
+	write.c \
+	mkdir.c \
+	stat.c 

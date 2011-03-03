@@ -9,3 +9,10 @@ These all run the same way:
 The tests are:
 t01	Simple mount/unmount sanity test.
 t02	Mount attempt on aname that's not exported
+t03	Read a file out of 9p and check integrity
+t04	Try to read a non-existent file.
+t05	Write a file into 9p and check integrity
+t06	Try to write file in non-existent directory.
+t07	Simple mkdir
+t08	Compare p9 stat with regular stat
+t09	Create directory >P9_MAXWELEM directories deep.

@@ -48,6 +48,7 @@ npc_walk(Npcfsys *fs, char *path)
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
 
+	errno = 0;
 	while (*path == '/')
 		path++;
 
@@ -78,7 +79,8 @@ npc_walk(Npcfsys *fs, char *path)
 			s = t + 1;
 		}
 
-		tc = np_create_twalk(nfid, fid->fid, n, wnames);
+		if (!(tc = np_create_twalk(nfid, fid->fid, n, wnames)))
+			goto error;
 		if (npc_rpc(fs, tc, &rc) < 0)
 			goto error;
 
@@ -100,16 +102,15 @@ npc_walk(Npcfsys *fs, char *path)
 	return fid;
 
 error:
-	free(rc);
-	free(tc);
+	errno = np_rerror ();
+	if (rc)
+		free(rc);
+	if (tc)
+		free(tc);
 	if (nfid == fid->fid) {
-		tc = np_create_tclunk(fid->fid);
-		if (!npc_rpc(fs, tc, &rc))
-			npc_fid_free(fid);
-		if (rc)
-			free(rc);
-		if (tc)
-			free(tc);
+		int saved_errno = errno;
+		(void)npc_clunk (fid);
+		errno = saved_errno;
 	}
 	if (fname)
 		free(fname);

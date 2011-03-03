@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+echo creating directory
+./tmkdir "$@" foo
+echo verifying existance
+if ! [ -d $PATH_EXPDIR/foo ]; then
+    echo directory does not exist
+    exit 1
+fi
+exit 0

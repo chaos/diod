@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+echo writing testfile
+./twrite "$@" $PATH_DIOD bogusdir/testfile | :  # should fail
+exit 0

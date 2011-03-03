@@ -41,12 +41,9 @@
 #include "npclient.h"
 #include "npcimpl.h"
 
-/* fid: parent directory on entry, new file on exit.
- */
 static int
-_fidcreate (Npcfid *fid, char *path, u32 flags, u32 mode)
+_fidmkdir(Npcfid *fid, char *path, u32 mode)
 {
-	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	char *cpy, *fname;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
@@ -57,13 +54,10 @@ _fidcreate (Npcfid *fid, char *path, u32 flags, u32 mode)
 	}
 	fname = basename (cpy);
 	errno = 0;
-	if (!(tc = np_create_tlcreate(fid->fid, fname, flags, mode, getegid())))
+	if (!(tc = np_create_tmkdir(fid->fid, fname, mode, getegid())))
 		goto done;
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
-	fid->iounit = rc->u.rlcreate.iounit;
-	if (!fid->iounit == 0 || fid->iounit > maxio)
-		fid->iounit = maxio;
 	ret = 0;
 done:
 	free (cpy);
@@ -75,8 +69,6 @@ done:
 	return ret;
 }
 
-/* walk to parent
- */
 static Npcfid*
 _walkparent (Npcfsys *fs, char *path)
 {
@@ -94,89 +86,19 @@ _walkparent (Npcfsys *fs, char *path)
 	return fid;
 }
 
-Npcfid*
-npc_create (Npcfsys *fs, char *path, u32 flags, u32 mode)
+int
+npc_mkdir (Npcfsys *fs, char *path, u32 mode)
 {
 	Npcfid *fid;
 	int saved_errno;
-
-	if (!(fid = _walkparent (fs, path)))
-		return NULL;
-	if (_fidcreate (fid, path, flags, mode) < 0) {
-		saved_errno = errno;
-		(void)npc_clunk (fid);
-		errno = saved_errno;
-		fid = NULL;
-	}
-	return fid;
-}
-
-static int
-_fidopen (Npcfid *fid, u32 mode)
-{
-	int maxio = fid->fsys->msize - P9_IOHDRSZ;
-	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	errno = 0;
-	if (!(tc = np_create_tlopen(fid->fid, mode)))
-		goto done;
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
-		goto done;
-	fid->iounit = rc->u.rlopen.iounit;
-	if (fid->iounit == 0 || fid->iounit > maxio)
-		fid->iounit = maxio;
-	fid->offset = 0;
-	ret = 0;
-done:
-	errno = np_rerror ();
-	if (tc)
-		free(tc);
-	if (rc)
-		free(rc);
+	if (!(fid = _walkparent (fs, path)))
+		return -1;
+	ret = _fidmkdir(fid, path, mode);
+	saved_errno = errno;
+	(void)npc_clunk (fid);
+	errno = saved_errno;
+
 	return ret;
-}
-
-Npcfid*
-npc_open (Npcfsys *fs, char *path, u32 mode)
-{
-	int saved_errno;
-	Npcfid *fid;
-
-	if (!(fid = npc_walk (fs, path)))
-		return NULL;
-	if (_fidopen (fid, mode) < 0) {
-		saved_errno = errno;
-		(void)npc_clunk (fid);
-		errno = saved_errno;
-		return NULL;
-	}
-	return fid;
-}
-
-int
-npc_close(Npcfid *fid)
-{
-	return npc_clunk(fid);
-}
-
-u64
-npc_lseek(Npcfid *fid, u64 offset, int whence)
-{
-	u64 file_size = 0;
-
-	switch (whence) {
-		case SEEK_SET:
-			fid->offset = offset;
-			break;
-		case SEEK_CUR:
-			fid->offset += offset;
-			break;
-		case SEEK_END:
-			/* FIXME: get file_size */
-			fid->offset = file_size + offset;
-			break;
-	}
-
-	return fid->offset;
 }
