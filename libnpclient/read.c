@@ -41,33 +41,24 @@
 int
 npc_read(Npcfid *fid, u8 *buf, u32 count, u64 offset)
 {
-	int i, n, l;
-	Npfcall *tc, *rc;
+	int maxread = fid->fsys->msize - P9_IOHDRSZ;
+	Npfcall *tc = NULL, *rc = NULL;
+	int ret = -1;
 
-	n = 0;
-	while (n < count) {
-		i = count - n;
-		if (i > (fid->fsys->msize - P9_IOHDRSZ))
-			i = fid->fsys->msize - P9_IOHDRSZ;
-
-		tc = np_create_tread(fid->fid, offset + n, i);
-		if (npc_rpc(fid->fsys, tc, &rc) < 0) {
-			free(tc);
-			return -1;
-		}
-
-		l = rc->u.rread.count;
-		if (l > count)
-			l = count;
-		memmove(buf, rc->u.rread.data, l);
+	if (count > maxread)
+		count = maxread;
+	if (!(tc = np_create_tread(fid->fid, offset, count)))
+		goto done;
+	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+		goto done;
+	ret = rc->u.rread.count;
+	memmove(buf, rc->u.rread.data, ret);
+done:
+	if (rc)
 		free(rc);
+	if (tc)
 		free(tc);
+	errno = np_rerror ();
 
-		if (l == 0)
-			break;
-
-		n += l;
-	}
-
-	return n;
+	return ret;
 }

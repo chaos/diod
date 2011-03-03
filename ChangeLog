@@ -1,3 +1,11 @@
+2011-03-02 Jim Garlick <garlick@llnl.gov>
+
+	* libnpclient/* : Get working with tests.
+
+	* testuser/t0[1-3] : Three new trivial tests.
+
+	* testuser/tattach.c, testuser/tread.c : New user space client code.
+
 2011-03-01 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/* : Port subset of npfs client to .L.

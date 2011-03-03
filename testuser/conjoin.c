@@ -95,7 +95,7 @@ main (int argc, char *argv[])
         case -1:
             err_exit ("fork");
             /*NOTREACHED*/
-        case 0:     /* child (normally diod server) */
+        case 0:     /* child */
             close (s[0]);
             if (dup2 (s[1], 0) < 0)
                 err_exit ("dup2 for %s leg", _cmd (cmd2));
@@ -104,7 +104,7 @@ main (int argc, char *argv[])
             _interpret_status (cs, _cmd (cmd2));
             exit (0);
             /*NOTREACHED*/
-        default:    /* parent (normally user space client) */
+        default:    /* parent */
             close (s[1]);
             if (dup2 (s[0], 0) < 0) {
                 err ("dup2 for %s leg", _cmd (cmd1));

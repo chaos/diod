@@ -62,6 +62,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <errno.h>
@@ -344,17 +345,25 @@ _dumpstats (Fid *f)
 {
     FILE *lf = diod_conf_get_statslog ();
     struct timeval death;
+    double lifetime;
 
-    if (lf && f->read_bytes + f->write_bytes > 0) {
-        if (gettimeofday (&death, NULL) == 0) {
-            fprintf (lf, "%s:%llu:%llu:%llu:%llu:%lf\n", f->path,
-                     (unsigned long long)f->read_ops,
-                     (unsigned long long)f->read_bytes,
-                     (unsigned long long)f->write_ops,
-                     (unsigned long long)f->write_bytes,
-                     (double)death.tv_sec + 10E-6*(double)death.tv_usec -
-                    ((double)f->birth.tv_sec + 10E-6*(double)f->birth.tv_usec));
-            fflush (lf);
+    //assert (f != NULL);
+
+    if (f && lf) {
+        lifetime = (double)death.tv_sec + 10E-6*(double)death.tv_usec
+                 - ((double)f->birth.tv_sec + 10E-6*(double)f->birth.tv_usec);
+        if (f->read_bytes + f->write_bytes > 0) {
+            if (gettimeofday (&death, NULL) == 0) {
+                fprintf (lf,
+                        "%s:%"PRIu64":%"PRIu64":%"PRIu64":%"PRIu64":%lf\n",
+                        f->path,
+                        f->read_ops,
+                        f->read_bytes,
+                        f->write_ops,
+                        f->write_bytes,
+                        lifetime);
+                fflush (lf);
+            }
         }
     }
 }

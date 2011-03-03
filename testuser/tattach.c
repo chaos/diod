@@ -17,7 +17,6 @@
 #include "npclient.h"
 
 #include "diod_log.h"
-#include "diod_upool.h"
 
 static void
 usage (void)
@@ -31,7 +30,6 @@ main (int argc, char *argv[])
 {
     Npcfsys *fs;
     char *aname;
-    Npuser *user;
 
     diod_log_init (argv[0]);
 
@@ -39,13 +37,10 @@ main (int argc, char *argv[])
         usage ();
     aname = argv[1];
 
-    if (!(user = diod_upool->uid2user (diod_upool, geteuid ())))
-        msg_exit ("out of memory");
-
-    if (!(fs = npc_mount (0, aname, user, NULL, NULL)))
-        msg_exit ("npc_mount failed");
-
-    npc_umount (fs);
+    if (!(fs = npc_mount (0, 8192+24, aname, geteuid ())))
+        err_exit ("npc_mount");
+    if (npc_umount (fs) < 0)
+        err_exit ("npc_umount");
 
     exit (0);
 }

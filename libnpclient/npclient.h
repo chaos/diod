@@ -33,9 +33,12 @@ struct Npcfid {
 	u64		offset;
 };
 
-Npcfsys* npc_mount(int fd, char *aname, Npuser *user, 
-	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux);
-void npc_umount(Npcfsys *fs);
+Npcfsys* npc_start(int fd, int msize);
+void npc_finish (Npcfsys *fs);
+int npc_attach(Npcfsys *fs, char *aname, uid_t uid);
+int npc_clunk(Npcfid *fid);
+Npcfsys* npc_mount(int fd, int msize, char *aname, uid_t uid);
+int npc_umount(Npcfsys *fs);
 
 Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, u32 mode);
 Npcfid* npc_open(Npcfsys *fs, char *path, u32 mode);

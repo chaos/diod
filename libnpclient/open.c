@@ -40,8 +40,6 @@
 #include "npclient.h"
 #include "npcimpl.h"
 
-static int npc_clunk(Npcfid *fid);
-
 Npcfid*
 npc_create(Npcfsys *fs, char *path, u32 flags, u32 mode)
 {
@@ -100,13 +98,13 @@ error:
 }
 
 Npcfid*
-npc_open(Npcfsys *fs, char *path, u32 mode)
+npc_open (Npcfsys *fs, char *path, u32 mode)
 {
 	Npfcall *tc = NULL;
 	Npfcall *rc = NULL;
 	Npcfid *fid;
 
-	if (!(fid = npc_walk(fs, path)))
+	if (!(fid = npc_walk (fs, path)))
 		goto error;
 	if (!(tc = np_create_tlopen(fid->fid, mode)))
 		goto error;
@@ -129,29 +127,6 @@ error:
 	if (rc)
 		free(rc);
 	return fid;
-}
-
-static int
-npc_clunk(Npcfid *fid)
-{
-	Npfcall *tc = NULL;
-	Npfcall *rc = NULL;
-
-	if (!(tc = np_create_tclunk(fid->fid)))
-		goto error;
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
-		goto error;
-	npc_fid_free(fid);
-	free(tc);
-	free(rc);
-
-	return 0;
-error:
-	if (tc)
-		free(tc);
-	if (rc)
-		free(rc);
-	return -1;
 }
 
 int

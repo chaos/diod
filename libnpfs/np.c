@@ -1214,6 +1214,9 @@ np_deserialize(Npfcall *fc, u8 *data)
 		fprintf(stderr, "unhandled op: %d\n", fc->type);
 		fflush(stderr);
 		goto error;
+	case P9_RLERROR:
+		fc->u.rlerror.ecode = buf_get_int32(bufp);
+		break;
 	case P9_TVERSION:
 		fc->u.tversion.msize = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tversion.version);

@@ -39,9 +39,10 @@ np_trans_create(void *aux, int (*read)(u8 *, u32, void *),
 	Nptrans *trans;
 
 	trans = malloc(sizeof(*trans));
-
-	if (!trans)
+	if (!trans) {
+		np_uerror(ENOMEM);
 		return NULL;
+	}
 
 	trans->aux = aux;
 	trans->read = read;

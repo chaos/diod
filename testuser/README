@@ -1,0 +1,11 @@
+These all run the same way:
+- Makefile sets up environment and invokes test through ./runtest wrapper.
+- ./runtest runs ./conjoin "diod -e ./exp.d ..." "<test> ./exp.d"
+  (conjoin sets up a socketpair and runs test on one end, server on the other)
+- output goes to <test>.out
+- diod log goes to <test>.diod
+- <test>.out is compared with <test>.exp 
+
+The tests are:
+t01	Simple mount/unmount sanity test.
+t02	Mount attempt on aname that's not exported

@@ -1,6 +1,5 @@
 These all run the same way:
-- Makefile sets some environment variables and invokes test through ./runtest
-  wrapper.
+- Makefile sets up environment and invokes test through ./runtest wrapper.
 - ./runtest mounts ./exp.d on ./mnt.d (privately) and runs test script
 - output goes to <test>.out
 - diod log goes to <test>.diod

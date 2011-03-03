@@ -33,79 +33,144 @@
 #include <sys/socket.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <pwd.h>
 
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
 
-Npcfsys*
-npc_mount(int fd, char *aname, Npuser *user, 
-	int (*auth)(Npcfid *afid, Npuser *user, void *aux), void *aux)
-{
-	Npcfsys *fs;
-	Npfcall *tc, *rc;
-
-	fs = npc_create_fsys(fd, 8216);
-	if (!fs)
-		return NULL;
-
-	tc = np_create_tversion(8216, "9P2000.L");
-	if (npc_rpc(fs, tc, &rc) < 0)
-		goto error;
-
-	if (np_strcmp(&rc->u.rversion.version, "9P2000.L") != 0) {
-		np_uerror(EIO);
-		goto error;
-	}
-	free(tc);
-	free(rc);
-	tc = rc = NULL;
-
-	if (auth) {
-		fs->afid = npc_fid_alloc(fs);
-		if (!fs->afid)
-			goto error;
-
-		tc = np_create_tauth(fs->afid->fid, user ? user->uname : NULL,
-				     aname, user ? user->uid : P9_NONUNAME);
-		if (npc_rpc(fs, tc, &rc) < 0) {
-			npc_fid_free(fs->afid);
-			fs->afid = NULL;
-		} else if ((*auth)(fs->afid, user, aux) < 0)
-			goto error;
-
-		free(tc);
-		free(rc);
-		tc = rc = NULL;
-	}
-
-	fs->root = npc_fid_alloc(fs);
-	if (!fs->root) 
-		goto error;
-
-	tc = np_create_tattach(fs->root->fid,
-			       fs->afid ? fs->afid->fid : P9_NOFID, 
-			       user->uname, aname, user->uid);
-	if (npc_rpc(fs, tc, &rc) < 0)
-		goto error;
-
-	free(tc);
-	free(rc);
-	return fs;
-
-error:
-	free(tc);
-	free(rc);
-	npc_disconnect_fsys(fs);
-	npc_decref_fsys(fs);
-
-	return NULL;
-}
+#define PASSWD_BUFSIZE  4096 /* FIXME: sysconf(_SC_GETPW_R_SIZE_MAX) ? */
 
 void
-npc_umount(Npcfsys *fs)
+npc_finish (Npcfsys *fs)
 {
-	npc_disconnect_fsys(fs);
-	npc_decref_fsys(fs);
+	npc_disconnect_fsys (fs);
+	npc_decref_fsys (fs);
+}
+
+Npcfsys*
+npc_start (int fd, int msize)
+{
+	Npcfsys *fs;
+	Npfcall *tc = NULL, *rc = NULL;
+
+	errno = 0;
+	if (!(fs = npc_create_fsys (fd, msize)))
+		goto done;
+	if (!(tc = np_create_tversion (msize, "9P2000.L")))
+		goto done;
+	if (npc_rpc (fs, tc, &rc) < 0)
+		goto done;
+	if (rc->u.rversion.msize < msize)
+		fs->msize = rc->u.rversion.msize;
+	if (np_strcmp (&rc->u.rversion.version, "9P2000.L") != 0) {
+		np_uerror(EIO);
+		goto done;
+	}
+done:
+	if (tc)
+		free (tc);
+	if (rc)
+		free (rc);
+	errno = np_rerror ();
+	if (errno && fs) {
+		npc_finish (fs);
+		fs = NULL;
+	}			
+	return fs;
+}
+
+int
+npc_attach (Npcfsys *fs, char *aname, uid_t uid)
+{
+	Npfcall *tc = NULL, *rc = NULL;
+	Npcfid *fid = NULL;
+	struct passwd pw, *pwd = NULL;
+	char buf[PASSWD_BUFSIZE];
+	int ret = -1;
+
+	errno = 0;
+	errno = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd);
+	if (errno) {
+		np_uerror (errno);
+		goto done;
+	}
+	if (!pwd) {
+		np_uerror (ESRCH);
+		goto done;
+	}
+
+	if (!(fid = npc_fid_alloc (fs)))
+		goto done;
+	if (!(tc = np_create_tattach (fid->fid, P9_NOFID,
+				      pwd->pw_name, aname, pwd->pw_uid)))
+		goto done;
+	if (npc_rpc (fs, tc, &rc) < 0)
+		goto done;
+	fs->root = fid;
+	ret = 0;
+done:
+	if (tc)
+		free (tc);
+	if (rc)
+		free (rc);
+	errno = np_rerror ();
+	if (errno && fid)
+		npc_fid_free (fid);
+
+	return ret;	
+}
+
+int
+npc_clunk (Npcfid *fid)
+{
+        Npfcall *tc = NULL, *rc = NULL;
+	int ret = -1;
+
+	errno = 0;
+        if (!(tc = np_create_tclunk (fid->fid)))
+                goto done;
+        if (npc_rpc (fid->fsys, tc, &rc) < 0)
+                goto done;
+        npc_fid_free(fid);
+	ret = 0;
+done:
+	if (tc)
+        	free (tc);
+	if (rc)
+        	free (rc);
+	errno = np_rerror ();
+
+        return ret;
+}
+
+Npcfsys*
+npc_mount (int fd, int msize, char *aname, uid_t uid)
+{
+	Npcfsys *fs;
+
+	if (!(fs = npc_start (fd, msize)))
+		return NULL;
+	if (npc_attach (fs, aname, uid) < 0) {
+		npc_finish (fs);
+		fs = NULL;
+	}
+
+	return fs;
+}
+
+int
+npc_umount (Npcfsys *fs)
+{
+	int ret = 0;
+
+	if (fs->root) {
+		if (npc_clunk (fs->root) < 0)
+			ret = -1;
+		fs->root = NULL;
+	}
+	npc_finish (fs);
+
+	return ret;
 }
