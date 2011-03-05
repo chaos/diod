@@ -230,8 +230,7 @@ struct Npsrv {
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);
 //	Npfcall*	(*auth)(Npfid *afid, Npstr *uname, Npstr *aname);
-	Npfcall*	(*attach)(Npfid *fid, Npfid *afid, Npstr *uname, 
-				Npstr *aname);
+	Npfcall*	(*attach)(Npfid *fid, Npfid *afid, Npstr *aname);
 	void		(*flush)(Npreq *req);
 	int		(*clone)(Npfid *fid, Npfid *newfid);
 	int		(*walk)(Npfid *fid, Npstr *wname, Npqid *wqid);

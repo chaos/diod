@@ -328,13 +328,11 @@ np_post_check(Npfcall *fc, struct cbuf *bufp)
 Npfcall *
 np_create_tversion(u32 msize, char *version)
 {
-        int size;
+        int size = sizeof(msize) + 2 + strlen(version);;
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 4 + 2 + strlen(version); /* msize[4] version[s] */
         fc = np_create_common(bufp, size, P9_TVERSION);
         if (!fc)
                 return NULL;
@@ -348,13 +346,11 @@ np_create_tversion(u32 msize, char *version)
 Npfcall *
 np_create_rversion(u32 msize, char *version)
 {
-	int size;
+	int size = sizeof(msize) + 2 + strlen(version);
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 4 + 2 + strlen(version); /* msize[4] version[s] */
 	fc = np_create_common(bufp, size, P9_RVERSION);
 	if (!fc)
 		return NULL;
@@ -368,16 +364,13 @@ np_create_rversion(u32 msize, char *version)
 Npfcall *
 np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
 {
-        int size;
+        int size = sizeof(fid) + 2 + 2 + sizeof(n_uname);
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 4 + 2 + 2; /* fid[4] uname[s] aname[s] */
         if (uname)
                 size += strlen(uname);
-
         if (aname)
                 size += strlen(aname);
 
@@ -396,13 +389,11 @@ np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
 Npfcall *
 np_create_rauth(Npqid *aqid)
 {
-	int size;
+	int size = sizeof(*aqid);
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 13; /* aqid[13] */
 	fc = np_create_common(bufp, size, P9_RAUTH);
 	if (!fc)
 		return NULL;
@@ -426,6 +417,7 @@ np_create_tflush(u16 oldtag)
                 return NULL;
 
         buf_put_int16(bufp, oldtag, &fc->u.tflush.oldtag);
+
         return np_post_check(fc, bufp);
 }
 
@@ -449,20 +441,15 @@ np_create_rflush(void)
 Npfcall *
 np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
 {
-        int size;
-        Npfcall *fc;
+        int size = sizeof(fid) + sizeof(afid) + 2 + 2 + sizeof(n_uname);
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
+        Npfcall *fc;
 
-        bufp = &buffer;
-        size = 4 + 4 + 2 + 2; /* fid[4] afid[4] uname[s] aname[s] */
         if (uname)
                 size += strlen(uname);
-
         if (aname)
                 size += strlen(aname);
-
-        size += 4; /* n_uname[4] */
 
         fc = np_create_common(bufp, size, P9_TATTACH);
         if (!fc)
@@ -473,6 +460,7 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
         buf_put_str(bufp, uname, &fc->u.tattach.uname);
         buf_put_str(bufp, aname, &fc->u.tattach.aname);
         buf_put_int32(bufp, n_uname, &fc->u.tattach.n_uname);
+
         return np_post_check(fc, bufp);
 }
 

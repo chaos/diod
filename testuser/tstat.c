@@ -21,6 +21,7 @@
 #include "npclient.h"
 
 #include "diod_log.h"
+#include "diod_auth.h"
 
 static void
 usage (void)
@@ -44,7 +45,7 @@ main (int argc, char *argv[])
     path1 = argv[2];
     path2 = argv[3];
 
-    if (!(fs = npc_mount (0, 65536+24, aname, geteuid ())))
+    if (!(fs = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
         err_exit ("npc_mount");
     if (npc_stat (fs, path1, &sb1) < 0)
         err_exit ("npc_stat");

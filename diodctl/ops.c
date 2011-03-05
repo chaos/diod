@@ -56,13 +56,13 @@
 #include "diod_conf.h"
 #include "diod_trans.h"
 #include "diod_upool.h"
+#include "diod_auth.h"
 #include "diod_sock.h"
 
 #include "serv.h"
 
 static Npfile       *_ctl_root_create (void);
-static Npfcall      *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname,
-                                  Npstr *aname);
+static Npfcall      *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *aname);
 
 void
 diodctl_register_ops (Npsrv *srv)
@@ -71,63 +71,21 @@ diodctl_register_ops (Npsrv *srv)
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->debugprintf = msg;
     srv->upool = diod_upool;
+    srv->auth = diod_auth;
     srv->attach = _ctl_attach;
 }
 
 /* Tattach - announce a new user, and associate her fid with the root dir.
  */
 static Npfcall*
-_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
+_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *aname)
 {
-    char *host = diod_trans_get_host (fid->conn->trans);
-    char *ip = diod_trans_get_ip (fid->conn->trans);
     Npfile *root = (Npfile *)fid->conn->srv->treeaux;
     Npfcall *ret = NULL;
     Npfilefid *f;
 
-    if (nafid) {    /* 9P Tauth not supported */
-        np_uerror (EIO);
-         msg ("diodctl_attach: 9P Tauth is not supported");
-        goto done;
-    }
+    /* N.B. assume aname is /diodctl */
 
-    /* Not all 9P libraries (e.g. libixp) send the aname, so ignore it
-     * since we only offer one (/diodctl).
-     */
-
-#if HAVE_MUNGE
-    /* Munge authentication involves the upool and trans layers:
-     * - we ask the upool layer if the user now attaching has a munge cred
-     * - we stash the uid of the last successful munge auth in the trans layer
-     * - subsequent attaches on the same trans get to leverage the last auth
-     * By the time we get here, invalid munge creds have already been rejected.
-     */
-    if (diod_conf_get_munge ()) {
-        int authenticated;
-
-        if (diod_user_get_authinfo (fid->user, &authenticated) < 0) {
-            np_uerror (ENOMEM);
-            msg ("diodctl_attach: out of memory");
-            goto done;
-        }
-        if (authenticated) {
-            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
-        } else {
-            uid_t auid;
-
-            if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
-                np_uerror (EPERM);
-                msg ("diodctl_attach: attach rejected from unauthenticated user");
-                goto done;
-            }
-            if (auid != 0 && auid != fid->user->uid) {
-                np_uerror (EPERM);
-                msg ("diodctl_attach: attach rejected from unauthenticated user");
-                goto done;
-            }
-        }
-    }
-#endif
     if (!npfile_checkperm (root, fid->user, 4)) {
         np_uerror (EPERM);
         msg ("diodctl_attach: root file mode denies access for user");
@@ -146,9 +104,6 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     fid->aux = f;
     np_fid_incref (fid);
 done:
-    msg ("attach user %s path %.*s host %s(%s): %s",
-         fid->user->uname, aname->len, aname->str,
-         host, ip, np_rerror () ? "DENIED" : "ALLOWED");
     if (np_rerror ())
         npfile_fiddestroy (fid); /* frees fid->aux as Npfilefid* if not NULL */
     return ret;

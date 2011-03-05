@@ -87,6 +87,7 @@
 #include "diod_log.h"
 #include "diod_trans.h"
 #include "diod_upool.h"
+#include "diod_auth.h"
 
 #include "ops.h"
 
@@ -113,7 +114,7 @@ typedef struct {
     struct timeval   birth;
 } Fid;
 
-Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
+Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *aname);
 int          diod_clone  (Npfid *fid, Npfid *newfid);
 int          diod_walk   (Npfid *fid, Npstr *wname, Npqid *wqid);
 Npfcall     *diod_read   (Npfid *fid, u64 offset, u32 count, Npreq *req);
@@ -161,6 +162,7 @@ diod_register_ops (Npsrv *srv)
 {
     srv->msize = 65536;
     srv->upool = diod_upool;
+    srv->auth = diod_auth;
     srv->attach = diod_attach;
     srv->clone = diod_clone;
     srv->walk = diod_walk;
@@ -418,77 +420,29 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
-/* Tattach - announce a new user, and associate her fid with the root dir.
+/* Tattach - attach a new user (fid->user) to aname.
+ *   diod_auth.c::diod_checkauth first authenticates/authorizes user
  */
 Npfcall*
-diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
+diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
 {
-    char *host = diod_trans_get_host (fid->conn->trans);
-    char *ip = diod_trans_get_ip (fid->conn->trans);
     Npfcall* ret = NULL;
     Fid *f = NULL;
     int err;
     Npqid qid;
-    uid_t runasuid;
 
-    if (nafid) {    /* 9P Tauth not supported */
-        np_uerror (EIO);
-        msg ("diod_attach: 9P Tauth is not supported");
-        goto done;
-    }
     if (aname->len == 0 || *aname->str != '/') {
         np_uerror (EPERM);
         msg ("diod_attach: mount attempt for malformed aname");
         goto done;
     }
-    /* If running as a particular user, reject attaches from other users.
-     */
-    if (diod_conf_get_runasuid (&runasuid) && fid->user->uid != runasuid) {
-        np_uerror (EPERM);
-        msg ("diod_attach: attach rejected from unauthorized user");
-        goto done;
-    }
-#if HAVE_MUNGE
-    /* Munge authentication involves the upool and trans layers:
-     * - we ask the upool layer if the user now attaching has a munge cred
-     * - we stash the uid of the last successful munge auth in the trans layer
-     * - subsequent attaches on the same trans get to leverage the last auth
-     * By the time we get here, invalid munge creds have already been rejected.
-     */
-    if (diod_conf_get_munge ()) {
-        int authenticated;
-
-        (void) diod_user_get_authinfo (fid->user, &authenticated);
-        if (authenticated) {
-            diod_trans_set_authuser (fid->conn->trans, fid->user->uid);
-        } else {
-            uid_t auid;
-
-            if (diod_trans_get_authuser (fid->conn->trans, &auid) < 0) {
-                np_uerror (EPERM);
-                msg ("diod_attach: attach rejected from unauthenticated user");
-                goto done;
-            }
-            if (auid != 0 && auid != fid->user->uid) {
-                np_uerror (EPERM);
-                msg ("diod_attach: attach rejected from unauthenticated user");
-                goto done;
-            }
-        }
-    }
-#endif
-    if (!(f = _fidalloc ())) {
+    if (!(f = _fidalloc ()) || !(f->path = _p9strdup(aname))) {
         msg ("diod_attach: out of memory");
         goto done;
     }
-    if (!(f->path = _p9strdup(aname))) {
-        msg ("diod_attach: out of memory");
-        goto done;
-    }
-    if (!diod_conf_match_export (f->path, host, ip, fid->user->uid, &err)) {
+    if (!diod_conf_match_export (f->path, &err)) {
         np_uerror (err);
-        msg ("diod_attach: %s@%s is not permitted to attach to %s",
-              fid->user->uname, host, f->path);
+        msg ("diod_attach: %s doesn not match export", f->path);
         goto done;
     }
     if (_fidstat (f) < 0) {
@@ -505,12 +459,8 @@ diod_attach (Npfid *fid, Npfid *nafid, Npstr *uname, Npstr *aname)
     np_fid_incref (fid);
 
 done:
-    if (np_rerror ()) {
-        msg ("attach user %s path %.*s host %s(%s): DENIED",
-             fid->user->uname, aname->len, aname->str, host, ip);
-        if (f)
-            _fidfree (f);
-    }
+    if (np_rerror () && f)
+        _fidfree (f);
     return ret;
 }
 

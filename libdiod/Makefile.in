@@ -56,8 +56,9 @@ AR = ar
 ARFLAGS = cru
 libdiod_a_AR = $(AR) $(ARFLAGS)
 libdiod_a_LIBADD =
-am_libdiod_a_OBJECTS = diod_log.$(OBJEXT) diod_conf.$(OBJEXT) \
-	diod_trans.$(OBJEXT) diod_upool.$(OBJEXT) diod_sock.$(OBJEXT)
+am_libdiod_a_OBJECTS = diod_auth.$(OBJEXT) diod_log.$(OBJEXT) \
+	diod_conf.$(OBJEXT) diod_trans.$(OBJEXT) diod_upool.$(OBJEXT) \
+	diod_sock.$(OBJEXT)
 libdiod_a_OBJECTS = $(am_libdiod_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -203,10 +204,12 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
-	-I../libnpfs -I../liblsd
+	-I../libnpfs -I../libnpclient -I../liblsd
 
 noinst_LIBRARIES = libdiod.a
 libdiod_a_SOURCES = \
+	diod_auth.c \
+	diod_auth.h \
 	diod_log.c \
 	diod_log.h \
 	diod_conf.c \
@@ -216,7 +219,7 @@ libdiod_a_SOURCES = \
 	diod_upool.c \
 	diod_upool.h \
 	diod_sock.c \
-	diod_sock.h 
+	diod_sock.h
 
 all: all-am
 
@@ -266,6 +269,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_auth.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_conf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_sock.Po@am__quote@

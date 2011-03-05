@@ -53,10 +53,8 @@ typedef struct {
     char            *ip;
     char            *svc;
     int              magic;
-#if HAVE_MUNGE
     int              authenticated;
     uid_t            authuser;
-#endif
 } DTrans;
 
 #define DIOD_TRANS_MAGIC    0xf00fbaaa
@@ -75,9 +73,7 @@ diod_trans_create (int fd, char *host, char *ip, char *svc)
         return NULL;
     dt->magic = DIOD_TRANS_MAGIC;
     dt->fd = fd;
-#if HAVE_MUNGE
     dt->authenticated = 0;
-#endif
     if (!(dt->host = strdup (host))) {
         diod_trans_destroy (dt);
         return NULL;
@@ -169,7 +165,6 @@ diod_trans_get_svc (Nptrans *trans)
     return dt->svc;
 }
 
-#if HAVE_MUNGE
 void
 diod_trans_set_authuser (Nptrans *trans, uid_t uid)
 {
@@ -196,7 +191,6 @@ diod_trans_get_authuser (Nptrans *trans, uid_t *uidp)
 
     return ret;
 }
-#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

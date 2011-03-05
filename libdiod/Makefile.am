@@ -1,11 +1,13 @@
 AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
-	-I../libnpfs -I../liblsd
+	-I../libnpfs -I../libnpclient -I../liblsd
 
 noinst_LIBRARIES = libdiod.a
 
 libdiod_a_SOURCES = \
+	diod_auth.c \
+	diod_auth.h \
 	diod_log.c \
 	diod_log.h \
 	diod_conf.c \
@@ -15,4 +17,4 @@ libdiod_a_SOURCES = \
 	diod_upool.c \
 	diod_upool.h \
 	diod_sock.c \
-	diod_sock.h 
+	diod_sock.h

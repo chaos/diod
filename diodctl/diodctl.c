@@ -73,7 +73,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:e:amD:L:"
+#define OPTIONS "fd:l:w:c:e:anD:L:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -84,7 +84,7 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
     {"allowany",        no_argument,        0, 'a'},
-    {"no-munge-auth",   no_argument,        0, 'm'},
+    {"no-auth",         no_argument,        0, 'n'},
     {"diod-path",       required_argument,  0, 'D'},
     {"log-dest",        required_argument,  0, 'L'},
     {0, 0, 0, 0},
@@ -105,9 +105,7 @@ usage()
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
 "   -a,--allowany          disable TCP wrappers checks\n"
-#if HAVE_MUNGE
-"   -m,--no-munge-auth     do not require munge authentication\n"
-#endif
+"   -n,--no-auth           disable authentication check\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
 "   -L,--log-dest DEST     log to DEST, can be syslog, stderr, or file\n"
 "Note: command line overrides config file\n");
@@ -182,8 +180,8 @@ main(int argc, char **argv)
             case 'a':   /* --allowany */
                 diod_conf_set_tcpwrappers (0);
                 break;
-            case 'm':   /* --no-munge-auth */
-                diod_conf_set_munge (0);
+            case 'n':   /* --no-auth */
+                diod_conf_set_auth_required (0);
                 break;
             case 'D':   /* --diod-path PATH */
                 diod_conf_set_diodpath (optarg);

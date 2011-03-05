@@ -21,7 +21,8 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-int diod_switch_user (Npuser *u, gid_t gid_override);
-void diod_become_user (char *name, uid_t uid, int realtoo);
+extern Npauth *diod_auth;
 
-extern Npuserpool *diod_upool;
+struct Npcfid;
+
+int diod_auth_client_handshake (struct Npcfid *afid, u32 uid);

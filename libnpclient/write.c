@@ -39,7 +39,7 @@
 #include "npcimpl.h"
 
 int
-npc_pwrite(Npcfid *fid, u8 *buf, u32 count, u64 offset)
+npc_pwrite(Npcfid *fid, void *buf, u32 count, u64 offset)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
@@ -63,7 +63,21 @@ done:
 }
 
 int
-npc_write(Npcfid *fid, u8 *buf, u32 count)
+npc_pwrite_all(Npcfid *fid, void *buf, u32 count, u64 offset)
+{
+	int n, done = 0;
+
+	while (done < count) {
+		n = npc_pwrite(fid, buf + done, count - done, offset + done);
+		if (n < 0)
+			return -1;
+		done += n;
+	}
+	return done;
+}
+
+int
+npc_write(Npcfid *fid, void *buf, u32 count)
 {
 	int ret;
 
@@ -71,4 +85,24 @@ npc_write(Npcfid *fid, u8 *buf, u32 count)
 	if (ret > 0)
 		fid->offset += ret;
 	return ret;
+}
+
+int
+npc_write_all(Npcfid *fid, void *buf, u32 count)
+{
+	int n, done = 0;
+
+	while (done < count) {
+		n = npc_write(fid, buf + done, count - done);
+		if (n < 0)
+			return -1;
+		done += n;
+	}
+	return done;
+}
+
+int
+npc_puts (Npcfid *fid, char *buf)
+{
+	return npc_write_all (fid, buf, strlen (buf));
 }

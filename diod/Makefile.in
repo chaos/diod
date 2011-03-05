@@ -59,6 +59,7 @@ am_diod_OBJECTS = diod.$(OBJEXT) ops.$(OBJEXT)
 diod_OBJECTS = $(am_diod_OBJECTS)
 am__DEPENDENCIES_1 =
 diod_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -235,6 +236,7 @@ AM_CPPFLAGS = \
 
 diod_LDADD = \
 	$(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)

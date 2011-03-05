@@ -473,6 +473,11 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 			fc->tag, fc->u.tauth.afid);
 		n += np_printstr(s+n,len-n, "uname", &fc->u.tauth.uname);
 		n += np_printstr(s+n,len-n, "aname", &fc->u.tauth.aname);
+		if (fc->u.tauth.n_uname != P9_NONUNAME)
+			n += snprintf(s+n,len-n, " n_uname %u",
+					fc->u.tauth.n_uname);
+		else
+			n += snprintf(s+n,len-n, " n_uname P9_NONUNAME");
 		break;
 	case P9_RAUTH:
 		n += snprintf(s+n,len-n, "P9_RAUTH tag %u qid ", fc->tag); 
@@ -489,7 +494,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 					fc->u.tattach.n_uname);
 		else
 			n += snprintf(s+n,len-n, " n_uname P9_NONUNAME");
-			
 		break;
 	case P9_RATTACH:
 		n += snprintf(s+n,len-n, "P9_RATTACH tag %u qid ", fc->tag); 

@@ -198,9 +198,7 @@ np_attach(Npreq *req, Npfcall *tc)
 	&& !(*conn->srv->auth->checkauth)(fid, afid, aname))
 		goto done;
 
-	rc = (*conn->srv->attach)(fid, afid,
-					&tc->u.tattach.uname,
-					&tc->u.tattach.aname);
+	rc = (*conn->srv->attach)(fid, afid, &tc->u.tattach.aname);
 
 done:
 	free(aname);

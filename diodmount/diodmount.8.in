@@ -65,10 +65,6 @@ If \fI-u\fR is used, run \fICMD\fR as \fIUSER\fR.
 Pass additional 9P mount options when mounting the \fBdiod\fR server.
 These options override the ones \fBdiodmount\fR sets up internally.
 .TP
-.I "-O, --diodctl-options OPT,[OPT,...]"
-Pass additional 9P mount options when mounting the \fBdiodctl\fR server.
-These options override the ones \fBdiodmount\fR sets up internally.
-.TP
 .I "-v, --verbose"
 Be verbose about what is going on.
 .TP

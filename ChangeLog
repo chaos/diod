@@ -1,3 +1,29 @@
+2011-03-05 Jim Garlick <garlick@llnl.gov>
+
+	* diod/diod.c : Rename --allow-any to --no-wrap.
+	Rename --no-munge-auth to --no-auth.
+
+	* diod/ops.c, diodctl/ops.c : Remove auth checks from attach method.
+	Add auth method.
+
+	* libdiod/diod_auth.[ch] : Implement munge-based npfs auth module.
+	Add diod_auth_client_handshake () to call from client.
+
+	* testuser/*.c : Change mount command to pass client auth function.
+
+	* diodmount/auth.[ch] : Remove.
+
+	* diodmount/ctl.c : Switch to user space based method.
+
+	* libnpfs/* : Simplify attach method function arguments.
+
+	* libnpclient/mount.c : Implement auth protocol.
+
+	* libnpclient/read.c, libnpclient/write.c : Implement more variants
+	of io functions for convenience.
+
+	* libdiod/diod_upool.c : Remove server side authenticaion code.
+
 2011-03-03 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/np.c : Fix serialization bug in np_create_tlcreate ().

@@ -46,7 +46,7 @@ static void np_wthread_create(Npsrv *srv);
 static void *np_wthread_proc(void *a);
 
 static Npfcall* np_default_version(Npconn *, u32, Npstr *);
-static Npfcall* np_default_attach(Npfid *, Npfid *, Npstr *, Npstr *);
+static Npfcall* np_default_attach(Npfid *, Npfid *, Npstr *);
 static void np_default_flush(Npreq *);
 static int np_default_clone(Npfid *, Npfid *);
 static int np_default_walk(Npfid *, Npstr*, Npqid *);
@@ -573,7 +573,7 @@ done:
 }
 
 static Npfcall*
-np_default_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname)
+np_default_attach(Npfid *fid, Npfid *afid, Npstr *aname)
 {
 	np_uerror(EIO);
 	return NULL;

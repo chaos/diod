@@ -39,7 +39,7 @@
 #include "npcimpl.h"
 
 int
-npc_pread(Npcfid *fid, u8 *buf, u32 count, u64 offset)
+npc_pread(Npcfid *fid, void *buf, u32 count, u64 offset)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
@@ -64,7 +64,21 @@ done:
 }
 
 int
-npc_read(Npcfid *fid, u8 *buf, u32 count)
+npc_pread_all(Npcfid *fid, void *buf, u32 count, u64 offset)
+{
+	int n = 0, done = 0;
+
+	while (done < count && n > 0) {
+		n = npc_pread(fid, buf + done, count - done, offset + done);
+		if (n < 0)
+			return -1;
+		done += n;
+	}
+	return done;
+}
+
+int
+npc_read(Npcfid *fid, void *buf, u32 count)
 {
 	int ret;
 
@@ -72,4 +86,36 @@ npc_read(Npcfid *fid, u8 *buf, u32 count)
 	if (ret > 0)
 		fid->offset += ret;
 	return ret;
+}
+
+int
+npc_read_all(Npcfid *fid, void *buf, u32 count)
+{
+	int n = 0, done = 0;
+
+	while (done < count && n > 0) {
+		n = npc_read(fid, buf + done, count - done);
+		if (n < 0)
+			return -1;
+		done += n;
+	}
+	return done;
+}
+
+char *
+npc_gets (Npcfid *fid, char *buf, u32 count)
+{
+	int n, skipchars = 0;
+	char *p;
+
+	n = npc_pread_all (fid, (void *)buf, count - 1, fid->offset);
+	if (n <= 0)
+		return NULL;
+	buf[n] = '\0';
+	if ((p = strchr (buf, '\n'))) {
+		*p = '\0';
+		skipchars++;
+	}
+	fid->offset += strlen (buf) + skipchars;
+	return buf;
 }

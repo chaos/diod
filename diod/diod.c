@@ -57,7 +57,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:aF:u:A:L:s:m"
+#define OPTIONS "d:l:w:e:E:aF:u:A:L:s:n"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -67,8 +67,8 @@ static const struct option longopts[] = {
     {"nwthreads",       required_argument,  0, 'w'},
     {"export",          required_argument,  0, 'e'},
     {"export-file",     required_argument,  0, 'E'},
-    {"allowany",        no_argument,        0, 'a'},
-    {"no-munge-auth",   no_argument,        0, 'm'},
+    {"no-wrap",         no_argument,        0, 'a'},
+    {"no-auth",         no_argument,        0, 'n'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"atomic-max",      required_argument,  0, 'A'},
@@ -89,16 +89,14 @@ usage()
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
-"   -a,--allowany          disable TCP wrappers checks\n"
-#if HAVE_MUNGE
-"   -m,--no-munge-auth     do not require munge authentication\n"
-#endif
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
 "   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
 "   -s,--stats FILE        log detailed I/O stats to FILE\n"
+"   -a,--no-wrap           disable TCP wrappers checks (allow any host)\n"
+"   -n,--no-auth           disable authentication check (allow any user)\n"
     );
     exit (1);
 }
@@ -159,11 +157,11 @@ main(int argc, char **argv)
                 }
                 diod_conf_read_exports (optarg);
                 break;
-            case 'a':   /* --allowany */
+            case 'a':   /* --no-wrap */
                 diod_conf_set_tcpwrappers (0);
                 break;
-            case 'm':   /* --no-munge-auth */
-                diod_conf_set_munge (0);
+            case 'n':   /* --no--auth */
+                diod_conf_set_auth_required (0);
                 break;
             case 'F':   /* --listen-fds N */
                 Fopt = strtoul (optarg, NULL, 10);

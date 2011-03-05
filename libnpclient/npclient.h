@@ -33,27 +33,36 @@ struct Npcfid {
 	u64		offset;
 };
 
+typedef int (*AuthFun)(Npcfid *afid, u32 uid);
+
 /* mount.c */
 Npcfsys* npc_start(int fd, int msize);
 void npc_finish (Npcfsys *fs);
-int npc_attach(Npcfsys *fs, char *aname, uid_t uid);
+int npc_attach(Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid);
 int npc_clunk(Npcfid *fid);
-Npcfsys* npc_mount(int fd, int msize, char *aname, uid_t uid);
+Npcfsys* npc_mount(int fd, int msize, char *aname, AuthFun auth);
 int npc_umount(Npcfsys *fs);
 
 /* open.c */
+int npc_open_fid (Npcfid *fid, u32 mode);
 Npcfid* npc_open(Npcfsys *fs, char *path, u32 mode);
 Npcfid* npc_create(Npcfsys *fs, char *path, u32 perm, u32 mode);
 int npc_close(Npcfid *fid);
 u64 npc_lseek(Npcfid *fid, u64 offset, int whence);
 
 /* read.c */
-int npc_pread(Npcfid *fid, u8 *buf, u32 count, u64 offset);
-int npc_read(Npcfid *fid, u8 *buf, u32 count);
+int npc_pread(Npcfid *fid, void *buf, u32 count, u64 offset);
+int npc_pread_all(Npcfid *fid, void *buf, u32 count, u64 offset);
+int npc_read(Npcfid *fid, void *buf, u32 count);
+int npc_read_all(Npcfid *fid, void *buf, u32 count);
+char *npc_gets(Npcfid *fid, char *buf, u32 count);
 
 /* write.c */
-int npc_pwrite(Npcfid *fid, u8 *buf, u32 count, u64 offset);
-int npc_write(Npcfid *fid, u8 *buf, u32 count);
+int npc_pwrite(Npcfid *fid, void *buf, u32 count, u64 offset);
+int npc_pwrite_all(Npcfid *fid, void *buf, u32 count, u64 offset);
+int npc_write(Npcfid *fid, void *buf, u32 count);
+int npc_write_all(Npcfid *fid, void *buf, u32 count);
+int npc_puts(Npcfid *fid, char *buf);
 
 /* walk.c */
 Npcfid *npc_walk(Npcfsys *fs, char *path);

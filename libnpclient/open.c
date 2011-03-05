@@ -111,8 +111,8 @@ npc_create (Npcfsys *fs, char *path, u32 flags, u32 mode)
 	return fid;
 }
 
-static int
-_fidopen (Npcfid *fid, u32 mode)
+int
+npc_open_fid (Npcfid *fid, u32 mode)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
@@ -145,7 +145,7 @@ npc_open (Npcfsys *fs, char *path, u32 mode)
 
 	if (!(fid = npc_walk (fs, path)))
 		return NULL;
-	if (_fidopen (fid, mode) < 0) {
+	if (npc_open_fid (fid, mode) < 0) {
 		saved_errno = errno;
 		(void)npc_clunk (fid);
 		errno = saved_errno;

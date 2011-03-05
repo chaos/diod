@@ -36,12 +36,6 @@
  * Twalk: if cloning the fid, refcount++ 
  * Tclunk: if fid is destroyed, refcount--
  * User is destroyed when its refcount reaches 0.
- * 
- * Secure authentication is accomplished with munge.  All attaches are denied
- * until an attach is received with a valid munge cred in the uname field.
- * If that attach succedes, subsequent non-munge attaches on the same
- * transport (set up per mount) succeed if the original attach was root or
- * the same user (this logic is in the per-fs srv->attach method).
  */
 
 #if HAVE_CONFIG_H
@@ -58,10 +52,6 @@
 #include <grp.h>
 #include <errno.h>
 #include <assert.h>
-#if HAVE_MUNGE
-#define GPL_LICENSED 1
-#include <munge.h>
-#endif
 
 #include "9p.h"
 #include "npfs.h"
@@ -103,7 +93,6 @@ static Npuserpool upool = {
 #define DUSER_MAGIC 0x3455DDDF
 typedef struct {
     int         magic;
-    int         munged;         /* user supplied a valid munge cred */
     int         nsg;            /* number of supplementary groups */
     gid_t       sg[NGROUPS_MAX];/* supplementary gid array */
 } Duser;
@@ -171,14 +160,13 @@ _getsg (struct passwd *pwd, gid_t *gp, int *glenp)
 }
 
 static Duser *
-_alloc_duser (struct passwd *pwd, int munged)
+_alloc_duser (struct passwd *pwd)
 {
     Duser *d = NULL;
 
     if (!(d = np_malloc (sizeof (*d))))
         goto done;
     d->magic = DUSER_MAGIC;
-    d->munged = munged;
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
 done:
@@ -231,14 +219,14 @@ diod_become_user (char *name, uid_t uid, int realtoo)
 
 
 static Npuser *
-_alloc_user (Npuserpool *up, struct passwd *pwd, int munged)
+_alloc_user (Npuserpool *up, struct passwd *pwd)
 {
     Npuser *u;
     int err;
 
     if (!(u = np_malloc (sizeof (*u))))
         goto done;
-    if (!(u->aux = _alloc_duser (pwd, munged)))
+    if (!(u->aux = _alloc_duser (pwd)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
         np_uerror (err);
@@ -280,47 +268,6 @@ diod_udestroy (Npuserpool *up, Npuser *u)
     /* caller frees u */
 }
 
-int
-diod_user_get_authinfo (Npuser *u, int *authenticated)
-{
-    Duser *d = u->aux;
-    int res = 0;
-
-    assert (d->magic == DUSER_MAGIC);
-    *authenticated = d->munged;
-    return res;
-}
-
-#if HAVE_MUNGE
-static int
-_decode_mungecred (char *uname, uid_t *uidp)
-{
-    int ret = -1;
-    munge_ctx_t ctx;
-    munge_err_t err;
-    uid_t uid;
-
-    if (!(ctx = munge_ctx_create ())) {
-        np_uerror (ENOMEM);
-        goto done;
-    }
-    err = munge_decode (uname, ctx, NULL, 0, &uid, NULL);
-    memset (uname, 0, strlen (uname));
-    /* FIXME: there is another copy in Npfcall->uname to sanitize */
-    /* FIXME: the cred will be logged if DEBUG_9P_TRACE is enabled */
-    munge_ctx_destroy (ctx);
-    if (err != EMUNGE_SUCCESS) {
-        msg ("munge_decode: %s", munge_strerror (err));
-        np_uerror (EPERM);
-        goto done;
-    }
-    ret = 0;
-    *uidp = uid;
-done:
-    return ret;
-}
-#endif
-
 /* N.B. This (or diod_uid2user) is called when handling a 9P attach message.
  * Also called when building a pseudo file system as in diodctl/ops.c.
  */
@@ -331,35 +278,16 @@ diod_uname2user (Npuserpool *up, char *uname)
     int err;
     struct passwd pw, *pwd = NULL;
     char buf[PASSWD_BUFSIZE];
-    int munged = 0;
 
-    if (diod_conf_get_munge () && strncmp (uname, "MUNGE:", 6) == 0) {
-#if HAVE_MUNGE
-        uid_t uid;
-
-        if (_decode_mungecred (uname, &uid) < 0)
-            goto done;
-        if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
-            np_uerror (err);
-            goto done;
-        }
-        munged = 1;
-#else
-        msg ("server not built with --enable-munge");
-        np_uerror (EPERM);
+    if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
+        np_uerror (err);
         goto done;
-#endif
-    } else {
-        if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
-            np_uerror (err);
-            goto done;
-        }
     }
     if (!pwd) {
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd, munged)))
+    if (!(u = _alloc_user (up, pwd)))
         goto done;
     np_user_incref (u);
 done:
@@ -385,7 +313,7 @@ diod_uid2user(Npuserpool *up, u32 uid)
         np_uerror (ESRCH);
         goto done;
     }
-    if (!(u = _alloc_user (up, pwd, 0)))
+    if (!(u = _alloc_user (up, pwd)))
         goto done;
 done:
     np_user_incref (u);

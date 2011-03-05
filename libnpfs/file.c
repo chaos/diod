@@ -294,7 +294,7 @@ npfile_fiddestroy(Npfid *fid)
 }
 
 Npfcall*
-npfile_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname)
+npfile_attach(Npfid *fid, Npfid *afid, Npstr *aname)
 {
 	Npfile *root = (Npfile*) fid->conn->srv->treeaux;
 	Npfilefid *f;

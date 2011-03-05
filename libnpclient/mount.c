@@ -33,14 +33,13 @@
 #include <sys/socket.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <pwd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
-
-#define PASSWD_BUFSIZE  4096 /* FIXME: sysconf(_SC_GETPW_R_SIZE_MAX) ? */
 
 void
 npc_finish (Npcfsys *fs)
@@ -81,30 +80,44 @@ done:
 	return fs;
 }
 
+Npcfid*
+npc_auth (Npcfsys *fs, char *aname, u32 uid)
+{
+        Npcfid *afid = NULL;
+        Npfcall *tc = NULL, *rc = NULL;
+
+        errno = 0;
+        if (!(afid = npc_fid_alloc (fs)))
+                goto done;
+        if (!(tc = np_create_tauth (afid->fid, NULL, aname, uid)))
+                goto done;
+        if (npc_rpc (afid->fsys, tc, &rc) < 0)
+                goto done;
+done:
+        errno = np_rerror ();
+        if (errno && afid) {
+                npc_fid_free (afid);
+                afid = NULL;
+        }
+        if (tc)
+                free(tc);
+        if (rc)
+                free(rc);
+        return afid;
+}
+
 int
-npc_attach (Npcfsys *fs, char *aname, uid_t uid)
+npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid)
 {
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
-	struct passwd pw, *pwd = NULL;
-	char buf[PASSWD_BUFSIZE];
 	int ret = -1;
 
 	errno = 0;
-	errno = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd);
-	if (errno) {
-		np_uerror (errno);
-		goto done;
-	}
-	if (!pwd) {
-		np_uerror (ESRCH);
-		goto done;
-	}
-
 	if (!(fid = npc_fid_alloc (fs)))
 		goto done;
-	if (!(tc = np_create_tattach (fid->fid, P9_NOFID,
-				      pwd->pw_name, aname, pwd->pw_uid)))
+	if (!(tc = np_create_tattach (fid->fid, afid ? afid->fid : P9_NOFID,
+				      NULL, aname, uid)))
 		goto done;
 	if (npc_rpc (fs, tc, &rc) < 0)
 		goto done;
@@ -146,17 +159,34 @@ done:
 }
 
 Npcfsys*
-npc_mount (int fd, int msize, char *aname, uid_t uid)
+npc_mount (int fd, int msize, char *aname, AuthFun auth)
 {
 	Npcfsys *fs;
+	u32 uid = geteuid();
+	Npcfid *afid = NULL;
 
 	if (!(fs = npc_start (fd, msize)))
 		return NULL;
-	if (npc_attach (fs, aname, uid) < 0) {
+	if (auth) {
+		if (!(afid = npc_auth (fs, aname, uid)))
+			np_uerror (0); /* not an error */
+		if (afid) {
+			if (auth (afid, uid) < 0) {
+				npc_clunk (afid);
+				npc_finish (fs);
+				fs = NULL;
+				np_uerror (EIO);
+				goto done;
+			}
+		}
+	}
+	if (npc_attach (fs, afid, aname, uid) < 0) {
+		if (afid)
+			npc_clunk (afid);
 		npc_finish (fs);
 		fs = NULL;
 	}
-
+done:
 	return fs;
 }
 

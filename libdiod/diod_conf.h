@@ -43,8 +43,8 @@ void    diod_conf_set_foreground (int i);
 int     diod_conf_get_tcpwrappers (void);
 void    diod_conf_set_tcpwrappers (int i);
 
-int     diod_conf_get_munge (void);
-void    diod_conf_set_munge (int i);
+int     diod_conf_get_auth_required (void);
+void    diod_conf_set_auth_required (int i);
 
 int     diod_conf_get_runasuid (uid_t *uidp);
 void    diod_conf_set_runasuid (uid_t uid);
@@ -60,8 +60,7 @@ List    diod_conf_get_diodctllisten (void);
 void    diod_conf_clr_diodctllisten (void);
 void    diod_conf_add_diodctllisten (char *s);
 
-int     diod_conf_match_export (char *path, char *host, char *ip, uid_t uid,
-                                int *errp);
+int     diod_conf_match_export (char *path, int *errp);
 void    diod_conf_validate_exports (void);
 void    diod_conf_clr_export (void);
 void    diod_conf_add_export (char *path);

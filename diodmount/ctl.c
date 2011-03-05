@@ -28,6 +28,7 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -47,66 +48,16 @@
 
 #include "9p.h"
 #include "npfs.h"
+#include "npclient.h"
 #include "list.h"
 #include "diod_log.h"
 #include "diod_upool.h"
 #include "diod_sock.h"
+#include "diod_auth.h"
+
 #include "opt.h"
 #include "util.h"
 #include "ctl.h"
-#include "auth.h"
-
-/* Mount diodctl file running on [host] on [dir].
- * Default mount options can be overridden by a comma separated list [opts].
- * If [vopt], say what we're doing before we do it.
- * Exit on error.
- */
-static void
-_diodctl_mount (char *host, char *dir, char *opts, int vopt, char *opt_debug)
-{
-    Opt o = opt_create ();
-    char *options, *dev;
-    char *u = auth_mkuser ();
-    int fd;
-
-    opt_add (o, "uname=%s", u);
-    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
-        err_exit ("connect failed");
-    opt_add (o, "rfdno=%d", fd);
-    opt_add (o, "wfdno=%d", fd);
-    opt_add (o, "trans=fd");
-    opt_add (o, "aname=/diodctl");
-    opt_add (o, "version=9p2000.L");
-    opt_add (o, "access=%d", geteuid ());
-    if (opt_debug)
-        opt_add (o, opt_debug);
-    if (opts)
-        opt_add_cslist_override (o, opts);
-    free (u);
-    options = opt_string (o);
-    opt_destroy (o);
-
-    if (!(dev = malloc (strlen (host) + strlen ("/diodctl") + 2)))
-        msg_exit ("out of memory");
-    sprintf (dev, "%s:%s", host, "/diodctl");
-    if (vopt)
-        msg ("mount %s %s -o%s", dev, dir, options);
-    util_mount (dev, dir, options);
-    free (options);
-    free (dev);
-    close (fd);
-}
-
-static void
-_cat_file (FILE *f)
-{
-    char buf[PATH_MAX];
-
-    while (fgets (buf, sizeof (buf), f))
-        printf ("%s%s", buf, buf[strlen (buf) - 1] == '\n' ? "" : "\n");
-    if (ferror (f))
-        errn_exit (ferror (f), "read error");
-}
 
 /* Allocate and initialize a query_t struct.
  * Exit on error.
@@ -136,144 +87,98 @@ free_query (query_t *r)
     free (r);
 }
 
-/* Overwrite any trailing white space in string [s] with nulls.
+/* Trim leading and trailing whitespace from a string, then duplicate
+ * what's left.  If what's left is an empty string, return NULL.
+ * Exit on malloc failure.
  */
-static void
-_delete_trailing_whitespace (char *s)
+static char *
+_strdup_trim (char *s)
 {
     int n = strlen (s) - 1;
+    char *cpy;
 
     while (n >= 0) {
         if (!isspace (s[n]))
             break;
         s[n--] = '\0';
     }
+    while (*s && isspace (*s))
+        s++;
+    if (strlen (s) == 0)
+        return NULL;
+    if (!(cpy = strdup (s)))
+        err_exit ("out of memory");
+    return cpy;
 }
 
-/* Helper for _diodctl_query ().  This is the parent leg of the fork,
- * responsible for reading data from pipe [fd], assigning it to query_t [r],
- * reaping the child [pid], and returning success (1) or failure (0).
- * N.B. This function cannot exit directly on error because
- * the temporary mount point has to be cleaned up.
+/* Write jobid into ctl file, then read port number back.
  */
-static int
-_query_parent (int fd, pid_t pid, query_t *r, int getport)
+static void
+_getport (Npcfsys *fs, query_t *q, char *jobid)
 {
-    int status, res = 0;
-    FILE *f;
-    char buf[PATH_MAX], *cpy;
+    Npcfid *fid;
+    char buf[64];
 
-    if (!(f = fdopen (fd, "r"))) {
-        err ("error fdopening pipe");
-        goto done;
+    if (!jobid)
+        jobid = "nojob";
+    if (!(fid = npc_open (fs, "ctl", O_RDWR)))
+        err_exit ("ctl: open");
+    if (npc_puts (fid, jobid) < 0)
+        err_exit ("ctl: write");
+    if (!npc_gets (fid, buf, sizeof (buf)))
+        err_exit ("ctl: read");
+    q->port = _strdup_trim (buf);
+    if (npc_close (fid) < 0)
+        err_exit ("ctl: close");
+    if (q->port == NULL)
+        msg_exit ("ctl: error reading port");
+}
+
+/* Read export list from exports file.
+ */
+static void
+_getexports (Npcfsys *fs, query_t *q)
+{
+    Npcfid *fid;
+    char buf[PATH_MAX];
+    char *line;
+
+    if (!(fid = npc_open (fs, "exports", O_RDONLY)))
+        err_exit ("exports: open");
+    errno = 0;
+    while (npc_gets (fid, buf, sizeof (buf))) {
+        if ((line = _strdup_trim (buf)))
+            if (!list_append (q->exports, line))
+                msg_exit ("out of memory");
     }
-    while (fgets (buf, sizeof (buf), f)) {
-        _delete_trailing_whitespace (buf);
-        if (!(cpy = strdup (buf))) {
-            msg ("out of memory");
-            goto done;
-        }
-        if (getport && r->port == NULL)
-            r->port = cpy;
-        else if (!list_append (r->exports, cpy)) {
-            msg ("out of memory");
-            goto done;
-        }
-    }
-    if (ferror (f)) {
-        errn (ferror (f), "error reading pipe");
-        goto done;
-    }
-    fclose (f);
-    if (waitpid (pid, &status, 0) < 0) {
-        err ("wait");
-        goto done;
-    }
-    if (WIFEXITED (status)) {
-        if (WEXITSTATUS (status) != 0) {
-            msg ("child exited with rc=%d", WEXITSTATUS (status));
-            goto done;
-        }
-    } else if (WIFSIGNALED (status)) {
-        err ("child killed by signal %d", WTERMSIG (status));
-        goto done;
-    } else if (WIFSTOPPED (status)) {
-        err ("child stopped by signal %d", WSTOPSIG (status));
-        goto done;
-    } else if (WIFCONTINUED (status)) {
-        err ("child continued");
-        goto done;
-    }
-    res = 1;
-done:
-    return res;
+    if (errno)
+        err_exit ("exports: read");
+    if (npc_close (fid) < 0)
+        err_exit ("exports: close");
 }
 
 /* Interact with diodctl server to determine port number of diod server
  * and a list of exports, returned in a query_t struct that caller must free.
  * If getport is false, skip port query that triggers server creation.
  * Exit on error.
- * N.B. mount is always cleaned up because it's in a private namespace.
  */
 query_t *
-ctl_query (char *host, char *opts, int vopt, int getport, char *jobid,
-                char *opt_debug)
+ctl_query (char *host, int getport, char *jobid)
 {
-    char tmppath[] = "/tmp/diodmount.XXXXXX";
-    char path[PATH_MAX];
-    query_t *res = _alloc_query ();
-    int pfd[2];
-    pid_t pid;
-    char *tmpdir;
-    FILE *f;
+    int fd;
+    Npcfsys *fs;
+    query_t *q = _alloc_query ();
 
-
-    if (pipe (pfd) < 0)
-        err_exit ("pipe");
-    if (!(tmpdir = mkdtemp (tmppath)))
-        err_exit ("failed to create temporary diodctl mount point");
-    switch ((pid = fork())) {
-        case -1:    /* error */
-            err_exit ("fork");
-        case 0:     /* child */
-            close (pfd[0]);
-            close (STDOUT_FILENO);
-            if (dup2 (pfd[1], STDOUT_FILENO) < 0)
-                err_exit ("failed to dup stdout");
-            util_unshare ();
-            _diodctl_mount (host, tmpdir, opts, vopt, opt_debug);
-            if (getport) {
-                snprintf (path, sizeof (path), "%s/ctl", tmpdir);
-                if (!(f = fopen (path, "r+")))
-                    err_exit ("error opening %s", path);
-                if (fprintf (f, "%s", jobid ? jobid : "nojob") < 0)
-                    err_exit ("error writing to %s", path);
-                fflush (f);
-                rewind (f); 
-                _cat_file (f);
-                fclose (f);
-            }
-            snprintf (path, sizeof (path), "%s/exports", tmpdir);
-            if (!(f = fopen (path, "r")))
-                err_exit ("error opening %s", path);
-            _cat_file (f);
-            fclose (f);
-            fflush (stdout);
-            /* ummount is implicit when we exit */
-            exit (0); 
-        default:    /* parent */
-            close (pfd[1]);
-            if (!_query_parent (pfd[0], pid, res, getport)) {
-                free_query (res);
-                res = NULL;
-            }
-            break; 
-    }
-    if (rmdir (tmpdir) < 0)
-        err_exit ("failed to remove temporary diodctl mount point");
-    if (res == NULL)
-        exit (1);
-    return res;
+    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
+        err_exit ("connect failed");
+    if (!(fs = npc_mount (0, 65536+24, "/diodctl", diod_auth_client_handshake)))
+        err_exit ("npc_mount");
+    if (getport)
+        _getport (fs, q, jobid);
+    _getexports (fs, q);
+    if (npc_umount (fs) < 0)
+        err_exit ("mpc_umount");
+    return q;
 }
 
 /*

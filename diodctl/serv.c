@@ -298,10 +298,8 @@ _build_server_args (Server *s)
         goto done;
     if (!diod_conf_get_tcpwrappers () && _append_arg (s, "-a") < 0)
         goto done;
-#if HAVE_MUNGE
-    if (!diod_conf_get_munge () && _append_arg (s, "-m") < 0)
+    if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
         goto done;
-#endif
     if (_append_arg (s, "-E%s", exports_file) < 0)
         goto done;
     if (!(dest = diod_log_get_dest ())) {

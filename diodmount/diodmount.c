@@ -64,12 +64,12 @@
 #include "diod_log.h"
 #include "diod_upool.h"
 #include "diod_sock.h"
+#include "diod_auth.h"
 #include "opt.h"
 #include "util.h"
 #include "ctl.h"
-#include "auth.h"
 
-#define OPTIONS "au:Dnj:fs:x:o:O:Tvp:d:"
+#define OPTIONS "au:Dnj:fs:x:o:Tvp:d:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -82,7 +82,6 @@ static const struct option longopts[] = {
     {"server",          required_argument,   0, 's'},
     {"exec",            required_argument,   0, 'x'},
     {"diod-options",    required_argument,   0, 'o'},
-    {"diodctl-options", required_argument,   0, 'O'},
     {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
     {"diod-port",       required_argument,   0, 'p'},
@@ -109,7 +108,6 @@ usage (void)
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -j,--jobid STR                set job id string\n"
 "   -f,--fake-mount               do everything but the actual diod mount(s)\n"
-"See diodmount(8) for debugging options.\n"
 );
     exit (1);
 }
@@ -129,7 +127,6 @@ main (int argc, char *argv[])
     char *popt = NULL;
     char *uopt = NULL;
     char *oopt = NULL;
-    char *Oopt = NULL;
     char *jopt = NULL;
     char *dopt = NULL;
     char *sopt = NULL;
@@ -159,9 +156,6 @@ main (int argc, char *argv[])
                 break;
             case 'o':   /* --diod-options OPT[,OPT]... */
                 oopt = optarg;
-                break;
-            case 'O':   /* --diodctl-options OPT[,OPT]... */
-                Oopt = optarg;
                 break;
             case 'v':   /* --verbose */
                 vopt = 1;
@@ -225,7 +219,7 @@ main (int argc, char *argv[])
     /* Fetch server export and port info from diodctl, if mode requires it.
      */
     if ((!popt && !sopt) || aopt)
-        ctl = ctl_query (host, Oopt, vopt, aopt, jopt, opt_debug);
+        ctl = ctl_query (host, aopt, jopt);
 
     /* Move into a new namespace for ephemeral mounts (-s, -x).
      * Force -n so we don't leave behind mtab entries.
@@ -375,9 +369,9 @@ _diod_mount (int fd, char *dev, char *dir, char *aname, char *opts,
 {
     Opt o = opt_create ();
     char *options;
-    char *u = auth_mkuser ();
+    //char *u = strdup ("root"); /* FIXME */
 
-    opt_add (o, "uname=%s", u);
+    //opt_add (o, "uname=%s", u);
     opt_add (o, "rfdno=%d", fd);
     opt_add (o, "wfdno=%d", fd);
     opt_add (o, "trans=fd");
@@ -392,7 +386,7 @@ _diod_mount (int fd, char *dev, char *dir, char *aname, char *opts,
         opt_add (o, opt_debug);
     if (opts)
         opt_add_cslist_override (o, opts);
-    free (u);
+    //free (u);
     options = opt_string (o);
     opt_destroy (o);
 

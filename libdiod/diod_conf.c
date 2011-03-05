@@ -56,7 +56,7 @@ typedef struct {
     int          debuglevel;
     int          nwthreads;
     int          foreground;
-    int          munge;
+    int          auth_required;
     int          tcpwrappers;
     uid_t        runasuid;
     int          runasuid_valid;
@@ -72,7 +72,7 @@ static Conf config = {
     .debuglevel     = 0,
     .nwthreads      = 16,
     .foreground     = 0,
-    .munge          = 1,
+    .auth_required  = 1,
     .tcpwrappers    = 1,
     .runasuid_valid = 0,
     .diodpath       = NULL, /* diod_conf_init initializes */
@@ -128,15 +128,15 @@ diod_conf_set_foreground (int i)
 }
 
 int
-diod_conf_get_munge (void)
+diod_conf_get_auth_required (void)
 {
-    return config.munge;
+    return config.auth_required;
 }
 
 void
-diod_conf_set_munge (int i)
+diod_conf_set_auth_required (int i)
 {
-    config.munge = i;
+    config.auth_required = i;
 }
 
 int
@@ -242,12 +242,12 @@ diod_conf_add_diodctllisten (char *s)
 }
 
 /* Tattach verifies path against configured exports.
- * Return 1 on ALLOWED, 0 on DENIED.  On DENjIED, put errno in *errp.
+ * Return 1 on ALLOWED, 0 on DENIED.  On DENIED, put errno in *errp.
  * FIXME: verify host/ip/uid once we parse those in config file
  * FIXME: verify path contains no symlinks below export dir
  */
 int
-diod_conf_match_export (char *path, char *host, char *ip, uid_t uid, int *errp)
+diod_conf_match_export (char *path, int *errp)
 {
     ListIterator itr;
     char *el;
@@ -589,9 +589,9 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (path, L, "debuglevel", &config.debuglevel);
         _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
         _lua_getglobal_int (path, L, "foreground", &config.foreground);
-        _lua_getglobal_int (path, L, "munge", &config.munge);
+        _lua_getglobal_int (path, L, "auth_required", &config.auth_required);
         _lua_getglobal_int (path, L, "tcpwrappers", &config.tcpwrappers);
-        _lua_getglobal_int (path, L, "atomic_max_mb", &config.tcpwrappers);
+        _lua_getglobal_int (path, L, "atomic_max_mb", &config.atomic_max_mb);
         _lua_getglobal_string (path, L, "diodpath", &config.diodpath);
         _lua_getglobal_list_of_strings (path, L, "listen",
                             &config.diodctllisten);

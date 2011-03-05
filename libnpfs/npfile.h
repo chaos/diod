@@ -90,7 +90,7 @@ void npfile_init_srv(Npsrv *, Npfile *);
 
 Npfilefid* npfile_fidalloc(Npfile *file, Npfid *fid); /* added jg */
 void npfile_fiddestroy(Npfid *fid);
-Npfcall *npfile_attach(Npfid *fid, Npfid *afid, Npstr *uname, Npstr *aname);
+Npfcall *npfile_attach(Npfid *fid, Npfid *afid, Npstr *aname);
 int npfile_clone(Npfid *fid, Npfid *newfid);
 int npfile_walk(Npfid *fid, Npstr *wname, Npqid *wqid);
 Npfcall *npfile_open(Npfid *fid, u8 mode);

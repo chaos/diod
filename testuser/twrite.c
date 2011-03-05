@@ -20,6 +20,7 @@
 #include "npclient.h"
 
 #include "diod_log.h"
+#include "diod_auth.h"
 
 static void
 usage (void)
@@ -29,18 +30,14 @@ usage (void)
 }
 
 static void
-_cat_unixto9 (int fd, Npcfid *fid)
+_copy_to9 (int fd, Npcfid *fid)
 {
-    int n, m, done;
+    int n;
     u8 buf[65536];
 
     while ((n = read (fd, buf, sizeof (buf))) > 0) {
-        done = 0;
-        do {
-            if ((m = npc_write (fid, buf + done, n - done)) < 0)
-                err_exit ("npc_write");
-            done += m;
-        } while (done < n);
+        if (npc_write_all (fid, buf, n) < 0)
+            err_exit ("npc_write_all");
     }
     if (n < 0)
         err_exit ("read");
@@ -65,12 +62,12 @@ main (int argc, char *argv[])
     if ((fd = open (infile, O_RDONLY)) < 0)
         err_exit ("open");
 
-    if (!(fs = npc_mount (0, 65536+24, aname, geteuid ())))
+    if (!(fs = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
         err_exit ("npc_mount");
     if (!(fid = npc_create (fs, outfile, O_WRONLY, 0644)))
         err_exit ("npc_create");
 
-    _cat_unixto9 (fd, fid);
+    _copy_to9 (fd, fid);
 
     if (npc_close (fid) < 0)
         err_exit ("npc_close");
