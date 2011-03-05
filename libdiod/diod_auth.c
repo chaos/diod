@@ -23,6 +23,11 @@
 
 /* diod_auth.c - munge authentication for diod */
 
+/* Strategy is to authenticate from user space, then pass fd to kernel
+ * with afid=n munt option.  If correct code is in place, kernel will
+ * skip version and insert afid into attach message.
+ */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -97,23 +102,23 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
 
     /* Auth will be nil in attach if
      * - we fail auth request, indicating auth not required
-     * - secondary attach for v9fs access=user
+     * - secondary attach on this conn (v9fs access=user)
      */
     if (!afid) {
         if (!diod_conf_get_auth_required ()) {
             ret = 1;
-            goto done;
-        }
-        if (diod_trans_get_authuser (fid->conn->trans, &uid)
+        } else if (diod_trans_get_authuser (fid->conn->trans, &uid)
                             && (uid == 0 || fid->user->uid == uid)) {
             ret = 1;
-            goto done;
+        } else {
+            msg ("checkauth: unauthenticated attach rejected");
+            np_uerror (EPERM);
         }
-        msg ("checkauth: unauthenticated attach rejected");
         goto done;
     }
     if (afid->aux == NULL) {
         msg ("checkauth: incomplete authentication handshake");
+        np_uerror (EPERM);
         goto done;
     }
     if (afid->user->uid != fid->user->uid) {
