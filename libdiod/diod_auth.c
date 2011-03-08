@@ -68,14 +68,18 @@ static Npauth _auth = {
 
 Npauth *diod_auth = &_auth;
 
-/* Auth state associated with fid->aux.
+/* Auth state associated with afid->aux.
  */
 #define DIOD_AUTH_MAGIC 0x54346666
 struct diod_auth_struct {
     int magic;
     enum { DA_UNVERIFIED, DA_VERIFIED } state;
+#if HAVE_MUNGE
     char *mungecred;
     munge_ctx_t mungectx;
+    munge_err_t mungerr;
+    uid_t mungeuid;
+#endif
 };
 typedef struct diod_auth_struct *da_t;
 
@@ -90,6 +94,7 @@ _da_create (void)
     }
     da->magic = DIOD_AUTH_MAGIC;
     da->state = DA_UNVERIFIED;
+#if HAVE_MUNGE
     da->mungecred = NULL;
     if (!(da->mungectx = munge_ctx_create ())) {
         np_uerror (ENOMEM);
@@ -97,6 +102,7 @@ _da_create (void)
         da = NULL;
         goto done;
     }
+#endif
 done:
     return da;
 }
@@ -105,10 +111,12 @@ static void
 _da_destroy (da_t da)
 {
     assert (da->magic == DIOD_AUTH_MAGIC);
+#if HAVE_MUNGE
     if (da->mungecred)
         free (da->mungecred);
     if (da->mungectx)
         munge_ctx_destroy (da->mungectx);
+#endif
     da->magic = 0;
     free (da);
 }
@@ -124,6 +132,9 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 
     if (! diod_conf_get_auth_required ())
         goto done;
+#if ! HAVE_MUNGE
+    msg ("warning: auth started but server was not built with MUNGE support");
+#endif
     aqid->path = 0;
     aqid->type = P9_QTAUTH;
     aqid->version = 0;
@@ -145,14 +156,15 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
 {
     da_t da;
     int ret = 0;
-    u32 uid;
 
-    msg ("_auth_check: fid %d afid %d aname %s",
-         fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
+    //msg ("_auth_check: fid %d afid %d aname %s",
+    //     fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
 
     assert (fid != NULL);
 
     if (!afid) {
+        u32 uid;
+
         if (!diod_conf_get_auth_required ()) {
             ret = 1;
         } else if (diod_trans_get_authuser (fid->conn->trans, &uid) == 0
@@ -195,10 +207,8 @@ _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 static int
 _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    munge_err_t err;
     da_t da = afid->aux;
     int ret = -1;
-    uid_t uid;
 
     //msg ("_auth_write: afid %d", afid ? afid->fid : -1);
 
@@ -207,7 +217,10 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
     if (da->state == DA_VERIFIED) {
         np_uerror (EIO);
         goto done;
-    } else if (offset == 0 && !da->mungecred) {
+    }
+
+#if HAVE_MUNGE
+    if (offset == 0 && !da->mungecred) {
         da->mungecred = malloc (count + 1); 
     } else if (da->mungecred && offset == strlen (da->mungecred)) {
         da->mungecred = realloc (da->mungecred, offset + count + 1);
@@ -221,12 +234,11 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
     }
     memcpy (da->mungecred + offset, data, count);
     da->mungecred[offset + count] = '\0';
-
-    /* Try to decode the munge cred.
-     */
-    err = munge_decode (da->mungecred, da->mungectx, NULL, 0, &uid, NULL);
-    if (err == EMUNGE_SUCCESS && afid->user->uid == uid)
+    da->mungerr = munge_decode (da->mungecred, da->mungectx, NULL, 0,
+                                &da->mungeuid, NULL)
+    if (da->mungerr == EMUNGE_SUCCESS && afid->user->uid == da->mungeuid)
         da->state = DA_VERIFIED;
+#endif
     ret = count;
 done:
     return ret;
@@ -249,18 +261,17 @@ _auth_clunk(Npfid *afid)
 int
 diod_auth_client_handshake (Npcfid *afid, u32 uid)
 {
-    char *cred = NULL;
-    munge_ctx_t ctx = NULL;
-    munge_err_t err;
-    int saved_errno = 0;
     int ret = -1; 
+#if HAVE_MUNGE
+    char *cred = NULL;
+    int saved_errno = 0;
+    munge_ctx_t ctx = NULL;
 
     if (!(ctx = munge_ctx_create ())) {
         saved_errno = ENOMEM;
         goto done;
     }
-    err = munge_encode (&cred, ctx, NULL, 0);
-    if (err != EMUNGE_SUCCESS) {
+    if (munge_encode (&cred, ctx, NULL, 0) != EMUNGE_SUCCESS) {
         saved_errno = EPERM;
         goto done;
     }
@@ -270,9 +281,10 @@ diod_auth_client_handshake (Npcfid *afid, u32 uid)
     }
     ret = 0;
 done:
-    munge_ctx_destroy (ctx);
+    if (ctx)
+        munge_ctx_destroy (ctx);
     errno = saved_errno;
-
+#endif
     return ret;
 }
 
