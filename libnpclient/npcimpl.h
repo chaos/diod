@@ -21,25 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-typedef struct Npcreq Npcreq;
 typedef struct Npcpool Npcpool;
-
-struct Npcreq {
-	Npcfsys*	fsys;
-
-	u16		tag;
-	Npfcall*	tc;
-	Npfcall*	rc;
-
-	int		ecode;
-
-	void		(*cb)(Npcreq *, void *);
-	void*		cba;
-
-	int		flushed;
-	Npcreq*		next;
-	Npcreq*		prev;
-};
 
 struct Npcpool {
 	pthread_mutex_t	lock;
@@ -51,30 +33,21 @@ struct Npcpool {
 
 struct Npcfsys {
 	pthread_mutex_t	lock;
-	pthread_cond_t	cond;
 	int		fd;
 	u32		msize;
 	Nptrans*	trans;
 	Npcfid*		root;
-	Npcfid*		afid;
+	//Npcfid*	afid;
 
 	int		refcount;
 	Npcpool*	tagpool;
 	Npcpool*	fidpool;
-
-	Npcreq*		unsent_first;
-	Npcreq*		unsent_last;
-	Npcreq*		pend_first;
-
-	pthread_t	readproc;
-	pthread_t	writeproc;
 };
 
 Npcfsys *npc_create_fsys(int fd, int msize);
 void npc_disconnect_fsys(Npcfsys *fs);
 void npc_incref_fsys(Npcfsys *fs);
 void npc_decref_fsys(Npcfsys *fs);
-//int npc_cancel_fid_requests(Npcfid *fid);
 
 Npcpool *npc_create_pool(u32 maxid);
 void npc_destroy_pool(Npcpool *p);
@@ -85,4 +58,3 @@ Npcfid *npc_fid_alloc(Npcfsys *fs);
 void npc_fid_free(Npcfid *fid);
 
 int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
-int npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba);

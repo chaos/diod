@@ -40,8 +40,10 @@ Npcfsys* npc_start(int fd, int msize);
 void npc_finish (Npcfsys *fs);
 int npc_attach(Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid);
 int npc_clunk(Npcfid *fid);
+Npcfid* npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth);
 Npcfsys* npc_mount(int fd, int msize, char *aname, AuthFun auth);
 int npc_umount(Npcfsys *fs);
+int npc_umount2(Npcfsys *fs);
 
 /* open.c */
 int npc_open_fid (Npcfid *fid, u32 mode);

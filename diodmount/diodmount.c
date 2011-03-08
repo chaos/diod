@@ -60,6 +60,7 @@
 
 #include "9p.h"
 #include "npfs.h"
+#include "npclient.h"
 #include "list.h"
 #include "diod_log.h"
 #include "diod_upool.h"
@@ -92,10 +93,11 @@ static const struct option longopts[] = {
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
 
+#define DIOD_MSIZE 65512
+
 static void  _diod_mount (int fd, char *dev, char *dir, char *aname,
-                          char *opts, int vopt, int fopt, char *opt_debug);
+                          char *opts, int vopt, int fopt, char *dopt);
 static void _verify_mountpoint (char *path, int Dopt);
-static char *_parse_debug (char *s);
 
 static void
 usage (void)
@@ -131,7 +133,6 @@ main (int argc, char *argv[])
     char *dopt = NULL;
     char *sopt = NULL;
     char *xopt = NULL;
-    char *opt_debug = NULL;
     query_t *ctl = NULL;
     int rc = 0;
     pid_t spid;
@@ -206,7 +207,6 @@ main (int argc, char *argv[])
         dir = argv[optind++];
         util_parse_device (device, &aname, &host);
     }
-    opt_debug = _parse_debug (dopt);
 
     /* Must start out with effective root id.
      * We drop euid = root but preserve ruid = root for mount, etc.
@@ -236,27 +236,28 @@ main (int argc, char *argv[])
      */
     if (aopt) {
         ListIterator itr;
-        char *el;
         char path[PATH_MAX];
         char dev[PATH_MAX];
 
+        assert (aname == NULL);
         if (!(itr = list_iterator_create (ctl->exports)))
             msg_exit ("out of memory");
-        while ((el = list_next (itr))) {
-            snprintf (path, sizeof (path), "%s%s", dir ? dir : "", el);
+        while ((aname = list_next (itr))) {
+            snprintf (path, sizeof (path), "%s%s", dir ? dir : "", aname);
             _verify_mountpoint (path, Dopt);
         }
         list_iterator_reset(itr);
-        while ((el = list_next (itr))) {
+        while ((aname = list_next (itr))) {
             if ((sfd = diod_sock_connect (host, ctl->port, 1, 0)) < 0)
                 err_exit ("connect failed");
-            snprintf (dev, sizeof(dev), "%s:%s", host, el);
-            _diod_mount (sfd, dev, path, el, oopt, vopt, fopt, opt_debug);
-            close (sfd);
+            snprintf (dev, sizeof(dev), "%s:%s", host, aname);
+            _diod_mount (sfd, dev, path, aname, oopt, vopt, fopt, dopt);
+            (void)close (sfd);
             if (!nopt)
                 (void)util_update_mtab (dev, path); /* FIXME: handle error */
         }
         list_iterator_destroy (itr);
+        aname = NULL;
 
     /* Mount one file system.
      * If -D option, create mount point as needed.
@@ -272,8 +273,8 @@ main (int argc, char *argv[])
             if (sfd < 0)
                 err_exit ("connect failed");
         }
-        _diod_mount (sfd, device, dir, aname, oopt, vopt, fopt, opt_debug);
-        close (sfd);
+        _diod_mount (sfd, device, dir, aname, oopt, vopt, fopt, dopt);
+        (void)close (sfd);
         if (!nopt) {
             if (!util_update_mtab (device, dir)) {
                 util_umount (dir);
@@ -296,7 +297,7 @@ main (int argc, char *argv[])
 }
 
 static char *
-_parse_debug (char *s)
+_parse_v9fs_debug (char *s)
 {
     char *optstr;
     Opt o;
@@ -361,39 +362,49 @@ _verify_mountpoint (char *path, int Dopt)
  * Default mount options can be overridden by a comma separated list [opts].
  * If [vopt], say what we're doing before we do it.
  * If [fopt], don't actually perform the mount.
+ * Authenticate connection in user space, then pass fd to kernel.
  * Exit on error.
  */
 static void
 _diod_mount (int fd, char *dev, char *dir, char *aname, char *opts,
-             int vopt, int fopt, char *opt_debug)
+             int vopt, int fopt, char *dopt)
 {
     Opt o = opt_create ();
     char *options;
-    //char *u = strdup ("root"); /* FIXME */
+    uid_t uid = geteuid ();;
+    Npcfsys *fs;
 
-    //opt_add (o, "uname=%s", u);
     opt_add (o, "rfdno=%d", fd);
     opt_add (o, "wfdno=%d", fd);
     opt_add (o, "trans=fd");
     opt_add (o, "aname=%s", aname);
-    opt_add (o, "msize=65560");
+    opt_add (o, "msize=%d", DIOD_MSIZE);
     opt_add (o, "version=9p2000.L");
-    if (geteuid () != 0)
-        opt_add (o, "access=%d", geteuid ());
-    else
+    if (uid == 0) {
+        opt_add (o, "uname=root");
         opt_add (o, "access=user");
-    if (opt_debug)
-        opt_add (o, opt_debug);
+    } else {
+        struct passwd *pw = getpwuid (uid);
+
+        if (!pw)
+            err_exit ("could not look up name for uid=%d", uid);
+        opt_add (o, "access=%d", uid);
+        opt_add (o, "uname=%s", pw->pw_name);
+    }
+    opt_add (o, _parse_v9fs_debug (dopt)); /* debug=0 if !dopt */
     if (opts)
         opt_add_cslist_override (o, opts);
-    //free (u);
     options = opt_string (o);
     opt_destroy (o);
 
     if (vopt)
         msg ("mount %s %s -o%s", dev, dir, options);
+    if (!(fs = npc_mount (fd, DIOD_MSIZE, aname, diod_auth_client_handshake)))
+        err_exit ("npc_mount");
+    npc_umount2 (fs);
     if (!fopt)
         util_mount (dev, dir, options);
+    npc_finish (fs);
     free (options);
 }
 

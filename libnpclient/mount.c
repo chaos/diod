@@ -81,24 +81,35 @@ done:
 }
 
 Npcfid*
-npc_auth (Npcfsys *fs, char *aname, u32 uid)
+npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth)
 {
         Npcfid *afid = NULL;
         Npfcall *tc = NULL, *rc = NULL;
+	int saved_errno = 0;
 
         errno = 0;
         if (!(afid = npc_fid_alloc (fs)))
                 goto done;
-        if (!(tc = np_create_tauth (afid->fid, NULL, aname, uid)))
+        if (!(tc = np_create_tauth (afid->fid, NULL, aname, uid))) {
+		saved_errno = ENOMEM;
+		npc_fid_free (afid);
+		afid = NULL;
                 goto done;
-        if (npc_rpc (afid->fsys, tc, &rc) < 0)
-                goto done;
+	}
+        if (npc_rpc (afid->fsys, tc, &rc) < 0) {
+		npc_fid_free (afid);
+		afid = NULL;
+                np_uerror (0); /* not an error - means auth not required */
+		goto done;
+	}
+	if (auth && auth (afid, uid) < 0) {
+		saved_errno = errno;
+		(void)npc_clunk (afid);
+		afid = NULL;
+		goto done;
+	}
 done:
-        errno = np_rerror ();
-        if (errno && afid) {
-                npc_fid_free (afid);
-                afid = NULL;
-        }
+        errno = saved_errno ? saved_errno : np_rerror ();
         if (tc)
                 free(tc);
         if (rc)
@@ -164,30 +175,37 @@ npc_mount (int fd, int msize, char *aname, AuthFun auth)
 	Npcfsys *fs;
 	u32 uid = geteuid();
 	Npcfid *afid = NULL;
+	int err = 1;
 
 	if (!(fs = npc_start (fd, msize)))
-		return NULL;
-	if (auth) {
-		if (!(afid = npc_auth (fs, aname, uid)))
-			np_uerror (0); /* not an error */
-		if (afid) {
-			if (auth (afid, uid) < 0) {
-				npc_clunk (afid);
-				npc_finish (fs);
-				fs = NULL;
-				np_uerror (EIO);
-				goto done;
-			}
-		}
-	}
-	if (npc_attach (fs, afid, aname, uid) < 0) {
-		if (afid)
-			npc_clunk (afid);
+		goto done;
+	if (auth)
+		afid = npc_auth (fs, aname, uid, auth);
+	if (npc_attach (fs, afid, aname, uid) < 0)
+		goto done;
+	err = 0;
+done:
+	if (afid)
+		npc_clunk (afid);
+	if (err) {
 		npc_finish (fs);
 		fs = NULL;
 	}
-done:
 	return fs;
+}
+
+int
+npc_umount2 (Npcfsys *fs)
+{
+	int ret = 0;
+
+	if (fs->root) {
+		if (npc_clunk (fs->root) < 0)
+			ret = -1;
+		fs->root = NULL;
+	}
+
+	return ret;
 }
 
 int
@@ -204,3 +222,4 @@ npc_umount (Npcfsys *fs)
 
 	return ret;
 }
+

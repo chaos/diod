@@ -21,7 +21,7 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/* ctl.c - manipulate diodctl pseudo-files system */
+/* ctl.c - manipulate diodctl pseudo-file system */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -88,7 +88,7 @@ free_query (query_t *r)
 }
 
 /* Trim leading and trailing whitespace from a string, then duplicate
- * what's left.  If what's left is an empty string, return NULL.
+ * what's left, if anything; else return NULL .
  * Exit on malloc failure.
  */
 static char *
@@ -147,9 +147,10 @@ _getexports (Npcfsys *fs, query_t *q)
         err_exit ("exports: open");
     errno = 0;
     while (npc_gets (fid, buf, sizeof (buf))) {
-        if ((line = _strdup_trim (buf)))
-            if (!list_append (q->exports, line))
-                msg_exit ("out of memory");
+        if (!(line = _strdup_trim (buf)))
+            continue;
+        if (!list_append (q->exports, line))
+            msg_exit ("out of memory");
     }
     if (errno)
         err_exit ("exports: read");

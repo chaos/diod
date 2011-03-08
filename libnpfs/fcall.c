@@ -469,10 +469,10 @@ np_clunk(Npreq *req, Npfcall *tc)
 	}
 	rc = (*conn->srv->clunk)(fid);
 
+done:
 	if (rc && rc->type == P9_RCLUNK)
 		np_fid_decref(fid);
 
-done:
 	return rc;
 }
 

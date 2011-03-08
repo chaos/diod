@@ -1,3 +1,29 @@
+2011-03-07 Jim Garlick <garlick@llnl.gov>
+
+	* libnpclient/fsys.c : Rework to make single-threaded synchronous,
+	so that we can use this to do auth in user space, then get rid of
+	our reader and pass the fd to the kernel.
+
+	* diod/ops.c : Clear O_CREAT bit in lopen handler rather than
+	return EINVAL.  The kernel client correctly uses lcreate when
+	it needs to create a file but may pass O_CREAT for an existing file
+	if the user provided that bit in the open.
+
+	* libnpfs/fcall.c : Alter refcounting on afid so it can be clunked
+	after attach and recycled.  Old code was holding a refcount on it
+	after clunk, so when client tried to reuse, for example in a walk,
+	the server would return EIO because the fid appeared to be in use
+	for something else.
+
+	* libdiod/diod_auth.c : Cleanup:
+	- auth_clunk (): overwrite memory containing munge cred.
+	- diod_auth_client_handshake (): set np_uerror on npc_puts () error.
+
+	* libnpclient/npclient.h : Add np_auth () prototype.
+
+	* libnpclient/mount.c : Move auth callback from np_mount () to
+	np_auth ().  Clunk afid after attach.
+
 2011-03-05 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c : Rename --allow-any to --no-wrap.

@@ -917,13 +917,12 @@ diod_lopen (Npfid *fid, u32 mode)
     Npfcall *res = NULL;
     Npqid qid;
 
-    /* clients must use lcreate otherwise we don't have enough
+    /* Clients must use lcreate otherwise we don't have enough
      * information to construct the file mode (need client umask).
+     * Clear the flag and allow open to fail with ENOENT.
      */
-    if ((mode & O_CREAT)) {
-        np_uerror (EINVAL);
-        goto done;
-    }
+    if ((mode & O_CREAT))
+        mode &= ~O_CREAT;
 
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_lopen: error switching user");

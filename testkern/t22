@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 echo writing 4k file
-dd status=noxfer bs=4096 if=/dev/zero of=$PATH_MNTDIR/a count=1
+dd status=noxfer bs=4096 if=/dev/zero >>$PATH_MNTDIR/a count=1
 echo appending 3 bytes
 echo -n foo >>$PATH_MNTDIR/a
 echo verifying

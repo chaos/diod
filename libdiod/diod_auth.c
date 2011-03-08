@@ -23,11 +23,6 @@
 
 /* diod_auth.c - munge authentication for diod */
 
-/* Strategy is to authenticate from user space, then pass fd to kernel
- * with afid=n munt option.  If correct code is in place, kernel will
- * skip version and insert afid into attach message.
- */
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -79,14 +74,18 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
     //msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
 
     if (! diod_conf_get_auth_required ())
-        return 0;
+        return 0; /* fail - no auth required */
     aqid->path = 0;
     aqid->type = P9_QTAUTH;
     aqid->version = 0;
     assert (afid->aux == NULL);
-    return 1;
+    return 1; /* success - proceed with auth handshake on afid */
 }
 
+/* afid will be NULL in attach (and here) if
+ * - we fail auth request, indicating auth not required
+ * - secondary attach on this conn (v9fs access=user)
+ */
 static int
 _auth_check(Npfid *fid, Npfid *afid, char *aname)
 {
@@ -100,14 +99,10 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
 
     assert (fid != NULL);
 
-    /* Auth will be nil in attach if
-     * - we fail auth request, indicating auth not required
-     * - secondary attach on this conn (v9fs access=user)
-     */
     if (!afid) {
         if (!diod_conf_get_auth_required ()) {
             ret = 1;
-        } else if (diod_trans_get_authuser (fid->conn->trans, &uid)
+        } else if (diod_trans_get_authuser (fid->conn->trans, &uid) == 0
                             && (uid == 0 || fid->user->uid == uid)) {
             ret = 1;
         } else {
@@ -159,7 +154,7 @@ done:
 static int
 _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    //msg ("_auth_read: for afid %d", afid ? afid->fid : -1);
+    //msg ("_auth_read: afid %d", afid ? afid->fid : -1);
  
     return 0;
 }
@@ -190,10 +185,11 @@ _auth_clunk(Npfid *afid)
     //msg ("_auth_clunk: afid %d", afid ? afid->fid : -1);
 
     if (afid->aux) {
+        memset (afid->aux, 0, strlen((char *)afid->aux));
         free (afid->aux);
         afid->aux = NULL;
     }
-    return 1;
+    return 1; /* success */
 }
 
 int
@@ -202,22 +198,26 @@ diod_auth_client_handshake (Npcfid *afid, u32 uid)
     char *cred = NULL;
     munge_ctx_t ctx = NULL;
     munge_err_t err;
+    int saved_errno = 0;
     int ret = -1; 
 
     if (!(ctx = munge_ctx_create ())) {
-        np_uerror (ENOMEM);
+        saved_errno = ENOMEM;
         goto done;
     }
     err = munge_encode (&cred, ctx, NULL, 0);
     if (err != EMUNGE_SUCCESS) {
-        np_uerror (EIO);
+        saved_errno = EPERM;
         goto done;
     }
-    if (npc_puts (afid, cred) < 0)
+    if (npc_puts (afid, cred) < 0) {
+        saved_errno = errno;
         goto done;
-    ret = 1;
+    }
+    ret = 0;
 done:
     munge_ctx_destroy (ctx);
+    errno = saved_errno;
 
     return ret;
 }

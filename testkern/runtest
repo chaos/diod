@@ -41,7 +41,7 @@ if ! test -d $PATH_EXPDIR; then
 fi
 
 $PATH_DIODMOUNT -x "$TEST" \
-    -s "$PATH_DIOD -d 0x3 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    -s "$PATH_DIOD -n -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
     nohost:$PATH_EXPDIR $PATH_MNTDIR  \
     >$TEST.out 2>&1
 rc=$?
