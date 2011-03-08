@@ -24,9 +24,6 @@ if [ -z "$PATH_DIOD" ]; then
     exit 1
 fi
 
-rm -rf $PATH_EXPDIR/*
-rm -f $TEST.diod $TEST.out
-
 if test $(id -u) != 0; then
     echo "not root - skipping" >$TEST.out
     exit 77
@@ -39,9 +36,16 @@ if ! test -d $PATH_EXPDIR; then
     echo "test directory vanished" >$TEST.out
     exit 77
 fi
+rm -rf $PATH_EXPDIR/*
+rm -f $TEST.diod $TEST.out
+ulimit -c unlimited
+
+if ! [ -x /usr/bin/munge ] || ! /usr/bin/munge -n >/dev/null 2>&1; then
+    AUTHARG="-n"
+fi
 
 $PATH_DIODMOUNT -x "$TEST" \
-    -s "$PATH_DIOD -n -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    -s "$PATH_DIOD $AUTHARG -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
     nohost:$PATH_EXPDIR $PATH_MNTDIR  \
     >$TEST.out 2>&1
 rc=$?

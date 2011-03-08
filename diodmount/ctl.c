@@ -172,7 +172,7 @@ ctl_query (char *host, int getport, char *jobid)
 
     if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
         err_exit ("connect failed");
-    if (!(fs = npc_mount (0, 65536+24, "/diodctl", diod_auth_client_handshake)))
+    if (!(fs = npc_mount (0, 8192, "/diodctl", diod_auth_client_handshake)))
         err_exit ("npc_mount");
     if (getport)
         _getport (fs, q, jobid);

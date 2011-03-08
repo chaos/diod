@@ -3,6 +3,10 @@
 	* libnpclient/mount.c : Fix error handling that was causing
 	testuser/t02 failure.
 
+	* libdiod/diod_auth.c : Clean up.
+
+	* testuser/runtest, testkern/runtest : Use munge auth if configured.
+
 2011-03-07 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/fsys.c : Rework to make single-threaded synchronous,

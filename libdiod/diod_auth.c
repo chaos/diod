@@ -66,21 +66,73 @@ static Npauth _auth = {
     .clunk          = _auth_clunk,
 };
 
-
 Npauth *diod_auth = &_auth;
 
+/* Auth state associated with fid->aux.
+ */
+#define DIOD_AUTH_MAGIC 0x54346666
+struct diod_auth_struct {
+    int magic;
+    enum { DA_UNVERIFIED, DA_VERIFIED } state;
+    char *mungecred;
+    munge_ctx_t mungectx;
+};
+typedef struct diod_auth_struct *da_t;
+
+static da_t
+_da_create (void)
+{
+    da_t da = NULL;
+
+    if (!(da = malloc (sizeof (*da)))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    da->magic = DIOD_AUTH_MAGIC;
+    da->state = DA_UNVERIFIED;
+    da->mungecred = NULL;
+    if (!(da->mungectx = munge_ctx_create ())) {
+        np_uerror (ENOMEM);
+        free (da);
+        da = NULL;
+        goto done;
+    }
+done:
+    return da;
+}
+
+static void
+_da_destroy (da_t da)
+{
+    assert (da->magic == DIOD_AUTH_MAGIC);
+    if (da->mungecred)
+        free (da->mungecred);
+    if (da->mungectx)
+        munge_ctx_destroy (da->mungectx);
+    da->magic = 0;
+    free (da);
+}
+
+/* returns 1=success (proceed with auth on afid), or
+ *         0=fail (auth not required, or other failure).
+ */
 static int
 _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 {
+    int ret = 0;
     //msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
 
     if (! diod_conf_get_auth_required ())
-        return 0; /* fail - no auth required */
+        goto done;
     aqid->path = 0;
     aqid->type = P9_QTAUTH;
     aqid->version = 0;
     assert (afid->aux == NULL);
-    return 1; /* success - proceed with auth handshake on afid */
+    if (!(afid->aux = _da_create ()))
+        goto done;
+    ret = 1;
+done:
+    return ret;
 }
 
 /* afid will be NULL in attach (and here) if
@@ -91,13 +143,12 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 static int
 _auth_check(Npfid *fid, Npfid *afid, char *aname)
 {
-    munge_ctx_t ctx = NULL;
-    munge_err_t err;
-    uid_t uid;
+    da_t da;
     int ret = 0;
+    u32 uid;
 
-    //msg ("_auth_check: fid %d afid %d aname %s",
-    //     fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
+    msg ("_auth_check: fid %d afid %d aname %s",
+         fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
 
     assert (fid != NULL);
 
@@ -113,8 +164,11 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
         }
         goto done;
     }
-    if (afid->aux == NULL) {
-        msg ("checkauth: incomplete authentication handshake");
+
+    da = afid->aux;
+    assert (da->magic == DIOD_AUTH_MAGIC);
+    if (da->state != DA_VERIFIED) {
+        msg ("checkauth: failed or incomplete auth handshake");
         np_uerror (EPERM);
         goto done;
     }
@@ -124,32 +178,9 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
         np_uerror (EPERM);
         goto done;
     }
-    if (!(ctx = munge_ctx_create ())) {
-        msg ("checkauth: out of memory");
-        np_uerror (ENOMEM);
-        goto done;
-    }
-    err = munge_decode ((char *)afid->aux, ctx, NULL, 0, &uid, NULL);
-    if (err != EMUNGE_SUCCESS) {
-        msg ("checkauth: munge_decode: %s", munge_strerror (err));
-        np_uerror (EPERM);
-        goto done;
-    }
-    if (afid->user->uid != uid) {
-        msg ("checkauth: munge uid=%d != afid uid=%d", uid, afid->user->uid);
-        np_uerror (EPERM);
-        goto done;
-    }
-    diod_trans_set_authuser (fid->conn->trans, uid);
+    diod_trans_set_authuser (fid->conn->trans, afid->user->uid);
     ret = 1;
 done:
-    if (ctx)
-        munge_ctx_destroy (ctx);
-    if (afid && afid->aux) {
-        memset (afid->aux, 0, strlen ((char *)afid->aux));
-        free (afid->aux);
-        afid->aux = NULL;
-    }
     return ret;
 }
 
@@ -164,31 +195,52 @@ _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 static int
 _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    char *credstr;
+    munge_err_t err;
+    da_t da = afid->aux;
+    int ret = -1;
+    uid_t uid;
 
     //msg ("_auth_write: afid %d", afid ? afid->fid : -1);
 
-    if (afid->aux) /* FIXME: handle multiple writes */
-        return 0;
-    if (!(credstr = malloc (count + 1))) {
-        np_uerror (ENOMEM);
-        return 0;
-    }
-    memcpy (credstr, data, count);
-    credstr[count] = '\0';
-    afid->aux = credstr;
+    assert (da->magic == DIOD_AUTH_MAGIC);
 
-    return count;
+    if (da->state == DA_VERIFIED) {
+        np_uerror (EIO);
+        goto done;
+    } else if (offset == 0 && !da->mungecred) {
+        da->mungecred = malloc (count + 1); 
+    } else if (da->mungecred && offset == strlen (da->mungecred)) {
+        da->mungecred = realloc (da->mungecred, offset + count + 1);
+    } else {
+        np_uerror (EIO);
+        goto done;
+    }
+    if (!da->mungecred) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    memcpy (da->mungecred + offset, data, count);
+    da->mungecred[offset + count] = '\0';
+
+    /* Try to decode the munge cred.
+     */
+    err = munge_decode (da->mungecred, da->mungectx, NULL, 0, &uid, NULL);
+    if (err == EMUNGE_SUCCESS && afid->user->uid == uid)
+        da->state = DA_VERIFIED;
+    ret = count;
+done:
+    return ret;
 }
 
 static int
 _auth_clunk(Npfid *afid)
 {
+    da_t da = afid->aux;
+
     //msg ("_auth_clunk: afid %d", afid ? afid->fid : -1);
 
-    if (afid->aux) {
-        memset (afid->aux, 0, strlen((char *)afid->aux));
-        free (afid->aux);
+    if (da) {
+        _da_destroy (da);
         afid->aux = NULL;
     }
     return 1; /* success */

@@ -175,16 +175,18 @@ npc_mount (int fd, int msize, char *aname, AuthFun auth)
 	Npcfsys *fs;
 	u32 uid = geteuid();
 	Npcfid *afid = NULL;
+	int n;
 	int saved_errno = 0;
 
 	if (!(fs = npc_start (fd, msize)))
 		goto done;
 	if (auth)
 		afid = npc_auth (fs, aname, uid, auth);
-	if (npc_attach (fs, afid, aname, uid) < 0) {
-		saved_errno = errno;
-		if (afid)
-			npc_clunk (afid);
+	n = npc_attach (fs, afid, aname, uid);
+	saved_errno = errno;
+	if (afid)
+		npc_clunk (afid);
+	if (n < 0) {
 		npc_finish (fs);
 		errno = saved_errno;
 		fs = NULL;

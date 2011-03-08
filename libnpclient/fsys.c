@@ -93,13 +93,11 @@ void
 npc_disconnect_fsys(Npcfsys *fs)
 {
 	pthread_mutex_lock(&fs->lock);
-#if 0
 	if (fs->fd >= 0) {
-		shutdown(fs->fd, 2);
+		//shutdown(fs->fd, 2);
 		close(fs->fd);
 		fs->fd = -1;
 	}
-#endif
 	if (fs->trans) {
 		np_trans_destroy(fs->trans);
 		fs->trans = NULL;
