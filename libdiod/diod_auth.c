@@ -66,6 +66,7 @@ static Npauth _auth = {
     .clunk          = _auth_clunk,
 };
 
+
 Npauth *diod_auth = &_auth;
 
 static int
@@ -84,6 +85,7 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 
 /* afid will be NULL in attach (and here) if
  * - we fail auth request, indicating auth not required
+ * - primary attach of kernel on this conn after user space hand-off
  * - secondary attach on this conn (v9fs access=user)
  */
 static int

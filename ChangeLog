@@ -1,3 +1,8 @@
+2011-03-08 Jim Garlick <garlick@llnl.gov>
+
+	* libnpclient/mount.c : Fix error handling that was causing
+	testuser/t02 failure.
+
 2011-03-07 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/fsys.c : Rework to make single-threaded synchronous,
