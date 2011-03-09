@@ -1,3 +1,4 @@
+kconjoin: diodmount exited with rc=0
 1024+0 records in
 1024+0 records out
 testing host file system
@@ -111,3 +112,5 @@ tfcntl3: fd: write-locked
 tfcntl3: child forked
 tfcntl3: fd: read-locked (child)
 tfcntl3: child exited with 1, aborting  # ERror
+kconjoin: t23 exited with rc=0
+kconjoin: diod exited with rc=0

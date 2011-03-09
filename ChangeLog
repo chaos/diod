@@ -1,3 +1,12 @@
+2011-03-09 Jim Garlick <garlick@llnl.gov>
+
+	* testkern/*.exp : Update for harness output.
+
+	* testkern/kconjoin.c : New test harness.
+
+	* diodmount/diodmount.c, diodmount/util.[ch] : Add --stdin option,
+	remove --exec, --server testing options.
+
 2011-03-08 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/mount.c : Fix error handling that was causing

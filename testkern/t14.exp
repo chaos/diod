@@ -1,3 +1,6 @@
+kconjoin: diodmount exited with rc=0
 running statfs comparison
 f_type differs
 1 differences
+kconjoin: t14 exited with rc=0
+kconjoin: diod exited with rc=0

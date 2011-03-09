@@ -1,4 +1,7 @@
+kconjoin: diodmount exited with rc=0
 creating file in regular file system
 128+0 records in
 128+0 records out
 comparing file in regular and diod file systems
+kconjoin: t06 exited with rc=0
+kconjoin: diod exited with rc=0

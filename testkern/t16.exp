@@ -1,3 +1,4 @@
+kconjoin: diodmount exited with rc=0
 creating objects
 1024+0 records in
 1024+0 records out
@@ -10,3 +11,5 @@ st_dev differs
 comparing stat(2) results for directory
 st_dev differs
 1 differences
+kconjoin: t16 exited with rc=0
+kconjoin: diod exited with rc=0

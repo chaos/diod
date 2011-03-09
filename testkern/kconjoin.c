@@ -21,7 +21,7 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/* conjoin.c - start processes joined by socketpair on fd 0 */
+/* kconjoin.c - mount server using socketpair connection and run test */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -34,6 +34,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <libgen.h>
+#define _GNU_SOURCE
+#include <sched.h>
 
 #include "diod_log.h"
 
@@ -41,10 +43,14 @@
 #define PATH_MAX 1024
 #endif
 
+#ifndef SHUT_RDRW
+#define SHUT_RDRW 2
+#endif
+
 static void
 usage (void)
 {
-    fprintf (stderr, "Usage: conjoin cmd1 cmd2\n");
+    fprintf (stderr, "Usage: conjoin srv-cmd mnt-cmd tst-cmd\n");
     exit (1);
 }
 
@@ -78,13 +84,14 @@ int
 main (int argc, char *argv[])
 {
     int cs = -1, s[2];
-    char *cmd1, *cmd2;
+    char *srvcmd, *mntcmd, *tstcmd;
     pid_t pid;
 
-    if (argc != 3)
+    if (argc != 4)
         usage ();
-    cmd1 = argv[1];
-    cmd2 = argv[2];
+    srvcmd = argv[1];
+    mntcmd = argv[2];
+    tstcmd = argv[3];
 
     diod_log_init (argv[0]);
 
@@ -95,35 +102,42 @@ main (int argc, char *argv[])
         case -1:
             err_exit ("fork");
             /*NOTREACHED*/
-        case 0:     /* child */
+        case 0:    /* child (mnt-cmd, tst-cmd) */
+            close (s[1]);
+            if (dup2 (s[0], 0) < 0)
+                err_exit ("dup2 for %s leg", _cmd (mntcmd));
             close (s[0]);
-            if (dup2 (s[1], 0) < 0)
-                err_exit ("dup2 for %s leg", _cmd (cmd2));
-            if ((cs = system (cmd2)) == -1)
-                err_exit ("fork for %s leg", _cmd (cmd2));
-            _interpret_status (cs, _cmd (cmd2));
+            if (unshare (CLONE_NEWNS) < 0)
+                err_exit ("unshare");
+            if ((cs = system (mntcmd)) == -1)
+                err_exit ("failed to run %s", _cmd (mntcmd));
+            _interpret_status (cs, _cmd (mntcmd));
+            close (0);
+            if ((cs = system (tstcmd)) == -1)
+                err_exit ("fork for %s leg", _cmd (tstcmd));
+            _interpret_status (cs, _cmd (tstcmd));
             exit (0);
             /*NOTREACHED*/
-        default:    /* parent */
-            close (s[1]);
-            if (dup2 (s[0], 0) < 0) {
-                err ("dup2 for %s leg", _cmd (cmd1));
+        default:     /* parent (srv-cmd) */
+            close (s[0]);
+            if (dup2 (s[1], 0) < 0) {
+                err ("dup2 for %s leg", _cmd (srvcmd));
                 break;
             }
-            close (s[0]);
-            if ((cs = system (cmd1)) == -1)
-                err ("fork for %s leg", _cmd (cmd1));
+            if ((cs = system (srvcmd)) == -1) {
+                err ("fork for %s leg", _cmd (srvcmd));
+                break;
+            }
             break;
     }
 
     /* reap child */
-    close (0);
     if (waitpid (pid, NULL, 0) < 0)
         err_exit ("waitpid");
 
     /* report status of parent now that child has reported */
     if (cs != -1)
-        _interpret_status (cs, _cmd (cmd1));
+        _interpret_status (cs, _cmd (srvcmd));
 
     exit (0);
 }

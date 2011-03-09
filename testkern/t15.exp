@@ -1,3 +1,6 @@
+kconjoin: diodmount exited with rc=0
 writing file with fsync
 1024+0 records in
 1024+0 records out
+kconjoin: t15 exited with rc=0
+kconjoin: diod exited with rc=0

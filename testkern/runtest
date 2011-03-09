@@ -44,9 +44,10 @@ if ! [ -x /usr/bin/munge ] || ! /usr/bin/munge -n >/dev/null 2>&1; then
     AUTHARG="-n"
 fi
 
-$PATH_DIODMOUNT -x "$TEST" \
-    -s "$PATH_DIOD $AUTHARG -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
-    nohost:$PATH_EXPDIR $PATH_MNTDIR  \
+./kconjoin \
+    "$PATH_DIOD $AUTHARG -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    "$PATH_DIODMOUNT -S nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$TEST" \
     >$TEST.out 2>&1
 rc=$?
 if [ $rc != 0 ]; then

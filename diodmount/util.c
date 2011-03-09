@@ -154,23 +154,6 @@ util_umount (const char *target)
         err_exit ("failed to restore effective uid to %d", saved_euid);
 }
 
-/* Unshare file system name space.
- * Swap effective (user) and real (root) uid's for the duration of unshare call.
- * Exit on error.
- */
-void
-util_unshare (void)
-{
-    uid_t saved_euid = geteuid ();
-
-    if (seteuid (0) < 0)
-        err_exit ("failed to set effective uid to root");
-    if (unshare (CLONE_NEWNS) < 0)
-        err_exit ("failed to unshare name space");
-    if (seteuid (saved_euid) < 0)
-        err_exit ("failed to restore effective uid to %d", saved_euid);
-}
-
 /* Given [device] in host:aname format, parse out the host and aname.
  * Caller must free the resulting strings.
  * Exit on error.
@@ -190,61 +173,6 @@ util_parse_device (char *device, char **anamep, char **hostp)
     
     *hostp = host;
     *anamep = aname;
-}
-
-/* Like popen () but create bidirectional socketpair.
- * If clonens is 0, unshare fs namespace in the child.
- * Exit on error.
- */
-int
-util_spopen (char *cmd, pid_t *pidp, int clonens)
-{
-    int s, sp[2];
-    pid_t pid;
-
-    if (socketpair (AF_LOCAL, SOCK_STREAM, 0, sp) < 0)
-        err_exit ("socketpair");
-    switch ((pid = fork ())) {
-        case -1:
-            err_exit ("fork");
-            /*NOTREACHED*/
-        case 0:     /* child */
-            close (sp[0]);
-            if (dup2 (sp[1], 0) < 0)
-                err_exit ("dup2 on socket");
-            if (!clonens)
-                util_unshare ();
-            if ((s = system (cmd)) == -1)
-                err_exit ("fork");
-            if (!WIFEXITED (s))
-                msg_exit ("child %d terminated abnormally", pid);
-            if (WEXITSTATUS (s) != 0)
-                msg_exit ("child %d exited with rc=%d", pid, WEXITSTATUS (s));
-            exit (0);
-            /*NOTREACHED*/
-        default:    /* parent */
-            close (sp[1]);
-            break;
-    }
-    if (pidp)
-        *pidp = pid;
-    return sp[0];
-}
-
-int
-util_runcmd (char *cmd)
-{
-    int s;
-
-    if ((s = system (cmd)) < 0) {
-        err ("fork");
-        return 1;
-    }
-    if (!WIFEXITED (s)) {
-        msg ("command terminated abnormally");
-        return 1;
-    }
-    return WEXITSTATUS (s);
 }
 
 /*

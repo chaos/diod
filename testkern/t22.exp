@@ -1,3 +1,4 @@
+kconjoin: diodmount exited with rc=0
 writing 4k file
 1+0 records in
 1+0 records out
@@ -8,3 +9,5 @@ size is 4099
 *
 00001000  66 6f 6f                                          |foo|
 00001003
+kconjoin: t22 exited with rc=0
+kconjoin: diod exited with rc=0

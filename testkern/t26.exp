@@ -1,4 +1,7 @@
+kconjoin: diodmount exited with rc=0
 creating file with user:group 0:0
 chgrp to gid 42
 before: 0
 after: 42
+kconjoin: t26 exited with rc=0
+kconjoin: diod exited with rc=0

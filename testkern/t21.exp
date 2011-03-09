@@ -1,3 +1,4 @@
+kconjoin: diodmount exited with rc=0
 writing file with 1mb transfers and verifying
 diod: awrite: rsize 65503 count 1048576 offset 0
 diod: awrite:  allocated 1048576 byte cache
@@ -303,5 +304,5 @@ diod: aread:   read 0 bytes at offset 4194304
 diod: aread:   read 0 bytes from cache
 diod: aread:   freed 0 byte cache
 size is 4194304
-unmounting
-waiting for diod to terminate
+kconjoin: t21 exited with rc=0
+kconjoin: diod exited with rc=0

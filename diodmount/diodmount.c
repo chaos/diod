@@ -70,7 +70,7 @@
 #include "util.h"
 #include "ctl.h"
 
-#define OPTIONS "au:Dnj:fs:x:o:Tvp:d:"
+#define OPTIONS "au:Dnj:fo:Tvp:d:S"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -80,13 +80,12 @@ static const struct option longopts[] = {
     {"no-mtab",         no_argument,         0, 'n'},
     {"jobid",           required_argument ,  0, 'j'},
     {"fake-mount",      no_argument,         0, 'f'},
-    {"server",          required_argument,   0, 's'},
-    {"exec",            required_argument,   0, 'x'},
     {"diod-options",    required_argument,   0, 'o'},
     {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
     {"diod-port",       required_argument,   0, 'p'},
     {"v9fs-debug",      required_argument ,  0, 'd'},
+    {"stdin",           no_argument,         0, 'S'},
     {0, 0, 0, 0},
 };
 #else
@@ -126,16 +125,14 @@ main (int argc, char *argv[])
     int vopt = 0;
     int fopt = 0;
     int Dopt = 0;
+    int Sopt = 0;
     char *popt = NULL;
     char *uopt = NULL;
     char *oopt = NULL;
     char *jopt = NULL;
     char *dopt = NULL;
-    char *sopt = NULL;
-    char *xopt = NULL;
     query_t *ctl = NULL;
     int rc = 0;
-    pid_t spid;
     int sfd;
 
     diod_log_init (argv[0]);
@@ -176,11 +173,8 @@ main (int argc, char *argv[])
             case 'j':   /* --jobid STR */
                 jopt = optarg;
                 break;
-            case 's':   /* --server CMD */
-                sopt = optarg;
-                break;
-            case 'x':   /* --exec CMD */
-                xopt = optarg;
+            case 'S':   /* --stdin */
+                Sopt = 1;
                 break;
             default:
                 usage ();
@@ -188,10 +182,8 @@ main (int argc, char *argv[])
     }
     if (aopt && popt)
         msg_exit ("--all and --diod-port are incompatible options");
-    if (aopt && sopt)
-        msg_exit ("--all and --server are incompatible options");
-    if (popt && sopt)
-        msg_exit ("--server and --diod-port are incompatible options");
+    if (aopt && Sopt)
+        msg_exit ("--all and --stdin are incompatible options");
     if (aopt) {/* Usage: diodmount [options] -a hostname [dir] */
         if (optind != argc - 1 && optind != argc - 2)
             usage ();
@@ -218,17 +210,8 @@ main (int argc, char *argv[])
 
     /* Fetch server export and port info from diodctl, if mode requires it.
      */
-    if ((!popt && !sopt) || aopt)
+    if ((!popt && !Sopt) || aopt)
         ctl = ctl_query (host, aopt, jopt);
-
-    /* Move into a new namespace for ephemeral mounts (-s, -x).
-     * Force -n so we don't leave behind mtab entries.
-     * All mounts will be implicitly unmounted when we exit.
-     */
-    if (xopt || sopt) {
-        util_unshare ();
-        nopt = 1;
-    }
 
     /* Mount everything.
      * If directory is specified, use as the root for mount points, else /.
@@ -264,10 +247,9 @@ main (int argc, char *argv[])
      */
     } else {
         _verify_mountpoint (dir, Dopt);
-        if (sopt) {
-            sfd = util_spopen (sopt, &spid, 0);
-            if (vopt)
-                msg ("server started");
+        if (Sopt) {
+            sfd = 0;
+            nopt = 1; /* force no mtab */
         } else {
             sfd = diod_sock_connect (host, popt ? popt : ctl->port, 1, 0);
             if (sfd < 0)
@@ -288,11 +270,6 @@ main (int argc, char *argv[])
         free (aname);
     if (ctl)
         free_query (ctl);
-
-    /* Run -x command in ephemeral mount sandbox.
-     */
-    if (xopt)
-        rc = util_runcmd (xopt);
     exit (rc);
 }
 

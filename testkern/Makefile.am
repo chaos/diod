@@ -1,4 +1,5 @@
 check_PROGRAMS = \
+	kconjoin \
 	tsuppgrp \
 	tstatfs \
 	trename \
@@ -48,6 +49,7 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
 
 common_sources = test.h
 
+kconjoin_SOURCES = kconjoin.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)

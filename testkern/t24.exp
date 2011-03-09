@@ -1,3 +1,4 @@
+kconjoin: diodmount exited with rc=0
 1024+0 records in
 1024+0 records out
 testing host file system
@@ -10,3 +11,5 @@ fd: open
 fd: write-locked
 fd2: open
 fd: write-locked - FAIL  # wrong
+kconjoin: t24 exited with rc=0
+kconjoin: diod exited with rc=0

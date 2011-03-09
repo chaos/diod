@@ -34,10 +34,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-check_PROGRAMS = tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) trename$(EXEEXT) \
-	tstat$(EXEEXT) tflock$(EXEEXT) tflock2$(EXEEXT) \
-	tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) tconfig$(EXEEXT) \
-	tfsgid$(EXEEXT)
+check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
+	trename$(EXEEXT) tstat$(EXEEXT) tflock$(EXEEXT) \
+	tflock2$(EXEEXT) tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) \
+	tconfig$(EXEEXT) tfsgid$(EXEEXT)
 @LARGEIO_FALSE@am__append_1 = t20 t21
 subdir = testkern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
@@ -55,10 +55,19 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+am__objects_1 =
+am_kconjoin_OBJECTS = kconjoin.$(OBJEXT) $(am__objects_1)
+kconjoin_OBJECTS = $(am_kconjoin_OBJECTS)
+kconjoin_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+kconjoin_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 tconfig_SOURCES = tconfig.c
 tconfig_OBJECTS = tconfig.$(OBJEXT)
 tconfig_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 tconfig_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -80,7 +89,6 @@ tfcntl3_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am__objects_1 =
 am_tflock_OBJECTS = tflock.$(OBJEXT) $(am__objects_1)
 tflock_OBJECTS = $(am_tflock_OBJECTS)
 tflock_LDADD = $(LDADD)
@@ -145,12 +153,14 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = tconfig.c tfcntl2.c tfcntl3.c $(tflock_SOURCES) tflock2.c \
-	$(tfsgid_SOURCES) $(trename_SOURCES) $(tstat_SOURCES) \
-	$(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
-DIST_SOURCES = tconfig.c tfcntl2.c tfcntl3.c $(tflock_SOURCES) \
-	tflock2.c $(tfsgid_SOURCES) $(trename_SOURCES) \
-	$(tstat_SOURCES) $(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
+SOURCES = $(kconjoin_SOURCES) tconfig.c tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
+DIST_SOURCES = $(kconjoin_SOURCES) tconfig.c tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -306,6 +316,7 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = test.h
+kconjoin_SOURCES = kconjoin.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tstatfs_SOURCES = tstatfs.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
@@ -349,6 +360,9 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+kconjoin$(EXEEXT): $(kconjoin_OBJECTS) $(kconjoin_DEPENDENCIES) 
+	@rm -f kconjoin$(EXEEXT)
+	$(LINK) $(kconjoin_OBJECTS) $(kconjoin_LDADD) $(LIBS)
 tconfig$(EXEEXT): $(tconfig_OBJECTS) $(tconfig_DEPENDENCIES) 
 	@rm -f tconfig$(EXEEXT)
 	$(LINK) $(tconfig_OBJECTS) $(tconfig_LDADD) $(LIBS)
@@ -386,6 +400,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kconjoin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl3.Po@am__quote@
