@@ -1,25 +1,54 @@
-[This Document is Under Construction]
++----------+
+| Building | 
++----------+
 
-TODO
-- free fids (+users) when connection fails and they are not properly clunked
-- rework auth to use afid and Tauth?
-- POSIX issue: newgrp + creat = created file will have old gid?
-- flock advisory file lock
-- fcntl(lock) advisory record lock
-- one stuck fs can hang all npfs worker threads
-- seekdir (offset != 0), telldir incompat with 9P
-- limit aread/awrite size (breaks atomicity, but better than malloc==NULL /oom)
-- handle simultaneous aread/awrite on same fid
-- mount generates attach + stat / - can we cache stat / result to avoid
-  touching all the file system at mount time (e.g. when doing it at the
-  beginning of every cluster job)?  If just one fs is down, everything hangs.
-- diodmount should umount control file system when it aborts for other reasons
-- init scripts 'restart' fails to start server if it is not already running
-- init scripts should create rundir if it doesn't exist
-- handle lustre ioctls?
-    error on ioctl 0x4008669a
-      for '/p/lcrater2/garlick/ior-fpp.1000010/testfile.00000000' (3):
-      Inappropriate ioctl for device
-    error: setstripe: create stripe file
-      '/p/lcrater2/garlick/ior-fpp.1000010/testfile.00000000' failed
+You need a few prerequisites (shared library versions):
 
+    lua, lua-devel 
+	A LUA parser is used to parse the config file.
+
+    munge, munge-libs, munge-devel
+	Needed if --enable-munge (see below).
+
+    tcp_wrappers, tcp_wrappers-libs, tcp_wrappers-devel
+	Needed if you want built-in TCP wrapper functionality.
+
+configure options:
+
+    --enable-munge
+	Build with MUNGE support.  Currrently this is the only
+	supported authentication method.  If you don't enable
+	munge, you will have to run the server with --no-auth
+	which is likely a big security vulnerability.
+
+	The 'testkern' and 'testuser' test suites will detect
+	whether MUNGE is installed/running and supply --no-auth
+	to the server automatically.  Tests won't work if MUNGE
+	is running but diod was configured without MUNGE support.
+
++---------+
+| Testing |
++---------+
+
+Unit tests (make check):
+
+    ./test
+	Miscellaneous unit tests.
+	Some tests will be skipped if not root.
+
+    ./testuser
+	User space client and server running across a socketpair.
+	All tests should always run.
+
+    ./testkern:
+	Mount kernel client and user server locally, once per test.
+	You will need a 9p.ko that speaks 9P2000.L, e.g. kernel 2.6.38+.
+	All tests require root and 9p.ko.
+
+Running by hand:
+
+    Starting diod server with one export, with protocol debugging:
+	sudo ./diod -l 192.168.50.135:550 -d 1 -n -e /tmp/9 
+
+    Mounting:
+	sudo ./diodmount -p 550 -n 192.168.50.135:/tmp/9 /mnt
