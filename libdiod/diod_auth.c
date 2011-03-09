@@ -235,7 +235,7 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
     memcpy (da->mungecred + offset, data, count);
     da->mungecred[offset + count] = '\0';
     da->mungerr = munge_decode (da->mungecred, da->mungectx, NULL, 0,
-                                &da->mungeuid, NULL)
+                                &da->mungeuid, NULL);
     if (da->mungerr == EMUNGE_SUCCESS && afid->user->uid == da->mungeuid)
         da->state = DA_VERIFIED;
 #endif

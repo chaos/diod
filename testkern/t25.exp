@@ -10,4 +10,3 @@ testing diod file system create with setgid parent
 tfsgid: file gid is different than egid and different than gid
 kconjoin: t25 exited with rc=0
 kconjoin: diod exited with rc=0
-

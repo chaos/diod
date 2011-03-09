@@ -21,11 +21,6 @@ configure options:
 	munge, you will have to run the server with --no-auth
 	which is likely a big security vulnerability.
 
-	The 'testkern' and 'testuser' test suites will detect
-	whether MUNGE is installed/running and supply --no-auth
-	to the server automatically.  Tests won't work if MUNGE
-	is running but diod was configured without MUNGE support.
-
 +---------+
 | Testing |
 +---------+
@@ -47,7 +42,8 @@ Unit tests (make check):
 
 Running by hand:
 
-    Starting diod server with one export, with protocol debugging:
+    Starting diod server with one export, no auth required,
+    with protocol debugging enabled:
 	sudo ./diod -l 192.168.50.135:550 -d 1 -n -e /tmp/9 
 
     Mounting:

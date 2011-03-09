@@ -28,7 +28,7 @@ if test $(id -u) != 0; then
     echo "not root - skipping" >$TEST.out
     exit 77
 fi
-if ! modprobe 9p; then
+if ! modprobe 9p 2>/dev/null; then
     echo "9p not loaded - skipping" >$TEST.out
     exit 77
 fi
@@ -40,12 +40,8 @@ rm -rf $PATH_EXPDIR/*
 rm -f $TEST.diod $TEST.out
 ulimit -c unlimited
 
-if ! [ -x /usr/bin/munge ] || ! /usr/bin/munge -n >/dev/null 2>&1; then
-    AUTHARG="-n"
-fi
-
 ./kconjoin \
-    "$PATH_DIOD $AUTHARG -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    "$PATH_DIOD -n -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
     "$PATH_DIODMOUNT -S nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST" \
     >$TEST.out 2>&1

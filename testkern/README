@@ -1,4 +1,5 @@
-These all run the same way:
+These tests all run the same way:
+
 - Makefile sets up environment and invokes test through ./runtest wrapper.
 - ./runtest mounts ./exp.d on ./mnt.d (privately) and runs test script
 - output goes to <test>.out
