@@ -1,5 +1,8 @@
 2011-03-10 Jim Garlick <garlick@llnl.gov>
 
+	* diod/diod.c : Implement distributed advisory locking in
+	terms of BSD file locks (with caveats!).
+
 	* testkern/Makefile.am, testkern/t18.out, testkern/t19.out,
 	testkern/t23.out, testkern/t24.out : These tests now pass with
 	non-distributed advisory locking implementation.

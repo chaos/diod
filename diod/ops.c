@@ -97,6 +97,8 @@ typedef struct {
     DIR             *dir;
     struct dirent   *dirent;
     struct stat      stat;
+    /* advisory locking */
+    int              lock_type;
     /* atomic I/O */
     void            *rc_data;
     u64              rc_offset;
@@ -312,6 +314,7 @@ _fidalloc (void)
         f->read_bytes = 0;
         f->write_ops = 0;
         f->write_bytes = 0;
+        f->lock_type = LOCK_UN;
         if (gettimeofday (&f->birth, NULL) < 0) {
             np_uerror (errno);
             free (f);
@@ -1408,8 +1411,10 @@ done:
     return ret;
 }
 
-/* Always return success, effectively delegating lock processing to client.
- * FIXME: need distributed implementation.
+/* Locking note:
+ * Implement POSIX locks in terms of BSD flock locks.
+ * This at least gets distributed whole-file locking to work.
+ * Strategies for distributed record locking will deadlock.
  */
 Npfcall*
 diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
@@ -1417,27 +1422,59 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
 {
     Npfcall *ret = NULL;
     Fid *f = fid->aux;
+    char *cid = _p9strdup (client_id);
     u8 status = P9_LOCK_ERROR;
 
-    if (flags & ~P9_LOCK_FLAGS_BLOCK) {
-        np_uerror (EINVAL);
+    if (!cid) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    if (flags & ~P9_LOCK_FLAGS_BLOCK) { /* only one valid flag for now */
+        np_uerror (EINVAL);             /*  (which we ignore) */
         goto done;
     }
     if (_fidstat(f) < 0)
         goto done;
-    status = P9_LOCK_SUCCESS;
+    switch (type) {
+        case F_UNLCK:
+            if (flock (f->fd, LOCK_UN) >= 0) {
+                status = P9_LOCK_SUCCESS;
+                f->lock_type = LOCK_UN;
+            } else
+                status = P9_LOCK_ERROR;
+            break;
+        case F_RDLCK:
+            if (flock (f->fd, LOCK_SH | LOCK_NB) >= 0) {
+                status = P9_LOCK_SUCCESS;
+                f->lock_type = LOCK_SH;
+            } else if (errno == EWOULDBLOCK) {
+                status = P9_LOCK_BLOCKED;
+            } else
+                status = P9_LOCK_ERROR;
+            break;
+        case F_WRLCK:
+            if (flock (f->fd, LOCK_EX | LOCK_NB) >= 0) {
+                status = P9_LOCK_SUCCESS;
+                f->lock_type = LOCK_EX;
+            } else if (errno == EWOULDBLOCK) {
+                status  = P9_LOCK_BLOCKED;
+            }
+            break;
+        default:
+            np_uerror (EINVAL);
+            goto done;
+    }
     if (!((ret = np_create_rlock (status)))) {
         np_uerror (ENOMEM);
         msg ("diod_lock: out of memory");
         goto done;
     }
 done:
+    if (cid)
+        free (cid);
     return ret;
 }
 
-/* Always return success, effectively delegating lock processing to client.
- * FIXME: need distributed implementation.
- */
 Npfcall*
 diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
              Npstr *client_id)
@@ -1446,19 +1483,63 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     char *cid = _p9strdup (client_id);
     Fid *f = fid->aux;
 
-    if (_fidstat(f) < 0)
-        goto done;
     if (!cid) {
-        np_uerror (EINVAL);
+        np_uerror (ENOMEM);
         goto done;
     }
-    type = F_UNLCK;
+    if (_fidstat(f) < 0)
+        goto done;
+    switch (type) {
+        case F_RDLCK:
+            switch (f->lock_type) {
+                case LOCK_EX:
+                case LOCK_SH:
+                    type = LOCK_UN;
+                    break;
+                case LOCK_UN:
+                    if (flock (f->fd, LOCK_SH | LOCK_NB) >= 0) {
+                        (void)flock (f->fd, LOCK_UN);
+                        type = LOCK_UN;
+                    } else
+                        type = LOCK_EX;
+                    break;
+            }
+            break;
+        case F_WRLCK:
+            switch (f->lock_type) {
+                case LOCK_EX:
+                    type = LOCK_UN;
+                    break;
+                case LOCK_SH:
+                    /* Rather than upgrade the lock to LOCK_EX and risk
+                     * not reacquiring the LOCK_SH afterwards, lie about
+                     * the lock being available.  Getlock is racy anyway.
+                     */
+                    type = LOCK_UN;
+                    break;
+                case LOCK_UN:
+                    if (flock (f->fd, LOCK_EX | LOCK_NB) >= 0) {
+                        (void)flock (f->fd, LOCK_UN);
+                        type = LOCK_UN;
+                    } else
+                        type = LOCK_EX; /* could also be LOCK_SH actually */
+            }
+            break;
+        default:
+            np_uerror (EINVAL);
+            goto done;
+    }
+    if (type != LOCK_UN) {
+        /* FIXME: need to fake up start, length, proc_id, cid? */
+    }
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
         msg ("diod_getlock: out of memory");
         goto done;
     }
 done:
+    if (cid)
+        free (cid);
     return ret;
 }
 
