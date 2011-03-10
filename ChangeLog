@@ -1,3 +1,9 @@
+2011-03-10 Jim Garlick <garlick@llnl.gov>
+
+	* testkern/Makefile.am, testkern/t18.out, testkern/t19.out,
+	testkern/t23.out, testkern/t24.out : These tests now pass with
+	non-distributed advisory locking implementation.
+
 2011-03-09 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c : Clean up non-distributed advisory locking

@@ -110,7 +110,18 @@ tfcntl3: 10. Write lock is not inherited across a fork
 tfcntl3: fd: open O_RDWR
 tfcntl3: fd: write-locked
 tfcntl3: child forked
-tfcntl3: fd: read-locked (child)
-tfcntl3: child exited with 1, aborting  # ERror
+tfcntl3: fd: read-lock failed (child): Resource temporarily unavailable
+tfcntl3: child exited normally
+tfcntl3: fd: closed
+tfcntl3: 11. Write lock is dropped if another fd to same file is closed
+tfcntl3: fd: open O_RDWR
+tfcntl3: fd: write-locked
+tfcntl3: fd2: open O_RDWR
+tfcntl3: fd2: closed
+tfcntl3: child forked
+tfcntl3: fd: closed (child)
+tfcntl3: fd2: open O_RDWR (child)
+tfcntl3: fd2: read-locked (child)
+tfcntl3: child exited normally
 kconjoin: t23 exited with rc=0
 kconjoin: diod exited with rc=0

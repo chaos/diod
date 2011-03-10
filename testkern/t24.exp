@@ -10,6 +10,6 @@ testing diod file system
 fd: open
 fd: write-locked
 fd2: open
-fd: write-locked - FAIL  # wrong
+second flock failed as it should - PASS: Resource temporarily unavailable
 kconjoin: t24 exited with rc=0
 kconjoin: diod exited with rc=0

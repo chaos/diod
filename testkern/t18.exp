@@ -32,7 +32,24 @@ tflock: fd: open
 tflock: fd: write-locked
 tflock: child forked
 tflock: fd2: open (child)
-tflock: fd2: write-locked
-tflock: child exited with 1, aborting  # WHOOPS broken
+tflock: fd2: write-lock failed: Resource temporarily unavailable
+tflock: child exited normally
+tflock: fd: closed
+tflock: 2. Conflicting read and write locks cannot be held by two processes
+tflock: fd: open
+tflock: fd: write-locked
+tflock: child forked
+tflock: fd2: open (child)
+tflock: fd2: read-lock failed: Resource temporarily unavailable
+tflock: child exited normally
+tflock: fd: closed
+tflock: 3. Conflicting read locks CAN be held by two processes
+tflock: fd: open
+tflock: fd: read-locked
+tflock: child forked
+tflock: fd2: open (child)
+tflock: fd2: read-locked
+tflock: child exited normally
+tflock: fd: closed
 kconjoin: t18 exited with rc=0
 kconjoin: diod exited with rc=0

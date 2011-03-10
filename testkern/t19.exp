@@ -48,7 +48,40 @@ tfcntl2: fd: open
 tfcntl2: fd: write-locked
 tfcntl2: child forked
 tfcntl2: fd2: open (child)
-tfcntl2: fd2: write-locked
-tfcntl2: child exited with 1, aborting  # broke
+tfcntl2: fd2: write-lock failed: Resource temporarily unavailable
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 2. Conflicting read and write locks cannot be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: read-lock failed: Resource temporarily unavailable
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 3. Conflicting read locks CAN be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: read-locked
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: read-locked
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 4. Non-conflicting write locks CAN be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked 1 byte
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: write-locked rest of file
+tfcntl2: child exited normally
+tfcntl2: fd: closed
+tfcntl2: 5. Non-conflicting read and write locks CAN be held by two processes
+tfcntl2: fd: open
+tfcntl2: fd: write-locked 1 byte
+tfcntl2: child forked
+tfcntl2: fd2: open (child)
+tfcntl2: fd2: read-locked rest of file
+tfcntl2: child exited normally
+tfcntl2: fd: closed
 kconjoin: t19 exited with rc=0
 kconjoin: diod exited with rc=0

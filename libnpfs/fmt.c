@@ -30,6 +30,9 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <time.h>
+#include <unistd.h>
+#include <fcntl.h>
+
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -133,6 +136,53 @@ np_printdata(char *s, int len, u8 *buf, int buflen)
 	if (buflen > 0)	
 		n += snprintf(s+n, len-n, "\n");
 	return np_sndump(s+n, len-n, buf, buflen < 64 ? buflen : 64);
+}
+
+static int
+np_printlocktype(char *s, int len, u8 type)
+{
+	int n = 0;
+
+	switch (type) {
+		case F_RDLCK:
+			n += snprintf(s+n,len-n, "%s", "F_RDLCK");
+			break;
+		case F_WRLCK:
+			n += snprintf(s+n,len-n, "%s", "F_WRLCK");
+			break;
+		case F_UNLCK:
+			n += snprintf(s+n,len-n, "%s", "F_UNLCK");
+			break;
+		default:
+			n += snprintf(s+n,len-n, "%u", type);
+			break;
+	}
+	return n;
+}
+
+static int
+np_printlockstatus(char *s, int len, u8 status)
+{
+	int n = 0;
+
+	switch (status) {
+		case P9_LOCK_SUCCESS:
+			n += snprintf(s+n,len-n, "%s", "P9_LOCK_SUCCESS");
+			break;
+		case P9_LOCK_BLOCKED:
+			n += snprintf(s+n,len-n, "%s", "P9_LOCK_BLOCKED");
+			break;
+		case P9_LOCK_ERROR:
+			n += snprintf(s+n,len-n, "%s", "P9_LOCK_ERROR");
+			break;
+		case P9_LOCK_GRACE:
+			n += snprintf(s+n,len-n, "%s", "P9_LOCK_GRACE");
+			break;
+		default:
+			n += snprintf(s+n,len-n, "%u", status);
+			break;
+	}
+	return n;
 }
 
 int
@@ -379,7 +429,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TLOCK:
 		n += snprintf(s+n,len-n, "P9_TLOCK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tlock.fid);
-		n += snprintf(s+n,len-n, " type %u", fc->u.tlock.type);
+		n += snprintf(s+n,len-n, " type ");
+		n += np_printlocktype(s+n,len-n, fc->u.tlock.type);
 		n += snprintf(s+n,len-n, " flags %"PRIu32, fc->u.tlock.flags);
 		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tlock.start);
 		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tlock.length);
@@ -389,12 +440,14 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 	case P9_RLOCK:
 		n += snprintf(s+n,len-n, "P9_RLOCK tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " status %u", fc->u.rlock.status);
+		n += snprintf(s+n,len-n, " status ");
+		n += np_printlockstatus(s+n,len-n, fc->u.rlock.status);
 		break;
 	case P9_TGETLOCK:
 		n += snprintf(s+n,len-n, "P9_TGETLOCK tag %u", fc->tag);
 		n += snprintf(s+n,len-n, " fid %"PRIu32, fc->u.tgetlock.fid);
-		n += snprintf(s+n,len-n, " type %u", fc->u.tgetlock.type);
+		n += snprintf(s+n,len-n, " type ");
+		n += np_printlocktype(s+n,len-n, fc->u.tgetlock.type);
 		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.tgetlock.start);
 		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.tgetlock.length);
 		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.tgetlock.proc_id);
@@ -403,7 +456,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 	case P9_RGETLOCK:
 		n += snprintf(s+n,len-n, "P9_RGETLOCK tag %u", fc->tag);
-		n += snprintf(s+n,len-n, " type %u", fc->u.rgetlock.type);
+		n += snprintf(s+n,len-n, " type ");
+		n += np_printlocktype(s+n,len-n, fc->u.rgetlock.type);
 		n += snprintf(s+n,len-n, " start %"PRIu64, fc->u.rgetlock.start);
 		n += snprintf(s+n,len-n, " length %"PRIu64, fc->u.rgetlock.length);
 		n += snprintf(s+n,len-n, " proc_id %"PRIu32, fc->u.rgetlock.proc_id);
