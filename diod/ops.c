@@ -918,7 +918,7 @@ diod_lopen (Npfid *fid, u32 mode)
     Npqid qid;
 
     /* Clients must use lcreate otherwise we don't have enough
-     * information to construct the file mode (need client umask).
+     * information to construct the file mode (need client umask and gid).
      * Clear the flag and allow open to fail with ENOENT.
      */
     if ((mode & O_CREAT))
@@ -1408,18 +1408,25 @@ done:
     return ret;
 }
 
+/* Always return success, effectively delegating lock processing to client.
+ * FIXME: need distributed implementation.
+ */
 Npfcall*
 diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
            Npstr *client_id)
 {
     Npfcall *ret = NULL;
-    //Fid *f = fid->aux;
+    Fid *f = fid->aux;
+    u8 status = P9_LOCK_ERROR;
 
-    /* FIXME: server not implemented.
-     * ENOSYS triggers BUG() in v9fs, so return failure in status byte.
-     * FIXME: Locks are granted when we return this. v9fs bug?
-     */
-    if (!((ret = np_create_rlock(P9_LOCK_ERROR)))) {
+    if (flags & ~P9_LOCK_FLAGS_BLOCK) {
+        np_uerror (EINVAL);
+        goto done;
+    }
+    if (_fidstat(f) < 0)
+        goto done;
+    status = P9_LOCK_SUCCESS;
+    if (!((ret = np_create_rlock (status)))) {
         np_uerror (ENOMEM);
         msg ("diod_lock: out of memory");
         goto done;
@@ -1428,20 +1435,25 @@ done:
     return ret;
 }
 
+/* Always return success, effectively delegating lock processing to client.
+ * FIXME: need distributed implementation.
+ */
 Npfcall*
 diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
              Npstr *client_id)
 {
     Npfcall *ret = NULL;
     char *cid = _p9strdup (client_id);
-    //Fid *f = fid->aux;
+    Fid *f = fid->aux;
 
-    if (!cid)
+    if (_fidstat(f) < 0)
         goto done;
-    /* FIXME: server not implemented.
-     * This response means lock is held by another (foo:pid+1)
-     */
-    if (!((ret = np_create_rgetlock(type, start, length, proc_id+1, "foo")))) {
+    if (!cid) {
+        np_uerror (EINVAL);
+        goto done;
+    }
+    type = F_UNLCK;
+    if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
         msg ("diod_getlock: out of memory");
         goto done;

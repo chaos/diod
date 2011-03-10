@@ -375,7 +375,7 @@ _diod_mount (int fd, char *dev, char *dir, char *aname, char *opts,
     opt_destroy (o);
 
     if (vopt)
-        msg ("mount %s %s -o%s", dev, dir, options);
+        msg ("mount -t 9p %s %s -o%s", dev, dir, options);
     if (!(fs = npc_mount (fd, DIOD_MSIZE, aname, diod_auth_client_handshake)))
         err_exit ("npc_mount");
     npc_umount2 (fs);

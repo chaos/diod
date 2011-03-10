@@ -1,5 +1,8 @@
 2011-03-09 Jim Garlick <garlick@llnl.gov>
 
+	* diod/diod.c : Clean up non-distributed advisory locking
+	implementation to look more like qemu's.
+
 	* testkern/*.exp : Update for harness output.
 
 	* testkern/kconjoin.c : New test harness.
