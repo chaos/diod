@@ -1,0 +1,38 @@
+#!/bin/bash
+
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
+if [ $# -ne 1 ]; then
+    echo "Usage runtest test" 2>&1
+    exit 1
+fi
+TEST=$1
+
+if [ -z "$PATH_EXPDIR" ]; then
+    echo "PATH_EXPDIR is not set" 2>&1
+    exit 1
+fi
+if [ -z "$PATH_DIOD" ]; then
+    echo "PATH_DIOD is not set" 2>&1
+    exit 1
+fi
+
+if ! test -d $PATH_EXPDIR; then
+    echo "test directory vanished" >$TEST.out
+    exit 77
+fi
+rm -rf $PATH_EXPDIR/*
+rm -f $TEST.diod $TEST.out
+ulimit -c unlimited
+
+./conjoin \
+    "$PATH_DIOD -n -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    "$TEST $PATH_EXPDIR" \
+    >$TEST.out 2>&1
+rc=$?
+if [ $rc != 0 ]; then
+    echo "test exited with $rc" >>$TEST.out
+    exit $rc
+fi
+
+diff $TEST.exp $TEST.out >$TEST.diff
+exit $?
