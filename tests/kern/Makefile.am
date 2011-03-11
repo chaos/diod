@@ -60,3 +60,5 @@ tfsgid_SOURCES = tfsgid.c $(common_sources)
 clean: clean-am
 	-rmdir mnt.d
 	-rmdir exp.d
+
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest

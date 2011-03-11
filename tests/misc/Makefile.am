@@ -29,3 +29,5 @@ tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
 topt_SOURCES = topt.c $(common_sources) 
+
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp)

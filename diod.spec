@@ -26,6 +26,9 @@ system for I/O forwarding on Linux clusters.
 %configure
 make
 
+%check
+make check
+
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT

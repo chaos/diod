@@ -49,3 +49,5 @@ twrite_SOURCES = twrite.c $(common_sources)
 
 clean: clean-am
 	-rmdir exp.d
+
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest

@@ -324,6 +324,7 @@ trename_SOURCES = trename.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
 all: all-am
 
 .SUFFIXES:

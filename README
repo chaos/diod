@@ -32,15 +32,15 @@ configure options:
 
 Unit tests (make check):
 
-    ./test
+    ./tests/misc
 	Miscellaneous unit tests.
 	Some tests will be skipped if not root.
 
-    ./testuser
+    ./tests/user
 	User space client and server running across a socketpair.
 	All tests can run as non-root, no kernel support needed.
 
-    ./testkern:
+    ./tests/kern:
         Kernel client and server running across a socketpair,
 	in private namespace.
 	All tests require root and 9p.ko with 9P2000.L e.g. from 2.6.38+.

@@ -281,6 +281,7 @@ tmkdir_SOURCES = tmkdir.c $(common_sources)
 tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
 all: all-am
 
 .SUFFIXES:
