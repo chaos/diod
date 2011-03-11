@@ -1,5 +1,8 @@
 2011-03-10 Jim Garlick <garlick@llnl.gov>
 
+	* testkern/Makefile.am : Change t16 to expected pass after
+	fid leakage bug fix in v9fs.
+
 	* diod/diod.c : Implement distributed advisory locking in
 	terms of BSD file locks (with caveats!).
 
