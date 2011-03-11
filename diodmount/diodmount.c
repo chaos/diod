@@ -207,7 +207,7 @@ main (int argc, char *argv[])
     /* Fetch server export and port info from diodctl, if mode requires it.
      */
     if ((!popt && !Sopt) || aopt)
-        ctl = ctl_query (host, aopt, jopt);
+        ctl = ctl_query (host, jopt);
 
     /* Mount everything.
      * If directory is specified, use as the root for mount points, else /.

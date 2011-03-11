@@ -1,5 +1,11 @@
 2011-03-11 Jim Garlick <garlick@llnl.gov>
 
+	* libnpclient/read.c : Fix bug in np_gets ().
+
+	* diodctl/ops.c : Handle returning server in multiple reads.
+
+	* diodmount/ctl.c : Fix two bugs in diodctl interface logic.
+
 	* tests/*, diod.spec.in : Consolidate tests under one directory
 	and arrange to run them during package build.
 

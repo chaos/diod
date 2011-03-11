@@ -66,12 +66,14 @@ done:
 int
 npc_pread_all(Npcfid *fid, void *buf, u32 count, u64 offset)
 {
-	int n = 0, done = 0;
+	int n, done = 0;
 
-	while (done < count && n > 0) {
+	while (done < count) {
 		n = npc_pread(fid, buf + done, count - done, offset + done);
 		if (n < 0)
 			return -1;
+		if (n == 0)
+			break;
 		done += n;
 	}
 	return done;
@@ -91,12 +93,14 @@ npc_read(Npcfid *fid, void *buf, u32 count)
 int
 npc_read_all(Npcfid *fid, void *buf, u32 count)
 {
-	int n = 0, done = 0;
+	int n, done = 0;
 
-	while (done < count && n > 0) {
+	while (done < count) {
 		n = npc_read(fid, buf + done, count - done);
 		if (n < 0)
 			return -1;
+		if (n == 0)
+			break;
 		done += n;
 	}
 	return done;
@@ -108,7 +112,7 @@ npc_gets (Npcfid *fid, char *buf, u32 count)
 	int n, skipchars = 0;
 	char *p;
 
-	n = npc_pread_all (fid, (void *)buf, count - 1, fid->offset);
+	n = npc_pread_all (fid, buf, count - 1, fid->offset);
 	if (n <= 0)
 		return NULL;
 	buf[n] = '\0';
@@ -119,3 +123,5 @@ npc_gets (Npcfid *fid, char *buf, u32 count)
 	fid->offset += strlen (buf) + skipchars;
 	return buf;
 }
+
+

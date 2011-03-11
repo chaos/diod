@@ -23,7 +23,7 @@ system for I/O forwarding on Linux clusters.
 %setup -q
 
 %build
-%configure
+%configure --enable-munge
 make
 
 %check

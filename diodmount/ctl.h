@@ -3,5 +3,5 @@ typedef struct {
     char *port;
 } query_t;
 
-query_t *ctl_query (char *host, int getport, char *jobid);
+query_t *ctl_query (char *host, char *jobid);
 void free_query (query_t *q);

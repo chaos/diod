@@ -125,6 +125,8 @@ _getport (Npcfsys *fs, query_t *q, char *jobid)
         err_exit ("ctl: open");
     if (npc_puts (fid, jobid) < 0)
         err_exit ("ctl: write");
+    if (npc_lseek (fid, 0, SEEK_SET) < 0)
+        err_exit ("ctl: seek");
     if (!npc_gets (fid, buf, sizeof (buf)))
         err_exit ("ctl: read");
     q->port = _strdup_trim (buf);
@@ -164,7 +166,7 @@ _getexports (Npcfsys *fs, query_t *q)
  * Exit on error.
  */
 query_t *
-ctl_query (char *host, int getport, char *jobid)
+ctl_query (char *host, char *jobid)
 {
     int fd;
     Npcfsys *fs;
@@ -172,10 +174,9 @@ ctl_query (char *host, int getport, char *jobid)
 
     if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
         err_exit ("connect failed");
-    if (!(fs = npc_mount (0, 8192, "/diodctl", diod_auth_client_handshake)))
+    if (!(fs = npc_mount (fd, 8192, "/diodctl", diod_auth_client_handshake)))
         err_exit ("npc_mount");
-    if (getport)
-        _getport (fs, q, jobid);
+    _getport (fs, q, jobid);
     _getexports (fs, q);
     if (npc_umount (fs) < 0)
         err_exit ("mpc_umount");

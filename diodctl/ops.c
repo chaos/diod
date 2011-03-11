@@ -153,14 +153,8 @@ static int
 _ctl_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
-    int ret;
 
-    ret = diodctl_serv_getname (fid->user, file->aux, offset, count, data);
-    if (file->aux) {
-        free (file->aux);
-        file->aux = NULL;
-    }
-    return ret;
+    return diodctl_serv_getname (fid->user, file->aux, offset, count, data);
 }
 
 /* Handle a write to the 'ctl' file.
@@ -189,6 +183,15 @@ _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
     return ret;
 }
 
+static void
+_ctl_closefid (Npfilefid *file)
+{
+    if (file->aux) {
+        free (file->aux);
+        file->aux = NULL;
+    } 
+}
+
 static Npdirops root_ops = {
         .first = _root_first,
         .next =  _root_next,
@@ -199,6 +202,7 @@ static Npfileops exports_ops = {
 static Npfileops ctl_ops = {
         .write = _ctl_write,
         .read  = _ctl_read,
+        .closefid = _ctl_closefid,
 };
 
 /* Create the file system representation for /diodctl.
