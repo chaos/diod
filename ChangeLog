@@ -1,5 +1,9 @@
 2011-03-10 Jim Garlick <garlick@llnl.gov>
 
+	* testkern/Makefile.am : Fix t17 to avoid testing sticky bits on 
+	directories since underlying fs limits possible values and 
+	causes test to fail.  Change to expected pass.
+
 	* testkern/Makefile.am : Change t16 to expected pass after
 	fid leakage bug fix in v9fs.
 

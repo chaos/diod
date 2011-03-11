@@ -3,20 +3,37 @@
 testmode ()
 {
 	for i in 0 1 2 3 4 5 6 7; do
-		chmod $i$i$i$i $1
+		if [ -d $1 ]; then
+			chmod $i$i$i $1
+		else
+			chmod $i$i$i$i $1
+		fi
 		stat -c "%a" $2
 	done
 }
 
-echo "creating file and directory"
-touch $PATH_MNTDIR/a
-mkdir $PATH_MNTDIR/b
+remake ()
+{
+	echo "(re-)creating file and directory"
+	rm -rf $PATH_MNTDIR/a $PATH_MNTDIR/b
+	touch $PATH_MNTDIR/a
+	mkdir $PATH_MNTDIR/b
+}
 
+# N.B. setting S_ISUID causes S_ISGID to set also.
+# This seems to be an ext3 thing?
+# Anyway skip sticky bits on directories.
+# 
+
+remake
 echo "testing file server to client"
 testmode $PATH_EXPDIR/a $PATH_MNTDIR/a
+remake
 echo "testing file client to server"
 testmode $PATH_MNTDIR/a $PATH_EXPDIR/a
+remake
 echo "testing directory server to client"
 testmode $PATH_EXPDIR/b $PATH_MNTDIR/b
+remake
 echo "testing directory client to server"
 testmode $PATH_MNTDIR/b $PATH_EXPDIR/b

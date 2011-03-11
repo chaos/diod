@@ -1,5 +1,5 @@
 kconjoin: diodmount exited with rc=0
-creating file and directory
+(re-)creating file and directory
 testing file server to client
 0
 1111
@@ -9,6 +9,7 @@ testing file server to client
 5555
 6666
 7777
+(re-)creating file and directory
 testing file client to server
 0
 1111
@@ -18,23 +19,25 @@ testing file client to server
 5555
 6666
 7777
+(re-)creating file and directory
 testing directory server to client
 0
-1111
-2222
-3333
-4444
-5555
-6666
-7777
+111
+222
+333
+444
+555
+666
+777
+(re-)creating file and directory
 testing directory client to server
 0
-1111
-2222
-3333
-4444
-5555
-6666
-7777
+111
+222
+333
+444
+555
+666
+777
 kconjoin: t17 exited with rc=0
 kconjoin: diod exited with rc=0
