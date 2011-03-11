@@ -70,7 +70,7 @@
 #include "util.h"
 #include "ctl.h"
 
-#define OPTIONS "au:Dnj:fo:Tvp:d:S"
+#define OPTIONS "au:Dnj:fo:vp:d:S"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -81,7 +81,6 @@ static const struct option longopts[] = {
     {"jobid",           required_argument ,  0, 'j'},
     {"fake-mount",      no_argument,         0, 'f'},
     {"diod-options",    required_argument,   0, 'o'},
-    {"test-opt",        no_argument,         0, 'T'},
     {"verbose",         no_argument,         0, 'v'},
     {"diod-port",       required_argument,   0, 'p'},
     {"v9fs-debug",      required_argument ,  0, 'd'},
@@ -164,9 +163,6 @@ main (int argc, char *argv[])
             case 'f':   /* --fake-mount */
                 fopt = 1;
                 break;
-            case 'T':   /* --test-opt */
-                opt_test ();
-                exit (0);
             case 'd':   /* --v9fs-debug flag[,flag...] */
                 dopt = optarg;
                 break;

@@ -6336,7 +6336,7 @@ _ACEOF
 ##
 # Epilogue
 ##
-ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile man/Makefile diod/diod.8 diodctl/diodctl.8 diodmount/diodmount.8 man/diodctl.conf.5 scripts/Makefile scripts/diodctl.init diod/Makefile diodctl/Makefile diodmount/Makefile test/Makefile testkern/Makefile testuser/Makefile"
+ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile man/Makefile diod/diod.8 diodctl/diodctl.8 diodmount/diodmount.8 man/diodctl.conf.5 scripts/Makefile scripts/diodctl.init diod/Makefile diodctl/Makefile diodmount/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/user/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -7006,9 +7006,10 @@ do
     "diod/Makefile") CONFIG_FILES="$CONFIG_FILES diod/Makefile" ;;
     "diodctl/Makefile") CONFIG_FILES="$CONFIG_FILES diodctl/Makefile" ;;
     "diodmount/Makefile") CONFIG_FILES="$CONFIG_FILES diodmount/Makefile" ;;
-    "test/Makefile") CONFIG_FILES="$CONFIG_FILES test/Makefile" ;;
-    "testkern/Makefile") CONFIG_FILES="$CONFIG_FILES testkern/Makefile" ;;
-    "testuser/Makefile") CONFIG_FILES="$CONFIG_FILES testuser/Makefile" ;;
+    "tests/Makefile") CONFIG_FILES="$CONFIG_FILES tests/Makefile" ;;
+    "tests/misc/Makefile") CONFIG_FILES="$CONFIG_FILES tests/misc/Makefile" ;;
+    "tests/kern/Makefile") CONFIG_FILES="$CONFIG_FILES tests/kern/Makefile" ;;
+    "tests/user/Makefile") CONFIG_FILES="$CONFIG_FILES tests/user/Makefile" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 $as_echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

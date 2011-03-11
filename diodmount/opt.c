@@ -202,35 +202,6 @@ opt_find_withval (Opt o, char *keyval)
     return list_find_first (o->list, (ListFindF)_match_keyval, keyval);
 }
 
-
-void
-opt_test (void)
-{
-    Opt o = opt_create ();
-    char *s;
-
-    opt_add (o, "mickey=%d", 42);
-    opt_add (o, "goofey=%s", "yes");
-    opt_add (o, "donald");
-    opt_add_cslist (o, "foo,bar,baz");
-    opt_add (o, "lastone");
-
-    s = opt_string (o);
-    msg ("opt string='%s'", s);
-    free (s);
-
-    assert (opt_find (o, "mickey"));
-    assert (opt_find (o, "bar"));
-    assert (!opt_find (o, "barn"));
-
-    opt_add_cslist_override (o, "mickey=string,foo=12,bar=15,baz");
-    s = opt_string (o);
-    msg ("opt string='%s'", s);
-    free (s);
-
-    opt_destroy (o);
-}
-
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */

@@ -32,7 +32,6 @@ void            opt_add_cslist (Opt o, char *s);
 void            opt_add_cslist_override (Opt o, char *s);
 char           *opt_find (Opt o, char *key);
 char           *opt_find_withval (Opt o, char *keyval);
-void            opt_test (void);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

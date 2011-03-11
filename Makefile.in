@@ -249,9 +249,7 @@ SUBDIRS = \
 	man \
 	scripts \
 	diodctl \
-	test \
-	testkern \
-	testuser
+	tests
 
 EXTRA_DIST = META diod.spec
 all: all-recursive

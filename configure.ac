@@ -88,9 +88,10 @@ AC_CONFIG_FILES( \
   diod/Makefile \
   diodctl/Makefile \
   diodmount/Makefile \
-  test/Makefile \
-  testkern/Makefile \
-  testuser/Makefile \
+  tests/Makefile \
+  tests/misc/Makefile \
+  tests/kern/Makefile \
+  tests/user/Makefile \
 )
 
 AC_OUTPUT

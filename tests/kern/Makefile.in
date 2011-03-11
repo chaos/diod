@@ -34,9 +34,11 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-check_PROGRAMS = conjoin$(EXEEXT) tattach$(EXEEXT) tmkdir$(EXEEXT) \
-	tread$(EXEEXT) tstat$(EXEEXT) twrite$(EXEEXT)
-subdir = testuser
+check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
+	trename$(EXEEXT) tstat$(EXEEXT) tflock$(EXEEXT) \
+	tflock2$(EXEEXT) tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) \
+	tconfig$(EXEEXT) tfsgid$(EXEEXT)
+subdir = tests/kern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
@@ -53,39 +55,67 @@ CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__objects_1 =
-am_conjoin_OBJECTS = conjoin.$(OBJEXT) $(am__objects_1)
-conjoin_OBJECTS = $(am_conjoin_OBJECTS)
-conjoin_LDADD = $(LDADD)
+am_kconjoin_OBJECTS = kconjoin.$(OBJEXT) $(am__objects_1)
+kconjoin_OBJECTS = $(am_kconjoin_OBJECTS)
+kconjoin_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
-conjoin_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
+kconjoin_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_tattach_OBJECTS = tattach.$(OBJEXT) $(am__objects_1)
-tattach_OBJECTS = $(am_tattach_OBJECTS)
-tattach_LDADD = $(LDADD)
-tattach_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
+tconfig_SOURCES = tconfig.c
+tconfig_OBJECTS = tconfig.$(OBJEXT)
+tconfig_LDADD = $(LDADD)
+tconfig_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_tmkdir_OBJECTS = tmkdir.$(OBJEXT) $(am__objects_1)
-tmkdir_OBJECTS = $(am_tmkdir_OBJECTS)
-tmkdir_LDADD = $(LDADD)
-tmkdir_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
+tfcntl2_SOURCES = tfcntl2.c
+tfcntl2_OBJECTS = tfcntl2.$(OBJEXT)
+tfcntl2_LDADD = $(LDADD)
+tfcntl2_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_tread_OBJECTS = tread.$(OBJEXT) $(am__objects_1)
-tread_OBJECTS = $(am_tread_OBJECTS)
-tread_LDADD = $(LDADD)
-tread_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
+tfcntl3_SOURCES = tfcntl3.c
+tfcntl3_OBJECTS = tfcntl3.$(OBJEXT)
+tfcntl3_LDADD = $(LDADD)
+tfcntl3_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_tflock_OBJECTS = tflock.$(OBJEXT) $(am__objects_1)
+tflock_OBJECTS = $(am_tflock_OBJECTS)
+tflock_LDADD = $(LDADD)
+tflock_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+tflock2_SOURCES = tflock2.c
+tflock2_OBJECTS = tflock2.$(OBJEXT)
+tflock2_LDADD = $(LDADD)
+tflock2_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_tfsgid_OBJECTS = tfsgid.$(OBJEXT) $(am__objects_1)
+tfsgid_OBJECTS = $(am_tfsgid_OBJECTS)
+tfsgid_LDADD = $(LDADD)
+tfsgid_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_trename_OBJECTS = trename.$(OBJEXT) $(am__objects_1)
+trename_OBJECTS = $(am_trename_OBJECTS)
+trename_LDADD = $(LDADD)
+trename_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -94,16 +124,22 @@ am_tstat_OBJECTS = tstat.$(OBJEXT) $(am__objects_1)
 tstat_OBJECTS = $(am_tstat_OBJECTS)
 tstat_LDADD = $(LDADD)
 tstat_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
-am_twrite_OBJECTS = twrite.$(OBJEXT) $(am__objects_1)
-twrite_OBJECTS = $(am_twrite_OBJECTS)
-twrite_LDADD = $(LDADD)
-twrite_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
+am_tstatfs_OBJECTS = tstatfs.$(OBJEXT) $(am__objects_1)
+tstatfs_OBJECTS = $(am_tstatfs_OBJECTS)
+tstatfs_LDADD = $(LDADD)
+tstatfs_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+am_tsuppgrp_OBJECTS = tsuppgrp.$(OBJEXT) $(am__objects_1)
+tsuppgrp_OBJECTS = $(am_tsuppgrp_OBJECTS)
+tsuppgrp_LDADD = $(LDADD)
+tsuppgrp_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -116,10 +152,14 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(conjoin_SOURCES) $(tattach_SOURCES) $(tmkdir_SOURCES) \
-	$(tread_SOURCES) $(tstat_SOURCES) $(twrite_SOURCES)
-DIST_SOURCES = $(conjoin_SOURCES) $(tattach_SOURCES) $(tmkdir_SOURCES) \
-	$(tread_SOURCES) $(tstat_SOURCES) $(twrite_SOURCES)
+SOURCES = $(kconjoin_SOURCES) tconfig.c tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
+DIST_SOURCES = $(kconjoin_SOURCES) tconfig.c tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -258,26 +298,32 @@ TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODCTL=$(top_builddir)/diodctl/diodctl" \
 	"PATH_DIODMOUNT=$(top_builddir)/diodmount/diodmount" \
 	"PATH_DIODCONF=$(top_builddir)/etc/diod.conf" \
-	"PATH_EXPDIR=$(shell readlink -f exp.d)" "./runtest"
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09
+	"PATH_MNTDIR=$(shell readlink -f mnt.d)" "PATH_EXPDIR=$(shell \
+	readlink -f exp.d)" "./runtest"
+TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t20 t21 t22 \
+	t23 t24 t25 t26 
+
+@LARGEIO_FALSE@XFAIL_TESTS = t20 t21
 CLEANFILES = *.out *.diff *.stats *.diod
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
-        -I../libnpfs -I../libnpclient -I../liblsd -I../libdiod
+        -I$(top_srcdir)/libnpfs \
+	-I$(top_srcdir)/liblsd \
+	-I$(top_srcdir)/libdiod
 
 LDADD = $(top_builddir)/libdiod/libdiod.a \
-        $(top_builddir)/libnpclient/libnpclient.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
-common_sources = 
-conjoin_SOURCES = conjoin.c $(common_sources)
-tattach_SOURCES = tattach.c $(common_sources)
-tmkdir_SOURCES = tmkdir.c $(common_sources)
-tread_SOURCES = tread.c $(common_sources)
+common_sources = test.h
+kconjoin_SOURCES = kconjoin.c $(common_sources)
+tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
+tstatfs_SOURCES = tstatfs.c $(common_sources)
+trename_SOURCES = trename.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
-twrite_SOURCES = twrite.c $(common_sources)
+tflock_SOURCES = tflock.c $(common_sources)
+tfsgid_SOURCES = tfsgid.c $(common_sources)
 all: all-am
 
 .SUFFIXES:
@@ -291,9 +337,9 @@ $(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__confi
 	      exit 1;; \
 	  esac; \
 	done; \
-	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu testuser/Makefile'; \
+	echo ' cd $(top_srcdir) && $(AUTOMAKE) --gnu tests/kern/Makefile'; \
 	$(am__cd) $(top_srcdir) && \
-	  $(AUTOMAKE) --gnu testuser/Makefile
+	  $(AUTOMAKE) --gnu tests/kern/Makefile
 .PRECIOUS: Makefile
 Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 	@case '$?' in \
@@ -315,24 +361,39 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
-conjoin$(EXEEXT): $(conjoin_OBJECTS) $(conjoin_DEPENDENCIES) 
-	@rm -f conjoin$(EXEEXT)
-	$(LINK) $(conjoin_OBJECTS) $(conjoin_LDADD) $(LIBS)
-tattach$(EXEEXT): $(tattach_OBJECTS) $(tattach_DEPENDENCIES) 
-	@rm -f tattach$(EXEEXT)
-	$(LINK) $(tattach_OBJECTS) $(tattach_LDADD) $(LIBS)
-tmkdir$(EXEEXT): $(tmkdir_OBJECTS) $(tmkdir_DEPENDENCIES) 
-	@rm -f tmkdir$(EXEEXT)
-	$(LINK) $(tmkdir_OBJECTS) $(tmkdir_LDADD) $(LIBS)
-tread$(EXEEXT): $(tread_OBJECTS) $(tread_DEPENDENCIES) 
-	@rm -f tread$(EXEEXT)
-	$(LINK) $(tread_OBJECTS) $(tread_LDADD) $(LIBS)
+kconjoin$(EXEEXT): $(kconjoin_OBJECTS) $(kconjoin_DEPENDENCIES) 
+	@rm -f kconjoin$(EXEEXT)
+	$(LINK) $(kconjoin_OBJECTS) $(kconjoin_LDADD) $(LIBS)
+tconfig$(EXEEXT): $(tconfig_OBJECTS) $(tconfig_DEPENDENCIES) 
+	@rm -f tconfig$(EXEEXT)
+	$(LINK) $(tconfig_OBJECTS) $(tconfig_LDADD) $(LIBS)
+tfcntl2$(EXEEXT): $(tfcntl2_OBJECTS) $(tfcntl2_DEPENDENCIES) 
+	@rm -f tfcntl2$(EXEEXT)
+	$(LINK) $(tfcntl2_OBJECTS) $(tfcntl2_LDADD) $(LIBS)
+tfcntl3$(EXEEXT): $(tfcntl3_OBJECTS) $(tfcntl3_DEPENDENCIES) 
+	@rm -f tfcntl3$(EXEEXT)
+	$(LINK) $(tfcntl3_OBJECTS) $(tfcntl3_LDADD) $(LIBS)
+tflock$(EXEEXT): $(tflock_OBJECTS) $(tflock_DEPENDENCIES) 
+	@rm -f tflock$(EXEEXT)
+	$(LINK) $(tflock_OBJECTS) $(tflock_LDADD) $(LIBS)
+tflock2$(EXEEXT): $(tflock2_OBJECTS) $(tflock2_DEPENDENCIES) 
+	@rm -f tflock2$(EXEEXT)
+	$(LINK) $(tflock2_OBJECTS) $(tflock2_LDADD) $(LIBS)
+tfsgid$(EXEEXT): $(tfsgid_OBJECTS) $(tfsgid_DEPENDENCIES) 
+	@rm -f tfsgid$(EXEEXT)
+	$(LINK) $(tfsgid_OBJECTS) $(tfsgid_LDADD) $(LIBS)
+trename$(EXEEXT): $(trename_OBJECTS) $(trename_DEPENDENCIES) 
+	@rm -f trename$(EXEEXT)
+	$(LINK) $(trename_OBJECTS) $(trename_LDADD) $(LIBS)
 tstat$(EXEEXT): $(tstat_OBJECTS) $(tstat_DEPENDENCIES) 
 	@rm -f tstat$(EXEEXT)
 	$(LINK) $(tstat_OBJECTS) $(tstat_LDADD) $(LIBS)
-twrite$(EXEEXT): $(twrite_OBJECTS) $(twrite_DEPENDENCIES) 
-	@rm -f twrite$(EXEEXT)
-	$(LINK) $(twrite_OBJECTS) $(twrite_LDADD) $(LIBS)
+tstatfs$(EXEEXT): $(tstatfs_OBJECTS) $(tstatfs_DEPENDENCIES) 
+	@rm -f tstatfs$(EXEEXT)
+	$(LINK) $(tstatfs_OBJECTS) $(tstatfs_LDADD) $(LIBS)
+tsuppgrp$(EXEEXT): $(tsuppgrp_OBJECTS) $(tsuppgrp_DEPENDENCIES) 
+	@rm -f tsuppgrp$(EXEEXT)
+	$(LINK) $(tsuppgrp_OBJECTS) $(tsuppgrp_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -340,12 +401,17 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conjoin.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tattach.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tmkdir.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kconjoin.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconfig.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl3.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfsgid.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trename.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstat.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twrite.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstatfs.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsuppgrp.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -650,12 +716,13 @@ uninstall-am:
 	uninstall-am
 
 
-$(TESTS): exp.d
+$(TESTS): mnt.d exp.d
 
-exp.d:
+mnt.d exp.d:
 	mkdir -p $@
 
 clean: clean-am
+	-rmdir mnt.d
 	-rmdir exp.d
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.

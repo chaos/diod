@@ -26,7 +26,10 @@ CLEANFILES = *.out *.diff *.stats *.diod
 AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
-        -I../libnpfs -I../libnpclient -I../liblsd -I../libdiod
+        -I$(top_srcdir)/libnpfs \
+	-I$(top_srcdir)/libnpclient \
+	-I$(top_srcdir)/liblsd \
+	-I$(top_srcdir)/libdiod
 
 
 LDADD = $(top_builddir)/libdiod/libdiod.a \
