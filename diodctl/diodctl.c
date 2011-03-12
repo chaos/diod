@@ -73,7 +73,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:e:anD:L:"
+#define OPTIONS "fd:l:w:c:e:nD:L:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -83,7 +83,6 @@ static const struct option longopts[] = {
     {"nwthreads",       required_argument,  0, 'w'},
     {"config-file",     required_argument,  0, 'c'},
     {"export",          required_argument,  0, 'e'},
-    {"allowany",        no_argument,        0, 'a'},
     {"no-auth",         no_argument,        0, 'n'},
     {"diod-path",       required_argument,  0, 'D'},
     {"log-dest",        required_argument,  0, 'L'},
@@ -104,7 +103,6 @@ usage()
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -c,--config-file FILE  set config file path\n"
 "   -e,--export PATH       export PATH (just one allowed)\n"
-"   -a,--allowany          disable TCP wrappers checks\n"
 "   -n,--no-auth           disable authentication check\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
 "   -L,--log-dest DEST     log to DEST, can be syslog, stderr, or file\n"
@@ -177,9 +175,6 @@ main(int argc, char **argv)
                 }
                 diod_conf_add_export (optarg);
                 break;
-            case 'a':   /* --allowany */
-                diod_conf_set_tcpwrappers (0);
-                break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);
                 break;
@@ -199,10 +194,6 @@ main(int argc, char **argv)
 
     /* sane config? */
     diod_conf_validate_exports ();
-#if ! HAVE_TCP_WRAPPERS
-    if (diod_conf_get_tcpwrappers ())
-        msg_exit ("no TCP wrapper support but config enables it");
-#endif
 
     if (geteuid () != 0)
         msg_exit ("must run as root");
@@ -221,7 +212,7 @@ main(int argc, char **argv)
 
     diodctl_serv_init ();
     diodctl_register_ops (srv);
-    diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
+    diod_sock_accept_loop (srv, fds, nfds);
     /*NOTREACHED*/
 
     exit (0);

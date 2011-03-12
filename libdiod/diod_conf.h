@@ -40,9 +40,6 @@ void    diod_conf_set_nwthreads (int i);
 int     diod_conf_get_foreground (void);
 void    diod_conf_set_foreground (int i);
 
-int     diod_conf_get_tcpwrappers (void);
-void    diod_conf_set_tcpwrappers (int i);
-
 int     diod_conf_get_auth_required (void);
 void    diod_conf_set_auth_required (int i);
 

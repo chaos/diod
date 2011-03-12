@@ -58,7 +58,7 @@ main (int argc, char *argv[])
     if (sb1.st_dev != sb2.st_dev)
         msg ("dev differs");
     if (sb1.st_ino != sb2.st_ino)
-        msg ("ino differs by %"PRIu64, sb2.st_ino - sb1.st_ino);
+        msg ("ino differs");
     if (sb1.st_mode != sb2.st_mode)
         msg ("mode differs");
     if (sb1.st_nlink != sb2.st_nlink)

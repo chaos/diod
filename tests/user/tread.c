@@ -64,7 +64,7 @@ main (int argc, char *argv[])
     infile = argv[2];
     outfile = argv[3];
 
-    if ((fd = open (outfile, O_WRONLY | O_CREAT)) < 0)
+    if ((fd = open (outfile, O_WRONLY | O_CREAT, 0644)) < 0)
         err_exit ("open");
 
     if (!(fs = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))

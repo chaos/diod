@@ -234,7 +234,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
  * This is a helper for diod_sock_accept_loop ().
  */
 static void
-_accept_one (Npsrv *srv, int fd, int wrap)
+_accept_one (Npsrv *srv, int fd)
 {
     struct sockaddr_storage addr;
     socklen_t addr_size = sizeof(addr);
@@ -262,13 +262,11 @@ _accept_one (Npsrv *srv, int fd, int wrap)
         return;
     }
 #if HAVE_TCP_WRAPPERS
-    if (wrap) {
-        res = hosts_ctl (DAEMON_NAME, host, ip, STRING_UNKNOWN);
-        if (!res) {
-            msg ("connect denied by wrappers: %s:%s", host, svc);
-            close (fd);
-            return;
-        }
+    res = hosts_ctl (DAEMON_NAME, host, ip, STRING_UNKNOWN);
+    if (!res) {
+        msg ("connect denied by wrappers: %s:%s", host, svc);
+        close (fd);
+        return;
     }
 #endif
     diod_sock_startfd (srv, fd, host, ip, svc, 0);
@@ -278,7 +276,7 @@ _accept_one (Npsrv *srv, int fd, int wrap)
  * This comprises the main service loop in diod -L and diodctl daemons.
  */
 void
-diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
+diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds)
 {
     int i;
 
@@ -294,7 +292,7 @@ diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
         }
         for (i = 0; i < nfds; i++) {
             if ((fds[i].revents & POLLIN)) {
-                _accept_one (srv, fds[i].fd, wrap);
+                _accept_one (srv, fds[i].fd);
             }
         }
     }
@@ -307,14 +305,13 @@ typedef struct  {
     Npsrv *srv;
     struct pollfd *fds;
     int nfds;
-    int wrap;
 } ala_t;
 
 static void *
 _accept_thread (void *ap)
 {
     ala_t *a = ap;
-    diod_sock_accept_loop (a->srv, a->fds, a->nfds, a->wrap);
+    diod_sock_accept_loop (a->srv, a->fds, a->nfds);
     return NULL;
 }
 
@@ -322,7 +319,7 @@ _accept_thread (void *ap)
  * Quit once connection count goes above zero then drops to zero again.
  */
 void
-diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
+diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds)
 {
     ala_t a;
     pthread_t thd;
@@ -330,7 +327,6 @@ diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds, int wrap)
     a.srv = srv;
     a.fds = fds;
     a.nfds = nfds;
-    a.wrap = wrap;
     pthread_create (&thd, NULL, _accept_thread, &a);
     np_srv_wait_zeroconns (srv);
 }

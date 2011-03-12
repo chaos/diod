@@ -57,7 +57,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:aF:u:A:L:s:n"
+#define OPTIONS "d:l:w:e:E:F:u:A:L:s:n"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -67,7 +67,6 @@ static const struct option longopts[] = {
     {"nwthreads",       required_argument,  0, 'w'},
     {"export",          required_argument,  0, 'e'},
     {"export-file",     required_argument,  0, 'E'},
-    {"no-wrap",         no_argument,        0, 'a'},
     {"no-auth",         no_argument,        0, 'n'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
@@ -95,8 +94,7 @@ usage()
 "   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
 "   -s,--stats FILE        log detailed I/O stats to FILE\n"
-"   -a,--no-wrap           disable TCP wrappers checks (allow any host)\n"
-"   -n,--no-auth           disable authentication check (allow any user)\n"
+"   -n,--no-auth           disable authentication check\n"
     );
     exit (1);
 }
@@ -157,10 +155,7 @@ main(int argc, char **argv)
                 }
                 diod_conf_read_exports (optarg);
                 break;
-            case 'a':   /* --no-wrap */
-                diod_conf_set_tcpwrappers (0);
-                break;
-            case 'n':   /* --no--auth */
+            case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);
                 break;
             case 'F':   /* --listen-fds N */
@@ -198,10 +193,6 @@ main(int argc, char **argv)
         usage();
 
     diod_conf_validate_exports ();
-#if ! HAVE_TCP_WRAPPERS
-    if (diod_conf_get_tcpwrappers ())
-        msg_exit ("no TCP wrapper support, yet config enables it");
-#endif
     if (diod_conf_get_runasuid (&uid)) {
         if (geteuid () != 0 && geteuid () != uid)
             msg_exit ("must be root to run diod as another user");
@@ -222,11 +213,11 @@ main(int argc, char **argv)
     if (Fopt) {
         if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
             msg_exit ("failed to set up listen ports");
-        diod_sock_accept_batch (srv, fds, nfds, diod_conf_get_tcpwrappers ());
+        diod_sock_accept_batch (srv, fds, nfds);
     } else if ((hplist = diod_conf_get_diodlisten ())) {
         if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
             msg_exit ("failed to set up listen ports");
-        diod_sock_accept_loop (srv, fds, nfds, diod_conf_get_tcpwrappers ());
+        diod_sock_accept_loop (srv, fds, nfds);
         /*NOTREACHED*/
     } else {
         diod_sock_startfd (srv, 0, "stdin", "0.0.0.0", "0", 1);

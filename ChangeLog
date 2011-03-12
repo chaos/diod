@@ -1,3 +1,13 @@
+2011-03-12 Jim Garlick <garlick@llnl.gov>
+
+	* tests/user/tstat.c : Don't print inode difference.
+
+	* tests/user/tread.c : Provide missing open () mode argument.
+
+	* libdiod/diod_conf.[ch], libdiod/diod_sock.[ch], diod/diod.c,
+	diodctl/diodctl.c : Drop support for -a option (disable tcp wrappers).
+	If wrappers are compiled in, disable checks by configuring wrappers.
+
 2011-03-11 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/read.c : Fix bug in np_gets ().

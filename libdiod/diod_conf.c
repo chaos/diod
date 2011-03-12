@@ -57,7 +57,6 @@ typedef struct {
     int          nwthreads;
     int          foreground;
     int          auth_required;
-    int          tcpwrappers;
     uid_t        runasuid;
     int          runasuid_valid;
     char        *diodpath;
@@ -73,7 +72,6 @@ static Conf config = {
     .nwthreads      = 16,
     .foreground     = 0,
     .auth_required  = 1,
-    .tcpwrappers    = 1,
     .runasuid_valid = 0,
     .diodpath       = NULL, /* diod_conf_init initializes */
     .diodlisten     = NULL, /* diod_conf_init initializes */
@@ -137,18 +135,6 @@ void
 diod_conf_set_auth_required (int i)
 {
     config.auth_required = i;
-}
-
-int
-diod_conf_get_tcpwrappers (void)
-{
-    return config.tcpwrappers;
-}
-
-void
-diod_conf_set_tcpwrappers (int i)
-{
-    config.tcpwrappers = i;
 }
 
 int
