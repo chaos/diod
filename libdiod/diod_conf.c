@@ -576,7 +576,6 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
         _lua_getglobal_int (path, L, "foreground", &config.foreground);
         _lua_getglobal_int (path, L, "auth_required", &config.auth_required);
-        _lua_getglobal_int (path, L, "tcpwrappers", &config.tcpwrappers);
         _lua_getglobal_int (path, L, "atomic_max_mb", &config.atomic_max_mb);
         _lua_getglobal_string (path, L, "diodpath", &config.diodpath);
         _lua_getglobal_list_of_strings (path, L, "listen",
