@@ -1,0 +1,7 @@
+kconjoin: diodmount exited with rc=0
+remove file in expdir
+stat file in mntdir: does not exist
+touch file in expdir
+stat file in mntdir: exists
+kconjoin: t27 exited with rc=0
+kconjoin: diod exited with rc=0

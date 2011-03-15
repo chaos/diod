@@ -1,0 +1,21 @@
+#!/bin/bash -e
+
+echo remove file in expdir
+rm -f $PATH_EXPDIR/a
+
+if stat $PATH_MNTDIR/a >/dev/null 2>&1; then
+    echo stat file in mntdir: exists
+    exit 1
+else
+    echo stat file in mntdir: does not exist
+fi
+
+echo touch file in expdir
+touch $PATH_EXPDIR/a
+
+if stat $PATH_MNTDIR/a >/dev/null 2>&1; then
+    echo stat file in mntdir: exists
+else
+    echo stat file in mntdir: does not exist
+    exit 1
+fi

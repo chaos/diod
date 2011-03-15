@@ -1,5 +1,8 @@
 2011-03-14 Jim Garlick <garlick@llnl.gov>
 
+	* tests/kern/t27*, tests/kern/Makefile.am : New (failing) test for
+	cached negative dentries.
+
 	* utils/diodexp.8.in : New.
 
 	* utils/* : Fine tuning of options and documentation.
