@@ -8,8 +8,6 @@ check_PROGRAMS = \
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
-TESTS_ENVIRONMENT += "PATH_DIODCTL=$(top_builddir)/diodctl/diodctl"
-TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/diodmount/diodmount"
 TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
 TESTS_ENVIRONMENT += "PATH_EXPDIR=$(shell readlink -f exp.d)"
 TESTS_ENVIRONMENT += "./runtest"

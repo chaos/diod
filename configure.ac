@@ -81,13 +81,13 @@ AC_CONFIG_FILES( \
   man/Makefile \
   diod/diod.8 \
   diodctl/diodctl.8 \
-  diodmount/diodmount.8 \
+  utils/diodmount.8 \
   man/diodctl.conf.5 \
   scripts/Makefile \
   scripts/diodctl.init \
   diod/Makefile \
   diodctl/Makefile \
-  diodmount/Makefile \
+  utils/Makefile \
   tests/Makefile \
   tests/misc/Makefile \
   tests/kern/Makefile \

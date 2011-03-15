@@ -1,3 +1,14 @@
+2011-03-14 Jim Garlick <garlick@llnl.gov>
+
+	* scripts/auto.diod : New (under construction).
+
+	* utils/diodexp : New, for listing exports in automounter format.
+
+	* utils/diodmount : Drop -a option.  Accept a hostlist for
+	host:/aname, try hosts in sequence until one succeeds.
+
+	* utils/* : Renamed from diodmount.
+
 2011-03-12 Jim Garlick <garlick@llnl.gov>
 
 	* tests/user/tstat.c : Don't print inode difference.

@@ -10,7 +10,7 @@ AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \
 	-I$(top_srcdir)/liblsd \
 	-I$(top_srcdir)/libdiod \
-	-I$(top_srcdir)/diodmount
+	-I$(top_srcdir)/utils
 
 
 LDADD = $(top_builddir)/libdiod/libdiod.a \
@@ -19,8 +19,8 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = \
-	$(top_srcdir)/diodmount/opt.c \
-	$(top_srcdir)/diodmount/opt.h \
+	$(top_srcdir)/utils/opt.c \
+	$(top_srcdir)/utils/opt.h \
 	test.h
 
 tsetuid_SOURCES = tsetuid.c $(common_sources)

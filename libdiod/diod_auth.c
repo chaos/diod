@@ -23,6 +23,22 @@
 
 /* diod_auth.c - munge authentication for diod */
 
+/* Here is the basic handshake
+ * C: Tauth afid uname aname n_uname
+ * S: Rauth aqid
+ * C: Twrite afid offset count <munge cred>
+ * S: Rwrite count
+ * C: Tattach fid afid uname aname n_uname
+ * S: Rattach qid
+ * C: Tclunk afid
+ * S: Rclunk
+ */
+
+/* FIXME:
+ * Handshake should be expanded to include selection from
+ * multiple auth methods.
+ */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif

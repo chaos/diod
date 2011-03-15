@@ -258,7 +258,7 @@ AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \
 	-I$(top_srcdir)/liblsd \
 	-I$(top_srcdir)/libdiod \
-	-I$(top_srcdir)/diodmount
+	-I$(top_srcdir)/utils
 
 LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(top_builddir)/libnpfs/libnpfs.a \
@@ -266,8 +266,8 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = \
-	$(top_srcdir)/diodmount/opt.c \
-	$(top_srcdir)/diodmount/opt.h \
+	$(top_srcdir)/utils/opt.c \
+	$(top_srcdir)/utils/opt.h \
 	test.h
 
 tsetuid_SOURCES = tsetuid.c $(common_sources)
@@ -361,19 +361,19 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
 
-opt.o: $(top_srcdir)/diodmount/opt.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT opt.o -MD -MP -MF $(DEPDIR)/opt.Tpo -c -o opt.o `test -f '$(top_srcdir)/diodmount/opt.c' || echo '$(srcdir)/'`$(top_srcdir)/diodmount/opt.c
+opt.o: $(top_srcdir)/utils/opt.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT opt.o -MD -MP -MF $(DEPDIR)/opt.Tpo -c -o opt.o `test -f '$(top_srcdir)/utils/opt.c' || echo '$(srcdir)/'`$(top_srcdir)/utils/opt.c
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/opt.Tpo $(DEPDIR)/opt.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diodmount/opt.c' object='opt.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/utils/opt.c' object='opt.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o opt.o `test -f '$(top_srcdir)/diodmount/opt.c' || echo '$(srcdir)/'`$(top_srcdir)/diodmount/opt.c
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o opt.o `test -f '$(top_srcdir)/utils/opt.c' || echo '$(srcdir)/'`$(top_srcdir)/utils/opt.c
 
-opt.obj: $(top_srcdir)/diodmount/opt.c
-@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT opt.obj -MD -MP -MF $(DEPDIR)/opt.Tpo -c -o opt.obj `if test -f '$(top_srcdir)/diodmount/opt.c'; then $(CYGPATH_W) '$(top_srcdir)/diodmount/opt.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diodmount/opt.c'; fi`
+opt.obj: $(top_srcdir)/utils/opt.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT opt.obj -MD -MP -MF $(DEPDIR)/opt.Tpo -c -o opt.obj `if test -f '$(top_srcdir)/utils/opt.c'; then $(CYGPATH_W) '$(top_srcdir)/utils/opt.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/utils/opt.c'; fi`
 @am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/opt.Tpo $(DEPDIR)/opt.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diodmount/opt.c' object='opt.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/utils/opt.c' object='opt.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o opt.obj `if test -f '$(top_srcdir)/diodmount/opt.c'; then $(CYGPATH_W) '$(top_srcdir)/diodmount/opt.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diodmount/opt.c'; fi`
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o opt.obj `if test -f '$(top_srcdir)/utils/opt.c'; then $(CYGPATH_W) '$(top_srcdir)/utils/opt.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/utils/opt.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \

@@ -62,6 +62,7 @@
 #include "npfs.h"
 #include "npclient.h"
 #include "list.h"
+#include "hostlist.h"
 #include "diod_log.h"
 #include "diod_upool.h"
 #include "diod_sock.h"
@@ -70,20 +71,18 @@
 #include "util.h"
 #include "ctl.h"
 
-#define OPTIONS "au:Dnj:fo:vp:d:S"
+#define OPTIONS "u:nj:fo:vp:d:S"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
-    {"all",             no_argument,         0, 'a'},
     {"mount-user",      required_argument,   0, 'u'},
-    {"create-directories", no_argument,      0, 'D'},
     {"no-mtab",         no_argument,         0, 'n'},
     {"jobid",           required_argument ,  0, 'j'},
     {"fake-mount",      no_argument,         0, 'f'},
-    {"diod-options",    required_argument,   0, 'o'},
     {"verbose",         no_argument,         0, 'v'},
     {"diod-port",       required_argument,   0, 'p'},
     {"v9fs-debug",      required_argument ,  0, 'd'},
+    {"v9fs-options",    required_argument,   0, 'o'},
     {"stdin",           no_argument,         0, 'S'},
     {0, 0, 0, 0},
 };
@@ -95,16 +94,15 @@ static const struct option longopts[] = {
 
 static void  _diod_mount (int fd, char *dev, char *dir, char *aname,
                           char *opts, int vopt, int fopt, char *dopt);
-static void _verify_mountpoint (char *path, int Dopt);
+static void _verify_mountpoint (char *path);
+static hostlist_t _parse_device (char *device, char **anamep);
 
 static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodmount [OPTIONS] device [directory]\n"
-"   -a,--all                      mount all exported file systems\n"
+"Usage: diodmount [OPTIONS] host[,host,...]:aname [directory]\n"
 "   -u,--mount-user USER          set up the mount so only USER can use it\n"
-"   -D,--create-directories       create mount directories as needed\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -j,--jobid STR                set job id string\n"
 "   -f,--fake-mount               do everything but the actual diod mount(s)\n"
@@ -115,43 +113,34 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    char *dir = NULL, *host = NULL;
+    char *dir = NULL;
     char *aname = NULL;
     char *device;
     int c;
-    int aopt = 0;
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
-    int Dopt = 0;
     int Sopt = 0;
     char *popt = NULL;
     char *uopt = NULL;
     char *oopt = NULL;
     char *jopt = NULL;
     char *dopt = NULL;
-    query_t *ctl = NULL;
-    int rc = 0;
-    int sfd;
+    int sfd = -1;
+    hostlist_t hl = NULL;
 
     diod_log_init (argv[0]);
 
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 'a':   /* --all */
-                aopt = 1;
-                break;
-            case 'D':   /* --create-directories */
-                Dopt = 1;
-                break;
             case 'u':   /* --mount-user USER */
                 uopt = optarg;
                 break;
             case 'n':   /* --no-mtab */
                 nopt = 1;
                 break;
-            case 'o':   /* --diod-options OPT[,OPT]... */
+            case 'o':   /* --v9fs-options OPT[,OPT]... */
                 oopt = optarg;
                 break;
             case 'v':   /* --verbose */
@@ -176,25 +165,13 @@ main (int argc, char *argv[])
                 usage ();
         }
     }
-    if (aopt && popt)
-        msg_exit ("--all and --diod-port are incompatible options");
-    if (aopt && Sopt)
-        msg_exit ("--all and --stdin are incompatible options");
-    if (aopt) {/* Usage: diodmount [options] -a hostname [dir] */
-        if (optind != argc - 1 && optind != argc - 2)
-            usage ();
-        device = argv[optind++];
-        if (optind != argc)
-            dir = argv[optind++];
-        if (!(host = strdup (device)))
-            msg_exit ("out of memory");
-    } else {          /* Usage: diodmount [options] hostname:/aname directory */
-        if (optind != argc - 2)
-            usage ();
-        device = argv[optind++];
-        dir = argv[optind++];
-        util_parse_device (device, &aname, &host);
-    }
+    if (optind != argc - 2)
+        usage ();
+    device = argv[optind++];
+    dir = argv[optind++];
+    hl = _parse_device (device, &aname);
+
+    _verify_mountpoint (dir);
 
     /* Must start out with effective root id.
      * We drop euid = root but preserve ruid = root for mount, etc.
@@ -204,69 +181,91 @@ main (int argc, char *argv[])
     if (uopt)
         diod_become_user (uopt, 0, 0);
 
-    /* Fetch server export and port info from diodctl, if mode requires it.
+    /* Server is on stdin, not much to do.
      */
-    if ((!popt && !Sopt) || aopt)
-        ctl = ctl_query (host, jopt);
+    if (Sopt) {
+        sfd = 0;
+        nopt = 1;
 
-    /* Mount everything.
-     * If directory is specified, use as the root for mount points, else /.
-     * If -D option, create mount points as needed.
+    /* Port specified, try each host until one responds on that port.
      */
-    if (aopt) {
-        ListIterator itr;
-        char path[PATH_MAX];
-        char dev[PATH_MAX];
+    } else if (popt) {
+        hostlist_iterator_t hi;
+        char *host;
 
-        assert (aname == NULL);
-        if (!(itr = list_iterator_create (ctl->exports)))
+        if (!(hi = hostlist_iterator_create (hl)))
             msg_exit ("out of memory");
-        while ((aname = list_next (itr))) {
-            snprintf (path, sizeof (path), "%s%s", dir ? dir : "", aname);
-            _verify_mountpoint (path, Dopt);
+        while ((host = hostlist_next (hi)) && sfd < 0) {
+            if (vopt)
+                msg ("trying to connect to host %s port %s", host, popt);
+            sfd = diod_sock_connect (host, popt, 1, 0);
         }
-        list_iterator_reset(itr);
-        while ((aname = list_next (itr))) {
-            if ((sfd = diod_sock_connect (host, ctl->port, 1, 0)) < 0)
-                err_exit ("connect failed");
-            snprintf (dev, sizeof(dev), "%s:%s", host, aname);
-            _diod_mount (sfd, dev, path, aname, oopt, vopt, fopt, dopt);
-            (void)close (sfd);
-            if (!nopt)
-                (void)util_update_mtab (dev, path); /* FIXME: handle error */
-        }
-        list_iterator_destroy (itr);
-        aname = NULL;
+        hostlist_iterator_destroy (hi);
+        if (sfd < 0)
+            msg_exit ("could not contact diod server(s)");
 
-    /* Mount one file system.
-     * If -D option, create mount point as needed.
+    /* Try each diodctl server until one responds.
+     * Negotiate a port to conect on based on effective uid and jopt.
      */
     } else {
-        _verify_mountpoint (dir, Dopt);
-        if (Sopt) {
-            sfd = 0;
-            nopt = 1; /* force no mtab */
-        } else {
-            sfd = diod_sock_connect (host, popt ? popt : ctl->port, 1, 0);
-            if (sfd < 0)
-                err_exit ("connect failed");
-        }
-        _diod_mount (sfd, device, dir, aname, oopt, vopt, fopt, dopt);
-        (void)close (sfd);
-        if (!nopt) {
-            if (!util_update_mtab (device, dir)) {
-                util_umount (dir);
-                exit (1);
+        hostlist_iterator_t hi;
+        char *host, *port;
+
+        if (!(hi = hostlist_iterator_create (hl)))
+            msg_exit ("out of memory");
+        while ((host = hostlist_next (hi)) && sfd < 0) {
+            if (vopt)
+                msg ("trying to connect to host %s", host);
+            if (ctl_query (host, jopt, &port, NULL) == 0) {
+                sfd = diod_sock_connect (host, port, 1, 0);
+                free (port);
             }
+        }
+        hostlist_iterator_destroy (hi);
+        if (sfd < 0)
+            msg_exit ("could not contact diodctl/diod server(s)");
+    }
+
+    _diod_mount (sfd, device, dir, aname, oopt, vopt, fopt, dopt);
+    (void)close (sfd);
+    if (!nopt) {
+        if (!util_update_mtab (device, dir)) {
+            util_umount (dir);
+            exit (1);
         }
     }
 
-    free (host);
     if (aname)
         free (aname);
-    if (ctl)
-        free_query (ctl);
-    exit (rc);
+    if (hl)
+        hostlist_destroy (hl);
+    exit (0);
+}
+
+/* Given [device] in host[,host,...]:aname format,
+ * parse out the hostlist and aname.
+ * Caller must free the results.
+ * Exit on error.
+ */ 
+static hostlist_t
+_parse_device (char *device, char **anamep)
+{
+    char *host, *p, *aname;
+    hostlist_t hl;
+
+    if (!(host = strdup (device)))
+        msg_exit ("out of memory");
+    if (!(p = strchr (host, ':')))
+        msg_exit ("device is not in host[,host,...]:aname format");
+    *p++ = '\0';
+    if (!(aname = strdup (p)))
+        msg_exit ("out of memory");
+    if (!(hl = hostlist_create (host)))
+        msg_exit ("failed to parse hostlist");
+    free (host);
+    *anamep = aname;
+
+    return hl;
 }
 
 static char *
@@ -311,22 +310,15 @@ _parse_v9fs_debug (char *s)
     return optstr; 
 }
 
-/* Recursively create directory [path] if Dopt is true.
- * Verify that directory exists, exiting on failure.
+/* Verify that directory exists, exiting on failure.
  */
 static void
-_verify_mountpoint (char *path, int Dopt)
+_verify_mountpoint (char *path)
 {
     struct stat sb;
 
-    if (stat (path, &sb) < 0) {
-        if (Dopt)
-            err_exit ("stat %s", path);
-        if (util_mkdir_p (path, 0755) < 0)
-            err_exit ("mkdir %s", path);
-        if (stat (path, &sb) < 0)
-            err_exit ("stat %s", path);
-    } 
+    if (stat (path, &sb) < 0)
+        err_exit ("stat %s", path);
     if (!S_ISDIR (sb.st_mode))
         msg_exit ("%s: not a directory", path);
 }

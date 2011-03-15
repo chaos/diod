@@ -4,7 +4,7 @@ SUBDIRS = \
 	libnpclient \
 	libdiod \
 	diod \
-	diodmount \
+	utils \
 	man \
 	scripts \
 	diodctl \

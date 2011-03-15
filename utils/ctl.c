@@ -59,34 +59,6 @@
 #include "util.h"
 #include "ctl.h"
 
-/* Allocate and initialize a query_t struct.
- * Exit on error.
- */
-static query_t *
-_alloc_query (void)
-{
-    query_t *r;
-    
-    if (!(r = malloc (sizeof (*r))))
-        err_exit ("out of memory");
-    if (!(r->exports = list_create ((ListDelF)free)))
-        err_exit ("out of memory");
-    r->port = NULL;
-    return r;
-}
-
-/* Free a query_t struct.
- * This function always succeedes.
- */
-void
-free_query (query_t *r)
-{
-    if (r->port)
-        free (r->port);
-    list_destroy (r->exports);
-    free (r);
-}
-
 /* Trim leading and trailing whitespace from a string, then duplicate
  * what's left, if anything; else return NULL .
  * Exit on malloc failure.
@@ -113,74 +85,130 @@ _strdup_trim (char *s)
 
 /* Write jobid into ctl file, then read port number back.
  */
-static void
-_getport (Npcfsys *fs, query_t *q, char *jobid)
+static char *
+_getport (Npcfsys *fs, char *jobid)
 {
-    Npcfid *fid;
+    Npcfid *fid = NULL;
+    char *port = NULL;
     char buf[64];
 
     if (!jobid)
         jobid = "nojob";
-    if (!(fid = npc_open (fs, "ctl", O_RDWR)))
-        err_exit ("ctl: open");
-    if (npc_puts (fid, jobid) < 0)
-        err_exit ("ctl: write");
-    if (npc_lseek (fid, 0, SEEK_SET) < 0)
-        err_exit ("ctl: seek");
-    if (!npc_gets (fid, buf, sizeof (buf)))
-        err_exit ("ctl: read");
-    q->port = _strdup_trim (buf);
-    if (npc_close (fid) < 0)
-        err_exit ("ctl: close");
-    if (q->port == NULL)
-        msg_exit ("ctl: error reading port");
+    if (!(fid = npc_open (fs, "ctl", O_RDWR))) {
+        err ("ctl: open");
+        goto error;
+    }
+    if (npc_puts (fid, jobid) < 0) {
+        err ("ctl: write");
+        goto error;
+    }
+    if (npc_lseek (fid, 0, SEEK_SET) < 0) {
+        err ("ctl: seek");
+        goto error;
+    }
+    if (!npc_gets (fid, buf, sizeof (buf))) {
+        err ("ctl: read");
+        goto error;
+    }
+    port = _strdup_trim (buf);
+    if (port == NULL) {
+        msg ("ctl: error reading port");
+        goto error;
+    }
+    if (npc_close (fid) < 0) {
+        err ("ctl: close");
+        goto error;
+    }
+    return port;
+error:
+    if (fid)
+        (void)npc_close (fid);
+    if (port)
+        free (port);
+    return NULL;
 }
 
 /* Read export list from exports file.
  */
-static void
-_getexports (Npcfsys *fs, query_t *q)
+static List
+_getexports (Npcfsys *fs)
 {
-    Npcfid *fid;
+    Npcfid *fid = NULL;
+    List l = NULL;
     char buf[PATH_MAX];
-    char *line;
 
-    if (!(fid = npc_open (fs, "exports", O_RDONLY)))
-        err_exit ("exports: open");
+    if (!(fid = npc_open (fs, "exports", O_RDONLY))) {
+        err ("exports: open");
+        goto error;
+    }
+    if (!(l = list_create((ListDelF)free)))
+        err_exit ("out of memory");
     errno = 0;
     while (npc_gets (fid, buf, sizeof (buf))) {
-        if (!(line = _strdup_trim (buf)))
-            continue;
-        if (!list_append (q->exports, line))
+        char *line = _strdup_trim (buf);
+
+        if (line && !list_append (l, line))
             msg_exit ("out of memory");
     }
-    if (errno)
-        err_exit ("exports: read");
-    if (npc_close (fid) < 0)
-        err_exit ("exports: close");
+    if (errno) {
+        err ("exports: read");
+        goto error;
+    }
+    if (list_count (l) == 0) {
+        msg ("exports: empty");
+        goto error;
+    }
+    if (npc_close (fid) < 0) {
+        err ("exports: close");
+        goto error;
+    }
+    return l;
+error:
+    if (fid)
+        (void)npc_close (fid);
+    if (l)
+        list_destroy (l);
+    return NULL;
 }
 
-/* Interact with diodctl server to determine port number of diod server
- * and a list of exports, returned in a query_t struct that caller must free.
- * If getport is false, skip port query that triggers server creation.
- * Exit on error.
- */
-query_t *
-ctl_query (char *host, char *jobid)
+int
+ctl_query (char *host, char *jobid, char **portp, List *exportsp)
 {
     int fd;
-    Npcfsys *fs;
-    query_t *q = _alloc_query ();
+    Npcfsys *fs = NULL;
+    char *port = NULL;
+    List exports = NULL;
 
-    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
-        err_exit ("connect failed");
-    if (!(fs = npc_mount (fd, 8192, "/diodctl", diod_auth_client_handshake)))
-        err_exit ("npc_mount");
-    _getport (fs, q, jobid);
-    _getexports (fs, q);
-    if (npc_umount (fs) < 0)
-        err_exit ("mpc_umount");
-    return q;
+    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0) {
+        err ("connect failed");
+        goto error;
+    }
+    if (!(fs = npc_mount (fd, 8192, "/diodctl", diod_auth_client_handshake))) {
+        err ("npc_mount");
+        close (fd);
+        goto error;
+    }
+    if (portp && !(port = _getport (fs, jobid)))
+        goto error;
+    if (exportsp && !(exports = _getexports (fs)))
+        goto error;
+    if (npc_umount (fs) < 0) {
+        err ("umount");
+        goto error;
+    }
+    if (portp)
+        *portp = port;
+    if (exportsp)
+        *exportsp = exports;
+    return 0;
+error:
+    if (fs)
+        (void)npc_umount (fs);
+    if (port)
+        free (port);
+    if (exports)
+        list_destroy (exports);
+    return -1;
 }
 
 /*

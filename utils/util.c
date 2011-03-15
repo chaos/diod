@@ -49,36 +49,6 @@
 
 #include "util.h"
 
-/* Create a directory, recursively creating parents as needed.
- * Return success (0) if the directory already exists, or creation was
- * successful, (-1) on failure.
- */
-int
-util_mkdir_p (char *path, mode_t mode)
-{
-    struct stat sb;
-    char *cpy;
-    int res = 0;
-
-    if (stat (path, &sb) == 0) {
-        if (!S_ISDIR (sb.st_mode)) {
-            errno = ENOTDIR;
-            return -1;
-        }
-        return 0;
-    }
-    if (!(cpy = strdup (path))) {
-        errno = ENOMEM;
-        return -1;
-    }
-    res = util_mkdir_p (dirname (cpy), mode);
-    free (cpy);
-    if (res == 0)
-        res = mkdir (path, mode);
-
-    return res;
-}
-
 /* Add an entry for [dev] mounted on [dir] to /etc/mtab.
  * Return success (1) or failure (0).
  */
@@ -152,27 +122,6 @@ util_umount (const char *target)
         err_exit ("umount %s", target);
     if (seteuid (saved_euid) < 0)
         err_exit ("failed to restore effective uid to %d", saved_euid);
-}
-
-/* Given [device] in host:aname format, parse out the host and aname.
- * Caller must free the resulting strings.
- * Exit on error.
- */
-void
-util_parse_device (char *device, char **anamep, char **hostp)
-{
-    char *host, *p, *aname;
-
-    if (!(host = strdup (device)))
-        msg_exit ("out of memory");
-    if (!(p = strchr (host, ':')))
-        msg_exit ("device is not in host:directory format");
-    *p++ = '\0';
-    if (!(aname = strdup (p)))
-        msg_exit ("out of memory");
-    
-    *hostp = host;
-    *anamep = aname;
 }
 
 /*
