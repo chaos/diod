@@ -18,12 +18,14 @@ TESTS_ENVIRONMENT += "PATH_MNTDIR=$(shell readlink -f mnt.d)"
 TESTS_ENVIRONMENT += "PATH_EXPDIR=$(shell readlink -f exp.d)"
 TESTS_ENVIRONMENT += "./runtest"
 
-TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t20 t21 t22 \
-	t23 t24 t25 t26 t27
+TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
+	t23 t24 t25 t26 t27 t28
 
+# Need to fix cached negative dentries!
 XFAIL_TESTS = t27
+
 if ! LARGEIO
-XFAIL_TESTS += t20 t21
+TESTS += t20 t21
 endif
 
 $(TESTS): mnt.d exp.d

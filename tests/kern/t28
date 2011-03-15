@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+echo rsync /etc to mntdir
+rsync -a /etc $PATH_MNTDIR/
+
+echo rsync /etc to mntdir again - should be silent
+rsync -avc /etc $PATH_MNTDIR/ | egrep -v '^(sent|total).*'
+
+echo rsync /etc to expdir - should be silent
+rsync -avc /etc $PATH_EXPDIR/ | egrep -v '^(sent|total).*'

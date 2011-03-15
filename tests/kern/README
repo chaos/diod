@@ -35,3 +35,4 @@ t25	Verify that files are created with the users effective gid.
 	Verify that files created in a setgid directory have the parent gid.
 t26	Verify that chgrp works.
 t27	Check that negative dentries are not cached.
+t28	Rsync /etc into 9p and compare.

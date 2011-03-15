@@ -1,4 +1,6 @@
-2011-03-14 Jim Garlick <garlick@llnl.gov>
+2011-03-15 Jim Garlick <garlick@llnl.gov>
+
+	* tests/kern/t28*, tests/kern/Makefile.am : New rsync test.
 
 	* tests/kern/t27*, tests/kern/Makefile.am : New (failing) test for
 	cached negative dentries.
