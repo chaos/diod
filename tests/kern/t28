@@ -3,6 +3,9 @@
 echo rsync /etc to mntdir
 rsync -a /etc $PATH_MNTDIR/
 
+# N.B. will report missing file
+# will not report (but silently fix) an incorrect mode
+
 echo rsync /etc to mntdir again - should be silent
 rsync -avc /etc $PATH_MNTDIR/ | egrep -v '^(sent|total).*'
 

@@ -38,7 +38,7 @@ check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
 	trename$(EXEEXT) tstat$(EXEEXT) tflock$(EXEEXT) \
 	tflock2$(EXEEXT) tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) \
 	tconfig$(EXEEXT) tfsgid$(EXEEXT)
-@LARGEIO_FALSE@am__append_1 = t20 t21
+@LARGEIO_TRUE@am__append_1 = t20 t21
 subdir = tests/kern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4

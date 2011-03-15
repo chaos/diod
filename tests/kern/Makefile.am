@@ -24,7 +24,7 @@ TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
 # Need to fix cached negative dentries!
 XFAIL_TESTS = t27
 
-if ! LARGEIO
+if LARGEIO
 TESTS += t20 t21
 endif
 
