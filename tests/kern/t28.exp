@@ -2,7 +2,6 @@ kconjoin: diodmount exited with rc=0
 rsync /etc to mntdir
 rsync /etc to mntdir again - should be silent
 sending incremental file list
-etc/
 
 rsync /etc to expdir - should be silent
 sending incremental file list
