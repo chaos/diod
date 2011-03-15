@@ -27,4 +27,5 @@ diodexp_LDADD = $(common_ldadd)
 diodexp_SOURCES = diodexp.c $(common_sources)
 
 man8_MANS = \
-        diodmount.8
+        diodmount.8 \
+        diodexp.8

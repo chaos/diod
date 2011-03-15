@@ -38,7 +38,7 @@ target_triplet = @target@
 sbin_PROGRAMS = diodmount$(EXEEXT) diodexp$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diodmount.8.in
+	$(srcdir)/diodexp.8.in $(srcdir)/diodmount.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -51,7 +51,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodmount.8
+CONFIG_CLEAN_FILES = diodmount.8 diodexp.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
@@ -259,7 +259,8 @@ diodmount_SOURCES = diodmount.c $(common_sources)
 diodexp_LDADD = $(common_ldadd)
 diodexp_SOURCES = diodexp.c $(common_sources)
 man8_MANS = \
-        diodmount.8
+        diodmount.8 \
+        diodexp.8
 
 all: all-am
 
@@ -296,6 +297,8 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 diodmount.8: $(top_builddir)/config.status $(srcdir)/diodmount.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodexp.8: $(top_builddir)/config.status $(srcdir)/diodexp.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-sbinPROGRAMS: $(sbin_PROGRAMS)
 	@$(NORMAL_INSTALL)

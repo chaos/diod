@@ -82,6 +82,7 @@ AC_CONFIG_FILES( \
   diod/diod.8 \
   diodctl/diodctl.8 \
   utils/diodmount.8 \
+  utils/diodexp.8 \
   man/diodctl.conf.5 \
   scripts/Makefile \
   scripts/diodctl.init \

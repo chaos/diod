@@ -1,0 +1,35 @@
+.TH diodexp 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+diodexp \- list diod exports
+.SH SYNOPSIS
+\fBdiodexp\fR \fI[OPTIONS] host\fR
+.SH DESCRIPTION
+.B diodexp
+lists file systems exported by the distributed I/O daemon, which is an I/O
+forwarding service for Linux clusters.
+.LP
+In addition, \fBdiodexp\fR can be used to implement an \fBautofs\fR program
+map for purposes of making \fBdiod\fR mounts available on demand with
+minimal client configuration.  See the example map: /etc/auto.g.
+.SH OPTIONS
+.TP
+.I "-a, --auto-direct"
+List exports in a format that can be redirected to create an
+\fBautofs\fR direct map file.
+.TP
+.I "-i, --auto-indirect MAP"
+List exports in a format that can be redirected to create an
+\fBautofs\fR indirect map file for MAP.  File systems with an
+initial directory component that does not match MAP are ignored.
+.TP
+.I "-k, --auto-key KEY"
+Used in combination with \fI-a\fR or \fI-i\fR to generate only
+the map entry for KEY.  \fBdiodexp\fR can be called with these options
+from an executable program map.
+.TP
+.I "-K, --auto-listkeys"
+Used in combination with \fI-a\fR or \fI-i\fR to list available keys.
+.SH "SEE ALSO"
+diod (8),
+diodctl (8),
+diodctl.conf (5)

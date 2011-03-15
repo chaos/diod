@@ -1,100 +1,89 @@
-.TH diodmount 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.TH mount.diod 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
 .SH NAME
-diodmount \- mount diod file systems
+mount.diod \- mount diod file systems
 .SH SYNOPSIS
-\fBdiodmount\fR \fI[OPTIONS] host:aname dir\fR
-.nf
-\fBdiodmount\fR \fI[OPTIONS] -a host [dir-prefix]\fR
+\fBmount.diod\fR \fI[OPTIONS] host:aname dir\fR
 .SH DESCRIPTION
-.B diodmount
+.B mount.diod
 is the mount utility for the distributed I/O daemon, which is an I/O
 forwarding service for Linux clusters.
-Usually \fBdiodmount\fR first interacts with the \fBdiodctl\fR superserver,
-which dynamically starts servers and lists exported file systems.
-Then it uses this information to perform one or more \fBdiod\fR mounts.
-All file system interactions are authenticated with MUNGE.
 .LP
-This command must be run as root.
+\fBmount.diod\fR performs two main tasks: 1) contact the \fBdiodctl\fR
+superserver on \fIhost\fR to obtain a \fBdiod\fR port number, and
+2) issue the \fImount(2)\fR system call for the \fB9p\fR file system
+with appropriate options for \fIdiod\fR on that port.
+.LP
+The act of requesting a port number may spawn a new \fIdiod\fR server
+instance, or return the port of an existing server, depending on the options.
+If a shared mount is requested (default), the port of a shared
+server is returned.  If a private mount is requested with \fI-u USER\fR,
+then a port number for a \fIdiod\fR server running exclusively for that user
+is returned.  If a jobid is provided with \fI-j JOBID\fR, the port number
+for a \fIdiod\fR server running exclusively for that job will be returned.
+.LP
+Authentication with the \fBdiod\fR server takes place in user space.
+The connected (and authenticated) file descriptor is passed as a mount
+option to the \fB9p\fR file system
+.LP
+This command requires root to execute the \fImount(2)\fR system call.
+.LP
+The \fB9p\fR file system must support the 9P2000.L protocol variant,
+e.g. kernel 2.6.38 or above.
 .SH OPTIONS
 .TP
-.I "-a, --all"
-Mount all file systems exported by \fIHOST\fR (omit aname path).
-If a directory argument is specified, it will be prepended to
-the server directory names when constructing mount points.
-.TP
-.I "-u, --mount-user USER"
-Start a private server for \fIUSER\fR if one is not already running,
-and mount so that only \fIUSER\fR can access the file system
-(-o access=<uid>, where <uid> is \fIUSER\fR's uid).
-The default (eqivalent to -u root) is to start a shared server as root
-if one is not already running,
-and mount so that any user can access the file system
-(-o access=user).
-.TP
-.I "-D, --create-directories"
-Recursively create mount point directories as needed, mode 0755.
+.I "-u, --user USER"
+Only the specified user will be allowed to access the file system.
+All other users will be denied access by the kernel 9p file system,
+which is mounted with the \fIaccess=<uid>\fR option.
+Unless the port was specified with the \fI-p\fR option,
+\fBmount.diod\fR will first contact the \fBdiodctl\fR superserver
+to obtain the port of a \fBdiod\fR server running exclusively for USER.
 .TP
 .I "-n, --no-mtab"
-Do not update /etc/mtab.  This may be appropriate, for example, when
-the file system is mounted in a private name space.
+Mount without updating /etc/mtab.
 .TP
-.I "-j, --jobid STRING"
-Pass a jobid or other arbitrary string to the \fBdiodctl\fR server.
-The server uses the uid plus this string, if specified, as a unique key
-to look up an existing \fBdiod\fR server that can handle the mount request.
-This is intended for a batch cluster environment where one 
-I/O forwarding server per job is desired, not the default of one per user.
+.I "-j, --jobid JOBID"
+Ask the \fBdiodctl\fR superserver for a \fIdiod\fR server running
+exclusively for JOBID.
 .TP
 .I "-f, --fake-mount"
-Do everything but actually perform the diod mount/unmount.
-.SH TESTING OPTIONS
-The following options are mainly intended for testing.
+Do everything but actually perform the \fImount(2)\fR system call.
+Note: this may include contacting the \fBdiodctl\fR superserver
+and authenticating a conection with \fBdiod\fR.
 .TP
-.I "-S, --stdin"
-A connection to the \fBdiod\fR server is inherited on file descriptor 0.
-You must provide a dummy \fIhost\fR component of the \fIhost:aname\fR
-argument.
-.I "-o, --diod-options OPT,[OPT,...]"
-Pass additional 9P mount options when mounting the \fBdiod\fR server.
-These options override the ones \fBdiodmount\fR sets up internally.
+.I "-p, --port PORT"
+Mount the \fBdiod\fR server on the specified port.
+Do not contact \fBdiodctl\fR to obtain a port.
 .TP
 .I "-v, --verbose"
-Show an approximation of the raw \fBmount\fR command line(s).
+Display verbose messages on stderr.
 .TP
-.I "-p, --diod-port PORT"
-Mount the \fBdiod\fR server on the specified port.
-Do not contact \fBdiodctl\fR.
+.I "-o, --v9fs-options OPT,[OPT,...]"
+Pass additional options to the \fImount(2)\fR system call,
+overriding any options of the same name constructed internally.
+Hint: use \fI-v\fR to see what these are.
 .TP
 .I "-d, --v9fs-debug flag[,flag...]"
 Set the specified kernel 9p file system debug flags at mount time.
 The following flags are valid:
-error, 9p, vfs, conv, mux, trans, slabs, fcall, fid, pkt, fsc.
+\fBerror\fR, \fB9p\fR, \fBvfs\fR, \fBconv\fR,
+\fBmux\fR, \fBtrans\fR, \fBslabs\fR, \fBfcall\fR,
+\fBfid\fR, \fBpkt\fR, \fBfsc\fR.
 These debug flags are set globally and persist after unmount.
-Mounting without this option clears the kernel 9p file system debug flags.
+Mounting without this option clears the kernel \fB9p\fR file system debug flags.
+.TP
+.I "-S, --stdin"
+A connection to the \fBdiod\fR server is inherited on file descriptor 0.
+You must provide a dummy \fIhost\fR component of the \fIhost:aname\fR
+argument.  This option is intended for testing only.
 .SH "EXAMPLES"
 .LP
 Mount /g/g99 from tycho42, so that all users can access it:
 .LP
 .nf
-    diodmount tycho42:/g/g99 /g/g99
+    mount -t diod tycho42:/g/g99 /g/g99
 .fi
-.LP
-Mount all file systems exported by tycho42 without updating
-/etc/mtab, creating mount points as needed:
-.LP
-.nf
-    diodmount -a -n -D tycho42
-.fi
-.LP
-Mount /p/lcrater1 on tycho[101-164] without updating /etc/mtab, starting
-a private server for garlick:
-.LP
-.nf
-    pdsh -w tycho[101-164] \\
-        diodmount -n -u garlick tycho42:/p/lcrater1 /p/lcrater1
-.fi
-.nf
 .SH "SEE ALSO"
 diod (8),
 diodctl (8),
-diod.conf (5)
+diodctl.conf (5)

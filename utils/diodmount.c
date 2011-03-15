@@ -24,12 +24,12 @@
 /* diodmount.c - mount a diod file system */
 
 /* Usage: diodmount host:path dir
- *     All users can access dir.
- *     The server is shared by all mounts of this type for all users.
+ *     All users can access dir (access=user).
+ *     Each new user is introduced with a new attach.
  *
  * Usage: diodmount -u USER host:path dir
- *     Only USER can access dir.
- *     The server is shared by all mounts by USER of this type.
+ *     Only USER can access dir (access=<uid>).
+ *     Other users will be denied by the client without asking server.
  */
 
 #if HAVE_CONFIG_H
@@ -75,12 +75,12 @@
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
-    {"mount-user",      required_argument,   0, 'u'},
+    {"user",            required_argument,   0, 'u'},
     {"no-mtab",         no_argument,         0, 'n'},
     {"jobid",           required_argument ,  0, 'j'},
     {"fake-mount",      no_argument,         0, 'f'},
     {"verbose",         no_argument,         0, 'v'},
-    {"diod-port",       required_argument,   0, 'p'},
+    {"port",            required_argument,   0, 'p'},
     {"v9fs-debug",      required_argument ,  0, 'd'},
     {"v9fs-options",    required_argument,   0, 'o'},
     {"stdin",           no_argument,         0, 'S'},
@@ -101,11 +101,16 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodmount [OPTIONS] host[,host,...]:aname [directory]\n"
-"   -u,--mount-user USER          set up the mount so only USER can use it\n"
+"Usage: mount.diod [OPTIONS] host[,host,...]:aname [directory]\n"
+"   -u,--user USER                set up the mount so only USER can use it\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -j,--jobid STR                set job id string\n"
-"   -f,--fake-mount               do everything but the actual diod mount(s)\n"
+"   -f,--fake-mount               do everything but the actual diod mount\n"
+"   -v,--verbose                  increase verbosity for debugging\n"
+"   -p,--port                     set diod port instead of asking diodctl\n"
+"   -d,--v9fs-debug opt[,opt,...] mount kernel 9p client with debug flags\n"
+"   -o,--v9fs-options opt[,opt,...] mount kernel 9p client with options\n" 
+"   -S,--stdin                    inherit server fd on stdin (for testing)\n" 
 );
     exit (1);
 }
@@ -134,7 +139,7 @@ main (int argc, char *argv[])
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 'u':   /* --mount-user USER */
+            case 'u':   /* --user USER */
                 uopt = optarg;
                 break;
             case 'n':   /* --no-mtab */
@@ -177,7 +182,7 @@ main (int argc, char *argv[])
      * We drop euid = root but preserve ruid = root for mount, etc.
      */
     if (geteuid () != 0)
-        msg_exit ("you must be root to run diodmount");
+        msg_exit ("you must be root");
     if (uopt)
         diod_become_user (uopt, 0, 0);
 
@@ -359,6 +364,10 @@ _diod_mount (int fd, char *dev, char *dir, char *aname, char *opts,
     opt_add (o, _parse_v9fs_debug (dopt)); /* debug=0 if !dopt */
     if (opts)
         opt_add_cslist_override (o, opts);
+    if (opt_find (o, "remount"))
+        msg_exit ("remount is not supported");
+    if (opt_find (o, "ro"))
+        msg ("warning: ro is ignored by 9p file system");
     options = opt_string (o);
     opt_destroy (o);
 

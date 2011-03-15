@@ -62,14 +62,14 @@
 #include "util.h"
 #include "ctl.h"
 
-#define OPTIONS "i:aSk:"
+#define OPTIONS "i:ak:K"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"auto-indirect",   required_argument,   0, 'i'},
-    {"key",             required_argument,   0, 'k'},
+    {"auto-key",        required_argument,   0, 'k'},
+    {"auto-listkeys",   no_argument,         0, 'K'},
     {"auto-direct",     no_argument,         0, 'a'},
-    {"stdin",           no_argument,         0, 'S'},
     {0, 0, 0, 0},
 };
 #else
@@ -77,8 +77,9 @@ static const struct option longopts[] = {
 #endif
 
 static int _list_exports (hostlist_t hl);
-static int _list_exports_auto_direct (hostlist_t hl);
-static int _list_exports_auto_indirect (hostlist_t hl, char *map, char *key);
+static int _list_exports_auto_direct (hostlist_t hl, char *key, int listkey);
+static int _list_exports_auto_indirect (hostlist_t hl, char *map, char *key,
+                                        int listkey);
 
 static void
 usage (void)
@@ -87,7 +88,8 @@ usage (void)
 "Usage: diodexp [OPTIONS] host[,host,...]\n"
 "   -a,--auto-direct            list in automounter direct map format\n"
 "   -i,--auto-indirect MAP      list in automounter indirect map format\n"
-"   -k,--key KEY                only list indirect map for KEY\n"
+"   -k,--auto-key KEY           list automounter map entry for KEY\n"
+"   -K,--auto-listkeys          list automounter keys\n"
 );
     exit (1);
 }
@@ -97,8 +99,8 @@ main (int argc, char *argv[])
 {
     hostlist_t hl;
     char *iopt = NULL;
-    int Sopt = 0;
     int aopt = 0;
+    int Kopt = 0;
     char *kopt = NULL;
     int c;
 
@@ -113,11 +115,11 @@ main (int argc, char *argv[])
             case 'a':   /* --auto-direct */
                 aopt = 1;
                 break;
-            case 'k':   /* --key */
+            case 'k':   /* --auto-key */
                 kopt = optarg;
                 break;
-            case 'S':   /* --stdin */
-                Sopt = 1;
+            case 'K':   /* --auto-listkeys */
+                Kopt = 1;
                 break;
             default:
                 usage ();
@@ -125,16 +127,16 @@ main (int argc, char *argv[])
     }
     if (optind != argc - 1)
         usage ();
-    if (kopt && !iopt)
-        msg_exit ("-k should only be used with -i");
+    if ((kopt || Kopt) && !iopt && !aopt)
+        msg_exit ("-k or -K should be used only with -i or -a");
     if (!(hl = hostlist_create (argv[optind++])))
         msg_exit ("error parsing hostlist");
     if (hostlist_count (hl) == 0)
         usage ();
     if (aopt)
-        (void)_list_exports_auto_direct (hl);
+        (void)_list_exports_auto_direct (hl, kopt, Kopt);
     else if (iopt)
-        (void)_list_exports_auto_indirect (hl, iopt, kopt);
+        (void)_list_exports_auto_indirect (hl, iopt, kopt, Kopt);
     else
         (void)_list_exports (hl);
 
@@ -177,7 +179,7 @@ _dir1name (char *path)
  * Quit after the first server responds (assumes all servers are equal).
  */
 static int
-_list_exports_auto_indirect (hostlist_t hl, char *map, char *key)
+_list_exports_auto_indirect (hostlist_t hl, char *map, char *key, int listkey)
 {
     hostlist_iterator_t hi;
     List exports = NULL;
@@ -197,7 +199,12 @@ _list_exports_auto_indirect (hostlist_t hl, char *map, char *key)
                 char *p = _dir1name (path);
 
                 if (strcmp (p, map) == 0 && strlen (path) > strlen (p)) {
-                    if (!key || strcmp (key, path + strlen (p) + 1) == 0) {
+                    if (key) {
+                        if (strcmp (key, path + strlen (p) + 1) == 0)
+                            printf ("-fstype=diod %s:%s\n", hstr, path);
+                    } else if (listkey) {
+                        printf ("%s\n", path + strlen (p) + 1);
+                    } else {
                         printf ("%s -fstype=diod %s:%s\n",
                                 path + strlen (p) + 1, hstr, path);
                     }
@@ -220,7 +227,7 @@ _list_exports_auto_indirect (hostlist_t hl, char *map, char *key)
  * Quit after the first server responds (assumes all servers are equal).
  */
 static int
-_list_exports_auto_direct (hostlist_t hl)
+_list_exports_auto_direct (hostlist_t hl, char *key, int listkey)
 {
     hostlist_iterator_t hi;
     List exports = NULL;
@@ -237,7 +244,14 @@ _list_exports_auto_direct (hostlist_t hl)
             if (!(li = list_iterator_create (exports)))
                 msg_exit ("out of memory");
             while ((path = list_next (li))) {
-                printf ("%s -fstype=diod %s:%s\n", path, hstr, path);
+                if (key) {
+                    if (strcmp (key, path) == 0)
+                        printf ("-fstype=diod %s:%s\n", hstr, path);
+                } else if (listkey) {
+                    printf ("%s\n", path);
+                } else {
+                    printf ("%s -fstype=diod %s:%s\n", path, hstr, path);
+                }
                 n++;
             } 
             list_iterator_destroy (li);

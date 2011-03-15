@@ -34,6 +34,13 @@ rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT
 make install DESTDIR=$RPM_BUILD_ROOT
 
+# Kludge to install diodmount as a mount helper.
+mkdir -p $RPM_BUILD_ROOT/sbin
+mv $RPM_BUILD_ROOT%{_sbindir}/diodmount \
+   $RPM_BUILD_ROOT/sbin/mount.diod
+mv $RPM_BUILD_ROOT%{_mandir}/man8/diodmount.8 \
+   $RPM_BUILD_ROOT%{_mandir}/man8/mount.diod.8
+
 %clean
 rm -rf ${RPM_BUILD_ROOT}
 
@@ -50,7 +57,8 @@ rm -rf ${RPM_BUILD_ROOT}
 %defattr(-,root,root)
 %doc AUTHORS COPYING README INSTALL ChangeLog
 %{_sbindir}/*
+/sbin/*
 %{_mandir}/man8/*
 %{_mandir}/man5/*
 %attr(0755,root,root) %{_sysconfdir}/init.d/diodctl
-%attr(0755,root,root) %{_sysconfdir}/auto.diod
+%config(noreplace) %attr(0755,root,root) %{_sysconfdir}/auto.g

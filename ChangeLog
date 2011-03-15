@@ -1,5 +1,13 @@
 2011-03-14 Jim Garlick <garlick@llnl.gov>
 
+	* utils/diodexp.8.in : New.
+
+	* utils/* : Fine tuning of options and documentation.
+
+	* scripts/auto.g : Replaces auto.diod as sample autofs program map.
+		
+2011-03-14 Jim Garlick <garlick@llnl.gov>
+
 	* scripts/auto.diod : New (under construction).
 
 	* utils/diodexp : New, for listing exports in automounter format.
