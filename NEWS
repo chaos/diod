@@ -1,3 +1,15 @@
+1.0-pre11:
+	Resync with upstream 9P2000.L and rhel6.  Require 9P2000.L (2.6.38+).
+	Re-integrate MUNGE using proper 9p authentication.
+	Integrate diodctl and autofs (new tool: diodexp for program maps).
+	Dumb down diodmount and turn it into /sbin/mount.diod mount helper.
+	Restructure test framework to use socketpair client-server setups.
+	Get libnpclient working and use it for auth and diodctl.
+	Temporarily drop aread/awrite support.
+
+1.0-pre10:
+	Revert gcc-4.4 changes which were incorrect.
+
 1.0-pre9:
 	Fix warnings that prevented compilation with gcc-4.4
 
