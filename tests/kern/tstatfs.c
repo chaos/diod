@@ -34,11 +34,12 @@ main (int argc, char *argv[])
         perror (argv[2]);
         exit (1);
     }
-
+#if 0
     if (tfield ("type") && s1.f_type != s2.f_type) {
         fprintf (stderr, "f_type differs\n");
         diff++;
     }
+#endif
     if (tfield ("bsize") && s1.f_bsize != s2.f_bsize ) {
         fprintf (stderr, "f_bsize differs\n");
         diff++;

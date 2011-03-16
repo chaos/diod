@@ -1,3 +1,8 @@
+2011-03-16 Jim Garlick <garlick@llnl.gov>
+
+	* tests/kern/tstatfs.c : Ignore f_type differences so testing 9p
+	forwarding 9p will work.
+
 2011-03-15 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre11
