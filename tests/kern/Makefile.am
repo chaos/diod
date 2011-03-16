@@ -21,8 +21,7 @@ TESTS_ENVIRONMENT += "./runtest"
 TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
 	t23 t24 t25 t26 t27 t28
 
-# Need to fix cached negative dentries!
-XFAIL_TESTS = t27
+#XFAIL_TESTS =
 
 if LARGEIO
 TESTS += t20 t21
