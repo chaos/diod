@@ -13,8 +13,6 @@ common_ldadd = \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = \
-	util.c \
-	util.h \
 	ctl.c \
 	ctl.h \
 	opt.c \

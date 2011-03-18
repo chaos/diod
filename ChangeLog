@@ -1,3 +1,8 @@
+2011-03-17 Jim Garlick <garlick@llnl.gov>
+
+	* utils/diodmount.c, utils/opt.c : Rework mount utility to be more
+	like a standard mount helper.  -oremount,ro or rw works now.
+
 2011-03-16 Jim Garlick <garlick@llnl.gov>
 
 	* tests/kern/tstatfs.c : Ignore f_type differences so testing 9p

@@ -26,12 +26,15 @@ typedef struct opt_struct *Opt;
 Opt             opt_create (void);
 void            opt_destroy (Opt o);
 char           *opt_string (Opt o);
-void            opt_add (Opt o, const char *fmt, ...);
+int             opt_add (Opt o, const char *fmt, ...);
 void            opt_add_override (Opt o, const char *fmt, ...);
-void            opt_add_cslist (Opt o, char *s);
-void            opt_add_cslist_override (Opt o, char *s);
+int             opt_add_cslist (Opt o, const char *s);
+void            opt_add_cslist_override (Opt o, const char *s);
 char           *opt_find (Opt o, char *key);
-char           *opt_find_withval (Opt o, char *keyval);
+int             opt_delete (Opt o, char *key);
+int             opt_scan (Opt o, const char *fmt, ...);
+int             opt_check_allowed_cslist (Opt o, const char *s);
+
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

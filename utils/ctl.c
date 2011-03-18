@@ -56,7 +56,6 @@
 #include "diod_auth.h"
 
 #include "opt.h"
-#include "util.h"
 #include "ctl.h"
 
 /* Trim leading and trailing whitespace from a string, then duplicate

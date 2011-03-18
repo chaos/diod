@@ -59,7 +59,6 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "opt.h"
-#include "util.h"
 #include "ctl.h"
 
 #define OPTIONS "i:ak:K"

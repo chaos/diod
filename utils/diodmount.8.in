@@ -2,23 +2,24 @@
 .SH NAME
 mount.diod \- mount diod file systems
 .SH SYNOPSIS
-\fBmount.diod\fR \fI[OPTIONS] host:aname dir\fR
+\fBmount.diod\fR \fI[OPTIONS] host:aname dir [-o optiont]\fR
 .SH DESCRIPTION
 .B mount.diod
 is the mount utility for the distributed I/O daemon, which is an I/O
 forwarding service for Linux clusters.
 .LP
-\fBmount.diod\fR performs two main tasks: 1) contact the \fBdiodctl\fR
-superserver on \fIhost\fR to obtain a \fBdiod\fR port number, and
-2) issue the \fImount(2)\fR system call for the \fB9p\fR file system
+\fBmount.diod\fR performs three main tasks: 1) contact the \fBdiodctl\fR
+superserver on \fIhost\fR to obtain a \fBdiod\fR port number,
+2) perform authentication on the 9p file system, and
+3) issue the \fImount(2)\fR system call for the \fB9p\fR file system
 with appropriate options for \fIdiod\fR on that port.
 .LP
 The act of requesting a port number may spawn a new \fIdiod\fR server
 instance, or return the port of an existing server, depending on the options.
 If a shared mount is requested (default), the port of a shared
-server is returned.  If a private mount is requested with \fI-u USER\fR,
+server is returned.  If a private mount is requested with \fI-oaccess=UID\fR,
 then a port number for a \fIdiod\fR server running exclusively for that user
-is returned.  If a jobid is provided with \fI-j JOBID\fR, the port number
+is returned.  If a jobid is provided with \fI-ojobid=JOBID\fR, the port number
 for a \fIdiod\fR server running exclusively for that job will be returned.
 .LP
 Authentication with the \fBdiod\fR server takes place in user space.
@@ -29,60 +30,106 @@ This command requires root to execute the \fImount(2)\fR system call.
 .LP
 The \fB9p\fR file system must support the 9P2000.L protocol variant,
 e.g. kernel 2.6.38 or above.
-.SH OPTIONS
-.TP
-.I "-u, --user USER"
-Only the specified user will be allowed to access the file system.
-All other users will be denied access by the kernel 9p file system,
-which is mounted with the \fIaccess=<uid>\fR option.
-Unless the port was specified with the \fI-p\fR option,
-\fBmount.diod\fR will first contact the \fBdiodctl\fR superserver
-to obtain the port of a \fBdiod\fR server running exclusively for USER.
-.TP
-.I "-n, --no-mtab"
-Mount without updating /etc/mtab.
-.TP
-.I "-j, --jobid JOBID"
-Ask the \fBdiodctl\fR superserver for a \fIdiod\fR server running
-exclusively for JOBID.
+.SH COMMAND LINE OPTIONS
 .TP
 .I "-f, --fake-mount"
-Do everything but actually perform the \fImount(2)\fR system call.
-Note: this may include contacting the \fBdiodctl\fR superserver
-and authenticating a conection with \fBdiod\fR.
+Do everything except the mount system call.
 .TP
-.I "-p, --port PORT"
-Mount the \fBdiod\fR server on the specified port.
-Do not contact \fBdiodctl\fR to obtain a port.
+.I "-n, --no-mtab"
+Do not update the system mtab.
 .TP
 .I "-v, --verbose"
-Display verbose messages on stderr.
+Set verbose mode.
 .TP
-.I "-o, --v9fs-options OPT,[OPT,...]"
-Pass additional options to the \fImount(2)\fR system call,
-overriding any options of the same name constructed internally.
-Hint: use \fI-v\fR to see what these are.
+.I "-o, --options opt[,opt,...]"
+Set mount options (see below).
+.SH MOUNT OPTIONS
+The following file system specific mount options are handled by
+\fBmount.diod\fR.
 .TP
-.I "-d, --v9fs-debug flag[,flag...]"
-Set the specified kernel 9p file system debug flags at mount time.
-The following flags are valid:
-\fBerror\fR, \fB9p\fR, \fBvfs\fR, \fBconv\fR,
-\fBmux\fR, \fBtrans\fR, \fBslabs\fR, \fBfcall\fR,
-\fBfid\fR, \fBpkt\fR, \fBfsc\fR.
-These debug flags are set globally and persist after unmount.
-Mounting without this option clears the kernel \fB9p\fR file system debug flags.
+.I "uname=name"
+The user name to authenticate to the \fBdiod\fR server.
+The default is \fIaccess=root\fR.
 .TP
-.I "-S, --stdin"
-A connection to the \fBdiod\fR server is inherited on file descriptor 0.
-You must provide a dummy \fIhost\fR component of the \fIhost:aname\fR
-argument.  This option is intended for testing only.
-.SH "EXAMPLES"
-.LP
-Mount /g/g99 from tycho42, so that all users can access it:
-.LP
-.nf
-    mount -t diod tycho42:/g/g99 /g/g99
-.fi
+.I "access=mode"
+Select the access mode.
+\fIaccess=user\fR (default) causes the mount to support multiple users,
+and requires root authentication.
+\fIaccess=<uid>\fR restricts access at the client to only the
+specified user.
+.TP
+.I "port=n"
+Connect to the \fIdiod\fR server on the specified port.
+The default is to obtain a port dynamically from \fBdiodctl\fR.
+.TP
+.I "trans=name"
+Select a transport.
+\fBmount.diod\fR only supports \fItrans=fd\fR
+because of its strategy for authentication.
+.TP
+.I "rfdno=n,wfdno=n"
+The file descriptor for reading and writing with \fItrans=fd\fR.
+If set, \fBmount.diod\fR assumes this file descriptor is already
+connected to a \fBdiod\fR server and ignores \fIhost\fR in the
+device specification, and the \fIport=n\fR option.
+.TP
+.I "msize=n"
+The msize is the max 9p packet payload size.
+The default is 65512 (65536-24)
+.TP
+.I "version=name"
+Select 9P protocol version.
+\fBdiod\fR only supports \fI9p2000.L\fR.
+.TP
+.I "jobid=name"
+Ask the \fBdiodctl\fR superserver for a \fIdiod\fR server running
+exclusively for \fIjobid=name\fR.
+.TP
+.I "cache=mode"
+Specify a caching policy.  By default, no caches are used.
+If \fIcache=loose\fR, no attempts are made at consistency.
+This mode is intended for exclusive, read-only mounts.
+If \fIcache=fscache\fR, FS-Cache for a persistent, read-only
+cache backend.
+.TP
+.I "cachetag"
+Cache tag to use the specified persistent cache.
+cache tags for existing cache sessions can be listed at
+/sys/fs/9p/caches. (applies only to \fIcache=fscache\fR)
+.TP
+.I "nodevmap"
+Do not map special files.  Represent them as normal files.
+This can be used to share devices/named pipes/sockets between
+hosts.
+.TP
+.I "debug=n"
+Specifies debug level for the kernel 9p module.  The debug level is a bitmask.
+.br
+0x01  = display verbose error messages
+.br
+0x02  = developer debug (DEBUG_CURRENT)
+.br
+0x04  = display 9p trace
+.br
+0x08  = display VFS trace
+.br
+0x10  = display Marshalling debug
+.br
+0x20  = display RPC debug
+.br
+0x40  = display transport debug
+.br
+0x80  = display allocation debug
+.br
+0x100 = display protocol message debug
+.br
+0x200 = display Fid debug
+.br
+0x400 = display packet debug
+.br
+0x800 = display fscache tracing debug
+.br
+The debug level is global.  The default is \fIdebug=0\fR.
 .SH "SEE ALSO"
 diod (8),
 diodctl (8),

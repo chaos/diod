@@ -21,20 +21,16 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/* diodmount.c - mount a diod file system */
-
-/* Usage: diodmount host:path dir
- *     All users can access dir (access=user).
- *     Each new user is introduced with a new attach.
- *
- * Usage: diodmount -u USER host:path dir
- *     Only USER can access dir (access=<uid>).
- *     Other users will be denied by the client without asking server.
+/* diodmount.c - diod file system mount helper
+ * 
+ * Usage: /sbin/mount.diod spec dir [-sfnv] [-o options]
  */
 
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#define _GNU_SOURCE     /* asprintf, unshare */
+#include <sched.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -47,6 +43,8 @@
 #if HAVE_GETOPT_H
 #include <getopt.h>
 #endif
+#include <mntent.h>
+#include <sys/mount.h>
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
@@ -68,49 +66,41 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "opt.h"
-#include "util.h"
 #include "ctl.h"
 
-#define OPTIONS "u:nj:fo:vp:d:S"
+#define OPTIONS "fnvo:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
-    {"user",            required_argument,   0, 'u'},
-    {"no-mtab",         no_argument,         0, 'n'},
-    {"jobid",           required_argument ,  0, 'j'},
     {"fake-mount",      no_argument,         0, 'f'},
+    {"no-mtab",         no_argument,         0, 'n'},
     {"verbose",         no_argument,         0, 'v'},
-    {"port",            required_argument,   0, 'p'},
-    {"v9fs-debug",      required_argument ,  0, 'd'},
-    {"v9fs-options",    required_argument,   0, 'o'},
-    {"stdin",           no_argument,         0, 'S'},
+    {"options",         required_argument,   0, 'o'},
     {0, 0, 0, 0},
 };
 #else
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
 
-#define DIOD_MSIZE 65512
-
-static void  _diod_mount (int fd, char *dev, char *dir, char *aname,
-                          char *opts, int vopt, int fopt, char *dopt);
+#define DIOD_DEFAULT_MSIZE 65512
+static void _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt,
+                         int fopt, int nopt);
+static void _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt);
 static void _verify_mountpoint (char *path);
-static hostlist_t _parse_device (char *device, char **anamep);
+static void _parse_uname_access (Opt o);
+static hostlist_t _parse_spec (char *spec, Opt o);
+static void _mount (const char *source, const char *target,
+                    unsigned long mountflags, const void *data);
 
 static void
 usage (void)
 {
     fprintf (stderr,
 "Usage: mount.diod [OPTIONS] host[,host,...]:aname [directory]\n"
-"   -u,--user USER                set up the mount so only USER can use it\n"
-"   -n,--no-mtab                  do not update /etc/mtab\n"
-"   -j,--jobid STR                set job id string\n"
 "   -f,--fake-mount               do everything but the actual diod mount\n"
-"   -v,--verbose                  increase verbosity for debugging\n"
-"   -p,--port                     set diod port instead of asking diodctl\n"
-"   -d,--v9fs-debug opt[,opt,...] mount kernel 9p client with debug flags\n"
-"   -o,--v9fs-options opt[,opt,...] mount kernel 9p client with options\n" 
-"   -S,--stdin                    inherit server fd on stdin (for testing)\n" 
+"   -n,--no-mtab                  do not update /etc/mtab\n"
+"   -v,--verbose                  verbose mode\n"
+"   -o,--options opt[,opt,...]    specify mount options\n" 
 );
     exit (1);
 }
@@ -119,52 +109,34 @@ int
 main (int argc, char *argv[])
 {
     char *dir = NULL;
-    char *aname = NULL;
-    char *device;
+    char *port = NULL;
+    char *spec;
     int c;
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
-    int Sopt = 0;
-    char *popt = NULL;
-    char *uopt = NULL;
-    char *oopt = NULL;
-    char *jopt = NULL;
-    char *dopt = NULL;
     int sfd = -1;
     hostlist_t hl = NULL;
+    Opt o; 
 
     diod_log_init (argv[0]);
+
+    o = opt_create ();
 
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 'u':   /* --user USER */
-                uopt = optarg;
+            case 'f':   /* --fake-mount */
+                fopt = 1;
                 break;
             case 'n':   /* --no-mtab */
                 nopt = 1;
                 break;
-            case 'o':   /* --v9fs-options OPT[,OPT]... */
-                oopt = optarg;
-                break;
             case 'v':   /* --verbose */
-                vopt = 1;
+                vopt++;
                 break;
-            case 'p':   /* --diod-port */
-                popt = optarg;
-                break;
-            case 'f':   /* --fake-mount */
-                fopt = 1;
-                break;
-            case 'd':   /* --v9fs-debug flag[,flag...] */
-                dopt = optarg;
-                break;
-            case 'j':   /* --jobid STR */
-                jopt = optarg;
-                break;
-            case 'S':   /* --stdin */
-                Sopt = 1;
+            case 'o':   /* --options OPT[,OPT]... */
+                opt_add_cslist_override (o, optarg);
                 break;
             default:
                 usage ();
@@ -172,147 +144,152 @@ main (int argc, char *argv[])
     }
     if (optind != argc - 2)
         usage ();
-    device = argv[optind++];
+    spec = argv[optind++];
     dir = argv[optind++];
-    hl = _parse_device (device, &aname);
+    hl = _parse_spec (spec, o);
+
+    if (geteuid () != 0)
+        msg_exit ("you must be root");
 
     _verify_mountpoint (dir);
 
-    /* Must start out with effective root id.
-     * We drop euid = root but preserve ruid = root for mount, etc.
+    /* Remount - only pass mount flags into the VFS for an existing mount.
+     * Take care of it here and exit.
      */
-    if (geteuid () != 0)
-        msg_exit ("you must be root");
-    if (uopt)
-        diod_become_user (uopt, 0, 0);
+    if (opt_find (o, "remount")) {
+        if (opt_check_allowed_cslist (o, "ro,rw,aname,remount"))
+            msg_exit ("-oremount can only be used with ro,rw (got %s)", opt_string (o));
+        _diod_remount (o, spec, dir, vopt, fopt);
+        goto done;
+    }
 
-    /* Server is on stdin, not much to do.
+    /* Ensure uname and access are set, and to diod-compatible values.
+     * The uname user becomes the euid which will be used by munge auth.
      */
-    if (Sopt) {
-        sfd = 0;
-        nopt = 1;
+    _parse_uname_access (o);
+    diod_become_user (opt_find (o, "uname"), 0, 0);
 
-    /* Port specified, try each host until one responds on that port.
+    /* We require -otrans=fd because auth occurs in user space, then live fd
+     * is passed to the kernel via -orfdno,wfdno.
      */
-    } else if (popt) {
+    if (!opt_find (o, "trans"))
+        opt_add (o, "trans=fd");
+    else if (!opt_find (o, "trans=fd"))
+        msg_exit ("only -otrans=fd transport is supported");
+
+    /* Set msize if not already set.  Validate it later.
+     */
+    if (!opt_find (o, "msize"))
+        opt_add (o, "msize=%d", DIOD_DEFAULT_MSIZE);
+
+    /* Only .L version is supported.
+     */
+    if (!opt_find (o, "version"))
+        opt_add (o, "version=9p2000.L");
+    else if (!opt_find (o, "version=9p2000.L"))
+        msg_exit ("only -oversion=9p2000.L is supported (little p, big L)");
+
+    /* Set debug level.
+     */
+    if (!opt_find (o, "debug"))
+        opt_add (o, "debug=0");
+
+    /* Server is on an inherited file descriptor.
+     * For testing, we start server on a socketpair duped to fd 0.
+     */
+    if (opt_find (o, "rfdno") || opt_find (o, "wfdno")) {
+        int rfd, wfd;
+
+        if (!opt_scan (o, "rfdno=%d", &rfd) || !opt_scan (o, "wfdno=%d", &wfd))
+            msg_exit ("-orfdno,wfdno must be used together");
+        if (rfd != wfd)    
+            msg_exit ("-orfdno,wfdno must have same value");
+        if (opt_find (o, "jobid"))
+            msg_exit ("jobid cannot be used with -orfdno,wfdno");
+        sfd = rfd;
+        nopt = 1; /* force no mtab */
+
+    /* Server port was specified.
+     * Presume there is no need to contact diodctl for port.
+     */
+    } else if ((port = opt_find (o, "port"))) {
         hostlist_iterator_t hi;
         char *host;
 
+        if (opt_find (o, "jobid"))
+            msg_exit ("-ojobid cannot be used with -oport");
         if (!(hi = hostlist_iterator_create (hl)))
             msg_exit ("out of memory");
         while ((host = hostlist_next (hi)) && sfd < 0) {
             if (vopt)
-                msg ("trying to connect to host %s port %s", host, popt);
-            sfd = diod_sock_connect (host, popt, 1, 0);
+                msg ("trying to connect to host %s port %s", host, port);
+            sfd = diod_sock_connect (host, port, 1, 0);
         }
         hostlist_iterator_destroy (hi);
         if (sfd < 0)
             msg_exit ("could not contact diod server(s)");
+        opt_delete (o, "port");
+        opt_add (o, "rfdno=%d", sfd);
+        opt_add (o, "wfdno=%d", sfd);
 
-    /* Try each diodctl server until one responds.
-     * Negotiate a port to conect on based on effective uid and jopt.
+    /* Try diodctl server on each host until one responds.
+     * Negotiate a port to connect to based on user and jobid.
      */
     } else {
         hostlist_iterator_t hi;
-        char *host, *port;
+        char *jobid, *host; 
 
+        jobid = opt_find (o, "jobid");
         if (!(hi = hostlist_iterator_create (hl)))
             msg_exit ("out of memory");
         while ((host = hostlist_next (hi)) && sfd < 0) {
             if (vopt)
-                msg ("trying to connect to host %s", host);
-            if (ctl_query (host, jopt, &port, NULL) == 0) {
+                msg ("requesting diod port from %s", host);
+            if (ctl_query (host, jobid, &port, NULL) == 0) {
                 sfd = diod_sock_connect (host, port, 1, 0);
                 free (port);
             }
         }
         hostlist_iterator_destroy (hi);
         if (sfd < 0)
-            msg_exit ("could not contact diodctl/diod server(s)");
+            msg_exit ("failed to establish connection with server");
+        opt_add (o, "rfdno=%d", sfd);
+        opt_add (o, "wfdno=%d", sfd);
+        if (jobid)
+            opt_delete (o, "jobid");
     }
 
-    _diod_mount (sfd, device, dir, aname, oopt, vopt, fopt, dopt);
+    /* Perform the mount here.
+     * After sfd is passed to the kernel, we close it here.
+     */
+    _diod_mount (o, sfd, spec, dir, vopt, fopt, nopt);
     (void)close (sfd);
-    if (!nopt) {
-        if (!util_update_mtab (device, dir)) {
-            util_umount (dir);
-            exit (1);
-        }
-    }
 
-    if (aname)
-        free (aname);
+done:
     if (hl)
         hostlist_destroy (hl);
+    opt_destroy (o);
     exit (0);
 }
 
-/* Given [device] in host[,host,...]:aname format,
- * parse out the hostlist and aname.
- * Caller must free the results.
- * Exit on error.
- */ 
 static hostlist_t
-_parse_device (char *device, char **anamep)
+_parse_spec (char *spec, Opt o)
 {
-    char *host, *p, *aname;
+    char *cpy, *p;
     hostlist_t hl;
 
-    if (!(host = strdup (device)))
+    if (!(cpy = strdup (spec)))
         msg_exit ("out of memory");
-    if (!(p = strchr (host, ':')))
-        msg_exit ("device is not in host[,host,...]:aname format");
+    if (!(p = strchr (cpy, ':')))
+        msg_exit ("spec is not in host[,host,...]:aname format");
     *p++ = '\0';
-    if (!(aname = strdup (p)))
-        msg_exit ("out of memory");
-    if (!(hl = hostlist_create (host)))
+    if (!opt_add (o, "aname=%s", p))
+        msg ("-oaname=value overriding host:/aname spec");
+    if (!(hl = hostlist_create (cpy)))
         msg_exit ("failed to parse hostlist");
-    free (host);
-    *anamep = aname;
+    free (cpy);
 
     return hl;
-}
-
-static char *
-_parse_v9fs_debug (char *s)
-{
-    char *optstr;
-    Opt o;
-    int f = 0;
-
-    if (!(optstr = malloc(64)))
-        msg_exit ("out of memory");
-    if (s) {
-        o = opt_create();
-
-        opt_add_cslist (o, s);
-        if (opt_find (o, "error"))
-            f |= P9_DEBUG_ERROR;
-        if (opt_find (o, "9p"))
-            f |= P9_DEBUG_9P;
-        if (opt_find (o, "vfs"))
-            f |= P9_DEBUG_VFS;
-        if (opt_find (o, "conv"))
-            f |= P9_DEBUG_CONV;
-        if (opt_find (o, "mux"))
-            f |= P9_DEBUG_MUX;
-        if (opt_find (o, "trans"))
-            f |= P9_DEBUG_TRANS;
-        if (opt_find (o, "slabs"))
-            f |= P9_DEBUG_SLABS;
-        if (opt_find (o, "fcall"))
-            f |= P9_DEBUG_FCALL;
-        if (opt_find (o, "fid"))
-            f |= P9_DEBUG_FID;
-        if (opt_find (o, "pkt"))
-            f |= P9_DEBUG_PKT;
-        if (opt_find (o, "fsc"))
-            f |= P9_DEBUG_FSC;
-        opt_destroy (o);
-    }
-    snprintf (optstr, 64, "debug=0x%x", f);
-
-    return optstr; 
 }
 
 /* Verify that directory exists, exiting on failure.
@@ -328,58 +305,217 @@ _verify_mountpoint (char *path)
         msg_exit ("%s: not a directory", path);
 }
 
-/* Mount diod file system already connected to [fd], attaching [aname] to [dir].
- * Default mount options can be overridden by a comma separated list [opts].
- * If [vopt], say what we're doing before we do it.
- * If [fopt], don't actually perform the mount.
- * Authenticate connection in user space, then pass fd to kernel.
+/* Private or public mount?  Only allow two modes:
+ *    private:        -ouname=USER,access=UID (uname could be root)
+ *    public (dflt):  -ouname=root,access=user
+ */
+static void
+_parse_uname_access (Opt o)
+{
+    char *uname = opt_find (o, "uname");
+    int uname_uid = -1;
+    char *access = opt_find (o, "access");
+    int access_uid = -1;
+    char *access_name = NULL;
+    struct passwd *pw;
+    
+    if (uname) {
+        if (!(pw = getpwnam (uname)))
+            msg_exit ("could not look up uname='%s'", uname);
+        uname_uid = pw->pw_uid;
+    }
+    if (access && opt_scan (o, "access=%d", &access_uid)) {
+        if (!(pw = getpwuid (access_uid)))
+            msg_exit ("could not look up access='%d'", access_uid);
+        if (!(access_name = strdup (pw->pw_name)))
+            msg_exit ("out of memory");
+    }
+
+    if (!uname && !access) {
+        opt_add (o, "uname=root");        
+        opt_add (o, "access=user");
+
+    } else if (uname && !access) {
+        if (uname_uid == 0)
+            opt_add (o, "access=user");
+        else
+            opt_add (o, "access=%d", uname_uid);
+
+    } else if (!uname && access) {
+        if (strcmp (access, "user") == 0)
+            opt_add (o, "uname=root");
+        else if (access_name) /* access=<uid> */
+            opt_add (o, "uname=%s", access_name);
+        else
+            msg_exit ("unsupported -oaccess=%s", access);
+    } else { /* if (uname && access) */
+        if (strcmp (access, "user") == 0) {
+            if (uname_uid != 0)
+                msg_exit ("-oaccess=user can only be used with -ouname=root");
+        } else if (access_name) { /* access=<uid> */
+            if (uname_uid != access_uid)
+                msg_exit ("-oaccess=<uid> requires matching -ouname=<name>");
+        } else
+            msg_exit ("unsupported -oaccess=%s", access);
+    } 
+    if (access_name)
+        free (access_name);
+}
+
+typedef struct {
+    char *opt;
+    unsigned long flag;
+} map_t;
+
+static map_t setopt[] = {
+    { "dirsync",        MS_DIRSYNC},
+    { "noatime",        MS_NOATIME},
+    { "nodev",          MS_NODEV},
+    { "nodiratime",     MS_NODIRATIME},
+    { "noexec",         MS_NOEXEC},
+    { "nosuid",         MS_NOSUID},
+    { "ro",             MS_RDONLY },
+    { "relatime",       MS_RELATIME},
+    { "remount",        MS_REMOUNT},
+    { "silent",         MS_SILENT},
+    { "strictatime",    MS_STRICTATIME},
+    { "sync",           MS_SYNCHRONOUS},
+};
+
+static map_t clropt[] = {
+    { "atime",          MS_NOATIME},
+    { "dev",            MS_NODEV},
+    { "diratime",       MS_NODIRATIME},
+    { "exec",           MS_NOEXEC},
+    { "suid",           MS_NOSUID},
+    { "rw",             MS_RDONLY },
+    { "norelatime",     MS_RELATIME},
+    { "nostrictatime",  MS_STRICTATIME},
+    { "nosync",         MS_SYNCHRONOUS},
+};
+
+static void
+_getflags (Opt o, unsigned long *flags)
+{
+    int i;
+
+    for (i = 0; i < sizeof (setopt) / sizeof (map_t); i++) {
+        if (opt_find (o, setopt[i].opt)) {
+            *flags |= setopt[i].flag;            
+            opt_delete (o, setopt[i].opt);
+        }
+    }
+    for (i = 0; i < sizeof (clropt) / sizeof (map_t); i++) {
+        if (opt_find (o, clropt[i].opt)) {
+            *flags &= ~clropt[i].flag;            
+            opt_delete (o, clropt[i].opt);
+        }
+    }
+}
+
+static void
+_diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt)
+{
+    char *options = opt_string (o);
+    unsigned long mountflags = 0;
+
+    _getflags (o, &mountflags);
+    if (vopt)
+        msg ("mount %s %s -o%s", spec, dir, options);
+    if (!fopt)
+        _mount (spec, dir, mountflags, NULL);
+}
+
+static int
+_update_mtab (char *options, char *spec, char *dir)
+{
+    uid_t saved_euid = geteuid ();
+    FILE *f;
+    int ret = 0;
+    struct mntent mnt;
+
+    mnt.mnt_fsname = spec;
+    mnt.mnt_dir = dir;
+    mnt.mnt_type = "diod";
+    mnt.mnt_opts = options;
+    mnt.mnt_freq = 0;
+    mnt.mnt_passno = 0;
+
+    if (seteuid (0) < 0) {
+        err ("failed to set effective uid to root");
+        goto done;
+    }
+    if (!(f = setmntent (_PATH_MOUNTED, "a"))) {
+        err (_PATH_MOUNTED);
+        goto done;
+    }
+    if (addmntent (f, &mnt) != 0) {
+        msg ("failed to add entry to %s", _PATH_MOUNTED);
+        endmntent (f);
+        goto done;
+    }
+    endmntent (f);
+    if (seteuid (saved_euid) < 0) {
+        err ("failed to restore effective uid to %d", saved_euid);
+        goto done;
+    }
+    ret = 1;
+done:
+    return ret;
+}
+
+static void
+_diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
+{
+    char *options, *options9p, *aname;
+    int msize;
+    Npcfsys *fs;
+    unsigned long mountflags = 0;
+
+    options = opt_string (o);
+    _getflags (o, &mountflags);
+    options9p = opt_string (o); /* after mountflags removed from opt list */
+
+    if (!(aname = opt_find (o, "aname")))
+        msg_exit ("aname is not set"); /* can't happen */
+    if (!opt_scan (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
+        msg_exit ("msize must be set to integer >= %d", P9_IOHDRSZ);
+
+    if (vopt)
+        msg ("pre-authenticating connection to server");
+    if (!(fs = npc_mount (fd, msize, aname, diod_auth_client_handshake)))
+        err_exit ("npc_mount");
+    npc_umount2 (fs);
+    if (vopt)
+        msg ("mount -t 9p %s %s -o%s", spec, dir, options);
+    if (!fopt)
+        _mount (spec, dir, mountflags, options9p);
+    npc_finish (fs);
+    if (!nopt) {
+        if (!_update_mtab (options, spec, dir))
+            msg_exit ("failed to update /etc/mtab");
+    }
+    free (options);
+    free (options9p);
+}
+
+
+/* Mount 9p file system [source] on [target] with options [data].
+ * Swap effective (user) and real (root) uid's for the duration of mount call.
  * Exit on error.
  */
 static void
-_diod_mount (int fd, char *dev, char *dir, char *aname, char *opts,
-             int vopt, int fopt, char *dopt)
+_mount (const char *source, const char *target, unsigned long mountflags,
+        const void *data)
 {
-    Opt o = opt_create ();
-    char *options;
-    uid_t uid = geteuid ();;
-    Npcfsys *fs;
+    uid_t saved_euid = geteuid ();
 
-    opt_add (o, "rfdno=%d", fd);
-    opt_add (o, "wfdno=%d", fd);
-    opt_add (o, "trans=fd");
-    opt_add (o, "aname=%s", aname);
-    opt_add (o, "msize=%d", DIOD_MSIZE);
-    opt_add (o, "version=9p2000.L");
-    if (uid == 0) {
-        opt_add (o, "uname=root");
-        opt_add (o, "access=user");
-    } else {
-        struct passwd *pw = getpwuid (uid);
-
-        if (!pw)
-            err_exit ("could not look up name for uid=%d", uid);
-        opt_add (o, "access=%d", uid);
-        opt_add (o, "uname=%s", pw->pw_name);
-    }
-    opt_add (o, _parse_v9fs_debug (dopt)); /* debug=0 if !dopt */
-    if (opts)
-        opt_add_cslist_override (o, opts);
-    if (opt_find (o, "remount"))
-        msg_exit ("remount is not supported");
-    if (opt_find (o, "ro"))
-        msg ("warning: ro is ignored by 9p file system");
-    options = opt_string (o);
-    opt_destroy (o);
-
-    if (vopt)
-        msg ("mount -t 9p %s %s -o%s", dev, dir, options);
-    if (!(fs = npc_mount (fd, DIOD_MSIZE, aname, diod_auth_client_handshake)))
-        err_exit ("npc_mount");
-    npc_umount2 (fs);
-    if (!fopt)
-        util_mount (dev, dir, options);
-    npc_finish (fs);
-    free (options);
+    if (seteuid (0) < 0)
+        err_exit ("failed to set effective uid to root");
+    if (mount (source, target, "9p", mountflags, data))
+        err_exit ("mount");
+    if (seteuid (saved_euid) < 0)
+        err_exit ("failed to restore effective uid to %d", saved_euid);
 }
 
 /*

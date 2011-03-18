@@ -20,6 +20,7 @@ main (int argc, char *argv[])
 {
     Opt o = opt_create ();
     char *s;
+    int i;
 
     diod_log_init (argv[0]);
 
@@ -36,6 +37,9 @@ main (int argc, char *argv[])
     assert (opt_find (o, "mickey"));
     assert (opt_find (o, "bar"));
     assert (!opt_find (o, "barn"));
+
+    assert (opt_scan (o, "mickey=%d", &i));
+    assert (i == 42);
 
     opt_add_cslist_override (o, "mickey=string,foo=12,bar=15,baz");
     s = opt_string (o);

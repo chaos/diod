@@ -115,7 +115,7 @@ _match_key (char *item, char *key)
     return (m == n && strncasecmp(item, key, n) == 0);
 }
 
-void
+int
 opt_add (Opt o, const char *fmt, ...)
 {
     va_list ap;
@@ -129,9 +129,10 @@ opt_add (Opt o, const char *fmt, ...)
     if (error < 0)
         msg_exit ("out of memory");
     if (list_find_first (o->list, (ListFindF)_match_key, item))
-        msg_exit ("%s: option is already set", item);
+        return 0;
     if (!list_append (o->list, item))
         msg_exit ("out of memory");
+    return 1;
 }
 
 void
@@ -152,8 +153,30 @@ opt_add_override (Opt o, const char *fmt, ...)
         msg_exit ("out of memory");
 }
 
+int
+opt_add_cslist (Opt o, const char *s)
+{
+    char *cpy = strdup (s);
+    char *item;
+    int ret = 0;
+
+    if (!cpy)
+        msg_exit ("out of memory");
+
+    item = strtok (cpy, ",");
+    while (item) {
+        if (!opt_add (o, "%s", item))
+            goto done;
+        item = strtok (NULL, ",");
+    }
+    ret = 1;
+done:
+    free (cpy);
+    return ret;
+}
+
 void
-opt_add_cslist (Opt o, char *s)
+opt_add_cslist_override (Opt o, const char *s)
 {
     char *cpy = strdup (s);
     char *item;
@@ -163,43 +186,101 @@ opt_add_cslist (Opt o, char *s)
 
     item = strtok (cpy, ",");
     while (item) {
-        opt_add (o, item);    
+        opt_add_override (o, "%s", item);    
         item = strtok (NULL, ",");
     }
     free (cpy);
 }
 
-void
-opt_add_cslist_override (Opt o, char *s)
+/* return option value or empty string (not null)
+ */
+static char *
+_optstr (char *s)
 {
-    char *cpy = strdup (s);
-    char *item;
+    char *p = strrchr (s, '=');
 
-    if (!cpy)
-        msg_exit ("out of memory");
-
-    item = strtok (cpy, ",");
-    while (item) {
-        opt_add_override (o, item);    
-        item = strtok (NULL, ",");
-    }
-    free (cpy);
+    return p ? p + 1 : s + strlen (s);
 }
 
 char *
 opt_find (Opt o, char *key)
 {
+    char *s;
+
     assert (o->magic == OPT_MAGIC);
 
-    return list_find_first (o->list, (ListFindF)_match_key, key);
+    if (strchr (key, '='))
+        s = list_find_first (o->list, (ListFindF)_match_keyval, key);
+    else
+        s = list_find_first (o->list, (ListFindF)_match_key, key);
+
+    return s ? _optstr (s) : NULL;
 }
 
-char *
-opt_find_withval (Opt o, char *keyval)
+/* Returns number of deletions.
+ */
+int
+opt_delete (Opt o, char *key)
 {
     assert (o->magic == OPT_MAGIC);
 
-    return list_find_first (o->list, (ListFindF)_match_keyval, keyval);
+    return list_delete_all (o->list, (ListFindF)_match_key, key);   
+}
+
+int
+opt_scan (Opt o, const char *fmt, ...)
+{
+    va_list ap;
+    char *s, *val, *key;
+    int ret = 0;
+
+    assert (o->magic == OPT_MAGIC);
+
+    if (!(key = strdup (fmt)))
+        msg_exit ("out of memory");
+    if (!(val = strchr (key, '=')))
+        msg_exit ("opt_scan used incorrectly, fmt='%s'", fmt);
+    *val++ = '\0';
+    if ((s = opt_find (o, key))) {
+        va_start (ap, fmt);
+        ret = vsscanf(s, val, ap);
+        va_end (ap);
+    }
+    free (key);    
+    return ret;
+}
+
+int
+opt_check_allowed_cslist (Opt o, const char *s)
+{
+    Opt allow;
+    ListIterator itr;
+    char *item, *cpy, *p;
+    int ret = 0;
+
+    assert (o->magic == OPT_MAGIC);
+
+    allow = opt_create ();
+    opt_add_cslist_override (allow, s);
+
+    if (!(itr = list_iterator_create (o->list)))
+        msg_exit ("out of memory");
+    while ((item = list_next (itr))) {
+        if (!(cpy = strdup (item)))
+            msg_exit ("out of memory");
+        if ((p = strchr (cpy, '=')))
+            *p = '\0';
+        if (!opt_find (allow, cpy)) {
+            ret = 1;
+            free (cpy);
+            break;
+        }
+        free (cpy);
+    }
+    list_iterator_destroy (itr);
+
+    opt_destroy (allow);
+    return ret;
 }
 
 /*

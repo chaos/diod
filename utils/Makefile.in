@@ -55,7 +55,7 @@ CONFIG_CLEAN_FILES = diodmount.8 diodexp.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am__objects_1 = util.$(OBJEXT) ctl.$(OBJEXT) opt.$(OBJEXT)
+am__objects_1 = ctl.$(OBJEXT) opt.$(OBJEXT)
 am_diodexp_OBJECTS = diodexp.$(OBJEXT) $(am__objects_1)
 diodexp_OBJECTS = $(am_diodexp_OBJECTS)
 am__DEPENDENCIES_1 =
@@ -247,8 +247,6 @@ common_ldadd = \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = \
-	util.c \
-	util.h \
 	ctl.c \
 	ctl.h \
 	opt.c \
@@ -354,7 +352,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodexp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
