@@ -1,3 +1,9 @@
+2011-03-18 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre12
+
+	* utils/diodmount.c, utils/diodmount.8.in : Allow -oaname.
+
 2011-03-17 Jim Garlick <garlick@llnl.gov>
 
 	* utils/diodmount.c, utils/opt.c : Rework mount utility to be more

@@ -275,19 +275,24 @@ done:
 static hostlist_t
 _parse_spec (char *spec, Opt o)
 {
-    char *cpy, *p;
+    char *host, *aname;
     hostlist_t hl;
 
-    if (!(cpy = strdup (spec)))
+    if (!(host = strdup (spec)))
         msg_exit ("out of memory");
-    if (!(p = strchr (cpy, ':')))
-        msg_exit ("spec is not in host[,host,...]:aname format");
-    *p++ = '\0';
-    if (!opt_add (o, "aname=%s", p))
-        msg ("-oaname=value overriding host:/aname spec");
-    if (!(hl = hostlist_create (cpy)))
+    if ((aname = strchr (host, ':')))
+        *aname++ = '\0';
+    if (strlen (host) == 0)
+        msg_exit ("no host specified");
+    if (!aname || strlen (aname) == 0)
+        aname = opt_find (o, "aname");
+    else if (!opt_add (o, "aname=%s", aname))
+        msg_exit ("you cannot have both -oaname and spec=host:aname");
+    if (!aname || strlen (aname) == 0)
+        msg_exit ("no aname specified");
+    if (!(hl = hostlist_create (host)))
         msg_exit ("failed to parse hostlist");
-    free (cpy);
+    free (host);
 
     return hl;
 }

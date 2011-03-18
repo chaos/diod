@@ -1,3 +1,6 @@
+1.0-pre12:
+	Rework mount helper options.
+
 1.0-pre11:
 	Resync with upstream 9P2000.L and rhel6.  Require 9P2000.L (2.6.38+).
 	Re-integrate MUNGE using proper 9p authentication.
