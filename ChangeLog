@@ -1,5 +1,7 @@
 2011-03-19 Jim Garlick <garlick@llnl.gov>
 
+	* libdiod/diod_sock.c : Fix error handling in diod_sock_connect ().
+
 	* utils/diodexp.c, scripts/auto.diod : Implement one indirect map
 	for all exported file systems.  End-user can get fancier with their
 	own scripts if they want direct maps or multiple indirect maps.

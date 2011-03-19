@@ -340,6 +340,7 @@ diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
     int error, fd = -1;
     struct addrinfo hints, *res = NULL, *r;
     int i;
+    char *errmsg = NULL;
 
     memset (&hints, 0, sizeof (hints));
     hints.ai_family = PF_UNSPEC;
@@ -357,14 +358,19 @@ diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
         if (i > 0)
             usleep (1000 * retry_wait_ms);
         for (r = res; r != NULL; r = r->ai_next) {
-            if (fd != -1)
-                close (fd);
-            if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
+            if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0) {
+                errmsg = "socket";
                 continue;
-            if (connect (fd, r->ai_addr, r->ai_addrlen) >= 0)
-                break;
+            }
+            if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
+                errmsg = "connect";
+                close (fd);
+                fd = -1;
+            }
         }
     }
+    if (fd < 0 && errmsg)
+        err ("%s", errmsg);
     if (res)
         freeaddrinfo (res);
 done:
