@@ -1,5 +1,7 @@
 2011-03-19 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre13
+
 	* libdiod/diod_sock.c : Fix error handling in diod_sock_connect ().
 
 	* utils/diodexp.c, scripts/auto.diod : Implement one indirect map
