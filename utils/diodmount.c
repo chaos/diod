@@ -111,7 +111,7 @@ main (int argc, char *argv[])
     char *dir = NULL;
     char *port = NULL;
     char *spec;
-    int c;
+    int c, i;
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
@@ -158,7 +158,7 @@ main (int argc, char *argv[])
      */
     if (opt_find (o, "remount")) {
         if (opt_check_allowed_cslist (o, "ro,rw,aname,remount"))
-            msg_exit ("-oremount can only be used with ro,rw (got %s)", opt_string (o));
+            msg_exit ("-oremount can only be used with ro,rw");
         _diod_remount (o, spec, dir, vopt, fopt);
         goto done;
     }
@@ -258,6 +258,18 @@ main (int argc, char *argv[])
         if (jobid)
             opt_delete (o, "jobid");
     }
+
+    assert (opt_find (o, "trans=fd"));
+    assert (opt_scan (o, "msize=%d", &i));
+    assert (opt_find (o, "version=9p2000.L"));
+    assert (opt_scan (o, "debug=%d", &i));
+    assert (opt_scan (o, "wfdno=%d", &i) && opt_scan (o, "rfdno=%d", &i));
+    assert (opt_find (o, "aname"));
+    assert ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
+         || (opt_scan (o, "access=%d", &i) && opt_find(o, "uname")));
+
+    assert (!opt_find (o, "port"));
+    assert (!opt_find (o, "jobid"));
 
     /* Perform the mount here.
      * After sfd is passed to the kernel, we close it here.

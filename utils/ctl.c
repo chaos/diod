@@ -178,10 +178,8 @@ ctl_query (char *host, char *jobid, char **portp, List *exportsp)
     char *port = NULL;
     List exports = NULL;
 
-    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0) {
-        err ("connect failed");
+    if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
         goto error;
-    }
     if (!(fs = npc_mount (fd, 8192, "/diodctl", diod_auth_client_handshake))) {
         err ("npc_mount");
         close (fd);

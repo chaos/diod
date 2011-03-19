@@ -2,7 +2,7 @@
 .SH NAME
 diodexp \- list diod exports
 .SH SYNOPSIS
-\fBdiodexp\fR \fI[OPTIONS] host\fR
+\fBdiodexp\fR \fI[-a key] host\fR
 .SH DESCRIPTION
 .B diodexp
 lists file systems exported by the distributed I/O daemon, which is an I/O
@@ -10,25 +10,19 @@ forwarding service for Linux clusters.
 .LP
 In addition, \fBdiodexp\fR can be used to implement an \fBautofs\fR program
 map for purposes of making \fBdiod\fR mounts available on demand with
-minimal client configuration.  See the example map: /etc/auto.g.
+minimal client configuration.
 .SH OPTIONS
+With no options, \fBdiodexp\fR lists the export paths.
 .TP
-.I "-a, --auto-direct"
-List exports in a format that can be redirected to create an
-\fBautofs\fR direct map file.
-.TP
-.I "-i, --auto-indirect MAP"
-List exports in a format that can be redirected to create an
-\fBautofs\fR indirect map file for MAP.  File systems with an
-initial directory component that does not match MAP are ignored.
-.TP
-.I "-k, --auto-key KEY"
-Used in combination with \fI-a\fR or \fI-i\fR to generate only
-the map entry for KEY.  \fBdiodexp\fR can be called with these options
-from an executable program map.
-.TP
-.I "-K, --auto-listkeys"
-Used in combination with \fI-a\fR or \fI-i\fR to list available keys.
+.I "-a, --auto-indirect KEY"
+Look up KEY and return corresponding indirect map entry, if any.
+Keys are either the basename of a server export path or the full path with
+hyphens as separators and no leading separator.  Example:
+server export `/usr/local', keys are `local' or `usr-local'.
+In the event that keys are not unique, the first one in the export list
+will be returned.
+.SH "FILES"
+/etc/auto.diod
 .SH "SEE ALSO"
 diod (8),
 diodctl (8),

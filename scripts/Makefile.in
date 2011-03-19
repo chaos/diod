@@ -183,7 +183,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = diodctl.init auto.g
+EXTRA_DIST = diodctl.init auto.diod
 all: all-am
 
 .SUFFIXES:
@@ -367,12 +367,12 @@ uninstall-am: uninstall-local
 install-data-local:
 	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/diodctl.init \
 		$(DESTDIR)$(sysconfdir)/init.d/diodctl
-	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/auto.g \
-		$(DESTDIR)$(sysconfdir)/auto.g
+	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/auto.diod \
+		$(DESTDIR)$(sysconfdir)/auto.diod
 
 uninstall-local:
 	$(RM) $(DESTDIR)$(sysconfdir)/init.d/diodctl
-	$(RM) $(DESTDIR)$(sysconfdir)/auto.g
+	$(RM) $(DESTDIR)$(sysconfdir)/auto.diod
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

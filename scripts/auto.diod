@@ -1,0 +1,23 @@
+#!/bin/bash
+
+key="$1"
+
+DIOD_MAP=/d
+DIOD_SYSCONF=/etc/sysconfig/auto.diod
+DIOD_DIODEXP=/usr/sbin/diodexp
+DIOD_SERVERS=""
+
+if [ -r $DIOD_SYSCONF ]; then
+    . $DIOD_SYSCONF
+fi
+if [ -z "$DIOD_SERVERS" ]; then
+    echo "auto.diod: DIOD_SERVERS is not set" >&2
+    exit 1
+fi
+if ! [ -x $DIOD_DIODEXP ]; then
+    echo "auto.diod: could not execute $DIOD_DIODEXP" >&2
+    exit 1
+fi
+if [ -n "$key" ]; then
+    $DIOD_DIODEXP -a $key $DIOD_SERVERS
+fi

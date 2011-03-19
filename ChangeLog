@@ -1,3 +1,9 @@
+2011-03-19 Jim Garlick <garlick@llnl.gov>
+
+	* utils/diodexp.c, scripts/auto.diod : Implement one indirect map
+	for all exported file systems.  End-user can get fancier with their
+	own scripts if they want direct maps or multiple indirect maps.
+
 2011-03-18 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre12
