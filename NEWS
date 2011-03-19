@@ -1,3 +1,7 @@
+1.0-pre13:
+	Fix error handling in diod_sock_connect().
+	Rework automounter integration.
+
 1.0-pre12:
 	Rework mount helper options.
 
