@@ -84,7 +84,7 @@ _ctl_attach (Npfid *fid, Npfid *nafid, Npstr *aname)
     Npfcall *ret = NULL;
     Npfilefid *f;
 
-    /* N.B. assume aname is /diodctl */
+    /* N.B. ignore aname (assume it's '/diodctl') */
 
     if (!npfile_checkperm (root, fid->user, 4)) {
         np_uerror (EPERM);
@@ -143,7 +143,7 @@ _exports_read (Npfilefid *f, u64 offset, u32 count, u8 *data, Npreq *req)
         cpylen = count;
     if (cpylen < 0)
         cpylen = 0;
-        memcpy (data, buf + offset, cpylen);
+    memcpy (data, buf + offset, cpylen);
     return cpylen;
 }
 
@@ -154,32 +154,40 @@ _ctl_read (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
     Npfid *fid = file->fid;
 
-    return diodctl_serv_getname (fid->user, file->aux, offset, count, data);
+    return diodctl_serv_readctl (fid->user, file->aux, offset, count, data);
 }
 
-/* Handle a write to the 'ctl' file.
- * We are expecting the jobid string - assume it comes in one message.
+/* Handle a write to the 'ctl' file.  Store the contents of the write
+ * in file->aux as a null terminated string.
  */
 static int
 _ctl_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
 {
-    Npfid *fid = file->fid;
-    char *jobid = file->aux;
-    int ret = 0;
+    char *s = file->aux;
+    int ret = -1;
 
-    if (offset > 0)
-        return 0;
-    if (jobid)
-        free (jobid);
-    if (!(jobid = malloc (count + 1)))
-        msg_exit ("out of memory");
-    memcpy (jobid, data, count);
-    jobid[count] = '\0';
-    file->aux = jobid;
-        
-    if (diodctl_serv_create (fid->user, jobid))
-        ret = count;
-
+    if (!s && offset == 0) {
+        if (!(s = malloc (count + 1))) {
+            np_uerror (ENOMEM);
+            goto done;
+        }
+        memcpy (s, data, count);
+        s[count] = '\0';
+        file->aux = s;
+    } else if (s && strlen (s) == offset) {
+        if (!(s = realloc (s, offset + count + 1))) {
+            np_uerror (ENOMEM);
+            goto done;
+        }
+        memcpy (s + offset, data, count);
+        s[offset + count] = '\0';
+        file->aux = s;
+    } else { 
+        np_uerror (EIO);
+        goto done;
+    }
+    ret = count;
+done:
     return ret;
 }
 

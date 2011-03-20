@@ -26,10 +26,10 @@
 /* What we do:
  * - Serve /diodctl synthetic file system
  * - File 'exports' contains list of I/O node exports
- * - File 'server' contains server port
- * - When an attached user reads 'server', if a diod server is already
+ * - File 'ctl' is written with mount options, read for port number.
+ * - When an attached user reads 'ctl', if a diod server is already
  *   running for that user, return port.  If not, spawn it and return port.
- * - Reap children when they quit (on last trans shutdown)
+ * - Reap children when they quit (on last connection shutdown)
  */
 
 #if HAVE_CONFIG_H

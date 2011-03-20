@@ -1,5 +1,8 @@
 2011-03-20 Jim Garlick <garlick@llnl.gov>
 
+	* diodctl/serv.c, diodctl/ops.c : Handle multiple I/O's on
+	ctl file.  Start server (if needed) at ctl read instead of write.
+
 	* diod.spec.in : chkconfig --add diodctl on installation.
 
 	* diod.spec.in, config/x_ac_munge.m4 : Default munge on.

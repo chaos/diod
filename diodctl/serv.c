@@ -433,20 +433,20 @@ done:
 
 /* Get server port for a particular user.
  * Copy its description starting at 'offset' into 'data', max 'count' bytes.
- * This backs the read handler for 'server', hence the funny args.
+ * This backs the read handler for 'ctl'.
+ * A previous write to 'ctl would have deposited option string in 'opts'.
  *
  * FIXME: improbable case: read is split into smaller chunks,
  * and server port changes in between reads.
  */
 int
-diodctl_serv_getname (Npuser *user, char *jobid, u64 offset, u32 count,
-                      u8* data)
+diodctl_serv_readctl (Npuser *user, char *opts, u64 offset, u32 count, u8* data)
 {
     int cpylen = 0;
     Server *s, *key;
     int err;
 
-    if (!(key = _alloc_server (user->uid, jobid)))
+    if (!(key = _alloc_server (user->uid, opts)))
         goto done;
     if ((err = pthread_mutex_lock (&serverlist->lock))) {
         np_uerror (err);
@@ -454,6 +454,8 @@ diodctl_serv_getname (Npuser *user, char *jobid, u64 offset, u32 count,
     }
     s = list_find_first (serverlist->servers, (ListFindF)_smatch, key);
     free (key);
+    if (!s)
+        s = _new_server (user, opts);
     if (s) {
         cpylen = strlen (s->port) - offset;
         if (cpylen > count)
@@ -469,37 +471,6 @@ diodctl_serv_getname (Npuser *user, char *jobid, u64 offset, u32 count,
     }
 done:
     return cpylen;
-}
-
-/* Create a new server for uid if there isn't one already.
- * This backs the write handler for 'ctl'.
- */
-int
-diodctl_serv_create (Npuser *user, char *jobid)
-{
-    int err;
-    int ret = 0;
-    Server *s, *key;
-
-    if (!(key = _alloc_server (user->uid, jobid)))
-        goto done;
-    if ((err = pthread_mutex_lock (&serverlist->lock))) {
-        np_uerror (err);
-        goto done;
-    }
-    /* FIXME: what if found server is listening on wrong ip? */
-    s = list_find_first (serverlist->servers, (ListFindF)_smatch, key);
-    free (key);
-    if (!s)
-        s = _new_server (user, jobid);
-
-    if ((err = pthread_mutex_unlock (&serverlist->lock))) {
-        np_uerror (err);
-        goto done;
-    }
-    ret = 1;
-done:
-    return ret;
 }
 
 /*
