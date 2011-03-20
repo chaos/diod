@@ -29,6 +29,7 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <errno.h>
+#include <sys/time.h>
 #include <assert.h>
 #include "9p.h"
 #include "npfs.h"
@@ -86,7 +87,9 @@ np_srv_create(int nwthread)
 	srv = malloc(sizeof(*srv));
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
-	pthread_cond_init(&srv->zeroconnscond, NULL);
+	pthread_cond_init(&srv->conncountcond, NULL);
+	srv->conncount = 0;
+	srv->connhistory = 0;
 	srv->msize = 8216;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
@@ -188,6 +191,9 @@ np_srv_add_conn(Npsrv *srv, Npconn *conn)
 		conn->next = srv->conns;
 		srv->conns = conn;
 		ret = 1;
+		srv->conncount++;
+		srv->connhistory++;
+		pthread_cond_signal(&srv->conncountcond);
 	}
 	pthread_mutex_unlock(&srv->lock);
 
@@ -222,20 +228,40 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 	np_conn_decref(conn);
 	if (srv->shuttingdown && !srv->conns)
 		np_srv_destroy(srv);
-	if (!srv->conns)
-		pthread_cond_signal(&srv->zeroconnscond);
+	srv->conncount--;
+	pthread_cond_signal(&srv->conncountcond);
 	pthread_mutex_unlock(&srv->lock);
 }
 
 void
-np_srv_wait_zeroconns(Npsrv *srv)
+np_srv_wait_conncount(Npsrv *srv, int count)
 {
 	pthread_mutex_lock(&srv->lock);
-	while (!srv->conns)
-		pthread_cond_wait(&srv->zeroconnscond, &srv->lock);
-	while (srv->conns)
-		pthread_cond_wait(&srv->zeroconnscond, &srv->lock);
+	while (srv->conncount > 0 || srv->connhistory < count)
+		pthread_cond_wait(&srv->conncountcond, &srv->lock);
 	pthread_mutex_unlock(&srv->lock);
+}
+
+void
+np_srv_wait_timeout(Npsrv *srv, int inactivity_secs)
+{
+	struct timeval tv;
+	struct timespec ts;
+	int rc = 0;
+
+	do {
+		pthread_mutex_lock(&srv->lock);
+		while (srv->conncount == 0 && rc != ETIMEDOUT) {
+			gettimeofday (&tv, NULL);
+			ts.tv_sec = tv.tv_sec + inactivity_secs;
+			ts.tv_nsec = tv.tv_usec * 1000;
+			rc = pthread_cond_timedwait(&srv->conncountcond,
+						    &srv->lock, &ts);
+		}
+		while (srv->conncount > 0)
+			pthread_cond_wait(&srv->conncountcond, &srv->lock);
+		pthread_mutex_unlock(&srv->lock);
+	} while (rc != ETIMEDOUT);
 }
 
 static void

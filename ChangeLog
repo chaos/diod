@@ -1,5 +1,11 @@
 2011-03-20 Jim Garlick <garlick@llnl.gov>
 
+	* diod/diod.c, diodctl/serv.c, libdiod/diod_conf.[ch] : Drop
+	atomicmax option to diod that is not currently relevant.
+
+	* libdiod/diod_sock.c, libnpfs/srv.c, libnpfs/npfs.h : Diod server
+	times out and exits after a period of 60 seconds with no connections.
+
 	* diodctl/serv.c, diodctl/ops.c : Handle multiple I/O's on
 	ctl file.  Start server (if needed) at ctl read instead of write.
 

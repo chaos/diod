@@ -294,8 +294,6 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-w%d", diod_conf_get_nwthreads ()) < 0)
         goto done;
-    if (_append_arg (s, "-A%d", diod_conf_get_atomic_max ()) < 0)
-        goto done;
     if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
         goto done;
     if (_append_arg (s, "-E%s", exports_file) < 0)

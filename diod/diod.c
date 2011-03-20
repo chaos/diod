@@ -57,7 +57,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:F:u:A:L:s:n"
+#define OPTIONS "d:l:w:e:E:F:u:L:s:n"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -70,7 +70,6 @@ static const struct option longopts[] = {
     {"no-auth",         no_argument,        0, 'n'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
-    {"atomic-max",      required_argument,  0, 'A'},
     {"log-to",          required_argument,  0, 'L'},
     {"stats",           required_argument,  0, 's'},
     {0, 0, 0, 0},
@@ -91,7 +90,6 @@ usage()
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -E,--export-file PATH  read exports from PATH (one per line)\n"
-"   -A,--atomic-max INT    set the maximum atomic I/O size, in megabytes\n"
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
 "   -s,--stats FILE        log detailed I/O stats to FILE\n"
 "   -n,--no-auth           disable authentication check\n"
@@ -111,7 +109,6 @@ main(int argc, char **argv)
     int nfds = 0;
     uid_t uid;
     List hplist;
-    unsigned long amax;
     char *end;
    
     diod_log_init (argv[0]); 
@@ -169,15 +166,6 @@ main(int argc, char **argv)
                 if (*end != '\0')
                     msg_exit ("error parsing --runas-uid argument");
                 diod_conf_set_runasuid (uid);
-                break;
-            case 'A':   /* --atomic-max INT */
-                errno = 0;
-                amax = strtoul (optarg, &end, 10);
-                if (errno != 0)
-                    err_exit ("error parsing --atomic-max argument");
-                if (*end != '\0')
-                    msg_exit ("error parsing --atomic-max argument");
-                diod_conf_set_atomic_max (amax);
                 break;
             case 'L':   /* --log-to DEST */
                 diod_log_set_dest (optarg);

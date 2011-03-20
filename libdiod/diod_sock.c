@@ -227,7 +227,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
         return;
     }
     if (blocking)
-        np_srv_wait_zeroconns (srv);
+        np_srv_wait_conncount(srv, 1);
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
@@ -328,7 +328,7 @@ diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds)
     a.fds = fds;
     a.nfds = nfds;
     pthread_create (&thd, NULL, _accept_thread, &a);
-    np_srv_wait_zeroconns (srv);
+    np_srv_wait_timeout(srv, 30);  /* exit after no conns for 30s */
 }
 
 /* Try to connect to host:port.
