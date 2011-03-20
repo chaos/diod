@@ -1,3 +1,9 @@
+2011-03-20 Jim Garlick <garlick@llnl.gov>
+
+	* diod.spec.in : chkconfig --add diodctl on installation.
+
+	* diod.spec.in, config/x_ac_munge.m4 : Default munge on.
+
 2011-03-19 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre13

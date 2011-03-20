@@ -23,7 +23,7 @@ system for I/O forwarding on Linux clusters.
 %setup -q
 
 %build
-%configure --enable-munge
+%configure
 make
 
 %check
@@ -45,13 +45,13 @@ mv $RPM_BUILD_ROOT%{_mandir}/man8/diodmount.8 \
 rm -rf ${RPM_BUILD_ROOT}
 
 # %post
-# if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add diodctl; fi
+if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add diodctl; fi
 
 # %preun
-# if [ "$1" = 0 ]; then
-#   %{_sysconfdir}/init.d/diodctl stop >/dev/null 2>&1 || :
-#   if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del diodctl; fi
-# fi
+if [ "$1" = 0 ]; then
+  %{_sysconfdir}/init.d/diodctl stop >/dev/null 2>&1 || :
+  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del diodctl; fi
+fi
 
 %files
 %defattr(-,root,root)

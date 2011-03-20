@@ -1,7 +1,7 @@
 AC_DEFUN([X_AC_MUNGE], [
   AC_ARG_ENABLE([munge],
-    [AS_HELP_STRING([--enable-munge], [Build to use MUNGE authentication])],
-    [enable_munge=$enableval], [enable_munge=no])
+    [AS_HELP_STRING([--disable-munge], [Build wout MUNGE support])],
+    [enable_munge=$enableval], [enable_munge=yes])
   if test x$enable_munge == xyes; then
     AC_CHECK_HEADERS([munge.h])
     X_AC_CHECK_COND_LIB(munge, munge_ctx_create)

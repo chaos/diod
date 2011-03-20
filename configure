@@ -1420,7 +1420,7 @@ Optional Features:
 			  (and sometimes confusing) to the casual installer
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
-  --enable-munge          Build to use MUNGE authentication
+  --disable-munge         Build wout MUNGE support
   --enable-largeio        Build to use large I/O protocol extensions
 
 Some influential environment variables:
@@ -5974,7 +5974,7 @@ fi
 if test "${enable_munge+set}" = set; then
   enableval=$enable_munge; enable_munge=$enableval
 else
-  enable_munge=no
+  enable_munge=yes
 fi
 
   if test x$enable_munge == xyes; then
