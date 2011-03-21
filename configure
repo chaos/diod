@@ -6336,7 +6336,7 @@ _ACEOF
 ##
 # Epilogue
 ##
-ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile man/Makefile diod/diod.8 diodctl/diodctl.8 utils/diodmount.8 utils/diodexp.8 man/diod.conf.5 scripts/Makefile scripts/diodctl.init diod/Makefile diodctl/Makefile utils/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/user/Makefile"
+ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile man/Makefile diod/diod.8 diodctl/diodctl.8 utils/diodmount.8 utils/diodexp.8 man/diod.conf.5 scripts/Makefile scripts/diodctl.init diod/Makefile diodctl/Makefile utils/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/user/Makefile etc/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -7011,6 +7011,7 @@ do
     "tests/misc/Makefile") CONFIG_FILES="$CONFIG_FILES tests/misc/Makefile" ;;
     "tests/kern/Makefile") CONFIG_FILES="$CONFIG_FILES tests/kern/Makefile" ;;
     "tests/user/Makefile") CONFIG_FILES="$CONFIG_FILES tests/user/Makefile" ;;
+    "etc/Makefile") CONFIG_FILES="$CONFIG_FILES etc/Makefile" ;;
 
   *) { { $as_echo "$as_me:$LINENO: error: invalid argument: $ac_config_target" >&5
 $as_echo "$as_me: error: invalid argument: $ac_config_target" >&2;}

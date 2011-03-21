@@ -249,6 +249,7 @@ SUBDIRS = \
 	man \
 	scripts \
 	diodctl \
+	etc \
 	tests
 
 EXTRA_DIST = META diod.spec

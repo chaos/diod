@@ -8,6 +8,7 @@ SUBDIRS = \
 	man \
 	scripts \
 	diodctl \
+	etc \
 	tests
 
 rpmdirs:

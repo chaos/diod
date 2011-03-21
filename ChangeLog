@@ -1,5 +1,8 @@
 2011-03-21 Jim Garlick <garlick@llnl.gov>
 
+	* etc/diod.conf, etc/Makefile.am, diod.spec.in : Update example config
+	and include it (noreplace) in pakage.
+
 	* man/diod.conf.5.in, diod/diod.8.in, diodctl/diodctl.8.in :
 	Update man pages to reflect option changes, etc..
 

@@ -93,6 +93,7 @@ AC_CONFIG_FILES( \
   tests/misc/Makefile \
   tests/kern/Makefile \
   tests/user/Makefile \
+  etc/Makefile \
 )
 
 AC_OUTPUT

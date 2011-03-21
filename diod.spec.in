@@ -62,3 +62,4 @@ fi
 %{_mandir}/man5/*
 %attr(0755,root,root) %{_sysconfdir}/init.d/diodctl
 %config(noreplace) %attr(0755,root,root) %{_sysconfdir}/auto.diod
+%config(noreplace) %attr(0644,root,root) %{_sysconfdir}/diod.conf
