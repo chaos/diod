@@ -77,7 +77,6 @@ typedef struct {
 } Serverlist;
 
 static Serverlist *serverlist = NULL;
-static char *exports_file = NULL;
 
 #define BASE_PORT       1942 /* arbitrary non-privileged port */
 #define MAX_PORT        (BASE_PORT + 1024)
@@ -152,7 +151,6 @@ diodctl_serv_init (void)
         msg_exit ("out of memory");
     if ((err = pthread_mutex_init (&serverlist->lock, NULL)))
         msg_exit ("pthread_mutex_init: %s", strerror (err));
-    exports_file = diod_conf_write_exports ();
 }
 
 /* Return nonzero if servers match uid and jobid.
@@ -295,8 +293,6 @@ _build_server_args (Server *s)
     if (_append_arg (s, "-w%d", diod_conf_get_nwthreads ()) < 0)
         goto done;
     if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
-        goto done;
-    if (_append_arg (s, "-E%s", exports_file) < 0)
         goto done;
     if (!(dest = diod_log_get_dest ())) {
         np_uerror (ENOMEM);

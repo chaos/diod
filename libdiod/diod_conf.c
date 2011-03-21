@@ -351,26 +351,6 @@ diod_conf_add_export (char *path)
     _str_list_append (config.exports, path);
 }
 
-void
-diod_conf_read_exports (char *path)
-{
-    FILE *f;
-    char buf[PATH_MAX];
-    int i;
-
-    if (!config.exports)
-        config.exports = _str_list_create ();
-    if ((f = fopen (path, "r")) == NULL)
-        err_exit ("error opening %s", path);
-    while ((fgets (buf, sizeof(buf), f))) {
-        while ((i = strlen (buf)) > 0 && isspace (buf[i - 1]))
-            buf[i - 1] = '\0';
-        if (strlen (buf) > 0)
-            diod_conf_add_export (buf);
-    }
-    (void)fclose (f);
-}
-
 char *
 diod_conf_write_exports (void)
 {

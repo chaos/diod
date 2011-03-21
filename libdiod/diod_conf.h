@@ -63,7 +63,6 @@ void    diod_conf_clr_export (void);
 void    diod_conf_add_export (char *path);
 char   *diod_conf_cat_exports (void);
 char   *diod_conf_write_exports (void);
-void    diod_conf_read_exports (char *path);
 
 void    diod_conf_set_statslog (char *path);
 FILE   *diod_conf_get_statslog (void);

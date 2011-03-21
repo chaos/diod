@@ -57,7 +57,7 @@
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:E:F:u:L:s:n"
+#define OPTIONS "d:l:w:e:F:u:L:s:nc:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -66,12 +66,12 @@ static const struct option longopts[] = {
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
     {"export",          required_argument,  0, 'e'},
-    {"export-file",     required_argument,  0, 'E'},
     {"no-auth",         no_argument,        0, 'n'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"log-to",          required_argument,  0, 'L'},
     {"stats",           required_argument,  0, 's'},
+    {"config-file",     required_argument,  0, 'c'},
     {0, 0, 0, 0},
 };
 #else
@@ -93,6 +93,7 @@ usage()
 "   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
 "   -s,--stats FILE        log detailed I/O stats to FILE\n"
 "   -n,--no-auth           disable authentication check\n"
+"   -c,--config-file FILE  set config file path\n"
     );
     exit (1);
 }
@@ -109,12 +110,31 @@ main(int argc, char **argv)
     int nfds = 0;
     uid_t uid;
     List hplist;
+    char *copt = NULL;
     char *end;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
 
-    /* Command line overrides defaults.
+    /* config file overrides defaults */
+    opterr = 0;
+    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+        switch (c) {
+            case 'c':   /* --config-file PATH */
+                copt = optarg;
+                break;
+            default:
+                break;
+        }
+    }
+#if HAVE_LUA_H
+    diod_conf_init_config_file (copt);
+#else
+    if (copt)
+        msg_exit ("No lua support but --config-file was specified");
+#endif
+
+    /* Command line overrides config file.
      */
     optind = 0;
     opterr = 0;
@@ -143,13 +163,6 @@ main(int argc, char **argv)
                     eopt = 1;
                 }
                 diod_conf_add_export (optarg);
-                break;
-            case 'E':   /* --export-file PATH */
-                if (!eopt) {
-                    diod_conf_clr_export ();
-                    eopt = 1;
-                }
-                diod_conf_read_exports (optarg);
                 break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);

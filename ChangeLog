@@ -1,5 +1,8 @@
 2011-03-20 Jim Garlick <garlick@llnl.gov>
 
+	* diod/diod.c, diodctl/serv.c, libdiod/diod_conf.[ch] : Have
+	diod read exports from config file like diodctl.
+
 	* utils/opt.[ch], utils/diodmount.c : Clean up opt package.
 
 	* diod/diod.c, diodctl/serv.c, libdiod/diod_conf.[ch] : Drop
