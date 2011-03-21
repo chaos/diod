@@ -54,7 +54,7 @@ like NFS, or it can be specified with this option.
 .TP
 .I "uname=name"
 The user name to authenticate to the \fBdiod\fR server.
-The default is \fIaccess=root\fR.
+The default is \fIuname=root\fR.
 .TP
 .I "access=mode"
 Select the access mode.
@@ -94,13 +94,13 @@ exclusively for \fIjobid=name\fR.
 Specify a caching policy.  By default, no caches are used.
 If \fIcache=loose\fR, no attempts are made at consistency.
 This mode is intended for exclusive, read-only mounts.
-If \fIcache=fscache\fR, FS-Cache for a persistent, read-only
+If \fIcache=fscache\fR, use FS-Cache for a persistent, read-only
 cache backend.
 .TP
 .I "cachetag"
-Cache tag to use the specified persistent cache.
-cache tags for existing cache sessions can be listed at
-/sys/fs/9p/caches. (applies only to \fIcache=fscache\fR)
+In the context of \fIcache=fscache\fR, select the cache tag
+to use for this session.
+Cache tags for existing cache sessions are listed in /sys/fs/9p/caches.
 .TP
 .I "nodevmap"
 Do not map special files.  Represent them as normal files.
