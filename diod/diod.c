@@ -115,7 +115,6 @@ main(int argc, char **argv)
     diod_conf_init ();
 
     /* Command line overrides defaults.
-     * Diod does not look at the config file.
      */
     optind = 0;
     opterr = 0;

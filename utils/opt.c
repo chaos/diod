@@ -72,7 +72,7 @@ opt_create (void)
 }
 
 char *
-opt_string (Opt o)
+opt_csv (Opt o)
 {
     ListIterator itr;
     char *item, *s;
@@ -116,80 +116,31 @@ _match_key (char *item, char *key)
 }
 
 int
-opt_add (Opt o, const char *fmt, ...)
+opt_addf (Opt o, const char *fmt, ...)
 {
     va_list ap;
-    char *item;
+    char *csv, *item, *cpy;
+    char *saveptr = NULL;
     int error;
 
     assert (o->magic == OPT_MAGIC);
     va_start (ap, fmt);
-    error = vasprintf (&item, fmt, ap);
+    error = vasprintf (&csv, fmt, ap);
     va_end (ap);
     if (error < 0)
         msg_exit ("out of memory");
-    if (list_find_first (o->list, (ListFindF)_match_key, item))
-        return 0;
-    if (!list_append (o->list, item))
-        msg_exit ("out of memory");
+
+    item = strtok_r (csv, ",", &saveptr);
+    while (item) {
+        if (!(cpy = strdup (item)))
+            msg_exit ("out of memory");
+        (void)list_delete_all (o->list, (ListFindF)_match_key, cpy);   
+        if (!list_append (o->list, cpy))
+            msg_exit ("out of memory");
+        item = strtok_r (NULL, ",", &saveptr);
+    }
+    free (csv);
     return 1;
-}
-
-void
-opt_add_override (Opt o, const char *fmt, ...)
-{
-    va_list ap;
-    char *item;
-    int error;
-
-    assert (o->magic == OPT_MAGIC);
-    va_start (ap, fmt);
-    error = vasprintf (&item, fmt, ap);
-    va_end (ap);
-    if (error < 0) 
-        msg_exit ("out of memory");
-    list_delete_all (o->list, (ListFindF)_match_key, item);
-    if (!list_append (o->list, item))
-        msg_exit ("out of memory");
-}
-
-int
-opt_add_cslist (Opt o, const char *s)
-{
-    char *cpy = strdup (s);
-    char *item;
-    int ret = 0;
-
-    if (!cpy)
-        msg_exit ("out of memory");
-
-    item = strtok (cpy, ",");
-    while (item) {
-        if (!opt_add (o, "%s", item))
-            goto done;
-        item = strtok (NULL, ",");
-    }
-    ret = 1;
-done:
-    free (cpy);
-    return ret;
-}
-
-void
-opt_add_cslist_override (Opt o, const char *s)
-{
-    char *cpy = strdup (s);
-    char *item;
-
-    if (!cpy)
-        msg_exit ("out of memory");
-
-    item = strtok (cpy, ",");
-    while (item) {
-        opt_add_override (o, "%s", item);    
-        item = strtok (NULL, ",");
-    }
-    free (cpy);
 }
 
 /* return option value or empty string (not null)
@@ -228,30 +179,46 @@ opt_delete (Opt o, char *key)
 }
 
 int
-opt_scan (Opt o, const char *fmt, ...)
+opt_vscanf (Opt o, const char *fmt, va_list ap)
 {
-    va_list ap;
-    char *s, *val, *key;
+    ListIterator itr;
+    char *item;
     int ret = 0;
 
     assert (o->magic == OPT_MAGIC);
 
-    if (!(key = strdup (fmt)))
+    if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");
-    if (!(val = strchr (key, '=')))
-        msg_exit ("opt_scan used incorrectly, fmt='%s'", fmt);
-    *val++ = '\0';
-    if ((s = opt_find (o, key))) {
-        va_start (ap, fmt);
-        ret = vsscanf(s, val, ap);
-        va_end (ap);
+    while ((item = list_next (itr))) {
+        va_list vacpy;
+
+        va_copy (vacpy, ap);
+        ret = vsscanf (item, fmt, vacpy);
+        va_end (vacpy);
+
+        if (ret > 0)
+            break;
     }
-    free (key);    
+    list_iterator_destroy (itr);
     return ret;
 }
 
 int
-opt_check_allowed_cslist (Opt o, const char *s)
+opt_scanf (Opt o, const char *fmt, ...)
+{
+    va_list ap;
+    int ret;
+
+    va_start(ap, fmt);
+    ret = opt_vscanf (o, fmt, ap);
+    va_end(ap);
+
+    return ret;
+}
+
+
+int
+opt_check_allowed_csv (Opt o, const char *csv)
 {
     Opt allow;
     ListIterator itr;
@@ -261,7 +228,7 @@ opt_check_allowed_cslist (Opt o, const char *s)
     assert (o->magic == OPT_MAGIC);
 
     allow = opt_create ();
-    opt_add_cslist_override (allow, s);
+    opt_addf (allow, csv);
 
     if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");

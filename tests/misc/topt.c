@@ -24,13 +24,13 @@ main (int argc, char *argv[])
 
     diod_log_init (argv[0]);
 
-    opt_add (o, "mickey=%d", 42);
-    opt_add (o, "goofey=%s", "yes");
-    opt_add (o, "donald");
-    opt_add_cslist (o, "foo,bar,baz");
-    opt_add (o, "lastone");
+    opt_addf (o, "mickey=%d", 42);
+    opt_addf (o, "goofey=%s", "yes");
+    opt_addf (o, "donald");
+    opt_addf (o, "foo,bar,baz");
+    opt_addf (o, "lastone");
 
-    s = opt_string (o);
+    s = opt_csv (o);
     msg ("opt string='%s'", s);
     free (s);
 
@@ -38,11 +38,11 @@ main (int argc, char *argv[])
     assert (opt_find (o, "bar"));
     assert (!opt_find (o, "barn"));
 
-    assert (opt_scan (o, "mickey=%d", &i));
+    assert (opt_scanf (o, "mickey=%d", &i));
     assert (i == 42);
 
-    opt_add_cslist_override (o, "mickey=string,foo=12,bar=15,baz");
-    s = opt_string (o);
+    opt_addf (o, "mickey=string,foo=%d,bar=%d,baz", 12, 15);
+    s = opt_csv (o);
     msg ("opt string='%s'", s);
     free (s);
 

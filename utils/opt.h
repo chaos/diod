@@ -25,15 +25,13 @@ typedef struct opt_struct *Opt;
 
 Opt             opt_create (void);
 void            opt_destroy (Opt o);
-char           *opt_string (Opt o);
-int             opt_add (Opt o, const char *fmt, ...);
-void            opt_add_override (Opt o, const char *fmt, ...);
-int             opt_add_cslist (Opt o, const char *s);
-void            opt_add_cslist_override (Opt o, const char *s);
+
+char           *opt_csv (Opt o);
+int             opt_addf (Opt o, const char *fmt, ...);
 char           *opt_find (Opt o, char *key);
 int             opt_delete (Opt o, char *key);
-int             opt_scan (Opt o, const char *fmt, ...);
-int             opt_check_allowed_cslist (Opt o, const char *s);
+int             opt_scanf (Opt o, const char *fmt, ...);
+int             opt_check_allowed_csv (Opt o, const char *s);
 
 
 /*

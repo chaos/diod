@@ -136,7 +136,7 @@ main (int argc, char *argv[])
                 vopt++;
                 break;
             case 'o':   /* --options OPT[,OPT]... */
-                opt_add_cslist_override (o, optarg);
+                opt_addf (o, optarg);
                 break;
             default:
                 usage ();
@@ -157,7 +157,7 @@ main (int argc, char *argv[])
      * Take care of it here and exit.
      */
     if (opt_find (o, "remount")) {
-        if (opt_check_allowed_cslist (o, "ro,rw,aname,remount"))
+        if (opt_check_allowed_csv (o, "ro,rw,aname,remount"))
             msg_exit ("-oremount can only be used with ro,rw");
         _diod_remount (o, spec, dir, vopt, fopt);
         goto done;
@@ -173,26 +173,26 @@ main (int argc, char *argv[])
      * is passed to the kernel via -orfdno,wfdno.
      */
     if (!opt_find (o, "trans"))
-        opt_add (o, "trans=fd");
+        opt_addf (o, "trans=%s", "fd");
     else if (!opt_find (o, "trans=fd"))
         msg_exit ("only -otrans=fd transport is supported");
 
     /* Set msize if not already set.  Validate it later.
      */
     if (!opt_find (o, "msize"))
-        opt_add (o, "msize=%d", DIOD_DEFAULT_MSIZE);
+        opt_addf (o, "msize=%d", DIOD_DEFAULT_MSIZE);
 
     /* Only .L version is supported.
      */
     if (!opt_find (o, "version"))
-        opt_add (o, "version=9p2000.L");
+        opt_addf (o, "version=%s", "9p2000.L");
     else if (!opt_find (o, "version=9p2000.L"))
         msg_exit ("only -oversion=9p2000.L is supported (little p, big L)");
 
     /* Set debug level.
      */
     if (!opt_find (o, "debug"))
-        opt_add (o, "debug=0");
+        opt_addf (o, "debug=%d", 0);
 
     /* Server is on an inherited file descriptor.
      * For testing, we start server on a socketpair duped to fd 0.
@@ -200,7 +200,7 @@ main (int argc, char *argv[])
     if (opt_find (o, "rfdno") || opt_find (o, "wfdno")) {
         int rfd, wfd;
 
-        if (!opt_scan (o, "rfdno=%d", &rfd) || !opt_scan (o, "wfdno=%d", &wfd))
+        if (!opt_scanf (o, "rfdno=%d", &rfd) || !opt_scanf (o, "wfdno=%d", &wfd))
             msg_exit ("-orfdno,wfdno must be used together");
         if (rfd != wfd)    
             msg_exit ("-orfdno,wfdno must have same value");
@@ -229,8 +229,8 @@ main (int argc, char *argv[])
         if (sfd < 0)
             msg_exit ("could not contact diod server(s)");
         opt_delete (o, "port");
-        opt_add (o, "rfdno=%d", sfd);
-        opt_add (o, "wfdno=%d", sfd);
+        opt_addf (o, "rfdno=%d", sfd);
+        opt_addf (o, "wfdno=%d", sfd);
 
     /* Try diodctl server on each host until one responds.
      * Negotiate a port to connect to based on user and jobid.
@@ -253,20 +253,20 @@ main (int argc, char *argv[])
         hostlist_iterator_destroy (hi);
         if (sfd < 0)
             msg_exit ("failed to establish connection with server");
-        opt_add (o, "rfdno=%d", sfd);
-        opt_add (o, "wfdno=%d", sfd);
+        opt_addf (o, "rfdno=%d", sfd);
+        opt_addf (o, "wfdno=%d", sfd);
         if (jobid)
             opt_delete (o, "jobid");
     }
 
     assert (opt_find (o, "trans=fd"));
-    assert (opt_scan (o, "msize=%d", &i));
+    assert (opt_scanf (o, "msize=%d", &i));
     assert (opt_find (o, "version=9p2000.L"));
-    assert (opt_scan (o, "debug=%d", &i));
-    assert (opt_scan (o, "wfdno=%d", &i) && opt_scan (o, "rfdno=%d", &i));
+    assert (opt_scanf (o, "debug=%d", &i));
+    assert (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
     assert (opt_find (o, "aname"));
     assert ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
-         || (opt_scan (o, "access=%d", &i) && opt_find(o, "uname")));
+         || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
 
     assert (!opt_find (o, "port"));
     assert (!opt_find (o, "jobid"));
@@ -298,7 +298,7 @@ _parse_spec (char *spec, Opt o)
         msg_exit ("no host specified");
     if (!aname || strlen (aname) == 0)
         aname = opt_find (o, "aname");
-    else if (!opt_add (o, "aname=%s", aname))
+    else if (!opt_addf (o, "aname=%s", aname))
         msg_exit ("you cannot have both -oaname and spec=host:aname");
     if (!aname || strlen (aname) == 0)
         msg_exit ("no aname specified");
@@ -341,7 +341,7 @@ _parse_uname_access (Opt o)
             msg_exit ("could not look up uname='%s'", uname);
         uname_uid = pw->pw_uid;
     }
-    if (access && opt_scan (o, "access=%d", &access_uid)) {
+    if (access && opt_scanf (o, "access=%d", &access_uid)) {
         if (!(pw = getpwuid (access_uid)))
             msg_exit ("could not look up access='%d'", access_uid);
         if (!(access_name = strdup (pw->pw_name)))
@@ -349,20 +349,20 @@ _parse_uname_access (Opt o)
     }
 
     if (!uname && !access) {
-        opt_add (o, "uname=root");        
-        opt_add (o, "access=user");
+        opt_addf (o, "uname=%s", "root");        
+        opt_addf (o, "access=%s", "user");
 
     } else if (uname && !access) {
         if (uname_uid == 0)
-            opt_add (o, "access=user");
+            opt_addf (o, "access=%s", "user");
         else
-            opt_add (o, "access=%d", uname_uid);
+            opt_addf (o, "access=%d", uname_uid);
 
     } else if (!uname && access) {
         if (strcmp (access, "user") == 0)
-            opt_add (o, "uname=root");
+            opt_addf (o, "uname=%s", "root");
         else if (access_name) /* access=<uid> */
-            opt_add (o, "uname=%s", access_name);
+            opt_addf (o, "uname=%s", access_name);
         else
             msg_exit ("unsupported -oaccess=%s", access);
     } else { /* if (uname && access) */
@@ -433,7 +433,7 @@ _getflags (Opt o, unsigned long *flags)
 static void
 _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt)
 {
-    char *options = opt_string (o);
+    char *options = opt_csv (o);
     unsigned long mountflags = 0;
 
     _getflags (o, &mountflags);
@@ -489,13 +489,13 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
     Npcfsys *fs;
     unsigned long mountflags = 0;
 
-    options = opt_string (o);
+    options = opt_csv (o);
     _getflags (o, &mountflags);
-    options9p = opt_string (o); /* after mountflags removed from opt list */
+    options9p = opt_csv (o); /* after mountflags removed from opt list */
 
     if (!(aname = opt_find (o, "aname")))
         msg_exit ("aname is not set"); /* can't happen */
-    if (!opt_scan (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
+    if (!opt_scanf (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
         msg_exit ("msize must be set to integer >= %d", P9_IOHDRSZ);
 
     if (vopt)

@@ -1,5 +1,7 @@
 2011-03-20 Jim Garlick <garlick@llnl.gov>
 
+	* utils/opt.[ch], utils/diodmount.c : Clean up opt package.
+
 	* diod/diod.c, diodctl/serv.c, libdiod/diod_conf.[ch] : Drop
 	atomicmax option to diod that is not currently relevant.
 
