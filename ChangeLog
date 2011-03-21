@@ -1,5 +1,13 @@
 2011-03-21 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre14
+
+	* utils/diodexp.c : Query all servers in hostlist and include
+	all hosts serving the file system matching key in the response.
+
+	* utils/diodexp.c : Allow both p1-p2-p3 and p1.p2.p3 as keys
+	for /p1/p2/p3.
+
 	* etc/diod.conf, etc/Makefile.am, diod.spec.in : Update example config
 	and include it (noreplace) in pakage.
 

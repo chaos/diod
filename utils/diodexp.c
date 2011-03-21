@@ -53,6 +53,7 @@
 #include "npfs.h"
 #include "npclient.h"
 #include "list.h"
+#include "hash.h"
 #include "hostlist.h"
 #include "diod_log.h"
 #include "diod_upool.h"
@@ -71,6 +72,11 @@ static const struct option longopts[] = {
 #else
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
+
+typedef struct {
+    char *path;
+    hostlist_t hl;
+} xhash_t;
 
 static void _list_exports (hostlist_t hl);
 static void _list_exports_auto_indirect (hostlist_t hl, char *key);
@@ -119,31 +125,78 @@ main (int argc, char *argv[])
     exit (0);
 }
 
-static char *
-_hstr (hostlist_t hl)
+static void
+_destroy_xhash (xhash_t *x)
 {
-    int len = 0;
-    char *s = NULL;
+    if (x) {
+        if (x->path) 
+            free (x->path);
+        if (x->hl)
+            hostlist_destroy (x->hl);
+        free (x);
+    }
+}
 
-    do {
-        len += 64;
-        if (!(s = (s ? realloc (s, len) : malloc (len))))
-            msg_exit ("out of memory");
-    } while (hostlist_deranged_string(hl, len, s) < 0);
+static xhash_t *
+_create_xhash (char *path, char *host)
+{
+    xhash_t *x;
 
-    return s;
+    if (!(x = malloc (sizeof (*x))))
+        msg_exit ("out of memory");
+    if (!(x->path = strdup (path)))
+        msg_exit ("out of memory");
+    if (!(x->hl = hostlist_create (host)))
+        msg_exit ("error parsing internal hostlist");
+    return x;
+}
+
+static void
+_update_xhash (hash_t h, char *path, char *host)
+{
+    xhash_t *x;
+
+    if ((x = hash_find (h, path))) {
+        if (!hostlist_push_host (x->hl, host))
+            err_exit ("error pushing to internal hostlist");
+    } else {
+        x = _create_xhash (path, host);
+        if (!hash_insert (h, path, x))
+            err_exit ("out of memory");
+    }
+}
+
+static hash_t
+_populate_xhash (hostlist_t hl)
+{
+    hostlist_iterator_t hi;
+    List exports = NULL;
+    ListIterator li;
+    char *host, *path;
+    hash_t h;
+
+    h = hash_create (64, (hash_key_f)hash_key_string,
+                    (hash_cmp_f)strcmp, (hash_del_f)_destroy_xhash);
+    if (!h)
+        msg_exit ("out of memory");
+
+    if (!(hi = hostlist_iterator_create (hl)))
+        msg_exit ("out of memory");
+    while ((host = hostlist_next (hi))) {
+        if (ctl_query (host, NULL, NULL, &exports) == 0) {
+            if (!(li = list_iterator_create (exports)))
+                msg_exit ("out of memory");
+            while ((path = list_next (li)))
+                _update_xhash (h, path, host);
+            list_iterator_destroy (li);
+        }
+    }
+    hostlist_iterator_destroy (hi);
+    return h;
 }
 
 static int
-_match_exp_base (char *path, char *key)
-{
-    char *p = strrchr (path, '/');
-
-    return (strcmp (key, p ? p + 1 : path) == 0);
-}
-
-static int
-_match_exp_hy (char *path, char *key)
+_transcmp (char *key, char *path)
 {
     char *cpy, *p;
     int ret = 0;
@@ -154,7 +207,8 @@ _match_exp_hy (char *path, char *key)
     while (*p == '/')
         p++;
     while (*p && *key) {
-        if ((*p != *key) && !(*key == '-' && *p == '/'))
+        if ((*p != *key) && !(*key == '-' && *p == '/')
+                         && !(*key == '.' && *p == '/'))
             break;
         p++;
         key++;
@@ -166,63 +220,71 @@ _match_exp_hy (char *path, char *key)
     return ret;
 }
 
+static char *
+_hstr (hostlist_t hl)
+{
+    int len = 0;
+    char *s = NULL;
+
+    hostlist_uniq (hl);
+    do {
+        len += 64;
+        if (!(s = (s ? realloc (s, len) : malloc (len))))
+            msg_exit ("out of memory");
+    } while (hostlist_deranged_string(hl, len, s) < 0);
+
+    return s;
+}
+
+static int
+_list_auto (xhash_t *x, char *key, void *match)
+{
+    char *hstr;
+
+    if (!match || strcmp (match, x->path) == 0 || _transcmp (match, x->path)
+               || strcmp (match, basename (x->path)) == 0) {
+        hstr = _hstr (x->hl);
+        printf ("--fstype diod %s:%s\n", hstr, x->path);
+        free (hstr);
+    }
+
+    return 0;
+}
+
+static int
+_list_export (xhash_t *x, char *key, void *match)
+{
+    char *hstr;
+
+    if (!match || strcmp (match, x->path) == 0 || _transcmp (match, x->path)
+               || strcmp (match, basename (x->path)) == 0) {
+        hstr = _hstr (x->hl);
+        printf ("%s:%s\n", hstr, x->path);
+        free (hstr);
+    }
+
+    return 0;
+}
+
 static void
 _list_exports_auto_indirect (hostlist_t hl, char *key)
 {
-    hostlist_iterator_t hi;
-    List exports = NULL;
-    char *host, *path;
-    char *hstr = _hstr (hl);
-    int hostok = 0;
+    hash_t h;
 
-    if (!(hi = hostlist_iterator_create (hl)))
-        msg_exit ("out of memory");
-    
-    while ((host = hostlist_next (hi))) {
-        if (ctl_query (host, NULL, NULL, &exports) == 0) {
-            path = list_find_first (exports, (ListFindF)_match_exp_base, key);
-            if (!path)
-                path = list_find_first (exports, (ListFindF)_match_exp_hy, key);
-            if (path)
-                printf ("-fstype=diod %s:%s\n", hstr, path);
-            hostok = 1;
-            break;
-        }
-    }
-    hostlist_iterator_destroy (hi);
-    free (hstr);
-    if (!hostok)
-        msg_exit ("could not contact a diodctl server");
+    h = _populate_xhash (hl);
+    hash_for_each (h, (hash_arg_f)_list_auto, key);
+    hash_destroy (h);
 }
 
 
 static void
 _list_exports (hostlist_t hl)
 {
-    hostlist_iterator_t hi;
-    List exports = NULL;
-    ListIterator li;
-    char *host, *path;
-    char *hstr = _hstr (hl);
-    int hostok = 0;
+    hash_t h;
 
-    if (!(hi = hostlist_iterator_create (hl)))
-        msg_exit ("out of memory");
-    while ((host = hostlist_next (hi))) {
-        if (ctl_query (host, NULL, NULL, &exports) == 0) {
-            if (!(li = list_iterator_create (exports)))
-                msg_exit ("out of memory");
-            while ((path = list_next (li)))
-                printf ("%s:%s\n", hstr, path);
-            list_iterator_destroy (li);
-            hostok = 1;
-            break;
-        }
-    }
-    hostlist_iterator_destroy (hi);
-    free (hstr);
-    if (!hostok)
-        msg_exit ("could not contact a diodctl server");
+    h = _populate_xhash (hl);
+    hash_for_each (h, (hash_arg_f)_list_export, NULL);
+    hash_destroy (h);
 }
 
 /*

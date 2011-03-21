@@ -1,3 +1,14 @@
+1.0-pre14:
+	Chkconfig --add diodctl upon RPM installation.
+	Fix 60s idle (disconnected) timeout on diod server spawned by diodctl.
+	Config file renamed to /etc/diod.conf and install example (noreplace).
+	Don't allow 'debuglevel', 'foreground', or 'diodpath' in config file.
+	Set listen port with 'diodlisten' and 'diodctllisten' in config file.
+	Allow diod to be run in the background again.
+	diodexp: if hostlist, compute intersection of results.
+	diodexp: allow 'foo-bar', 'foo.bar', and 'bar' as keys for /foo/bar.
+	Misc. code cleanup and man page improvement.
+
 1.0-pre13:
 	Fix error handling in diod_sock_connect().
 	Rework automounter integration.
