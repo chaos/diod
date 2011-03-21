@@ -290,8 +290,6 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-d%d", diod_conf_get_debuglevel ()) < 0)
         goto done;
-    if (_append_arg (s, "-w%d", diod_conf_get_nwthreads ()) < 0)
-        goto done;
     if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
         goto done;
     if (!(dest = diod_log_get_dest ())) {

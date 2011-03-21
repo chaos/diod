@@ -73,7 +73,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:e:nD:L:"
+#define OPTIONS "fd:l:w:c:nD:L:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -82,7 +82,6 @@ static const struct option longopts[] = {
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
     {"config-file",     required_argument,  0, 'c'},
-    {"export",          required_argument,  0, 'e'},
     {"no-auth",         no_argument,        0, 'n'},
     {"diod-path",       required_argument,  0, 'D'},
     {"log-dest",        required_argument,  0, 'L'},
@@ -99,10 +98,9 @@ usage()
 "Usage: diodctl [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -d,--debug MASK        set debugging mask\n"
-"   -l,--listen IP:PORT    set interface to listen on (just one allowed)\n"
-"   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
+"   -l,--listen IP:PORT    set interface to listen on (multiple OK)\n"
+"   -w,--nwthreads INT     set number of diodctl worker threads\n"
 "   -c,--config-file FILE  set config file path\n"
-"   -e,--export PATH       export PATH (just one allowed)\n"
 "   -n,--no-auth           disable authentication check\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
 "   -L,--log-dest DEST     log to DEST, can be syslog, stderr, or file\n"
@@ -167,6 +165,7 @@ main(int argc, char **argv)
                 diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
                 break;
             case 'c':   /* --config-file PATH */
+                /* handled above */
                 break;
             case 'e':   /* --export PATH */
                 if (!eopt) {

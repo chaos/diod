@@ -36,6 +36,7 @@
 #endif
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/resource.h>
 #include <string.h>
@@ -53,15 +54,19 @@
 
 #include "ops.h"
 
+static void          _daemonize (char *Lopt);
+static void          _setrlimit (void);
+
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "d:l:w:e:F:u:L:s:nc:"
+#define OPTIONS "fd:l:w:e:F:u:L:s:nc:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
+    {"foreground",      no_argument,        0, 'f'},
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
@@ -83,16 +88,16 @@ usage()
 {
     fprintf (stderr, 
 "Usage: diod [OPTIONS]\n"
-"   -d,--debug MASK        set debugging mask\n"
+"   -f,--foreground        do not fork and disassociate with tty\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
+"   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
-"   -F,--listen-fds N      listen for connections on the first N fds\n"
-"   -u,--runas-uid UID     only allow UID to attach\n"
-"   -E,--export-file PATH  read exports from PATH (one per line)\n"
-"   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
-"   -s,--stats FILE        log detailed I/O stats to FILE\n"
 "   -n,--no-auth           disable authentication check\n"
+"   -u,--runas-uid UID     only allow UID to attach\n"
+"   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
+"   -d,--debug MASK        set debugging mask\n"
+"   -s,--stats FILE        log detailed I/O stats to FILE\n"
 "   -c,--config-file FILE  set config file path\n"
     );
     exit (1);
@@ -106,6 +111,7 @@ main(int argc, char **argv)
     int Fopt = 0;
     int eopt = 0;
     int lopt = 0;
+    char *Lopt = NULL;
     struct pollfd *fds = NULL;
     int nfds = 0;
     uid_t uid;
@@ -140,6 +146,9 @@ main(int argc, char **argv)
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
+            case 'f':   /* --foreground */
+                diod_conf_set_foreground (1);
+                break;
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
@@ -181,6 +190,7 @@ main(int argc, char **argv)
                 break;
             case 'L':   /* --log-to DEST */
                 diod_log_set_dest (optarg);
+                Lopt = optarg;
                 break;
             case 's':   /* --stats PATH */
                 diod_conf_set_statslog (optarg);
@@ -193,6 +203,17 @@ main(int argc, char **argv)
         usage();
 
     diod_conf_validate_exports ();
+
+    if (geteuid () == 0)
+        _setrlimit ();
+
+    /* Don't daemonize if child of diodctl (-F) or client is on stdin.
+     */
+    if (!Fopt && diod_conf_get_diodlisten ()) {
+        if (!diod_conf_get_foreground ())
+            _daemonize (Lopt);
+    }
+
     if (diod_conf_get_runasuid (&uid)) {
         if (geteuid () != 0 && geteuid () != uid)
             msg_exit ("must be root to run diod as another user");
@@ -210,20 +231,86 @@ main(int argc, char **argv)
         msg_exit ("out of memory");
     diod_register_ops (srv);
 
+    /* Listen on bound sockets 0 thru value of Fopt inherited
+     * from diodctl.  Exit after a period of 30s with no connections.
+     */
     if (Fopt) {
         if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
             msg_exit ("failed to set up listen ports");
         diod_sock_accept_batch (srv, fds, nfds);
+
+    /* Listen on interface/port designation from -L or config file.
+     * Run forever.
+     */
     } else if ((hplist = diod_conf_get_diodlisten ())) {
         if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
             msg_exit ("failed to set up listen ports");
         diod_sock_accept_loop (srv, fds, nfds);
         /*NOTREACHED*/
+
+    /* No listen port or -F.  Client inherited on fd=0.  Exit on disconnect.
+     */
     } else {
         diod_sock_startfd (srv, 0, "stdin", "0.0.0.0", "0", 1);
     }
 
     exit (0);
+}
+
+/* Remove any resource limits.
+ * Exit on error
+ */
+static void
+_setrlimit (void)
+{
+    struct rlimit r, r2;
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_FSIZE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_FSIZE");
+
+    r.rlim_cur = r.rlim_max = NR_OPEN;
+    r2.rlim_cur = r2.rlim_max = sysconf(_SC_OPEN_MAX);
+    if (setrlimit (RLIMIT_NOFILE, &r) < 0)
+        if (errno != EPERM || setrlimit (RLIMIT_NOFILE, &r2) < 0)
+            err_exit ("setrlimit RLIMIT_NOFILE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_LOCKS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_LOCKS");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_CORE, &r) < 0)
+        err_exit ("setrlimit RLIMIT_CORE");
+
+    r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+    if (setrlimit (RLIMIT_AS, &r) < 0)
+        err_exit ("setrlimit RLIMIT_AS");
+}
+
+/* Create run directory if it doesn't exist and chdir there.
+ * Disassociate from parents controlling tty.  Switch logging to syslog.
+ * Exit on error.
+ */
+static void
+_daemonize (char *Lopt)
+{
+    char rdir[PATH_MAX];
+    struct stat sb;
+
+    snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
+    if (stat (rdir, &sb) < 0) {
+        if (mkdir (rdir, 0755) < 0)
+            err_exit ("mkdir %s", rdir);
+    } else if (!S_ISDIR (sb.st_mode))
+        msg_exit ("%s is not a directory", rdir);
+
+    if (chdir (rdir) < 0)
+        err_exit ("chdir %s", rdir);
+    if (daemon (1, 0) < 0)
+        err_exit ("daemon");
+    if (Lopt == NULL)
+        diod_log_set_dest ("syslog");
 }
 
 /*

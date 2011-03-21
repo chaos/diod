@@ -1,4 +1,4 @@
 man5_MANS = \
-	diodctl.conf.5
+	diod.conf.5
 
 EXTRA_DIST = $(man8_MANS) $(man5_MANS)

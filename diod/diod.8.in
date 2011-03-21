@@ -9,65 +9,87 @@ diod \- distributed I/O daemon
 is the distributed I/O daemon server, which
 implements I/O forwarding on Linux clusters.
 .LP
-Usually diod is spawned by the \fBdiodctl\fR, but it can be run standalone
-if required.
+Usually diod is spawned by the \fBdiodctl\fR superserver.
+It can also run standalone.
+.LP
+Configuration is read from the diod.conf (5) config file.
+Some configuration can be overridden on the command line, as described below.
 .SH OPTIONS
+.TP
+.I "-f, --foreground"
+Do not change working directory to @X_LOCALSTATEDIR@/run,
+drop the controlling terminal, or run in the background.
+Send logs to stderr not syslog, unless sent somewhere else by \fI\-L\fR.
 .TP
 .I "-l, --listen IP:PORT"
 Set the listen address.
 This option may be specified more than once.
-The default is to assume a client is already connected on file descriptor zero.
+It overrides the \fIdiodlisten\fR config file setting.
+If neither listen ports nor \fI-F\fR are specified, assume connected
+client is inherited on file descriptor 0.
 .TP
 .I "-F, --listen-fds N"
 Listen for connection on file descriptors zero through N.
 This is the mechanism that \fBdiodctl\fR uses to pass dynamically
-allocated ports to \fBdiod\fR.
-.TP
-.I "-e, --export PATH"
-Set the file system to be exported.
-This option may be specified more than once and in combination with \fI-E\fR.
+allocated ports, possibly on multiple interfaces, to \fBdiod\fR.
+If neither \fI-l\fR nor \fI-F\fR are specified, assume connected
+client is inherited on file descriptor 0.
 .TP
 .I "-w, --nwthreads INT"
 Set the number of worker threads to spawn to handle 9P operations.
+This option overrides the \fInwthreads\fR setting in diod.conf (5).
 The default is 16.
 .TP
-.I "-E, --export-file PATH"
-Read the file system(s) to be exported from PATH.
-This option may be specified more than once and in combination with \fI-e\fR.
+.I "-e, --export PATH"
+Set the file system to be exported.
+This option may be specified more than once.
+It overrides the \fIexports\fR setting in diod.conf (5).
 .TP
-.I "-a, --allowany"
-Override TCP wrappers checks and allow any client to connect.
-.TP
-.I "-m, --no-munge-auth"
+.I "-n, --no-auth"
 This option allows users to attach without security credentials.
-It only is relevant if \fBdiod\fR was built with \fI--enable-munge\fR.
+It overrides  the \fIauth_required\fR setting in diod.conf (5).
 .TP
 .I "-u, --runas-uid UID"
 Run the server as UID and only allow that user to attach.
-If invoked as root, \fBdiod\fR sets uid, gid, and
+If invoked as root, \fBdiod\fR sets real and effective uid, gid, and
 supplementary groups to those belonging to UID.
 If invoked as UID, \fBdiod\fR does not change these.
 It is an error to run \fBdiod\fR as a user other than UID or root, 
+.TP
+.I "-L, --log-dest DEST"
+Set the destination for logging.  Possible destinations are
+\fIsyslog:facility:level\fR,
+\fIstderr\fR,
+\fIstdout\fR, or
+a file name.
+This option cannot currently be set in the config file.
+.TP
+.I "-d, --debug MASK"
+Set the debug mask.  The bit values are:
+.br
+0x01 - log decoded 9P protocol messages
+.br
+0x02 - log any 9P RLERROR responses
+.br
 .TP
 .I "-s, --stats PATH"
 Write I/O statistics to PATH as each file is closed.
 Each line represents one file I/O session and is of the form:
 .nf
-
 path:read-ops:read-bytes:write-ops:write-bytes:time-seconds
-
 .fi
 .TP
-.I "-d, --debug MASK"
-Set the debug mask.  The bit values are:
-0x1 log decoded 9P protocol messages;
-0x2 log any 9P operation errors.
+.I "-c, --config-file PATH"
+Set config file path.
 .SH "LOGGING"
-\fBdiod\fR logs all messages to the LOG_DAEMON syslog facility
-at LOG_ERR severity.
+If listen ports were specified, \fBdiod\fR logs all messages to the
+LOG_DAEMON syslog facility at LOG_ERR severity unless overridden as
+described above.  Otherwise it logs to stderr.
 .SH "FILES"
 @X_SBINDIR@/diod
 .br
+@X_SYSCONFDIR@/diod.conf
+.br
 @X_LOCALSTATEDIR@/run/diod.pid
 .SH "SEE ALSO"
-diodctl (8), diodmount (8), hosts_access (5)
+diodctl (8), diod.conf (5), mount.diod (8), hosts_access (5)

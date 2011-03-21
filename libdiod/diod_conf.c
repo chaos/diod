@@ -453,7 +453,6 @@ _lua_getglobal_uint (char *path, lua_State *L, char *key, unsigned int *ip)
 
     return res;
 }
-#endif
 
 static int
 _lua_getglobal_string (char *path, lua_State *L, char *key, char **sp)
@@ -479,6 +478,7 @@ _lua_getglobal_string (char *path, lua_State *L, char *key, char **sp)
 
     return res;
 }
+#endif
 
 static int
 _lua_getglobal_list_of_strings (char *path, lua_State *L, char *key, List *lp)
@@ -523,7 +523,7 @@ diod_conf_init_config_file (char *path)
     static char buf[PATH_MAX];
 
     if (!path) {
-        snprintf (buf, sizeof (buf), "%s/diodctl.conf", X_SYSCONFDIR);
+        snprintf (buf, sizeof (buf), "%s/diod.conf", X_SYSCONFDIR);
         if (access (buf, R_OK) == 0)
             path = buf;  /* missing default config file is not fatal */
     }
@@ -538,13 +538,12 @@ diod_conf_init_config_file (char *path)
         if (luaL_loadfile (L, path) || lua_pcall (L, 0, 0, 0))
             msg_exit ("%s", lua_tostring (L, -1));
         
-        _lua_getglobal_int (path, L, "debuglevel", &config.debuglevel);
         _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
-        _lua_getglobal_int (path, L, "foreground", &config.foreground);
         _lua_getglobal_int (path, L, "auth_required", &config.auth_required);
-        _lua_getglobal_string (path, L, "diodpath", &config.diodpath);
-        _lua_getglobal_list_of_strings (path, L, "listen",
+        _lua_getglobal_list_of_strings (path, L, "diodctllisten",
                             &config.diodctllisten);
+        _lua_getglobal_list_of_strings (path, L, "diodlisten",
+                            &config.diodlisten);
         _lua_getglobal_list_of_strings (path, L, "exports", &config.exports);
 
         lua_close(L);

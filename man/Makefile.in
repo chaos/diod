@@ -36,7 +36,7 @@ host_triplet = @host@
 target_triplet = @target@
 subdir = man
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diodctl.conf.5.in
+	$(srcdir)/diod.conf.5.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
@@ -49,7 +49,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodctl.conf.5
+CONFIG_CLEAN_FILES = diod.conf.5
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -209,7 +209,7 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 man5_MANS = \
-	diodctl.conf.5
+	diod.conf.5
 
 EXTRA_DIST = $(man8_MANS) $(man5_MANS)
 all: all-am
@@ -245,7 +245,7 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-diodctl.conf.5: $(top_builddir)/config.status $(srcdir)/diodctl.conf.5.in
+diod.conf.5: $(top_builddir)/config.status $(srcdir)/diod.conf.5.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-man5: $(man5_MANS)
 	@$(NORMAL_INSTALL)

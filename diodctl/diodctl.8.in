@@ -6,56 +6,89 @@ diodctl \- distributed I/O daemon superserver
 .I "[OPTIONS]"
 .SH DESCRIPTION
 \fBdiodctl\fR is the distributed I/O daemon super-server, which 
-dynamically starts \fBdiod\fR servers when requested by \fBdiodmount\fR.
-It can also supply a list of exported file systems.
+dynamically starts \fBdiod\fR servers in tandem with requests received
+from the diod mount helper, \fBmount.diod\fR.
+It also supplies a list of exported file systems to the diod autofs
+helper, \fBdiodexp\fR.
 .LP
-Configuration is read from the diodctl.conf (5) config file.
+Configuration is read from the diod.conf (5) config file.
 Some configuration can be overridden on the command line, as described below.
 .SH OPTIONS
 .TP
 .I "-f, --foreground"
 Do not change working directory to @X_LOCALSTATEDIR@/run,
 drop the controlling terminal, or run in the background.
-Send logs to stderr not syslog.
+Send logs to stderr not syslog, unless sent somewhere else by \fI\-L\fR.
 .TP
 .I "-d, --debug MASK"
 Set the debug mask.  The bit values are:
-0x1 log decoded 9P protocol messages;
-0x2 log any 9P operation errors.
+.br
+0x01 - log decoded 9P protocol messages
+.br
+0x02 - log any 9P RLERROR responses
+.br
+The debug level is inherited by any spawned \fBdiod\fR processes.
 .TP
 .I "-l, --listen IP:PORT"
-Set the listen address (default 0.0.0.0:10005).  
+Set the listen address (default 0.0.0.0:10005),
+the \fIdiodctllisten\fR config file setting.
 This option may be specified more than once.
 .TP
 .I "-w, --nwthreads INT"
-Set the number of worker threads to spawn per server to handle 9P operations.
+Set the number of \fBdiodctl\fR worker threads to spawn handle 9P operations.
+This overrides the \fInwthreads\fR setting in the config file.
 The default is 16.
+It is not inerited by any spawned \fBdiod\fR processes.
 .TP
 .I "-c, --config-file PATH"
 Set config file path.
 .TP
-.I "-e, --export PATH"
-Set the file system to be exported.
-This option may be specified more than once.
-.TP
-.I "-a, --allowany"
-Override TCP wrappers checks and allow any client to connect.
-.TP
-.I "-m, --no-munge-auth"
+.I "-n, --no-auth"
 Allow users to attach without security credentials.
-It is only relevant if \fBdiod\fR was built with \fI--enable-munge\fR.
+This option overrides the \fIauth_required\fR config file setting,
+and is inherited by spawned \fBdiod\fR processes.
 .TP
 .I "-D, --diod-path PATH"
 Override the default path to the \fBdiod\fR server executable.
-This option is intended for testing only.
+.TP
+.I "-L, --log-dest DEST"
+Set the destination for logging.  Possible destinations are
+\fIsyslog:facility:level\fR,
+\fIstderr\fR,
+\fIstdout\fR, or
+a file name.
+This option is inherited by any spawned \fBdiod\fR processes.
+It cannot currently be set in the config file.
 .SH "LOGGING"
 \fBdiodctl\fR logs all messages to the LOG_DAEMON syslog facility
-at LOG_ERR severity.
+at LOG_ERR severity, unless overridden on the command line.
+Use your system's init script configuration to append daemon command
+line arguments, e.g. on Red Hat systems one might append the following
+line to the \fBdiodctl\fR sysconfig file:
+.nf
+
+DAEMON_ARGS="-Lsyslog:facility:level"
+.fi
+.SH "SPAWNED SERVERS"
+\fBdiod\fR servers spawned by \fBdiodctl\fR can be shared by multiple
+clients.  They are assigned random ports to listen on, which are given out
+to clients upon request by \fBmount.diod\fR.
+Servers run until they have had no connections for 30 seconds then terminate.
+\fBdiodctl\fR reaps these children and logs their exit status.
+.LP
+If \fBdiodctl\fR restarts with running children, as is necessary
+to have config file changes take effect, any children should continue
+to run as orphans, but their port numbers will no longer be handed out
+to new clients.
+A mount request in progress may fail if the server is
+restarted in the middle of a conversation with \fBmount.diod\fR.
 .SH "FILES"
 @X_SBINDIR@/diodctl
 .br
-@X_SYSCONFDIR@/diodctl.conf
+@X_SYSCONFDIR@/diod.conf
+.br
+@X_SYSCONFDIR@/sysconfig/diodctl
 .br
 @X_LOCALSTATEDIR@/run/diodctl.pid
 .SH "SEE ALSO"
-diod (8), diodmount (8), diodctl.conf (5), hosts_access (5)
+diod (8), mount.diod (8), diodexp (8), diod.conf (5), hosts_access (5)

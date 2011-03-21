@@ -1,3 +1,19 @@
+2011-03-21 Jim Garlick <garlick@llnl.gov>
+
+	* man/diod.conf.5.in, diod/diod.8.in, diodctl/diodctl.8.in :
+	Update man pages to reflect option changes, etc..
+
+	* libdiod/diod_conf.c : Don't allow debuglevel, foreground,
+	or diodpath to be set in the config file (command line only).
+	Rename listen to diodctllisten, add diodlisten.
+
+	* diodctl/serv.c : Don't pass on -w option to diod.
+
+	* diod/diod.c : Add -f (foreground) option.  Daemonize if not
+	running under diodctl (-F) or test (no listen host:port).
+
+	* libdiod/diod_conf.c : Rename config file to /etc/diod.conf.
+
 2011-03-20 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c, diodctl/serv.c, libdiod/diod_conf.[ch] : Have
