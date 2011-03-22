@@ -1,3 +1,6 @@
+1.0-pre15:
+	Fix typo in diodexp output that broke automounter.
+
 1.0-pre14:
 	Chkconfig --add diodctl upon RPM installation.
 	Fix 60s idle (disconnected) timeout on diod server spawned by diodctl.
