@@ -549,9 +549,6 @@ _lua_getglobal_list_of_strings (char *path, lua_State *L, char *key, List *lp)
 void
 diod_conf_init_config_file (char *path)
 {
-    lua_State *L;
-    static char buf[PATH_MAX];
-
     if (path) {
         diod_conf_set_configpath (path);
     } else {
@@ -559,7 +556,8 @@ diod_conf_init_config_file (char *path)
             path = config.configpath;  /* missing default file is not fatal */
     }
     if (path) {
-        L = lua_open ();
+    	lua_State *L = lua_open ();
+
         luaopen_base (L);
         luaopen_table (L);
         //luaopen_io (L);
