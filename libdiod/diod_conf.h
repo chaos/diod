@@ -31,6 +31,10 @@ enum {
 void	diod_conf_init (void);
 void    diod_conf_init_config_file (char *path);
 
+char   *diod_conf_get_configpath (void);
+void    diod_conf_set_configpath (char *s);
+int     diod_conf_configpath_isdefault (void);
+
 int     diod_conf_get_debuglevel (void);
 void    diod_conf_set_debuglevel (int i);
 

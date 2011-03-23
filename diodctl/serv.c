@@ -288,10 +288,16 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-F%d", s->nfds) < 0)
         goto done;
-    if (_append_arg (s, "-d%d", diod_conf_get_debuglevel ()) < 0)
-        goto done;
+    if (diod_conf_get_debuglevel () > 0) {
+        if (_append_arg (s, "-d%d", diod_conf_get_debuglevel ()) < 0)
+            goto done;
+    }
     if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
         goto done;
+    if (!diod_conf_configpath_isdefault ()) {
+	if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
+            goto done;
+    }
     if (!(dest = diod_log_get_dest ())) {
         np_uerror (ENOMEM);
         goto done;

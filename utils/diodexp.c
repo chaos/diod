@@ -85,7 +85,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodexp [OPTIONS] host[,host,...]\n"
+"Usage: diodexp [-a key] host\n"
 "   -a,--auto-indirect KEY      lookup KEY for automounter program map\n"
 );
     exit (1);

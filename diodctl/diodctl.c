@@ -135,12 +135,8 @@ main(int argc, char **argv)
                 break;
         }
     }
-#if HAVE_LUA_H
     diod_conf_init_config_file (copt);
-#else
-    if (copt)
-        msg_exit ("No lua support but --config-file was specified");
-#endif
+
     /* command line overrides config file */
     optind = 0;
     opterr = 0;

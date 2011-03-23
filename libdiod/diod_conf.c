@@ -64,6 +64,7 @@ typedef struct {
     List         diodctllisten;
     List         exports;
     FILE        *statslog;
+    char        *configpath;
 } Conf;
 
 static Conf config = {
@@ -73,18 +74,45 @@ static Conf config = {
     .auth_required  = 1,
     .runasuid_valid = 0,
     .diodpath       = NULL, /* diod_conf_init initializes */
-    .diodlisten     = NULL, /* diod_conf_init initializes */
+    .diodlisten     = NULL,
     .diodctllisten  = NULL, /* diod_conf_init initializes */
     .exports        = NULL,
     .statslog       = NULL,
+    .configpath     = NULL, /* diod_conf_init initializes */
 };
+
+#define DFLT_CONFIGPATH    X_SYSCONFDIR "/diod.conf"
+#define DFLT_DIODPATH      X_SBINDIR "/diod"
+#define DFLT_DIODCTLLISTEN "0.0.0.0:10005"
 
 
 void
 diod_conf_init (void)
 {
-    diod_conf_add_diodctllisten ("0.0.0.0:10005");
-    diod_conf_set_diodpath (X_SBINDIR "/diod");
+    diod_conf_add_diodctllisten (DFLT_DIODCTLLISTEN);
+    diod_conf_set_diodpath (DFLT_DIODPATH);
+    diod_conf_set_configpath (DFLT_CONFIGPATH);
+}
+
+char *
+diod_conf_get_configpath (void)
+{
+    return config.configpath;
+}
+
+void
+diod_conf_set_configpath (char *s)
+{
+    if (config.configpath)
+	free (config.configpath);
+    if (!(config.configpath = strdup (s)))
+        msg_exit ("out of memory");
+}
+
+int
+diod_conf_configpath_isdefault (void)
+{
+    return (strcmp (config.configpath, DFLT_CONFIGPATH) == 0);
 }
 
 int
@@ -159,6 +187,8 @@ diod_conf_get_diodpath (void)
 void
 diod_conf_set_diodpath (char *s)
 {
+    if (config.diodpath)
+        free (config.diodpath);
     if (!(config.diodpath = strdup (s)))
         msg_exit ("out of memory");
 }
@@ -522,10 +552,11 @@ diod_conf_init_config_file (char *path)
     lua_State *L;
     static char buf[PATH_MAX];
 
-    if (!path) {
-        snprintf (buf, sizeof (buf), "%s/diod.conf", X_SYSCONFDIR);
-        if (access (buf, R_OK) == 0)
-            path = buf;  /* missing default config file is not fatal */
+    if (path) {
+        diod_conf_set_configpath (path);
+    } else {
+        if (access (config.configpath, R_OK) == 0)
+            path = config.configpath;  /* missing default file is not fatal */
     }
     if (path) {
         L = lua_open ();
@@ -547,6 +578,20 @@ diod_conf_init_config_file (char *path)
         _lua_getglobal_list_of_strings (path, L, "exports", &config.exports);
 
         lua_close(L);
+    }
+}
+#else
+void
+diod_conf_init_config_file (char *path)
+{
+    struct stat sb;
+
+    if (path) {
+        if (stat (path, &sb) < 0)
+            err_exit ("%s", path);
+        if (sb.st_size > 0)
+            msg_exit ("no LUA suport - cannot parse contents of %s", path);
+	diod_conf_set_configpath (path);
     }
 }
 #endif /* HAVE_LUA_H */

@@ -385,17 +385,13 @@ typedef struct {
 } map_t;
 
 static map_t setopt[] = {
-    { "dirsync",        MS_DIRSYNC},
     { "noatime",        MS_NOATIME},
     { "nodev",          MS_NODEV},
     { "nodiratime",     MS_NODIRATIME},
     { "noexec",         MS_NOEXEC},
     { "nosuid",         MS_NOSUID},
     { "ro",             MS_RDONLY },
-    { "relatime",       MS_RELATIME},
     { "remount",        MS_REMOUNT},
-    { "silent",         MS_SILENT},
-    { "strictatime",    MS_STRICTATIME},
     { "sync",           MS_SYNCHRONOUS},
 };
 
@@ -406,8 +402,6 @@ static map_t clropt[] = {
     { "exec",           MS_NOEXEC},
     { "suid",           MS_NOSUID},
     { "rw",             MS_RDONLY },
-    { "norelatime",     MS_RELATIME},
-    { "nostrictatime",  MS_STRICTATIME},
     { "nosync",         MS_SYNCHRONOUS},
 };
 
