@@ -25,7 +25,6 @@
 
 /* What we do:
  * - Serve /diodctl synthetic file system
- * - File 'exports' contains list of I/O node exports
  * - File 'ctl' is written with mount options, read for port number.
  * - When an attached user reads 'ctl', if a diod server is already
  *   running for that user, return port.  If not, spawn it and return port.
@@ -113,7 +112,6 @@ main(int argc, char **argv)
 {
     Npsrv *srv;
     int c;
-    int eopt = 0;
     int lopt = 0;
     char *copt = NULL;
     char *Lopt = NULL;
@@ -162,13 +160,6 @@ main(int argc, char **argv)
                 break;
             case 'c':   /* --config-file PATH */
                 /* handled above */
-                break;
-            case 'e':   /* --export PATH */
-                if (!eopt) {
-                    diod_conf_clr_export ();
-                    eopt = 1;
-                }
-                diod_conf_add_export (optarg);
                 break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);

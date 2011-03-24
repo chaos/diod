@@ -1,3 +1,7 @@
+2011-03-24 Jim Garlick <garlick@llnl.gov>
+
+	* diodctl/diodctl.c : Remove vestiges of -e option.
+
 2011-03-23 Jim Garlick <garlick@llnl.gov>
 
 	* libdiod/diod_conf.[ch], diodctl/serv.c : Pass -c path (if any)
