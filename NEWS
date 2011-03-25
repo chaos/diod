@@ -1,3 +1,8 @@
+1.0-pre16:
+	Service diodctl reload works now (without killing diodctl).
+	Make it possible to set syslog level in config file.
+	Cleanup.	
+	
 1.0-pre15:
 	Fix typo in diodexp output that broke automounter.
 
