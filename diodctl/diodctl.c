@@ -65,14 +65,14 @@
 #include "ops.h"
 #include "serv.h"
 
-static void          _daemonize (char *Lopt);
+static void          _daemonize (void);
 static void          _setrlimit (void); 
 
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:nD:L:"
+#define OPTIONS "fd:l:w:c:nD:L:e:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -83,7 +83,8 @@ static const struct option longopts[] = {
     {"config-file",     required_argument,  0, 'c'},
     {"no-auth",         no_argument,        0, 'n'},
     {"diod-path",       required_argument,  0, 'D'},
-    {"log-dest",        required_argument,  0, 'L'},
+    {"logdest",         required_argument,  0, 'L'},
+    {"export",          required_argument,  0, 'e'},
     {0, 0, 0, 0},
 };
 #else
@@ -102,7 +103,8 @@ usage()
 "   -c,--config-file FILE  set config file path\n"
 "   -n,--no-auth           disable authentication check\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
-"   -L,--log-dest DEST     log to DEST, can be syslog, stderr, or file\n"
+"   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
+"   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -113,6 +115,7 @@ main(int argc, char **argv)
     Npsrv *srv;
     int c;
     int lopt = 0;
+    int eopt = 0;
     char *copt = NULL;
     char *Lopt = NULL;
     struct pollfd *fds = NULL;
@@ -167,9 +170,17 @@ main(int argc, char **argv)
             case 'D':   /* --diod-path PATH */
                 diod_conf_set_diodpath (optarg);
                 break;
-            case 'L':   /* --log-to DEST */
+            case 'L':   /* --logdest DEST */
+                diod_conf_set_logdest (optarg);
                 diod_log_set_dest (optarg);
                 Lopt = optarg;
+                break;
+            case 'e':   /* --export DIR */
+                if (!eopt) {
+                    diod_conf_clr_exports ();
+                    eopt = 1;
+                }
+                diod_conf_add_exports (optarg);
                 break;
             default:
                 usage();
@@ -186,11 +197,12 @@ main(int argc, char **argv)
     _setrlimit ();
 
     if (!diod_conf_get_foreground ())
-        _daemonize (Lopt);
+        _daemonize ();
+    diod_conf_arm_sighup ();
 
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
-        msg_exit ("out of memory");
+        err_exit ("np_srv_create");
 
     hplist = diod_conf_get_diodctllisten ();
     if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
@@ -209,10 +221,11 @@ main(int argc, char **argv)
  * Exit on error.
  */
 static void
-_daemonize (char *Lopt)
+_daemonize (void)
 {
     char rdir[PATH_MAX];
     struct stat sb;
+    char *logdest;
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
     if (stat (rdir, &sb) < 0) {
@@ -225,8 +238,8 @@ _daemonize (char *Lopt)
         err_exit ("chdir %s", rdir);
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
-    if (Lopt == NULL)
-        diod_log_set_dest ("syslog");
+    logdest = diod_conf_get_logdest ();
+    diod_log_set_dest (logdest ? logdest : "syslog");
 }
 
 /* Remove any resource limits that might hamper our (non-root) children.

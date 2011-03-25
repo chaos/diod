@@ -134,17 +134,30 @@ _root_next (Npfile *dir, Npfile *prevchild)
 /* Handle a read from the 'exports' file.
  */
 static int
-_exports_read (Npfilefid *f, u64 offset, u32 count, u8 *data, Npreq *req)
+_exports_read (Npfilefid *file, u64 offset, u32 count, u8 *data, Npreq *req)
 {
-    char *buf = f->file->aux;
-    int cpylen = strlen (buf) - offset;
+    char *s = file->aux;
+    int srclen, cpylen;
 
+    if (!s)
+        file->aux = s = diod_conf_cat_exports ();
+    srclen = strlen (s);
+    cpylen = srclen - offset;
     if (cpylen > count)
         cpylen = count;
     if (cpylen < 0)
         cpylen = 0;
-    memcpy (data, buf + offset, cpylen);
+    memcpy (data, s + offset, cpylen);
     return cpylen;
+}
+
+static void
+_exports_closefid (Npfilefid *file)
+{
+    if (file->aux) {
+        free (file->aux);
+        file->aux = NULL;
+    } 
 }
 
 /* Handle a read from the 'ctl' file.
@@ -206,6 +219,7 @@ static Npdirops root_ops = {
 };
 static Npfileops exports_ops = {
         .read  = _exports_read,
+        .closefid = _exports_closefid,
 };
 static Npfileops ctl_ops = {
         .write = _ctl_write,
@@ -234,8 +248,6 @@ _ctl_root_create (void)
                                  &exports_ops, NULL)))
         msg_exit ("out of memory");
     npfile_incref(exports);
-    if (!(exports->aux = diod_conf_cat_exports ()))
-        msg_exit ("out of memory");
 
     if (!(ctl = npfile_alloc(root, "ctl", 0666|S_IFREG, 3,
                              &ctl_ops, NULL)))

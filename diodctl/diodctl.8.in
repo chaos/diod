@@ -51,37 +51,33 @@ and is inherited by spawned \fBdiod\fR processes.
 .I "-D, --diod-path PATH"
 Override the default path to the \fBdiod\fR server executable.
 .TP
-.I "-L, --log-dest DEST"
+.I "-L, --logdest DEST"
 Set the destination for logging.  Possible destinations are
 \fIsyslog:facility:level\fR,
 \fIstderr\fR,
 \fIstdout\fR, or
 a file name.
 This option is inherited by any spawned \fBdiod\fR processes.
-It cannot currently be set in the config file.
-.SH "LOGGING"
-\fBdiodctl\fR logs all messages to the LOG_DAEMON syslog facility
-at LOG_ERR severity, unless overridden on the command line.
-Use your system's init script configuration to append daemon command
-line arguments, e.g. on Red Hat systems one might append the following
-line to the \fBdiodctl\fR sysconfig file:
-.nf
-
-DAEMON_ARGS="-Lsyslog:facility:level"
-.fi
-.SH "SPAWNED SERVERS"
+It overrides the logdest setting in diod.conf (5).
+.SH "NOTES"
 \fBdiod\fR servers spawned by \fBdiodctl\fR can be shared by multiple
 clients.  They are assigned random ports to listen on, which are given out
 to clients upon request by \fBmount.diod\fR.
 Servers run until they have had no connections for 30 seconds then terminate.
 \fBdiodctl\fR reaps these children and logs their exit status.
 .LP
-If \fBdiodctl\fR restarts with running children, as is necessary
-to have config file changes take effect, any children should continue
+If \fBdiodctl\fR restarts with running children, any children should continue
 to run as orphans, but their port numbers will no longer be handed out
 to new clients.
 A mount request in progress may fail if the server is
 restarted in the middle of a conversation with \fBmount.diod\fR.
+.LP
+When \fBdiodctl\fR receives a SIGHUP, it rereads its config file.
+Any original command line arguments will continue to override config file
+values.   Although the signal propagates to \fBdiod\fR children,
+not all changed values will have an effect on running servers.
+For example, if an export is removed, the \fBdiod\fR server will not
+allow new attaches but will continue to serve old ones.
 .SH "FILES"
 @X_SBINDIR@/diodctl
 .br

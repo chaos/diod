@@ -5,7 +5,6 @@ SUBDIRS = \
 	libdiod \
 	diod \
 	utils \
-	man \
 	scripts \
 	diodctl \
 	etc \

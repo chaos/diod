@@ -100,7 +100,7 @@ typedef struct {
 Npuserpool *diod_upool = &upool;
 
 /* Switch fsuid to user/group and load supplemental groups.
- * N.B. ../tests/t00, ../tests/t01, and ../tests/t02
+ * N.B. ../tests/misc/t00, ../tests/misc/t01, and ../tests/misc/t02
  * demonstrate that this works with pthreads work crew.
  */
 int
@@ -111,7 +111,7 @@ diod_switch_user (Npuser *u, gid_t gid_override)
 
     assert (d->magic == DUSER_MAGIC);
 
-    if (diod_conf_get_runasuid (NULL))
+    if (diod_conf_opt_runasuid ()) /* bail early if running as one user */
         return 1;
 
     if (setgroups (d->nsg, d->sg) < 0) {

@@ -112,7 +112,7 @@ _free_server (Server *s)
 /* Allocate server struct.
  */
 static Server *
-_alloc_server (uid_t uid, char *jobid)
+_alloc_server (uid_t uid, char *opts)
 {
     Server *s = NULL;
 
@@ -127,7 +127,7 @@ _alloc_server (uid_t uid, char *jobid)
     }
     s->av[0] = NULL;
     s->uid = uid;
-    if (jobid && !(s->jobid = strdup (jobid))) {
+    if (opts && !(s->jobid = strdup (opts))) {
         np_uerror (ENOMEM);
         goto done;
     }
@@ -274,7 +274,6 @@ _build_server_args (Server *s)
 {
     int ret = 0;
     int r;
-    char *dest = NULL;
 
     if (s->uid == 0)
         r = _append_arg (s, "diod-shared");
@@ -288,26 +287,39 @@ _build_server_args (Server *s)
         goto done;
     if (_append_arg (s, "-F%d", s->nfds) < 0)
         goto done;
-    if (diod_conf_get_debuglevel () > 0) {
+    if (diod_conf_opt_debuglevel ()) {
         if (_append_arg (s, "-d%d", diod_conf_get_debuglevel ()) < 0)
             goto done;
     }
-    if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
-        goto done;
-    if (!diod_conf_configpath_isdefault ()) {
-	if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
+    if (diod_conf_opt_auth_required ()) {
+        if (diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
             goto done;
     }
-    if (!(dest = diod_log_get_dest ())) {
-        np_uerror (ENOMEM);
-        goto done;
+    if (diod_conf_opt_configpath ()) {
+	    if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
+            goto done;
     }
-    if (_append_arg (s, "-L%s", dest) < 0)
-        goto done;
+    if (diod_conf_opt_exports ()) {
+        List l = diod_conf_get_exports ();
+        ListIterator itr = list_iterator_create (l);
+        char *exp;
+
+        if (!itr) {
+            np_uerror (ENOMEM);
+            goto done; 
+        }
+        while ((exp = list_next (itr))) {
+            if (_append_arg (s, "-e%s", exp) < 0)
+                goto done;
+        }
+        list_iterator_destroy (itr);
+    }
+    if (diod_conf_opt_logdest ()) {
+        if (_append_arg (s, "-L%s", diod_conf_get_logdest ()) < 0)
+            goto done;
+    }
     ret = 1;
 done:
-    if (dest)
-        free (dest);
     return ret;
 }
 
@@ -372,13 +384,13 @@ done:
  * We are holding serverlist->lock.
  */
 static Server *
-_new_server (Npuser *user, char *jobid)
+_new_server (Npuser *user, char *opts)
 {
     List l = diod_conf_get_diodctllisten ();
     int i, error;
     Server *s = NULL;
 
-    if (!(s = _alloc_server (user->uid, jobid)))
+    if (!(s = _alloc_server (user->uid, opts)))
         goto done;
 
     if (!_alloc_ports (l, &s->fds, &s->nfds, &s->port)) {

@@ -38,6 +38,11 @@ and \fBdiodctl\fR instance.  The default is 16.
 Allow clients to connect without authentication.
 This applies to both \fBdiodctl\fR and \fBdiod\fR, and is very insecure,
 only intended for testing.
+.TP
+.I "logdest = DEST"
+Set the destination for logging.
+\fIDEST\fR is in the form of \fIsyslog:facility:level\fR or \fIfilename\fR.
+The default is \fIsyslog:daemon:err\fR.
 .SH "EXAMPLE"
 .nf
 --
@@ -51,6 +56,6 @@ auth_required = 1
 .SH "FILES"
 @X_SYSCONFDIR@/diod.conf
 .SH "SEE ALSO"
-lua (1), diod (8), diodctl (8)
+lua (1), diod (8), diodctl (8), openlog (3)
 .LP
 http://www.lua.org/

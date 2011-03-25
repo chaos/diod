@@ -54,7 +54,7 @@
 
 #include "ops.h"
 
-static void          _daemonize (char *Lopt);
+static void          _daemonize (void);
 static void          _setrlimit (void);
 
 #ifndef NR_OPEN
@@ -74,7 +74,7 @@ static const struct option longopts[] = {
     {"no-auth",         no_argument,        0, 'n'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
-    {"log-to",          required_argument,  0, 'L'},
+    {"logdest",         required_argument,  0, 'L'},
     {"stats",           required_argument,  0, 's'},
     {"config-file",     required_argument,  0, 'c'},
     {0, 0, 0, 0},
@@ -95,7 +95,7 @@ usage()
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -n,--no-auth           disable authentication check\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
-"   -L,--log-to DEST       log to DEST, can be syslog, stderr, or file\n"
+"   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -s,--stats FILE        log detailed I/O stats to FILE\n"
 "   -c,--config-file FILE  set config file path\n"
@@ -111,13 +111,9 @@ main(int argc, char **argv)
     int Fopt = 0;
     int eopt = 0;
     int lopt = 0;
-    char *Lopt = NULL;
-    struct pollfd *fds = NULL;
-    int nfds = 0;
-    uid_t uid;
-    List hplist;
     char *copt = NULL;
     char *end;
+    int client_on_stdin = 1;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
@@ -163,29 +159,35 @@ main(int argc, char **argv)
                 break;
             case 'e':   /* --export PATH */
                 if (!eopt) {
-                    diod_conf_clr_export ();
+                    diod_conf_clr_exports ();
                     eopt = 1;
                 }
-                diod_conf_add_export (optarg);
+                diod_conf_add_exports (optarg);
                 break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);
                 break;
             case 'F':   /* --listen-fds N */
                 Fopt = strtoul (optarg, NULL, 10);
+                client_on_stdin = 0;
                 break;
             case 'u':   /* --runas-uid UID */
-                errno = 0;
-                uid = strtoul (optarg, &end, 10);
-                if (errno != 0)
-                    err_exit ("error parsing --runas-uid argument");
-                if (*end != '\0')
-                    msg_exit ("error parsing --runas-uid argument");
-                diod_conf_set_runasuid (uid);
+                if (geteuid () == 0) {
+                    uid_t uid;
+
+                    errno = 0;
+                    uid = strtoul (optarg, &end, 10);
+                    if (errno != 0)
+                        err_exit ("error parsing --runas-uid argument");
+                    if (*end != '\0')
+                        msg_exit ("error parsing --runas-uid argument");
+                    diod_conf_set_runasuid (uid);
+                } else 
+                    msg_exit ("must be root to run diod as another user");
                 break;
-            case 'L':   /* --log-to DEST */
+            case 'L':   /* --logdest DEST */
+                diod_conf_set_logdest (optarg);
                 diod_log_set_dest (optarg);
-                Lopt = optarg;
                 break;
             case 's':   /* --stats PATH */
                 diod_conf_set_statslog (optarg);
@@ -199,37 +201,56 @@ main(int argc, char **argv)
 
     diod_conf_validate_exports ();
 
+    if (client_on_stdin) {
+        List hplist = diod_conf_get_diodlisten ();
+
+        if (hplist && list_count (hplist) > 0)
+            client_on_stdin = 0; 
+    }
+    if (client_on_stdin)
+        diod_conf_set_foreground (1);
+
     if (geteuid () == 0)
         _setrlimit ();
 
-    /* Don't daemonize if child of diodctl (-F) or client is on stdin.
-     */
-    if (!Fopt && diod_conf_get_diodlisten ()) {
-        if (!diod_conf_get_foreground ())
-            _daemonize (Lopt);
-    }
+    if (!diod_conf_get_foreground ()) {
+        char *logdest = diod_conf_get_logdest ();
 
-    if (diod_conf_get_runasuid (&uid)) {
-        if (geteuid () != 0 && geteuid () != uid)
-            msg_exit ("must be root to run diod as another user");
-    } else {
-        if (geteuid () != 0)
-            diod_conf_set_runasuid (geteuid ());
+        if (!Fopt)
+            _daemonize ();
+        diod_log_set_dest (logdest ? logdest : "syslog");
     }
-    if (diod_conf_get_runasuid (&uid)) {
+    diod_conf_arm_sighup ();
+
+    /* Drop root permission if running as one user.
+     * If not root, arrange to run (only) as current effective uid.
+     */
+    if (geteuid () != 0)
+        diod_conf_set_runasuid (geteuid ());
+    else if (diod_conf_opt_runasuid ()) {
+        uid_t uid = diod_conf_get_runasuid ();
+
         if (uid != geteuid ())
             diod_become_user (NULL, uid, 1); /* exits on error */
     }
 
     srv = np_srv_create (diod_conf_get_nwthreads ());
     if (!srv)
-        msg_exit ("out of memory");
+        err_exit ("np_srv_create");
     diod_register_ops (srv);
+
+    /* Client inherited on fd=0.  Exit on disconnect.
+     */
+    if (client_on_stdin) {
+        diod_sock_startfd (srv, 0, "stdin", "0.0.0.0", "0", 1);
 
     /* Listen on bound sockets 0 thru value of Fopt inherited
      * from diodctl.  Exit after a period of 30s with no connections.
      */
-    if (Fopt) {
+    } else if (Fopt) {
+        struct pollfd *fds = NULL;
+        int nfds = 0;
+
         if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
             msg_exit ("failed to set up listen ports");
         diod_sock_accept_batch (srv, fds, nfds);
@@ -237,16 +258,15 @@ main(int argc, char **argv)
     /* Listen on interface/port designation from -L or config file.
      * Run forever.
      */
-    } else if ((hplist = diod_conf_get_diodlisten ())) {
+    } else {
+        List hplist = diod_conf_get_diodlisten ();
+        struct pollfd *fds = NULL;
+        int nfds = 0;
+    
         if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
             msg_exit ("failed to set up listen ports");
         diod_sock_accept_loop (srv, fds, nfds);
         /*NOTREACHED*/
-
-    /* No listen port or -F.  Client inherited on fd=0.  Exit on disconnect.
-     */
-    } else {
-        diod_sock_startfd (srv, 0, "stdin", "0.0.0.0", "0", 1);
     }
 
     exit (0);
@@ -288,7 +308,7 @@ _setrlimit (void)
  * Exit on error.
  */
 static void
-_daemonize (char *Lopt)
+_daemonize (void)
 {
     char rdir[PATH_MAX];
     struct stat sb;
@@ -304,8 +324,6 @@ _daemonize (char *Lopt)
         err_exit ("chdir %s", rdir);
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
-    if (Lopt == NULL)
-        diod_log_set_dest ("syslog");
 }
 
 /*

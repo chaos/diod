@@ -37,7 +37,7 @@ CONFIG=$sysconfdir/diod.conf
 PIDFILE="$localstatedir/run/diod/diodctl.pid"
 #NICE=
 #USER=@RUN_AS_USER@
-#SIGHUP_RELOAD=
+SIGHUP_RELOAD=1
 
 ###############################################################################
 

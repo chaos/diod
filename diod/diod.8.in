@@ -56,13 +56,13 @@ supplementary groups to those belonging to UID.
 If invoked as UID, \fBdiod\fR does not change these.
 It is an error to run \fBdiod\fR as a user other than UID or root, 
 .TP
-.I "-L, --log-dest DEST"
+.I "-L, --logdest DEST"
 Set the destination for logging.  Possible destinations are
 \fIsyslog:facility:level\fR,
 \fIstderr\fR,
 \fIstdout\fR, or
 a file name.
-This option cannot currently be set in the config file.
+This option overrides the \fIlogdest\fR setting in diod.conf (5).
 .TP
 .I "-d, --debug MASK"
 Set the debug mask.  The bit values are:

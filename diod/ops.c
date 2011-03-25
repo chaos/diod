@@ -443,7 +443,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         msg ("diod_attach: out of memory");
         goto done;
     }
-    if (!diod_conf_match_export (f->path, &err)) {
+    if (!diod_conf_match_exports (f->path, &err)) {
         np_uerror (err);
         msg ("diod_attach: %s doesn not match export", f->path);
         goto done;

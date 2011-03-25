@@ -41,9 +41,8 @@ struct Reqpool {
 	Npreq*		reqlist;
 } reqpool = { PTHREAD_MUTEX_INITIALIZER, 0, NULL };
 
-static void np_wthread_create(Npsrv *srv);
+static int np_wthread_create(Npsrv *srv);
 static void np_srv_destroy(Npsrv *srv);
-static void np_wthread_create(Npsrv *srv);
 static void *np_wthread_proc(void *a);
 
 static Npfcall* np_default_version(Npconn *, u32, Npstr *);
@@ -84,7 +83,10 @@ np_srv_create(int nwthread)
 	int i;
 	Npsrv *srv;
 
-	srv = malloc(sizeof(*srv));
+	if (!(srv = malloc(sizeof(*srv)))) {
+		errno = ENOMEM;
+		return NULL;
+	}
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	pthread_cond_init(&srv->conncountcond, NULL);
@@ -144,8 +146,12 @@ np_srv_create(int nwthread)
 	srv->debugprintf = NULL;
 	srv->nwthread = nwthread;
 
-	for(i = 0; i < nwthread; i++)
-		np_wthread_create(srv);
+	for(i = 0; i < nwthread; i++) {
+		if (np_wthread_create(srv) < 0) {
+			free (srv);
+			return NULL;
+		}
+	}
 
 	return srv;
 }
@@ -327,25 +333,29 @@ np_srv_remove_workreq(Npsrv *srv, Npreq *req)
 		req->next->prev = req->prev;
 }
 
-static void
+static int
 np_wthread_create(Npsrv *srv)
 {
 	int err;
 	Npwthread *wt;
 
-	wt = malloc(sizeof(*wt));
+	if (!(wt = malloc(sizeof(*wt)))) {
+		errno = ENOMEM;
+		return -1;
+	}
 	wt->srv = srv;
 	wt->shutdown = 0;
 	err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt);
 	if (err) {
-		fprintf(stderr, "can't create thread: %d\n", err);
-		return;
+		errno = err;
+		return -1;
 	}
 
 	pthread_mutex_lock(&srv->lock);
 	wt->next = srv->wthreads;
 	srv->wthreads = wt;
 	pthread_mutex_unlock(&srv->lock);
+	return 0;
 }
 
 
