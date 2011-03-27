@@ -296,7 +296,6 @@ _build_server_args (Server *s)
             goto done;
     }
     if (diod_conf_opt_configpath ()) {
-        msg ("appending config path");
 	    if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
             goto done;
     }
