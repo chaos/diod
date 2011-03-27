@@ -1,5 +1,7 @@
 2011-03-27 Jim Garlick <garlick@llnl.gov>
 
+	* utils/diodexp.c : Fix error in -a output that broke autofs.
+
 	* diodctl/serv.c : Drop space between -diod c and filename.
 
 	* INSTALL, AUTHORS : Update docs.

@@ -244,7 +244,7 @@ _list_auto (xhash_t *x, char *key, void *match)
     if (!match || strcmp (match, x->path) == 0 || _transcmp (match, x->path)
                || strcmp (match, basename (x->path)) == 0) {
         hstr = _hstr (x->hl);
-        printf ("-fstype diod %s:%s\n", hstr, x->path);
+        printf ("-fstype=diod %s:%s\n", hstr, x->path);
         free (hstr);
     }
 
