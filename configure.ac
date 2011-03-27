@@ -85,6 +85,7 @@ AC_CONFIG_FILES( \
   etc/diod.conf.5 \
   scripts/Makefile \
   scripts/diodctl.init \
+  scripts/auto.diod \
   diod/Makefile \
   diodctl/Makefile \
   utils/Makefile \

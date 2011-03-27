@@ -3,8 +3,8 @@
 key="$1"
 
 DIOD_MAP=/d
-DIOD_SYSCONF=/etc/sysconfig/auto.diod
-DIOD_DIODEXP=/usr/sbin/diodexp
+DIOD_SYSCONF=@X_SYSCONFDIR@/sysconfig/auto.diod
+DIOD_DIODEXP=@X_SBINDIR@/diodexp
 DIOD_SERVERS=""
 
 if [ -r $DIOD_SYSCONF ]; then
