@@ -4,5 +4,4 @@ Jim Garlick garlick at llnl dot gov
 Work by others imported and modified for diod:
 (bugs may not be the original authors' faults)
 - liblsd by Chris Dunlap et al
-- libnpfs by Latchesar Ionkov et al
-- libixp by Kris Maglione et al
+- libnpfs, libnpclient by Latchesar Ionkov et al

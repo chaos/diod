@@ -346,6 +346,52 @@ void diod_conf_set_statslog (char *path)
     config.oflags |= OF_STATSLOG;
 }
 
+static void *
+_sigthread (void *arg)
+{
+    sigset_t *set = (sigset_t *)arg;
+    int s, sig;
+
+    for (;;) {
+        if ((s = sigwait (set, &sig)) > 0) {
+            errno = s;
+            err_exit ("sigwait");
+        }
+        switch (sig) {
+            case SIGHUP:
+                msg ("reloading config file");
+                diod_conf_init_config_file (NULL);
+                break;
+            default:
+                msg ("caught signal %d", sig);
+                break;
+        }
+    }
+    /*NOTREACHED*/
+    return NULL;
+}
+
+void
+diod_conf_arm_sighup (void)
+{
+    static pthread_t thread;
+    static sigset_t set;
+    int s;
+
+    sigemptyset (&set);
+    sigaddset (&set, SIGHUP);
+
+    if ((s = pthread_sigmask (SIG_BLOCK, &set, NULL))) {
+        errno = s;
+        err_exit ("pthread_sigmask");
+    }
+    if ((s = pthread_create (&thread, NULL, &_sigthread, (void *)&set))) {
+        errno = s;
+        err_exit ("pthread_create");
+    }
+}
+
+
 #ifdef HAVE_LUA_H
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
@@ -444,52 +490,6 @@ _lua_getglobal_list_of_strings (char *path, lua_State *L, char *key, List *lp)
     return res;
 }
 
-
-static void *
-_sigthread (void *arg)
-{
-    sigset_t *set = (sigset_t *)arg;
-    int s, sig;
-
-    for (;;) {
-        if ((s = sigwait (set, &sig)) > 0) {
-            errno = s;
-            err_exit ("sigwait");
-        }
-        switch (sig) {
-            case SIGHUP:
-                msg ("reloading config file");
-                diod_conf_init_config_file (NULL);
-                break;
-            default:
-                msg ("caught signal %d", sig);
-                break;
-        }
-    }
-    /*NOTREACHED*/
-    return NULL;
-}
-
-void
-diod_conf_arm_sighup (void)
-{
-    static pthread_t thread;
-    static sigset_t set;
-    int s;
-
-    sigemptyset (&set);
-    sigaddset (&set, SIGHUP);
-
-    if ((s = pthread_sigmask (SIG_BLOCK, &set, NULL))) {
-        errno = s;
-        err_exit ("pthread_sigmask");
-    }
-    if ((s = pthread_create (&thread, NULL, &_sigthread, (void *)&set))) {
-        errno = s;
-        err_exit ("pthread_create");
-    }
-}
-
 void
 diod_conf_init_config_file (char *path)
 {
@@ -559,7 +559,7 @@ diod_conf_init_config_file (char *path)
             msg_exit ("no LUA suport - cannot parse contents of %s", path);
         if (config.configpath)
             free (config.configpath);
-        if (!(config.configpath = strdup (s)))
+        if (!(config.configpath = strdup (path)))
             msg_exit ("out of memory");
     }
 }

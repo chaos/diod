@@ -299,6 +299,10 @@ _build_server_args (Server *s)
 	    if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
             goto done;
     }
+    if (diod_conf_opt_logdest () || diod_conf_opt_foreground ()) {
+        if (_append_arg (s, "-L%s", diod_conf_get_logdest ()) < 0)
+            goto done;
+    }
     if (diod_conf_opt_exports ()) {
         List l = diod_conf_get_exports ();
         ListIterator itr = list_iterator_create (l);
@@ -313,10 +317,6 @@ _build_server_args (Server *s)
                 goto done;
         }
         list_iterator_destroy (itr);
-    }
-    if (diod_conf_opt_logdest ()) {
-        if (_append_arg (s, "-L%s", diod_conf_get_logdest ()) < 0)
-            goto done;
     }
     ret = 1;
 done:

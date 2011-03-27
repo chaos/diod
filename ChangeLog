@@ -1,3 +1,11 @@
+2011-03-27 Jim Garlick <garlick@llnl.gov>
+
+	* INSTALL, AUTHORS : Update docs.
+
+	* diodctl/serv.c : Set diod's logdest when diodctl in foreground mode.
+
+	* libdiod/diod_conf.c : Fix compilation without lua.
+
 2011-03-25 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c : Rename --log-to to --logdest.
