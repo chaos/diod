@@ -440,21 +440,7 @@ void np_group_decref(Npgroup *);
 int np_change_user(Npuser *u);
 Npuser* np_current_user(void);
 
-Npuserpool *np_priv_userpool_create();
-Npuser *np_priv_user_add(Npuserpool *up, char *uname, u32 uid, void *aux);
-void np_priv_user_del(Npuser *u);
-int np_priv_user_setdfltgroup(Npuser *u, Npgroup *g);
-Npgroup *np_priv_group_add(Npuserpool *up, char *gname, u32 gid);
-void np_priv_group_del(Npgroup *g);
-int np_priv_group_adduser(Npgroup *g, Npuser *u);
-int np_priv_group_deluser(Npgroup *g, Npuser *u);
-
 Nptrans *np_fdtrans_create(int, int);
-Npsrv *np_socksrv_create_tcp(int, int*);
-Npsrv *np_pipesrv_create(int nwthreads);
-int np_pipesrv_mount(Npsrv *srv, char *mntpt, char *user, int mntflags, char *opts);
-
-Npsrv *np_rdmasrv_create(int nwthreads, int *port);
 
 int np_rerror(void);
 void np_uerror(int ecode);

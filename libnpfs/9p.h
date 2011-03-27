@@ -35,50 +35,6 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-/** enum p9_proto_versions - 9P protocol versions
- * @p9_proto_legacy: 9P Legacy mode, pre-9P2000.u
- * @p9_proto_2000u: 9P2000.u extension
- * @p9_proto_2000L: 9P2000.L extension
- */
-
-enum p9_proto_versions{
-        p9_proto_legacy = 0,
-        p9_proto_2000u = 1,
-        p9_proto_2000L = 2,
-};
-
-/**
- * enum p9_debug_flags - bits for mount time debug parameter
- * @P9_DEBUG_ERROR: more verbose error messages including original error string
- * @P9_DEBUG_9P: 9P protocol tracing
- * @P9_DEBUG_VFS: VFS API tracing
- * @P9_DEBUG_CONV: protocol conversion tracing
- * @P9_DEBUG_MUX: trace management of concurrent transactions
- * @P9_DEBUG_TRANS: transport tracing
- * @P9_DEBUG_SLABS: memory management tracing
- * @P9_DEBUG_FCALL: verbose dump of protocol messages
- * @P9_DEBUG_FID: fid allocation/deallocation tracking
- * @P9_DEBUG_PKT: packet marshalling/unmarshalling
- * @P9_DEBUG_FSC: FS-cache tracing
- *
- * These flags are passed at mount time to turn on various levels of
- * verbosity and tracing which will be output to the system logs.
- */
-
-enum p9_debug_flags {
-	P9_DEBUG_ERROR = 	(1<<0),
-	P9_DEBUG_9P = 		(1<<2),
-	P9_DEBUG_VFS =		(1<<3),
-	P9_DEBUG_CONV =		(1<<4),
-	P9_DEBUG_MUX =		(1<<5),
-	P9_DEBUG_TRANS =	(1<<6),
-	P9_DEBUG_SLABS =      	(1<<7),
-	P9_DEBUG_FCALL =	(1<<8),
-	P9_DEBUG_FID =		(1<<9),
-	P9_DEBUG_PKT =		(1<<10),
-	P9_DEBUG_FSC =		(1<<11),
-};
-
 /**
  * enum p9_msg_t - 9P message types
  * @P9_TLERROR: not used

@@ -13,7 +13,6 @@ libnpfs_a_SOURCES = \
 	npfile.h \
 	fmt.c \
 	np.c \
-	pipesrv.c \
 	srv.c \
 	trans.c \
 	user.c \

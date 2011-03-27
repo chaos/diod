@@ -7,6 +7,9 @@
 
 	* libdiod/diod_conf.c : Fix compilation without lua.
 
+	* libnpfs/pipesrv.c, libnpfs/9p.h, libnpfs/npfs.h, libnpfs/user.c :
+	Prune dead code.
+
 2011-03-25 Jim Garlick <garlick@llnl.gov>
 
 	* diod/diod.c : Rename --log-to to --logdest.
