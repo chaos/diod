@@ -111,7 +111,7 @@ npc_read_all(Npcfid *fid, void *buf, u32 count)
 char *
 npc_gets(Npcfid *fid, char *buf, u32 count)
 {
-	int n, done = 0;
+	int n, done = 0, extra = 0;
 	char *p, *ret = NULL;
 
 	while (done < count) {
@@ -124,11 +124,12 @@ npc_gets(Npcfid *fid, char *buf, u32 count)
 		buf[done] = '\0';
 		ret = buf;
 		if ((p = strchr (buf, '\n'))) {
-			*p++ = '\0';
-			fid->offset += (p - buf);
+			*p = '\0';
+			extra = 1;
 			break;
 		}
-		fid->offset += done;
 	}
+	if (ret != NULL)
+		fid->offset += strlen (ret) + extra;
 	return ret;
 }
