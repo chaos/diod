@@ -296,7 +296,7 @@ _build_server_args (Server *s)
             goto done;
     }
     if (diod_conf_opt_configpath ()) {
-	    if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
+	    if (_append_arg (s, "-c%s", diod_conf_get_configpath ()) < 0)
             goto done;
     }
     if (diod_conf_opt_logdest () || diod_conf_opt_foreground ()) {

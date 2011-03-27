@@ -6336,7 +6336,7 @@ _ACEOF
 ##
 # Epilogue
 ##
-ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile diod/diod.8 diodctl/diodctl.8 utils/diodmount.8 utils/diodexp.8 etc/diod.conf.5 scripts/Makefile scripts/diodctl.init diod/Makefile diodctl/Makefile utils/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/user/Makefile etc/Makefile"
+ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile diod/diod.8 diodctl/diodctl.8 utils/diodmount.8 utils/diodexp.8 etc/diod.conf.5 scripts/Makefile scripts/diodctl.init scripts/auto.diod diod/Makefile diodctl/Makefile utils/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/user/Makefile etc/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -7003,6 +7003,7 @@ do
     "etc/diod.conf.5") CONFIG_FILES="$CONFIG_FILES etc/diod.conf.5" ;;
     "scripts/Makefile") CONFIG_FILES="$CONFIG_FILES scripts/Makefile" ;;
     "scripts/diodctl.init") CONFIG_FILES="$CONFIG_FILES scripts/diodctl.init" ;;
+    "scripts/auto.diod") CONFIG_FILES="$CONFIG_FILES scripts/auto.diod" ;;
     "diod/Makefile") CONFIG_FILES="$CONFIG_FILES diod/Makefile" ;;
     "diodctl/Makefile") CONFIG_FILES="$CONFIG_FILES diodctl/Makefile" ;;
     "utils/Makefile") CONFIG_FILES="$CONFIG_FILES utils/Makefile" ;;

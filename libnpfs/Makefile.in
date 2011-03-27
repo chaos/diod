@@ -59,8 +59,7 @@ libnpfs_a_AR = $(AR) $(ARFLAGS)
 libnpfs_a_LIBADD =
 am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
 	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) fmt.$(OBJEXT) np.$(OBJEXT) \
-	srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) \
-	file.$(OBJEXT)
+	srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) file.$(OBJEXT)
 libnpfs_a_OBJECTS = $(am_libnpfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
