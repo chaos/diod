@@ -1,3 +1,8 @@
+1.0-pre17:
+	Fix (another) typo in diodexp output that broke automounter.
+	Optimize np_gets () to avoid duplicate P9_READ calls.
+	Fix bug inheriting -n and -c options from diodctl to diod.
+
 1.0-pre16:
 	Service diodctl reload works now (without killing diodctl).
 	Make it possible to set syslog level in config file.

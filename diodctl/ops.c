@@ -137,17 +137,15 @@ static int
 _exports_read (Npfilefid *file, u64 offset, u32 count, u8 *data, Npreq *req)
 {
     char *s = file->aux;
-    int srclen, cpylen;
+    int len = s ? strlen (s) : 0;
+    int cpylen = len - offset;
 
-    if (!s)
-        file->aux = s = diod_conf_cat_exports ();
-    srclen = strlen (s);
-    cpylen = srclen - offset;
     if (cpylen > count)
         cpylen = count;
     if (cpylen < 0)
         cpylen = 0;
-    memcpy (data, s + offset, cpylen);
+    if (cpylen > 0)
+        memcpy (data, s + offset, cpylen);
     return cpylen;
 }
 
@@ -158,6 +156,17 @@ _exports_closefid (Npfilefid *file)
         free (file->aux);
         file->aux = NULL;
     } 
+}
+
+static int
+_exports_openfid (Npfilefid *file)
+{
+    assert (file->aux == NULL);
+    if (!(file->aux = diod_conf_cat_exports ())) {
+        np_uerror (ENOMEM);
+        return 0;
+    }
+    return 1;
 }
 
 /* Handle a read from the 'ctl' file.
@@ -220,6 +229,7 @@ static Npdirops root_ops = {
 static Npfileops exports_ops = {
         .read  = _exports_read,
         .closefid = _exports_closefid,
+        .openfid = _exports_openfid,
 };
 static Npfileops ctl_ops = {
         .write = _ctl_write,
