@@ -292,15 +292,22 @@ _build_server_args (Server *s)
             goto done;
     }
     if (diod_conf_opt_auth_required ()) {
-        if (diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
+        if (!diod_conf_get_auth_required () && _append_arg (s, "-n") < 0)
             goto done;
     }
     if (diod_conf_opt_configpath ()) {
+        msg ("appending config path");
 	    if (_append_arg (s, "-c %s", diod_conf_get_configpath ()) < 0)
             goto done;
     }
     if (diod_conf_opt_logdest () || diod_conf_opt_foreground ()) {
-        if (_append_arg (s, "-L%s", diod_conf_get_logdest ()) < 0)
+        char *logdest = diod_log_get_dest ();
+
+        if (logdest) {
+            r = _append_arg (s, "-L%s", logdest);
+            free (logdest);
+        }
+        if (!logdest || r < 0)
             goto done;
     }
     if (diod_conf_opt_exports ()) {

@@ -149,7 +149,7 @@ int diod_conf_opt_debuglevel (void) { return config.oflags & OF_DEBUGLEVEL; }
 void diod_conf_set_debuglevel (int i)
 {
     config.debuglevel = i;
-    config.oflags |= OF_CONFIGPATH;
+    config.oflags |= OF_DEBUGLEVEL;
 }
 
 /* nwthreads - number of worker threads to spawn in libnpfs
@@ -553,14 +553,20 @@ diod_conf_init_config_file (char *path)
     struct stat sb;
 
     if (path) {
+        free (config.configpath);
+        config.configpath = _xstrdup (path);
+        config.oflags |= OF_CONFIGPATH;
+    } else {
+        if (access (config.configpath, R_OK) == 0)
+            path = config.configpath;  /* missing default file is not fatal */
+    }
+    if (path) {
         if (stat (path, &sb) < 0)
             err_exit ("%s", path);
         if (sb.st_size > 0)
             msg_exit ("no LUA suport - cannot parse contents of %s", path);
         if (config.configpath)
             free (config.configpath);
-        if (!(config.configpath = strdup (path)))
-            msg_exit ("out of memory");
     }
 }
 #endif /* HAVE_LUA_H */

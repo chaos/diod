@@ -3,6 +3,7 @@
 	* INSTALL, AUTHORS : Update docs.
 
 	* diodctl/serv.c : Set diod's logdest when diodctl in foreground mode.
+	Fix log error inheriting -n option.
 
 	* libdiod/diod_conf.c : Fix compilation without lua.
 
