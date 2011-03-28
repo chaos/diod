@@ -1,13 +1,15 @@
 2011-03-27 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre17
+
 	* diodctl/ops.c : Added exports_openfid () and handle out of memory
 	properly in open call.
 
 	* libnpclient/read.c : Eliminate unnecessary read op in np_gets ().
 
-	* utils/diodexp.c : Fix error in -a output that broke autofs.
+	* utils/diodexp.c : Fix another error in -a output that broke autofs.
 
-	* diodctl/serv.c : Drop space between -diod c and filename.
+	* diodctl/serv.c : Drop space between diod -c and filename.
 
 	* INSTALL, AUTHORS : Update docs.
 
@@ -20,6 +22,14 @@
 	Prune dead code.
 
 2011-03-25 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre16
+
+	* utils/diodexp.c : Fix error in -a output that broke autofs.
+
+2011-03-25 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre15
 
 	* diod/diod.c : Rename --log-to to --logdest.
 
