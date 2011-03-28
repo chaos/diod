@@ -106,16 +106,15 @@ npc_read_all(Npcfid *fid, void *buf, u32 count)
 	return done;
 }
 
-/* FIXME: optimization: cache data for next npc_gets in Npcfid like stdio.
- */
 char *
 npc_gets(Npcfid *fid, char *buf, u32 count)
 {
-	int n, done = 0, extra = 0;
+	int n, done = 0;
 	char *p, *ret = NULL;
 
 	while (done < count) {
-		n = npc_pread (fid, buf + done, count - done - 1, fid->offset);
+		n = npc_pread (fid, buf + done,
+			       count - done - 1, fid->offset + done);
 		if (n < 0)
 			return NULL;
 		if (n == 0)
@@ -125,11 +124,10 @@ npc_gets(Npcfid *fid, char *buf, u32 count)
 		ret = buf;
 		if ((p = strchr (buf, '\n'))) {
 			*p = '\0';
-			extra = 1;
+			done = strlen (buf) + 1;
 			break;
 		}
 	}
-	if (ret != NULL)
-		fid->offset += strlen (ret) + extra;
+	fid->offset += done;
 	return ret;
 }
