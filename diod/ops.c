@@ -445,7 +445,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
     }
     if (!diod_conf_match_exports (f->path, &err)) {
         np_uerror (err);
-        msg ("diod_attach: %s doesn not match export", f->path);
+        msg ("diod_attach: %s not exported", f->path);
         goto done;
     }
     if (_fidstat (f) < 0) {

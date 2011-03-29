@@ -110,7 +110,7 @@ char *
 npc_gets(Npcfid *fid, char *buf, u32 count)
 {
 	int n, done = 0;
-	char *p, *ret = NULL;
+	char *p;
 
 	while (done < count) {
 		n = npc_pread (fid, buf + done,
@@ -121,7 +121,6 @@ npc_gets(Npcfid *fid, char *buf, u32 count)
 			break;
 		done += n;
 		buf[done] = '\0';
-		ret = buf;
 		if ((p = strchr (buf, '\n'))) {
 			*p = '\0';
 			done = strlen (buf) + 1;
@@ -129,5 +128,5 @@ npc_gets(Npcfid *fid, char *buf, u32 count)
 		}
 	}
 	fid->offset += done;
-	return ret;
+	return (done > 0 ? buf : NULL);
 }

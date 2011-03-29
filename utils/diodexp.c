@@ -45,10 +45,6 @@
 #include <libgen.h>
 #include <assert.h>
 
-#ifndef PATH_MAX
-#define PATH_MAX 1024
-#endif
-
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
