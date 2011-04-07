@@ -31,8 +31,7 @@ main (int argc, char *argv[])
         diff++;
     }
     if (s1.st_ino != s2.st_ino) {
-        fprintf (stderr, "st_ino differs (%lu != %lu)\n",
-                s1.st_ino, s2.st_ino);
+        fprintf (stderr, "st_ino differs\n"); /* expected failure */
         diff++;
     }
     if (s1.st_mode != s2.st_mode) {

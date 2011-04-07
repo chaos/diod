@@ -658,7 +658,7 @@ exp.d:
 	mkdir -p $@
 
 clean: clean-am
-	-rmdir exp.d
+	-rm -rf exp.d
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

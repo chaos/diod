@@ -4,12 +4,15 @@ creating objects
 1024+0 records out
 comparing stat(2) results for file
 st_dev differs
-1 differences
+st_ino differs
+2 differences
 comparing stat(2) results for hard link
 st_dev differs
-1 differences
+st_ino differs
+2 differences
 comparing stat(2) results for directory
 st_dev differs
-1 differences
+st_ino differs
+2 differences
 kconjoin: t16 exited with rc=0
 kconjoin: diod exited with rc=0

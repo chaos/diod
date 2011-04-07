@@ -58,7 +58,7 @@ tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
 
 clean: clean-am
-	-rmdir mnt.d
-	-rmdir exp.d
+	-rm -rf mnt.d
+	-rm -rf exp.d
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest

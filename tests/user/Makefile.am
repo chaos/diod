@@ -46,6 +46,6 @@ tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
 
 clean: clean-am
-	-rmdir exp.d
+	-rm -rf exp.d
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest

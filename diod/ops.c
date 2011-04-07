@@ -387,16 +387,12 @@ diod_fiddestroy (Npfid *fid)
 }
 
 /* Create a 9P qid from a file's stat info.
- * N.B. v9fs maps st_ino = qid->path + 2, presumably since inode 0 and 1
- * are special for Linux but not for Plan 9.  For I/O forwarding we want
- * inodes to be direct mapped, so set qid->path = st_ino - 2.
+ * N.B. v9fs maps st_ino = qid->path + 2
  */
 static void
 _ustat2qid (struct stat *st, Npqid *qid)
 {
-    assert (st->st_ino != 0);
-    assert (st->st_ino != 1);
-    qid->path = st->st_ino - 2;
+    qid->path = st->st_ino;
     /* FIXME: ramifcations of always-zero version? */
     //qid->version = st->st_mtime ^ (st->st_size << 8);
     qid->version = 0;
@@ -410,10 +406,8 @@ _ustat2qid (struct stat *st, Npqid *qid)
 static void
 _dirent2qid (struct dirent *d, Npqid *qid)
 {
-    assert (d->d_ino != 0);
-    assert (d->d_ino != 1);
     assert (d->d_type != DT_UNKNOWN);
-    qid->path = d->d_ino - 2;
+    qid->path = d->d_ino;
     /* FIXME: ramifcations of always-zero version? */
     qid->version = 0;
     qid->type = 0;

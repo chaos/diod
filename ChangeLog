@@ -1,3 +1,11 @@
+2011-04-06 Jim Garlick <garlick@llnl.gov>
+
+	* tests/kern/t16.exp, tests/kern/tstat.c : Allow for differing
+	inode numbers after diod/ops.c change.
+
+	* diod/ops.c : Return inode number directly instead of trying
+	to compensate for v9fs adding two to it.
+
 2011-03-28 Jim Garlick <garlick@llnl.gov>
 
 	* libnpclient/read.c : Fix incorrect np_gets () logic.
