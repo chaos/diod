@@ -74,12 +74,17 @@ int     diod_conf_opt_diodctllisten (void);
 void    diod_conf_clr_diodctllisten (void);
 void    diod_conf_add_diodctllisten (char *s);
 
-List    diod_conf_get_exports (void);
+typedef struct {
+    char         *path;
+    char         *opts;
+    char         *users;
+    char         *hosts;
+} Export;
+
+List    diod_conf_get_exports (void); /* returns a list of Export structs */
 int     diod_conf_opt_exports (void);
 void    diod_conf_clr_exports (void);
 void    diod_conf_add_exports (char *path);
-char   *diod_conf_cat_exports (void);
-int     diod_conf_match_exports (char *path, int *errp);
 void    diod_conf_validate_exports (void);
 
 FILE   *diod_conf_get_statslog (void);

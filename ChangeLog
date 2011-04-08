@@ -1,3 +1,17 @@
+2011-04-07 Jim Garlick <garlick@llnl.gov>
+
+	* tests/misc/t06*, tests/misc/tconf.c : Test for exports parsing.
+	
+	* diod/ops.c : Add _match_exports ().
+
+	* diodctl/ops.c : Add _strcpy_exports ().
+
+	* libdiod/diod_conf.[ch] : expose Export struct and remove
+	diod_conf_match_exports () and diod_conf_cat_exports ().
+
+	* libdiod/diod_conf.[ch] : Parse alternate exports format that
+	allows for expressing options, users, and hosts.
+
 2011-04-06 Jim Garlick <garlick@llnl.gov>
 
 	* tests/kern/t16.exp, tests/kern/tstat.c : Allow for differing

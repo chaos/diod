@@ -158,11 +158,41 @@ _exports_closefid (Npfilefid *file)
     } 
 }
 
+static char *
+_strcpy_exports (void)
+{
+    List exports;
+    ListIterator itr = NULL;
+    char *ret = malloc (1);
+    int len = 0, elen;
+    Export *x;
+
+    if (!ret)
+        goto done;
+    *ret = '\0';
+    if (!(exports = diod_conf_get_exports ()))
+        goto done;
+    if (!(itr = list_iterator_create (exports)))
+        goto done;
+    while ((x = list_next (itr))) {
+        elen = strlen (x->path) + 1;
+        if (!(ret = realloc (ret, len + elen + 1)))
+            goto done;
+        snprintf (ret + len, elen + 1, "%s\n", x->path);
+        len += elen;
+    }
+    ret[len] = '\0';
+done:
+    if (itr)
+        list_iterator_destroy (itr);
+    return ret;
+}
+
 static int
 _exports_openfid (Npfilefid *file)
 {
     assert (file->aux == NULL);
-    if (!(file->aux = diod_conf_cat_exports ())) {
+    if (!(file->aux = _strcpy_exports ())) {
         np_uerror (ENOMEM);
         return 0;
     }

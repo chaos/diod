@@ -36,7 +36,7 @@ host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = tfcntl$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsetuid$(EXEEXT) tsuppgrp$(EXEEXT) \
-	topt$(EXEEXT)
+	topt$(EXEEXT) tconf$(EXEEXT)
 subdir = tests/misc
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -54,10 +54,18 @@ CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__objects_1 = opt.$(OBJEXT)
+am_tconf_OBJECTS = tconf.$(OBJEXT) $(am__objects_1)
+tconf_OBJECTS = $(am_tconf_OBJECTS)
+tconf_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+tconf_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tfcntl_OBJECTS = tfcntl.$(OBJEXT) $(am__objects_1)
 tfcntl_OBJECTS = $(am_tfcntl_OBJECTS)
 tfcntl_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 tfcntl_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -111,12 +119,12 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(tfcntl_SOURCES) $(topt_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
-	$(tsuppgrp_SOURCES)
-DIST_SOURCES = $(tfcntl_SOURCES) $(topt_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
-	$(tsuppgrp_SOURCES)
+SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(topt_SOURCES) \
+	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
+	$(tsetuid_SOURCES) $(tsuppgrp_SOURCES)
+DIST_SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(topt_SOURCES) \
+	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
+	$(tsetuid_SOURCES) $(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -251,7 +259,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-TESTS = t00 t01 t02 t03 t04 t05
+TESTS = t00 t01 t02 t03 t04 t05 t06
 CLEANFILES = *.out *.diff *.stats
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
@@ -276,6 +284,7 @@ tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
 topt_SOURCES = topt.c $(common_sources) 
+tconf_SOURCES = tconf.c $(common_sources) 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp)
 all: all-am
 
@@ -314,6 +323,9 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+tconf$(EXEEXT): $(tconf_OBJECTS) $(tconf_DEPENDENCIES) 
+	@rm -f tconf$(EXEEXT)
+	$(LINK) $(tconf_OBJECTS) $(tconf_LDADD) $(LIBS)
 tfcntl$(EXEEXT): $(tfcntl_OBJECTS) $(tfcntl_DEPENDENCIES) 
 	@rm -f tfcntl$(EXEEXT)
 	$(LINK) $(tfcntl_OBJECTS) $(tfcntl_LDADD) $(LIBS)
@@ -340,6 +352,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/topt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuid.Po@am__quote@

@@ -1,0 +1,6 @@
+path=/g/g1 opts=NULL users=NULL hosts=NULL
+path=/g/g2 opts=NULL users=NULL hosts=NULL
+path=/g/g3 opts=ro users=jim,bob hosts=foo[1-64]
+path=/g/g5 opts=NULL users=NULL hosts=NULL
+path=/g/g4 opts=NULL users=jim,bob hosts=NULL
+path=/g/g6 opts=NULL users=NULL hosts=NULL

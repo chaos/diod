@@ -1,6 +1,6 @@
-check_PROGRAMS = tfcntl tsetfsuid tsetfsuidsupp tsetuid tsuppgrp topt
+check_PROGRAMS = tfcntl tsetfsuid tsetfsuidsupp tsetuid tsuppgrp topt tconf
 
-TESTS = t00 t01 t02 t03 t04 t05
+TESTS = t00 t01 t02 t03 t04 t05 t06
 
 CLEANFILES = *.out *.diff *.stats
 
@@ -29,5 +29,6 @@ tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
 tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
 tfcntl_SOURCES = tfcntl.c $(common_sources)
 topt_SOURCES = topt.c $(common_sources) 
+tconf_SOURCES = tconf.c $(common_sources) 
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp)

@@ -312,14 +312,14 @@ _build_server_args (Server *s)
     if (diod_conf_opt_exports ()) {
         List l = diod_conf_get_exports ();
         ListIterator itr = list_iterator_create (l);
-        char *exp;
+        Export *x;
 
         if (!itr) {
             np_uerror (ENOMEM);
             goto done; 
         }
-        while ((exp = list_next (itr))) {
-            if (_append_arg (s, "-e%s", exp) < 0)
+        while ((x = list_next (itr))) {
+            if (_append_arg (s, "-e%s", x->path) < 0)
                 goto done;
         }
         list_iterator_destroy (itr);

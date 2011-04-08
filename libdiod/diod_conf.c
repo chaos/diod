@@ -105,6 +105,30 @@ _xlist_append (List l, void *item)
         msg_exit ("out of memory");
 }
 
+static Export *
+_create_export (char *path)
+{
+    Export *x = malloc (sizeof (*x));
+    if (!x)
+        msg_exit ("out of memory");
+    memset (x, 0, sizeof (*x));
+    x->path = _xstrdup (path);
+    return x;
+}
+
+static void
+_destroy_export (Export *x)
+{
+    if (x->path)
+        free (x->path);
+    if (x->opts)
+        free (x->opts);
+    if (x->users)
+        free (x->users);
+    if (x->hosts)
+        free (x->hosts);
+}
+
 void
 diod_conf_init (void)
 {
@@ -117,7 +141,7 @@ diod_conf_init (void)
     config.diodlisten = _xlist_create ((ListDelF)free);
     config.diodctllisten = _xlist_create ((ListDelF)free);
     _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
-    config.exports = _xlist_create ((ListDelF)free);
+    config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.statslog = NULL;
     config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
     config.logdest = NULL;
@@ -245,91 +269,27 @@ int diod_conf_opt_exports (void) { return config.oflags & OF_EXPORTS; }
 void diod_conf_clr_exports (void)
 {
     list_destroy (config.exports);
-    config.exports = _xlist_create ((ListDelF)free);
+    config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.oflags |= OF_EXPORTS;
 }
 void diod_conf_add_exports (char *path)
 {
-    _xlist_append (config.exports, _xstrdup (path));
+    _xlist_append (config.exports, _create_export (path));
     config.oflags |= OF_EXPORTS;
-}
-int diod_conf_match_exports (char *path, int *errp)
-{
-    ListIterator itr;
-    char *el;
-    int res = 0; /* DENIED */
-    int plen = strlen(path);
-
-    if (strstr (path, "/..") != NULL) {
-        *errp = EPERM;
-        goto done;
-    }
-    if ((itr = list_iterator_create (config.exports)) == NULL) {
-        *errp = ENOMEM;
-        goto done;
-    }
-    while ((el = list_next (itr))) {
-        int len = strlen (el);
-
-        if (strcmp (el, "/") == 0) {
-            res = 1;
-            break;
-        }
-        while (len > 0 && el[len - 1] == '/')
-            len--; 
-        if (plen == len && strncmp (el, path, len) == 0) {
-            res = 1;
-            break;
-        }
-        if (plen > len && path[len] == '/') {
-            res = 1;
-            break;
-        }
-    }
-    list_iterator_destroy (itr);
-    if (res == 0)
-        *errp = EPERM;
-done:
-    return res;
-}
-char *diod_conf_cat_exports (void)
-{
-    ListIterator itr = NULL;
-    char *ret = malloc (1);
-    int len = 0, elen;
-    char *el;
-
-    if (!ret)
-        goto done;
-    *ret = '\0';
-    if ((itr = list_iterator_create (config.exports)) == NULL)
-        goto done;        
-    while ((el = list_next (itr))) {
-        elen = strlen (el) + 1;
-        if (!(ret = realloc (ret, len + elen + 1)))
-            goto done;
-        snprintf (ret + len, elen + 1, "%s\n", el);
-        len += elen;
-    }
-    ret[len] = '\0';
-done:
-    if (itr)
-        list_iterator_destroy (itr);
-    return ret;
 }
 void diod_conf_validate_exports (void)
 {
     ListIterator itr;
-    char *el;
+    Export *x;
 
     if (list_count (config.exports) == 0)
         msg_exit ("no exports defined");
     if ((itr = list_iterator_create (config.exports)) == NULL)
         msg_exit ("out of memory");
-    while ((el = list_next (itr))) {
-        if (*el != '/')
+    while ((x = list_next (itr))) {
+        if (*x->path != '/')
             msg_exit ("exports should begin with '/'");
-        if (strstr (el, "/..") != 0)
+        if (strstr (x->path, "/..") != 0)
             msg_exit ("exports should not contain '/..'"); /* FIXME */
     }
     list_iterator_destroy (itr);
@@ -411,26 +371,6 @@ _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
     return res;
 }
 
-#if 0
-static int
-_lua_getglobal_uint (char *path, lua_State *L, char *key, unsigned int *ip)
-{
-    int res = 0;
-
-    lua_getglobal (L, key);
-    if (!lua_isnil (L, -1)) {
-        if (!lua_isnumber (L, -1))
-            msg_exit ("%s: `%s' should be number", path, key);
-        if (ip)
-            *ip = (unsigned int)lua_tonumber (L, -1);
-        res = 1;
-    }
-    lua_pop (L, 1);
-
-    return res;
-}
-#endif
-
 static int
 _lua_getglobal_string (char *path, lua_State *L, char *key, char **sp)
 {
@@ -490,6 +430,82 @@ _lua_getglobal_list_of_strings (char *path, lua_State *L, char *key, List *lp)
     return res;
 }
 
+static int
+_lua_getglobal_exports (char *path, lua_State *L, char *key, List *lp)
+{
+    Export *x;
+    int res = 0;
+    int i;
+    List l;
+
+    lua_getglobal (L, key);
+    if (!lua_isnil (L, -1)) {
+        if (!lua_istable(L, -1))
+            msg_exit ("%s: `%s' should be table", path, key);
+        l = _xlist_create ((ListDelF)_destroy_export);
+        for (i = 1; ;i++) {
+            lua_pushinteger(L, (lua_Integer)i);
+            lua_gettable (L, -2);
+            if (lua_isnil (L, -1))
+                break;
+            if (lua_isstring (L, -1)) {
+                x = _create_export ((char *)lua_tostring (L, -1));
+                _xlist_append (l, x);
+            } else if (lua_istable(L, -1)) {
+                /* get path value (mandatory) */
+                lua_getfield (L, -1, "path");
+                if (lua_isnil (L, -1) || !lua_isstring (L, -1))
+                    msg_exit ("%s: `%s[%d]' path requires string value",
+                              path, key, i);
+                x = _create_export ((char *)lua_tostring (L, -1));
+                lua_pop (L, 1);
+
+                lua_getfield (L, -1, "opts");
+                if (!lua_isnil (L, -1)) {
+                    if (!lua_isstring (L, -1))
+                        msg_exit ("%s: `%s[%d]' opts requires string value",
+                                  path, key, i);
+                    x->opts = _xstrdup ((char *)lua_tostring (L, -1));
+                }
+                lua_pop (L, 1);
+
+                lua_getfield (L, -1, "users");
+                if (!lua_isnil (L, -1)) {
+                    if (!lua_isstring (L, -1))
+                        msg_exit ("%s: `%s[%d]' users requires string value",
+                                  path, key, i);
+                    x->users = _xstrdup ((char *)lua_tostring (L, -1));
+                }
+                lua_pop (L, 1);
+
+                lua_getfield (L, -1, "hosts");
+                if (!lua_isnil (L, -1)) {
+                    if (!lua_isstring (L, -1))
+                        msg_exit ("%s: `%s[%d]' hosts requires string value",
+                                  path, key, i);
+                    x->hosts = _xstrdup ((char *)lua_tostring (L, -1));
+                }
+                lua_pop (L, 1);
+
+                _xlist_append (l, x);
+            } else
+                msg_exit ("%s: `%s[%d]' should be string/table", path, key, i);
+            lua_pop (L, 1);
+        }
+        lua_pop (L, 1);
+        if (lp) {
+            if (*lp != NULL)
+                list_destroy (*lp);
+            *lp = l;
+        } else
+            list_destroy (l);
+        res = 1;
+    }
+    lua_pop (L, 1);
+
+    return res;
+}
+
 void
 diod_conf_init_config_file (char *path)
 {
@@ -532,7 +548,7 @@ diod_conf_init_config_file (char *path)
                                 &config.diodlisten);
         }
         if (!(config.oflags & OF_EXPORTS)) {
-            _lua_getglobal_list_of_strings (path, L, "exports",
+            _lua_getglobal_exports (path, L, "exports",
                                 &config.exports);
         }
         if (!(config.oflags & OF_LOGDEST)) {

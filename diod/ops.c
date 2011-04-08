@@ -417,6 +417,52 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
+int _match_exports (char *path)
+{
+    List exports = diod_conf_get_exports ();
+    ListIterator itr;
+    Export *x;
+    int res = 0; /* DENIED */
+    int plen = strlen(path);
+
+    if (!exports) {
+        np_uerror (EPERM);
+        goto done;
+    }
+    if (strstr (path, "/..") != NULL) {
+        np_uerror (EPERM);
+        goto done;
+    }
+    if (!(itr = list_iterator_create (exports))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    while ((x = list_next (itr))) {
+        int len = strlen (x->path);
+
+        if (strcmp (x->path, "/") == 0) {
+            res = 1;
+            break;
+        }
+        while (len > 0 && x->path[len - 1] == '/')
+            len--;
+        if (plen == len && strncmp (x->path, path, len) == 0) {
+            res = 1;
+            break;
+        }
+        if (plen > len && path[len] == '/') {
+            res = 1;
+            break;
+        }
+    }
+    list_iterator_destroy (itr);
+    if (res == 0)
+        np_uerror (EPERM);
+done:
+    return res;
+}
+
+
 /* Tattach - attach a new user (fid->user) to aname.
  *   diod_auth.c::diod_checkauth first authenticates/authorizes user
  */
@@ -425,7 +471,6 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
 {
     Npfcall* ret = NULL;
     Fid *f = NULL;
-    int err;
     Npqid qid;
 
     if (aname->len == 0 || *aname->str != '/') {
@@ -437,8 +482,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         msg ("diod_attach: out of memory");
         goto done;
     }
-    if (!diod_conf_match_exports (f->path, &err)) {
-        np_uerror (err);
+    if (!_match_exports (f->path)) {
         msg ("diod_attach: %s not exported", f->path);
         goto done;
     }
