@@ -1,5 +1,22 @@
 2011-04-09 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre19
+
+	* configure.ac : Define WITH_PTHREADS and check pthread.h header
+	to properly configure liblsd code (issue #18).
+
+	* utils/diodexp.c : Allow "ROOT" to be a key for a root (/) export.
+
+	* etc/diod.conf.5.in : Document exportall option.
+
+2011-04-09 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre18
+
+	* diod/diod.conf, diod/ops.c : Support exportall option.
+
+	* diodctl/diodctl.conf, diodctl/ops.c : Support exportall option.
+
 	* libdiod/diod_conf.[ch] : Add 'exportall' option.
 
 2011-04-08 Jim Garlick <garlick@llnl.gov>

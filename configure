@@ -4715,10 +4715,12 @@ done
 
 
 
+
 for ac_header in \
   getopt.h \
   zlib.h \
   lua.h \
+  pthread.h \
 
 do
 as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -6330,6 +6332,11 @@ _ACEOF
 
 cat >>confdefs.h <<\_ACEOF
 #define WITH_LSD_NOMEM_ERROR_FUNC 1
+_ACEOF
+
+
+cat >>confdefs.h <<\_ACEOF
+#define WITH_PTHREADS 1
 _ACEOF
 
 

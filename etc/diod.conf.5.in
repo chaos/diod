@@ -37,6 +37,11 @@ Note that although \fBdiod\fR will not traverse file system boundaries
 for a given mount due to inode uniqueness constraints, subdirectories of 
 exported paths can be mounted.
 .TP
+.I "exportsall = 1"
+Export all file systems listed in /proc/mounts.
+If new file systems are mounted after \fBdiod\fR or \fBdiodctl\fR daemons
+have started, they will become immediately mountable.
+.TP
 .I "nwthreads = INTEGER"
 Sets the number of worker threads created to handle 9P requests per \fBdiod\fR
 and \fBdiodctl\fR instance.  The default is 16.

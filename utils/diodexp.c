@@ -197,6 +197,10 @@ _transcmp (char *key, char *path)
     char *cpy, *p;
     int ret = 0;
 
+    /* special case root */
+    if (!strcmp (path, "/") && !strcmp (key, "ROOT"))
+        return 1;
+
     if (!(cpy = strdup (path)))
         msg_exit ("out of memory");
     p = cpy;

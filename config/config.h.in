@@ -36,6 +36,9 @@
 /* Define to 1 if you have the <munge.h> header file. */
 #undef HAVE_MUNGE_H
 
+/* Define to 1 if you have the <pthread.h> header file. */
+#undef HAVE_PTHREAD_H
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
@@ -123,8 +126,11 @@
 /* Define lsd_fatal_error */
 #undef WITH_LSD_FATAL_ERROR_FUNC
 
-/* Define lsd_fatal_error */
+/* Define lsd_nomem_error */
 #undef WITH_LSD_NOMEM_ERROR_FUNC
+
+/* Make liblsd thread safe */
+#undef WITH_PTHREADS
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

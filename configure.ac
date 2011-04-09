@@ -35,6 +35,7 @@ AC_CHECK_HEADERS( \
   getopt.h \
   zlib.h \
   lua.h \
+  pthread.h \
 )
 
 ##
@@ -66,7 +67,8 @@ X_AC_LARGEIO
 # For list.c, hostlist.c, hash.c
 ##
 AC_DEFINE(WITH_LSD_FATAL_ERROR_FUNC, 1, [Define lsd_fatal_error])
-AC_DEFINE(WITH_LSD_NOMEM_ERROR_FUNC, 1, [Define lsd_fatal_error])
+AC_DEFINE(WITH_LSD_NOMEM_ERROR_FUNC, 1, [Define lsd_nomem_error])
+AC_DEFINE(WITH_PTHREADS, 1, [Make liblsd thread safe])
 
 ##
 # Epilogue
