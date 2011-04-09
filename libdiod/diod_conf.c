@@ -49,6 +49,10 @@
 #include "diod_conf.h"
 #include "diod_log.h"
 
+#ifndef _PATH_PROC_MOUNTS
+#define _PATH_PROC_MOUNTS "/proc/mounts"
+#endif
+
 #define OF_DEBUGLEVEL       0x0001
 #define OF_NWTHREADS        0x0002
 #define OF_FOREGROUND       0x0004
@@ -61,6 +65,7 @@
 #define OF_STATSLOG         0x0200
 #define OF_CONFIGPATH       0x0400
 #define OF_LOGDEST          0x0800
+#define OF_EXPORTALL        0x1000
 
 typedef struct {
     int          debuglevel;
@@ -71,6 +76,7 @@ typedef struct {
     char        *diodpath;
     List         diodlisten;
     List         diodctllisten;
+    int          exportall;
     List         exports;
     FILE        *statslog;
     char        *configpath;
@@ -141,6 +147,7 @@ diod_conf_init (void)
     config.diodctllisten = _xlist_create ((ListDelF)free);
     _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
+    config.exportall = 0;
     config.statslog = NULL;
     config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
     config.logdest = NULL;
@@ -261,6 +268,44 @@ void diod_conf_add_diodctllisten (char *s)
     config.oflags |= OF_DIODCTLLISTEN;
 }
 
+/* exportall - export everything in /proc/mounts
+ */
+int diod_conf_get_exportall (void) { return config.exportall; }
+int diod_conf_opt_exportall (void) { return config.oflags & OF_EXPORTALL; }
+void diod_conf_set_exportall (int i)
+{
+    config.exportall = i;
+    config.oflags |= OF_EXPORTALL;
+}
+List diod_conf_get_mounts (void) /* FIXME: ENOMEM is fatal */
+{
+    List l = _xlist_create ((ListDelF)_destroy_export);
+    Export *x;
+    FILE *f;
+    char *p, *path, buf[1024];
+
+    if (!config.exportall)
+        goto done;
+    if (!(f = fopen (_PATH_PROC_MOUNTS, "r")))
+        goto done;
+    while (fgets (buf, sizeof(buf), f) != NULL) {
+        if (buf[strlen(buf) - 1] == '\n')
+            buf[strlen(buf) - 1] = '\0';
+        if (!(p = strchr (buf, ' ')))
+            continue;
+        path = p + 1;
+        if (!(p = strchr (path, ' ')))
+            continue;
+        *p = '\0';
+        x = _create_export ();
+        x->path = _xstrdup (path);
+        _xlist_append (l, x);
+    }
+    fclose (f);
+done:
+    return l;
+}
+
 /* exports - list of paths of exported file systems
  */
 List diod_conf_get_exports (void) { return config.exports; }
@@ -283,7 +328,7 @@ void diod_conf_validate_exports (void)
     ListIterator itr;
     Export *x;
 
-    if (list_count (config.exports) == 0)
+    if (config.exportall == 0 && list_count (config.exports) == 0)
         msg_exit ("no exports defined");
     if ((itr = list_iterator_create (config.exports)) == NULL)
         msg_exit ("out of memory");
@@ -498,7 +543,7 @@ _lua_getglobal_exports (char *path, lua_State *L, List *lp)
 }
 
 void
-diod_conf_init_config_file (char *path)
+diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
 {
     if (path) {
         free (config.configpath);
@@ -541,6 +586,10 @@ diod_conf_init_config_file (char *path)
         if (!(config.oflags & OF_LOGDEST)) {
             _lua_getglobal_string (path, L, "logdest",
                                 &config.logdest);
+        }
+        if (!(config.oflags & OF_EXPORTALL)) {
+            _lua_getglobal_int (path, L, "exportall",
+                                &config.exportall);
         }
         if (!(config.oflags & OF_EXPORTS))
             _lua_getglobal_exports (path, L, &config.exports);

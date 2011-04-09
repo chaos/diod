@@ -1,3 +1,8 @@
+1.0-pre18:
+	Allow file systems to be exported read-only with new export format.
+	Add 'exportall' diod.conf option to export everything in /proc/mounts.
+	Add diod -E,--export-all and diodctl -E,--export-all options.
+
 1.0-pre17:
 	Fix (another) typo in diodexp output that broke automounter.
 	Optimize np_gets () to avoid duplicate P9_READ calls.

@@ -188,6 +188,37 @@ done:
     return ret;
 }
 
+static char *
+_strcat_mounts (char *ret)
+{
+    List exports = NULL;
+    ListIterator itr = NULL;
+    int len, elen;
+    Export *x;
+
+    if (!ret)
+        goto done;
+    len = strlen (ret);
+    if (!(exports = diod_conf_get_mounts ()))
+        goto done;
+    if (!(itr = list_iterator_create (exports)))
+        goto done;
+    while ((x = list_next (itr))) {
+        elen = strlen (x->path) + 1;
+        if (!(ret = realloc (ret, len + elen + 1)))
+            goto done;
+        snprintf (ret + len, elen + 1, "%s\n", x->path);
+        len += elen;
+    }
+    ret[len] = '\0';
+done:
+    if (itr)
+        list_iterator_destroy (itr);
+    if (exports)
+        list_destroy (exports);
+    return ret;
+}
+
 static int
 _exports_openfid (Npfilefid *file)
 {
@@ -195,6 +226,12 @@ _exports_openfid (Npfilefid *file)
     if (!(file->aux = _strcpy_exports ())) {
         np_uerror (ENOMEM);
         return 0;
+    }
+    if (diod_conf_get_exportall ()) {
+        if (!(file->aux = _strcat_mounts (file->aux))) {
+            np_uerror (ENOMEM);
+            return 0;
+        }
     }
     return 1;
 }

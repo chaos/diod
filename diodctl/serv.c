@@ -309,6 +309,9 @@ _build_server_args (Server *s)
         if (!logdest || r < 0)
             goto done;
     }
+    if (diod_conf_opt_exportall ())
+        if (_append_arg (s, "-E") < 0)
+            goto done;
     if (diod_conf_opt_exports ()) {
         List l = diod_conf_get_exports ();
         ListIterator itr = list_iterator_create (l);

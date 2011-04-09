@@ -61,7 +61,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:e:F:u:L:s:nc:"
+#define OPTIONS "fd:l:w:e:EF:u:L:s:nc:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -71,6 +71,7 @@ static const struct option longopts[] = {
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
     {"export",          required_argument,  0, 'e'},
+    {"export-all",      no_argument,        0, 'E'},
     {"no-auth",         no_argument,        0, 'n'},
     {"listen-fds",      required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
@@ -93,6 +94,7 @@ usage()
 "   -F,--listen-fds N      listen for connections on the first N fds\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
+"   -E,--export-all        export all mounted file systems\n"
 "   -n,--no-auth           disable authentication check\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
@@ -163,6 +165,9 @@ main(int argc, char **argv)
                     eopt = 1;
                 }
                 diod_conf_add_exports (optarg);
+                break;
+            case 'E':   /* --export-all */
+                diod_conf_set_exportall (1);
                 break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);

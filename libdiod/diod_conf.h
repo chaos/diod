@@ -81,11 +81,16 @@ typedef struct {
     char         *hosts;
 } Export;
 
-List    diod_conf_get_exports (void); /* returns a list of Export structs */
+List    diod_conf_get_exports (void); /* list-o-Export (caller must NOT free) */
 int     diod_conf_opt_exports (void);
 void    diod_conf_clr_exports (void);
 void    diod_conf_add_exports (char *path);
 void    diod_conf_validate_exports (void);
+List    diod_conf_get_mounts (void); /* list-o-Export (caller must free) */
+
+int     diod_conf_get_exportall (void);
+int     diod_conf_opt_exportall (void);
+void    diod_conf_set_exportall (int i);
 
 FILE   *diod_conf_get_statslog (void);
 int     diod_conf_opt_statslog (void);

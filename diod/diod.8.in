@@ -45,6 +45,9 @@ Set the file system to be exported.
 This option may be specified more than once.
 It overrides the \fIexports\fR setting in diod.conf (5).
 .TP
+.I "-E, --export-all"
+Export everything in /proc/mounts.
+.TP
 .I "-n, --no-auth"
 This option allows users to attach without security credentials.
 It overrides  the \fIauth_required\fR setting in diod.conf (5).

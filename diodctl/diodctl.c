@@ -72,7 +72,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:nD:L:e:"
+#define OPTIONS "fd:l:w:c:nD:L:e:E"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -85,6 +85,7 @@ static const struct option longopts[] = {
     {"diod-path",       required_argument,  0, 'D'},
     {"logdest",         required_argument,  0, 'L'},
     {"export",          required_argument,  0, 'e'},
+    {"export-all",      no_argument,        0, 'E'},
     {0, 0, 0, 0},
 };
 #else
@@ -181,6 +182,9 @@ main(int argc, char **argv)
                     eopt = 1;
                 }
                 diod_conf_add_exports (optarg);
+                break;
+            case 'E':   /* --export-all */
+                diod_conf_set_exportall (1);
                 break;
             default:
                 usage();

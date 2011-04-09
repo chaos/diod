@@ -517,6 +517,21 @@ _match_exports (char *path, Nptrans *trans, Npuser *user, int *xfp)
         res = 1;
     }
     list_iterator_destroy (itr);
+    
+    if (res == 0 && diod_conf_get_exportall ()) {
+        /* N.B. static exports should not be destroyed, but this one should */
+        exports = diod_conf_get_mounts ();
+        if (!(itr = list_iterator_create (exports))) {
+            np_uerror (ENOMEM);
+            goto done;
+        }
+        while (res == 0 && (x = list_next (itr))) {
+            if (_match_export_path (x, path))
+                res = 1;
+        }
+        list_iterator_destroy (itr);
+        list_destroy (exports);
+    }
     if (res == 0)
         np_uerror (EPERM);
 done:
