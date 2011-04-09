@@ -106,13 +106,12 @@ _xlist_append (List l, void *item)
 }
 
 static Export *
-_create_export (char *path)
+_create_export (void)
 {
     Export *x = malloc (sizeof (*x));
     if (!x)
         msg_exit ("out of memory");
     memset (x, 0, sizeof (*x));
-    x->path = _xstrdup (path);
     return x;
 }
 
@@ -274,7 +273,9 @@ void diod_conf_clr_exports (void)
 }
 void diod_conf_add_exports (char *path)
 {
-    _xlist_append (config.exports, _create_export (path));
+    Export *x = _create_export ();
+    x->path = _xstrdup (path);
+    _xlist_append (config.exports, x);
     config.oflags |= OF_EXPORTS;
 }
 void diod_conf_validate_exports (void)
@@ -291,6 +292,8 @@ void diod_conf_validate_exports (void)
             msg_exit ("exports should begin with '/'");
         if (strstr (x->path, "/..") != 0)
             msg_exit ("exports should not contain '/..'"); /* FIXME */
+        if (x->opts && strcmp (x->opts, "ro") != 0) /* FIXME */
+            msg_exit ("illegal export option(s): %s", x->opts);
     }
     list_iterator_destroy (itr);
 }
@@ -430,18 +433,31 @@ _lua_getglobal_list_of_strings (char *path, lua_State *L, char *key, List *lp)
     return res;
 }
 
+static void
+_lua_get_expattr (char *path, int i, lua_State *L, char *key, char **sp)
+{
+    lua_getfield (L, -1, key);
+    if (!lua_isnil (L, -1)) {
+         if (!lua_isstring (L, -1))
+            msg_exit ("%s: `exports[%d].%s' requires string value",
+                      path, i, key);
+         *sp = _xstrdup ((char *)lua_tostring (L, -1));
+    }
+    lua_pop (L, 1);
+}
+
 static int
-_lua_getglobal_exports (char *path, lua_State *L, char *key, List *lp)
+_lua_getglobal_exports (char *path, lua_State *L, List *lp)
 {
     Export *x;
     int res = 0;
     int i;
     List l;
 
-    lua_getglobal (L, key);
+    lua_getglobal (L, "exports");
     if (!lua_isnil (L, -1)) {
         if (!lua_istable(L, -1))
-            msg_exit ("%s: `%s' should be table", path, key);
+            msg_exit ("%s: `exports' should be table", path);
         l = _xlist_create ((ListDelF)_destroy_export);
         for (i = 1; ;i++) {
             lua_pushinteger(L, (lua_Integer)i);
@@ -449,47 +465,22 @@ _lua_getglobal_exports (char *path, lua_State *L, char *key, List *lp)
             if (lua_isnil (L, -1))
                 break;
             if (lua_isstring (L, -1)) {
-                x = _create_export ((char *)lua_tostring (L, -1));
+                x = _create_export ();
+                x->path = _xstrdup ((char *)lua_tostring (L, -1));
                 _xlist_append (l, x);
             } else if (lua_istable(L, -1)) {
-                /* get path value (mandatory) */
-                lua_getfield (L, -1, "path");
-                if (lua_isnil (L, -1) || !lua_isstring (L, -1))
-                    msg_exit ("%s: `%s[%d]' path requires string value",
-                              path, key, i);
-                x = _create_export ((char *)lua_tostring (L, -1));
-                lua_pop (L, 1);
-
-                lua_getfield (L, -1, "opts");
-                if (!lua_isnil (L, -1)) {
-                    if (!lua_isstring (L, -1))
-                        msg_exit ("%s: `%s[%d]' opts requires string value",
-                                  path, key, i);
-                    x->opts = _xstrdup ((char *)lua_tostring (L, -1));
-                }
-                lua_pop (L, 1);
-
-                lua_getfield (L, -1, "users");
-                if (!lua_isnil (L, -1)) {
-                    if (!lua_isstring (L, -1))
-                        msg_exit ("%s: `%s[%d]' users requires string value",
-                                  path, key, i);
-                    x->users = _xstrdup ((char *)lua_tostring (L, -1));
-                }
-                lua_pop (L, 1);
-
-                lua_getfield (L, -1, "hosts");
-                if (!lua_isnil (L, -1)) {
-                    if (!lua_isstring (L, -1))
-                        msg_exit ("%s: `%s[%d]' hosts requires string value",
-                                  path, key, i);
-                    x->hosts = _xstrdup ((char *)lua_tostring (L, -1));
-                }
-                lua_pop (L, 1);
-
+                x = _create_export ();
+                _lua_get_expattr (path, i, L, "path", &x->path);
+                if (!x->path)
+                    msg_exit ("%s: `exports[%d]' path is a required attribute",
+                              path, i);
+                _lua_get_expattr (path, i, L, "opts", &x->opts);
+                _lua_get_expattr (path, i, L, "users", &x->users);
+                _lua_get_expattr (path, i, L, "hosts", &x->hosts);
+                /* FIXME: check for illegal export attributes */
                 _xlist_append (l, x);
             } else
-                msg_exit ("%s: `%s[%d]' should be string/table", path, key, i);
+                msg_exit ("%s: `exports[%d]' should be string/table", path, i);
             lua_pop (L, 1);
         }
         lua_pop (L, 1);
@@ -547,14 +538,12 @@ diod_conf_init_config_file (char *path)
             _lua_getglobal_list_of_strings (path, L, "diodlisten",
                                 &config.diodlisten);
         }
-        if (!(config.oflags & OF_EXPORTS)) {
-            _lua_getglobal_exports (path, L, "exports",
-                                &config.exports);
-        }
         if (!(config.oflags & OF_LOGDEST)) {
             _lua_getglobal_string (path, L, "logdest",
                                 &config.logdest);
         }
+        if (!(config.oflags & OF_EXPORTS))
+            _lua_getglobal_exports (path, L, &config.exports);
         lua_close(L);
     }
 }

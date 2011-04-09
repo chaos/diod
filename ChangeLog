@@ -1,3 +1,7 @@
+2011-04-08 Jim Garlick <garlick@llnl.gov>
+
+	* diod/ops.c : Add support for read-only export.
+
 2011-04-07 Jim Garlick <garlick@llnl.gov>
 
 	* tests/misc/t06*, tests/misc/tconf.c : Test for exports parsing.

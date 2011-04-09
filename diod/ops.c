@@ -82,6 +82,7 @@
 #include "9p.h"
 #include "npfs.h"
 #include "list.h"
+#include "hostlist.h"
 
 #include "diod_conf.h"
 #include "diod_log.h"
@@ -90,6 +91,8 @@
 #include "diod_auth.h"
 
 #include "ops.h"
+
+#define XFLAGS_RO       0x01
 
 typedef struct {
     char            *path;
@@ -114,6 +117,8 @@ typedef struct {
     u64              read_ops;
     u64              read_bytes;
     struct timeval   birth;
+    /* export flags */
+    int              xflags;
 } Fid;
 
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *aname);
@@ -320,6 +325,7 @@ _fidalloc (void)
             free (f);
             f = NULL;
         }
+        f->xflags = 0;
     }
   
     return f;
@@ -417,13 +423,75 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
-int _match_exports (char *path)
+static int
+_match_export_users (Export *x, Npuser *user)
+{
+    if (!x->users)
+        return 1;
+    /* FIXME */
+    return 0; /* no match */
+}
+
+static int
+_match_export_hosts (Export *x, Nptrans *trans)
+{
+    char *host = diod_trans_get_host (trans);
+    char *ip = diod_trans_get_ip (trans);
+    hostlist_t hl = NULL;
+    int res = 0; /* no match */
+
+    /* no host restrictions */
+    if (!x->hosts) {
+        res = 1;
+        goto done;
+    }
+    if (!(hl = hostlist_create (x->hosts))) {
+        np_uerror (ENOMEM);
+        goto done;
+    }
+    /* IP or address found in exports */
+    if (hostlist_find (hl, host) != -1 || hostlist_find (hl, ip) != -1) {
+        res = 1;
+        goto done;
+    }
+done:
+    if (hl)
+        hostlist_destroy (hl);
+    return res;
+}
+
+/* N.B. in diod_conf_validate_exports () we already have ensured
+ * that export begins with / and contains no /.. elements.
+ */
+static int
+_match_export_path (Export *x, char *path)
+{
+    int xlen = strlen (x->path);
+    int plen = strlen (path);
+
+    /* an export of / matches all */
+    if (strcmp (x->path, "/") == 0)
+        return 1;
+    /* drop trailing slashes from export */
+    while (xlen > 0 && x->path[xlen - 1] == '/')
+        xlen--;
+    /* export is identical to path */
+    if (plen == xlen && strncmp (x->path, path, plen) == 0)
+        return 1;
+    /* export is parent of path */
+    if (plen > xlen && path[xlen] == '/')
+        return 1;
+
+    return 0; /* no match */
+}
+
+static int
+_match_exports (char *path, Nptrans *trans, Npuser *user, int *xfp)
 {
     List exports = diod_conf_get_exports ();
     ListIterator itr;
     Export *x;
     int res = 0; /* DENIED */
-    int plen = strlen(path);
 
     if (!exports) {
         np_uerror (EPERM);
@@ -437,23 +505,16 @@ int _match_exports (char *path)
         np_uerror (ENOMEM);
         goto done;
     }
-    while ((x = list_next (itr))) {
-        int len = strlen (x->path);
-
-        if (strcmp (x->path, "/") == 0) {
-            res = 1;
-            break;
-        }
-        while (len > 0 && x->path[len - 1] == '/')
-            len--;
-        if (plen == len && strncmp (x->path, path, len) == 0) {
-            res = 1;
-            break;
-        }
-        if (plen > len && path[len] == '/') {
-            res = 1;
-            break;
-        }
+    while (res == 0 && (x = list_next (itr))) {
+        if (!_match_export_path (x, path))
+            continue;
+        if (!_match_export_hosts (x, trans))
+            continue;
+        if (!_match_export_users (x, user))
+            continue;
+        if (x->opts && strcmp (x->opts, "ro") == 0) /* FIXME */
+            *xfp |= XFLAGS_RO;
+        res = 1;
     }
     list_iterator_destroy (itr);
     if (res == 0)
@@ -482,7 +543,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         msg ("diod_attach: out of memory");
         goto done;
     }
-    if (!_match_exports (f->path)) {
+    if (!_match_exports (f->path, fid->conn->trans, fid->user, &f->xflags)) {
         msg ("diod_attach: %s not exported", f->path);
         goto done;
     }
@@ -524,6 +585,7 @@ diod_clone (Npfid *fid, Npfid *newfid)
         msg ("diod_clone: out of memory");
         goto done;
     }
+    nf->xflags = f->xflags;
     newfid->aux = nf;
     ret = 1;
 
@@ -635,7 +697,12 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
     int n;
     Npfcall *ret = NULL;
+    Fid *f = fid->aux;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_write: error switching user");
         goto done;
@@ -674,6 +741,10 @@ diod_remove (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_remove: error switching user");
         goto done;
@@ -876,10 +947,15 @@ _cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset,
 Npfcall*
 diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
 {
+    Fid *f = fid->aux;
     int debug = (diod_conf_get_debuglevel () & DEBUG_ATOMIC);
     int n;
     Npfcall *ret = NULL;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_awrite: error switching user");
         goto done;
@@ -958,6 +1034,10 @@ diod_lopen (Npfid *fid, u32 mode)
     Npfcall *res = NULL;
     Npqid qid;
 
+    if ((f->xflags & XFLAGS_RO) && ((mode & O_WRONLY) || (mode & O_RDWR))) {
+        np_uerror (EROFS);
+        goto done;
+    }
     /* Clients must use lcreate otherwise we don't have enough
      * information to construct the file mode (need client umask and gid).
      * Clear the flag and allow open to fail with ENOENT.
@@ -1019,6 +1099,10 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
     Npqid qid;
     mode_t saved_umask;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, gid)) {
         msg ("diod_lcreate: error switching user");
         goto done;
@@ -1063,6 +1147,10 @@ diod_symlink(Npfid *dfid, Npstr *name, Npstr *symtgt, u32 gid)
     struct stat sb;
     mode_t saved_umask;
 
+    if ((df->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_symlink: error switching user");
         goto done;
@@ -1110,6 +1198,10 @@ diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
     struct stat sb;
     mode_t saved_umask;
 
+    if ((df->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_mknod: error switching user");
         goto done;
@@ -1152,6 +1244,10 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
     char *newpath = NULL;
     int newpathlen;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_rename: error switching user");
         goto done;
@@ -1258,6 +1354,10 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     Npfcall *ret = NULL;
     Fid *f = fid->aux;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_setattr: error switching user");
         goto done;
@@ -1428,6 +1528,10 @@ diod_fsync (Npfid *fid)
     Npfcall *ret = NULL;
     Fid *f = fid->aux;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (fid->user, -1)) {
         msg ("diod_fsync: error switching user");
         goto done;
@@ -1463,6 +1567,10 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
     char *cid = _p9strdup (client_id);
     u8 status = P9_LOCK_ERROR;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!cid) {
         np_uerror (ENOMEM);
         goto done;
@@ -1521,6 +1629,10 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     char *cid = _p9strdup (client_id);
     Fid *f = fid->aux;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!cid) {
         np_uerror (ENOMEM);
         goto done;
@@ -1589,6 +1701,10 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
     Fid *f = fid->aux;
     char *npath = NULL;
 
+    if ((f->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (dfid->user, -1)) {
         msg ("diod_link: error switching user");
         goto done;
@@ -1622,6 +1738,10 @@ diod_mkdir (Npfid *dfid, Npstr *name, u32 mode, u32 gid)
     struct stat sb;
     mode_t saved_umask;
 
+    if ((df->xflags & XFLAGS_RO)) {
+        np_uerror (EROFS);
+        goto done;
+    }
     if (!diod_switch_user (dfid->user, gid)) {
         msg ("diod_mkdir: error switching user");
         goto done;
