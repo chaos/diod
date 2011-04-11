@@ -1447,7 +1447,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         }
 #else /* HAVE_UTIMENSAT */
         struct timeval tv[2], now, *tvp;
-        /* N.B. utimes () loses for atomicity and precision.
+        /* N.B. this utimes () implementation loses atomicity and precision.
          */
         if ((valid & P9_SETATTR_ATIME) && !(valid & P9_SETATTR_ATIME_SET)
          && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
@@ -1460,8 +1460,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                 goto done;
             }
             if (!(valid & P9_SETATTR_ATIME)) {
-                tv[0].tv_sec = f->stat.st_atime;
-                tv[0].tv_usec = 0;
+                tv[0].tv_sec = f->stat.st_atim.tv_sec;
+                tv[0].tv_usec = f->stat.st_atim.tv_nsec / 1000;
             } else if (!(valid & P9_SETATTR_ATIME_SET)) {
                 tv[0].tv_sec = now.tv_sec;
                 tv[0].tv_usec = now.tv_usec;
@@ -1471,8 +1471,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             }
 
             if (!(valid & P9_SETATTR_MTIME)) {
-                tv[1].tv_sec = f->stat.st_mtime;
-                tv[1].tv_usec = 0;
+                tv[1].tv_sec = f->stat.st_mtim.tv_sec;
+                tv[1].tv_usec = f->stat.st_mtim.tv_nsec / 1000;
             } else if (!(valid & P9_SETATTR_MTIME_SET)) {
                 tv[1].tv_sec = now.tv_sec;
                 tv[1].tv_usec = now.tv_usec;
