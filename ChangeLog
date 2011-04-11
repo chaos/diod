@@ -1,5 +1,7 @@
 2011-04-11 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre20
+
 	* configure.ac, diod/ops.c : If utimensat is unavailable, use utimes.
 	This allows diod to build on glibc-2.5 (e.g. RHEL 5) based system.
 
