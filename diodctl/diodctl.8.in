@@ -48,6 +48,11 @@ Allow users to attach without security credentials.
 This option overrides the \fIauth_required\fR config file setting,
 and is inherited by spawned \fBdiod\fR processes.
 .TP
+.I "-S, --allsquash"
+Remap all users to "nobody".
+The attaching user need not be present in the server's password file.
+It overrides the \fIallsquash\fR setting in diod.conf (5).
+.TP
 .I "-D, --diod-path PATH"
 Override the default path to the \fBdiod\fR server executable.
 .TP

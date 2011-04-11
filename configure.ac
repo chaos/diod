@@ -51,6 +51,7 @@ AC_CHECK_FUNCS( \
   getopt_long \
   vsnprintf \
   vsscanf \
+  utimensat \
 )
 X_AC_CHECK_PTHREADS
 X_AC_WRAP

@@ -1,3 +1,7 @@
+1.0-pre20:
+	Add 'allsquash' config option to remap all users to nobody.
+	Improve portability to RHEL 5 (glibc-2.5) based systems.
+
 1.0-pre19:
 	Build liblsd with thread-safety enabled (issue #18).
 	Allow /d/ROOT as alias for exported root fs (/).

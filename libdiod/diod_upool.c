@@ -67,8 +67,8 @@
 #define PASSWD_BUFSIZE  4096 /* FIXME: sysconf(_SC_GETPW_R_SIZE_MAX) ? */
 #define GROUP_BUFSIZE   4096 /* FIXME: sysconf(_SC_GETGR_R_SIZE_MAX) ? */
 #define PATH_GROUP      "/etc/group"
-#define SQUASH_UID      65534
-#define SQUASH_GID      65534
+
+#define SQUASH_UNAME    "nobody"
 
 static Npuser       *diod_uname2user (Npuserpool *, char *uname);
 static Npuser       *diod_uid2user (Npuserpool *, u32 uid);
@@ -111,8 +111,8 @@ diod_switch_user (Npuser *u, gid_t gid_override)
 
     assert (d->magic == DUSER_MAGIC);
 
-    if (diod_conf_opt_runasuid ()) /* bail early if running as one user */
-        return 1;
+    if (diod_conf_opt_runasuid () || diod_conf_get_allsquash ())
+        return 1; /* bail early if running as one user */
 
     if (setgroups (d->nsg, d->sg) < 0) {
         np_uerror (errno);
@@ -217,6 +217,12 @@ diod_become_user (char *name, uid_t uid, int realtoo)
         err_exit ("setreuid");
 }
 
+void
+diod_become_squashuser (void)
+{
+    diod_become_user (SQUASH_UNAME, -1, 1);
+}
+
 
 static Npuser *
 _alloc_user (Npuserpool *up, struct passwd *pwd)
@@ -279,6 +285,9 @@ diod_uname2user (Npuserpool *up, char *uname)
     struct passwd pw, *pwd = NULL;
     char buf[PASSWD_BUFSIZE];
 
+    if (diod_conf_get_allsquash ())
+        uname = SQUASH_UNAME;
+
     if ((err = getpwnam_r (uname, &pw, buf, sizeof(buf), &pwd)) != 0) {
         np_uerror (err);
         goto done;
@@ -304,6 +313,9 @@ diod_uid2user(Npuserpool *up, u32 uid)
     int err;
     struct passwd pw, *pwd;
     char buf[PASSWD_BUFSIZE];
+
+    if (diod_conf_get_allsquash ())
+        return diod_uname2user (up, SQUASH_UNAME);
 
     if ((err = getpwuid_r (uid, &pw, buf, sizeof(buf), &pwd)) != 0) {
         np_uerror (err);

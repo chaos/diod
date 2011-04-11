@@ -52,6 +52,11 @@ Export everything in /proc/mounts.
 This option allows users to attach without security credentials.
 It overrides  the \fIauth_required\fR setting in diod.conf (5).
 .TP
+.I "-S, --allsquash"
+Remap all users to "nobody".
+The attaching user need not be present in the server's password file.
+It overrides the \fIallsquash\fR setting in diod.conf (5).
+.TP
 .I "-u, --runas-uid UID"
 Run the server as UID and only allow that user to attach.
 If invoked as root, \fBdiod\fR sets real and effective uid, gid, and

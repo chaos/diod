@@ -275,7 +275,9 @@ _build_server_args (Server *s)
     int ret = 0;
     int r;
 
-    if (s->uid == 0)
+    if (diod_conf_get_allsquash ())
+        r = _append_arg (s, "diod-allsquash"); 
+    else if (s->uid == 0)
         r = _append_arg (s, "diod-shared");
     else if (s->jobid)
         r = _append_arg (s, "diod-jobid-%s", s->jobid);
@@ -283,8 +285,13 @@ _build_server_args (Server *s)
         r = _append_arg (s, "diod-uid-%lu", (unsigned long)s->uid);
     if (r < 0)
             goto done;
-    if (s->uid != 0 && _append_arg (s, "-u%d", s->uid) < 0)
-        goto done;
+    if (diod_conf_get_allsquash ()) {
+        if (diod_conf_opt_allsquash () && _append_arg (s, "-S") < 0)
+            goto done;
+    } else {
+        if (s->uid != 0 && _append_arg (s, "-u%d", s->uid) < 0)
+            goto done;
+    }
     if (_append_arg (s, "-F%d", s->nfds) < 0)
         goto done;
     if (diod_conf_opt_debuglevel ()) {

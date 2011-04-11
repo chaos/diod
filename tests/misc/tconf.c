@@ -58,9 +58,9 @@ dump_exports (void)
     if (!itr)
         msg_exit ("out of memory");
     while ((x = list_next (itr))) {
-        printf("path=%s opts=%s users=%s hosts=%s\n",
+        printf("path=%s opts=%s(0x%x) users=%s hosts=%s\n",
             x->path ? x->path : "NULL",
-            x->opts ? x->opts : "NULL",
+            x->opts ? x->opts : "NULL", x->opts ? x->oflags : 0,
             x->users ? x->users : "NULL",
             x->hosts ? x->hosts : "NULL");
     }

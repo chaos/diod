@@ -66,12 +66,14 @@
 #define OF_CONFIGPATH       0x0400
 #define OF_LOGDEST          0x0800
 #define OF_EXPORTALL        0x1000
+#define OF_ALLSQUASH        0x2000
 
 typedef struct {
     int          debuglevel;
     int          nwthreads;
     int          foreground;
     int          auth_required;
+    int          allsquash;
     uid_t        runasuid;
     char        *diodpath;
     List         diodlisten;
@@ -115,9 +117,17 @@ static Export *
 _create_export (void)
 {
     Export *x = malloc (sizeof (*x));
+    if (x)
+        memset (x, 0, sizeof (*x));
+    return x;
+}
+
+static Export *
+_xcreate_export (void)
+{
+    Export *x = _create_export ();
     if (!x)
         msg_exit ("out of memory");
-    memset (x, 0, sizeof (*x));
     return x;
 }
 
@@ -141,6 +151,7 @@ diod_conf_init (void)
     config.nwthreads = 16;
     config.foreground = 0;
     config.auth_required = 1;
+    config.allsquash = 0;
     config.runasuid = 0;
     config.diodpath = _xstrdup (X_SBINDIR "/diod");
     config.diodlisten = _xlist_create ((ListDelF)free);
@@ -212,6 +223,16 @@ void diod_conf_set_auth_required (int i)
     config.oflags |= OF_AUTH_REQUIRED;
 }
 
+/* allsquash - run server as nobody:nobody and remap all attaches
+ */
+int diod_conf_get_allsquash (void) { return config.allsquash; }
+int diod_conf_opt_allsquash (void) { return config.oflags & OF_ALLSQUASH; }
+void diod_conf_set_allsquash (int i)
+{
+    config.allsquash = i;
+    config.oflags |= OF_AUTH_REQUIRED;
+}
+
 /* runasuid - set to run server as one user (mount -o access=uid)
  */
 uid_t diod_conf_get_runasuid (void) { return config.runasuid; }
@@ -277,17 +298,19 @@ void diod_conf_set_exportall (int i)
     config.exportall = i;
     config.oflags |= OF_EXPORTALL;
 }
-List diod_conf_get_mounts (void) /* FIXME: ENOMEM is fatal */
+List diod_conf_get_mounts (void)
 {
-    List l = _xlist_create ((ListDelF)_destroy_export);
+    List l = NULL;
+    FILE *f = NULL;
     Export *x;
-    FILE *f;
     char *p, *path, buf[1024];
 
     if (!config.exportall)
-        goto done;
+        goto error;
+    if (!(l = list_create ((ListDelF)_destroy_export)))
+        goto error;
     if (!(f = fopen (_PATH_PROC_MOUNTS, "r")))
-        goto done;
+        goto error;
     while (fgets (buf, sizeof(buf), f) != NULL) {
         if (buf[strlen(buf) - 1] == '\n')
             buf[strlen(buf) - 1] = '\0';
@@ -297,13 +320,19 @@ List diod_conf_get_mounts (void) /* FIXME: ENOMEM is fatal */
         if (!(p = strchr (path, ' ')))
             continue;
         *p = '\0';
-        x = _create_export ();
+        if (!(x = _create_export ()))
+            goto error;
         x->path = _xstrdup (path);
         _xlist_append (l, x);
     }
     fclose (f);
-done:
     return l;
+error:
+    if (f)
+        fclose (f);
+    if (l)
+        list_destroy (l);
+    return NULL;
 }
 
 /* exports - list of paths of exported file systems
@@ -318,7 +347,7 @@ void diod_conf_clr_exports (void)
 }
 void diod_conf_add_exports (char *path)
 {
-    Export *x = _create_export ();
+    Export *x = _xcreate_export ();
     x->path = _xstrdup (path);
     _xlist_append (config.exports, x);
     config.oflags |= OF_EXPORTS;
@@ -337,8 +366,6 @@ void diod_conf_validate_exports (void)
             msg_exit ("exports should begin with '/'");
         if (strstr (x->path, "/..") != 0)
             msg_exit ("exports should not contain '/..'"); /* FIXME */
-        if (x->opts && strcmp (x->opts, "ro") != 0) /* FIXME */
-            msg_exit ("illegal export option(s): %s", x->opts);
     }
     list_iterator_destroy (itr);
 }
@@ -399,6 +426,26 @@ diod_conf_arm_sighup (void)
     }
 }
 
+static void
+_parse_expopt (char *s, int *fp)
+{
+    int flags = 0;
+    char *cpy, *item;
+    char *saveptr = NULL;
+
+    if (!(cpy = strdup (s)))
+        msg_exit ("out of memory");
+    item = strtok_r (cpy, ",", &saveptr);
+    while (item) {
+        if (!strcmp (item, "ro"))
+            flags |= XFLAGS_RO;
+        else
+            msg_exit ("unknown export option: %s", item);
+        item = strtok_r (NULL, ",", &saveptr);
+    }
+    free (cpy);
+    *fp = flags;
+}
 
 #ifdef HAVE_LUA_H
 static int
@@ -510,16 +557,18 @@ _lua_getglobal_exports (char *path, lua_State *L, List *lp)
             if (lua_isnil (L, -1))
                 break;
             if (lua_isstring (L, -1)) {
-                x = _create_export ();
+                x = _xcreate_export ();
                 x->path = _xstrdup ((char *)lua_tostring (L, -1));
                 _xlist_append (l, x);
             } else if (lua_istable(L, -1)) {
-                x = _create_export ();
+                x = _xcreate_export ();
                 _lua_get_expattr (path, i, L, "path", &x->path);
                 if (!x->path)
                     msg_exit ("%s: `exports[%d]' path is a required attribute",
                               path, i);
                 _lua_get_expattr (path, i, L, "opts", &x->opts);
+                if (x->opts)
+                    _parse_expopt (x->opts, &x->oflags);
                 _lua_get_expattr (path, i, L, "users", &x->users);
                 _lua_get_expattr (path, i, L, "hosts", &x->hosts);
                 /* FIXME: check for illegal export attributes */
@@ -574,6 +623,10 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.oflags & OF_AUTH_REQUIRED)) {
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
+        }
+        if (!(config.oflags & OF_ALLSQUASH)) {
+            _lua_getglobal_int (path, L, "allsquash",
+                                &config.allsquash);
         }
         if (!(config.oflags & OF_DIODCTLLISTEN)) {
             _lua_getglobal_list_of_strings (path, L, "diodctllisten",

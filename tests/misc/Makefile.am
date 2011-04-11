@@ -31,4 +31,4 @@ tfcntl_SOURCES = tfcntl.c $(common_sources)
 topt_SOURCES = topt.c $(common_sources) 
 tconf_SOURCES = tconf.c $(common_sources) 
 
-EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp)
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf

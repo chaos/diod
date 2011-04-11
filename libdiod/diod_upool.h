@@ -23,5 +23,6 @@
 
 int diod_switch_user (Npuser *u, gid_t gid_override);
 void diod_become_user (char *name, uid_t uid, int realtoo);
+void diod_become_squashuser (void);
 
 extern Npuserpool *diod_upool;

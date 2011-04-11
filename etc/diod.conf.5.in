@@ -47,9 +47,12 @@ Sets the number of worker threads created to handle 9P requests per \fBdiod\fR
 and \fBdiodctl\fR instance.  The default is 16.
 .TP
 .I "auth_required = 0"
-Allow clients to connect without authentication.
-This applies to both \fBdiodctl\fR and \fBdiod\fR, and is very insecure,
-only intended for testing.
+Allow clients to connect without authentication, i.e. without a valid
+munge credential.  This applies to both \fBdiodctl\fR and \fBdiod\fR.
+.TP
+.I "allsquash = 1"
+Remap all users to "nobody".
+The attaching user need not be present in the password file.
 .TP
 .I "logdest = DEST"
 Set the destination for logging.

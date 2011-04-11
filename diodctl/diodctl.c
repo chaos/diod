@@ -72,7 +72,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:nD:L:e:E"
+#define OPTIONS "fd:l:w:c:nSD:L:e:E"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -82,6 +82,7 @@ static const struct option longopts[] = {
     {"nwthreads",       required_argument,  0, 'w'},
     {"config-file",     required_argument,  0, 'c'},
     {"no-auth",         no_argument,        0, 'n'},
+    {"allsquash",       no_argument,        0, 'S'},
     {"diod-path",       required_argument,  0, 'D'},
     {"logdest",         required_argument,  0, 'L'},
     {"export",          required_argument,  0, 'e'},
@@ -103,6 +104,7 @@ usage()
 "   -w,--nwthreads INT     set number of diodctl worker threads\n"
 "   -c,--config-file FILE  set config file path\n"
 "   -n,--no-auth           disable authentication check\n"
+"   -S,--allsquash         remap all users to nobody\n"
 "   -D,--diod-path PATH    set path to diod executable\n"
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
@@ -170,6 +172,9 @@ main(int argc, char **argv)
                 break;
             case 'D':   /* --diod-path PATH */
                 diod_conf_set_diodpath (optarg);
+                break;
+            case 'S':   /* --allsquash */
+                diod_conf_set_allsquash (1);
                 break;
             case 'L':   /* --logdest DEST */
                 diod_conf_set_logdest (optarg);

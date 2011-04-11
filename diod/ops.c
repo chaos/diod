@@ -92,8 +92,6 @@
 
 #include "ops.h"
 
-#define XFLAGS_RO       0x01
-
 typedef struct {
     char            *path;
     int              fd;
@@ -512,22 +510,29 @@ _match_exports (char *path, Nptrans *trans, Npuser *user, int *xfp)
             continue;
         if (!_match_export_users (x, user))
             continue;
-        if (x->opts && strcmp (x->opts, "ro") == 0) /* FIXME */
-            *xfp |= XFLAGS_RO;
+        if (xfp)
+            *xfp = x->oflags;
         res = 1;
     }
     list_iterator_destroy (itr);
-    
+   
+    /* If 'exportall' option, check against /proc/mounts
+     */
     if (res == 0 && diod_conf_get_exportall ()) {
-        /* N.B. static exports should not be destroyed, but this one should */
-        exports = diod_conf_get_mounts ();
+        if (!(exports = diod_conf_get_mounts ())) {
+            np_uerror (ENOMEM);
+            goto done;
+        }
         if (!(itr = list_iterator_create (exports))) {
+            list_destroy (exports);
             np_uerror (ENOMEM);
             goto done;
         }
         while (res == 0 && (x = list_next (itr))) {
-            if (_match_export_path (x, path))
+            if (_match_export_path (x, path)) {
                 res = 1;
+                break;
+            }
         }
         list_iterator_destroy (itr);
         list_destroy (exports);
@@ -1411,6 +1416,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 
     /* utimes */
     if ((valid & P9_SETATTR_ATIME) || (valid & P9_SETATTR_MTIME)) {
+#if HAVE_UTIMENSAT
         struct timespec ts[2];
 
         if (!(valid & P9_SETATTR_ATIME)) {
@@ -1439,6 +1445,48 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             np_uerror(errno);
             goto done;
         }
+#else /* HAVE_UTIMENSAT */
+        struct timeval tv[2], now, *tvp;
+        /* N.B. utimes () loses for atomicity and precision.
+         */
+        if ((valid & P9_SETATTR_ATIME) && !(valid & P9_SETATTR_ATIME_SET)
+         && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
+            tvp = NULL; /* set both to now */
+        } else {
+            if (_fidstat(f) < 0)
+                goto done;
+            if (gettimeofday (&now, NULL) < 0) {
+                np_uerror (errno);
+                goto done;
+            }
+            if (!(valid & P9_SETATTR_ATIME)) {
+                tv[0].tv_sec = f->stat.st_atime;
+                tv[0].tv_usec = 0;
+            } else if (!(valid & P9_SETATTR_ATIME_SET)) {
+                tv[0].tv_sec = now.tv_sec;
+                tv[0].tv_usec = now.tv_usec;
+            } else {
+                tv[0].tv_sec = atime_sec;
+                tv[0].tv_usec = atime_nsec / 1000;
+            }
+
+            if (!(valid & P9_SETATTR_MTIME)) {
+                tv[1].tv_sec = f->stat.st_mtime;
+                tv[1].tv_usec = 0;
+            } else if (!(valid & P9_SETATTR_MTIME_SET)) {
+                tv[1].tv_sec = now.tv_sec;
+                tv[1].tv_usec = now.tv_usec;
+            } else {
+                tv[1].tv_sec = mtime_sec;
+                tv[1].tv_usec = mtime_nsec / 1000;
+            }
+            tvp = tv;
+        }
+        if (utimes (f->path, tvp) < 0) {
+            np_uerror(errno);
+            goto done;
+        }
+#endif
     }
 
     /* ctime - updated as a side effect of above changes.

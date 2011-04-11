@@ -56,6 +56,10 @@ int     diod_conf_get_auth_required (void);
 int     diod_conf_opt_auth_required (void);
 void    diod_conf_set_auth_required (int i);
 
+int     diod_conf_get_allsquash (void);
+int     diod_conf_opt_allsquash (void);
+void    diod_conf_set_allsquash (int i);
+
 uid_t   diod_conf_get_runasuid (void);
 int     diod_conf_opt_runasuid (void);
 void    diod_conf_set_runasuid (uid_t uid);
@@ -74,9 +78,12 @@ int     diod_conf_opt_diodctllisten (void);
 void    diod_conf_clr_diodctllisten (void);
 void    diod_conf_add_diodctllisten (char *s);
 
+#define XFLAGS_RO           0x01
+
 typedef struct {
     char         *path;
     char         *opts;
+    int          oflags;
     char         *users;
     char         *hosts;
 } Export;
