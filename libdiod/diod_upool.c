@@ -164,8 +164,10 @@ _alloc_duser (struct passwd *pwd)
 {
     Duser *d = NULL;
 
-    if (!(d = np_malloc (sizeof (*d))))
+    if (!(d = malloc (sizeof (*d)))) {
+        np_uerror (ENOMEM);
         goto done;
+    }
     d->magic = DUSER_MAGIC;
     if (!_getsg (pwd, d->sg, &d->nsg))
         np_uerror (errno);
@@ -230,8 +232,10 @@ _alloc_user (Npuserpool *up, struct passwd *pwd)
     Npuser *u;
     int err;
 
-    if (!(u = np_malloc (sizeof (*u))))
+    if (!(u = malloc (sizeof (*u)))) {
+        np_uerror (ENOMEM);
         goto done;
+    }
     if (!(u->aux = _alloc_duser (pwd)))
         goto done;
     if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
@@ -338,8 +342,10 @@ _alloc_group (Npuserpool *up, struct group *gr)
     Npgroup *g;
     int err;
 
-    if (!(g = np_malloc (sizeof (*g))))
+    if (!(g = malloc (sizeof (*g)))) {
+        np_uerror (ENOMEM);
         goto done;
+    }
     if ((err = pthread_mutex_init (&g->lock, NULL)) != 0) {
         np_uerror (err);
         goto done;

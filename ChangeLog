@@ -1,3 +1,13 @@
+2011-04-12 Jim Garlick <garlick@llnl.gov>
+
+	* libnpclient/fsys.c : Initialize np_uerror (0) in npc_create_fsys ().
+
+	* libnpfs/error.c : Handle ENOMEM when allocating thread specific data.
+
+	* libdiod/diod_upool.c, libnpfs/fidpool.c : Don't use np_malloc ().
+
+	* libnpfs/npfs.h, libnpfs/error.c : Drop np_malloc ().
+
 2011-04-11 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre20

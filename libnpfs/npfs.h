@@ -445,4 +445,3 @@ Nptrans *np_fdtrans_create(int, int);
 int np_rerror(void);
 void np_uerror(int ecode);
 
-void *np_malloc(int);

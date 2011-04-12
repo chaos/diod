@@ -54,6 +54,7 @@ npc_create_fsys(int fd, int msize)
 		return NULL;
 	}
 
+	np_uerror (0);
 	pthread_mutex_init(&fs->lock, NULL);
 	fs->fd = fd;
 	fs->msize = msize;

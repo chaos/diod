@@ -38,9 +38,11 @@ np_fidpool_create(void)
 {
 	Npfidpool *fp;
 
-	fp = np_malloc(sizeof(*fp) + FID_HTABLE_SIZE * sizeof(Npfid *));
-	if (!fp)
+	fp = malloc(sizeof(*fp) + FID_HTABLE_SIZE * sizeof(Npfid *));
+	if (!fp) {
+		np_uerror (ENOMEM);
 		return NULL;
+	}
 
 	pthread_mutex_init(&fp->lock, NULL);
 	fp->size = FID_HTABLE_SIZE;
@@ -129,8 +131,9 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 	hash = fid % FID_HTABLE_SIZE;
 	f = np_fid_lookup(fp, fid, hash);
 	if (!f) {
-		f = np_malloc(sizeof(*f));
+		f = malloc(sizeof(*f));
 		if (!f) {
+			np_uerror (ENOMEM);
 			pthread_mutex_unlock(&fp->lock);
 			return NULL;
 		}

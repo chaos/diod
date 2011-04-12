@@ -50,18 +50,6 @@ np_destroy_error(void *a)
 	free(err);
 }
 
-void *
-np_malloc(int size)
-{
-	void *ret;
-
-	ret = malloc(size);
-	if (!ret)
-		np_uerror(ENOMEM);
-
-	return ret;
-}
-
 static void
 np_init_error_key(void)
 {
@@ -77,10 +65,8 @@ np_uerror(int ecode)
 	err = pthread_getspecific(error_key);
 	if (!err) {
 		err = malloc(sizeof(*err));
-		if (!err) {
-			fprintf(stderr, "not enough memory\n");
+		if (!err)
 			return;
-		}
 		pthread_setspecific(error_key, err);
 	}
 	err->ecode = ecode;
@@ -94,6 +80,6 @@ np_rerror(void)
 	pthread_once(&error_once, np_init_error_key);
 	err = pthread_getspecific(error_key);
 
-	return err ? err->ecode : 0;
+	return err ? err->ecode : ENOMEM;
 }
 
