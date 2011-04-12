@@ -796,9 +796,12 @@ Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {
 		reqpool.reqnum--;
 	}
 	pthread_mutex_unlock(&reqpool.lock);
-	
-	if (!req)
+
+	if (!req) {
 		req = malloc(sizeof(*req));
+		if (!req)
+			return NULL;
+	}
 
 	np_conn_incref(conn);
 	pthread_mutex_init(&req->lock, NULL);

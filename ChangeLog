@@ -1,5 +1,7 @@
 2011-04-12 Jim Garlick <garlick@llnl.gov>
 
+	* libnpfs/srv.c, libnpfs/conn.c : Handle unchecked malloc () results.
+
 	* libnpfs/conn.c, libnpfs/npfs.h : Make np_conn_reset () static.
 	Handle unchecked malloc () results.  Clean up debugprintf () usage.
 

@@ -164,6 +164,8 @@ again:
 		n -= size;
 
 		req = np_req_alloc(conn, fc);
+		if (!req)
+			break; /* FIXME */
 		pthread_mutex_lock(&srv->lock);
 		if (!conn->resetting)
 			np_srv_add_req(srv, req);
