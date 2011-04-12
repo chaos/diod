@@ -1,5 +1,11 @@
 2011-04-12 Jim Garlick <garlick@llnl.gov>
 
+	* libnpfs/conn.c, libnpfs/npfs.h : Make np_conn_reset () static.
+	Handle unchecked malloc () results.  Clean up debugprintf () usage.
+
+	* libnpfs/npfsimpl.h, libnpfs/fmt.c : Drop np_dump (), np_dumpdata (),
+	and np_printfcall (). 
+
 	* libnpclient/fsys.c : Initialize np_uerror (0) in npc_create_fsys ().
 
 	* libnpfs/error.c : Handle ENOMEM when allocating thread specific data.

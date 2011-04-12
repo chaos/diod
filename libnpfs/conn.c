@@ -34,11 +34,10 @@
 #include "npfs.h"
 #include "npfsimpl.h"
 
-extern int printfcall(FILE *f, Npfcall *fc, int dotu);
-
 static Npfcall *np_conn_new_incall(Npconn *conn);
 static void np_conn_free_incall(Npconn *, Npfcall *, int);
 static void *np_conn_read_proc(void *);
+static void np_conn_reset(Npconn *conn, u32 msize);
 
 Npconn*
 np_conn_create(Npsrv *srv, Nptrans *trans)
@@ -128,7 +127,7 @@ np_conn_read_proc(void *a)
 	msize = conn->msize;
 	fc = np_conn_new_incall(conn);
 	n = 0;
-	while (conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, msize - n)) > 0) {
+	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, msize - n)) > 0) {
 		pthread_mutex_lock(&conn->lock);
 		if (conn->resetting) {
 			pthread_cond_wait(&conn->resetdonecond, &conn->lock);
@@ -150,17 +149,16 @@ again:
 			break;
 
 		if ((conn->srv->debuglevel & DEBUG_9P_TRACE)
-		 && conn->srv->debugprintf) {
+		 				&& conn->srv->debugprintf) {
 			char s[1024];
-			int n = 0;
-			int len = sizeof(s);
 			
-			//n += snprintf(s+n, len-n, "<<< (%p) ", conn);
-			n += np_snprintfcall(s+n, len-n, fc);
+			np_snprintfcall(s, sizeof (s), fc);
 			conn->srv->debugprintf(s);
 		}
 
 		fc1 = np_conn_new_incall(conn);
+		if (!fc1)
+			break; /* FIXME */
 		if (n > size)
 			memmove(fc1->pkt, fc->pkt + size, n - size);
 		n -= size;
@@ -194,7 +192,7 @@ again:
 	return NULL;
 }
 
-void
+static void
 np_conn_reset(Npconn *conn, u32 msize)
 {
 	int i, n;
@@ -232,6 +230,8 @@ np_conn_reset(Npconn *conn, u32 msize)
 	}
 
 	reqs = malloc(n * sizeof(Npreq *));
+	if (!reqs) /* FIXME: bailing out here is probably wrong */
+		return;
 	n = 0;
 	req = conn->srv->workreqs;
 	while (req != NULL) {
@@ -345,13 +345,9 @@ np_conn_respond(Npreq *req)
 	if (send) {
 		pthread_mutex_lock(&conn->wlock);
 		if ((conn->srv->debuglevel & DEBUG_9P_TRACE)
-		 && conn->srv->debugprintf) {
-			char s[1024];
-			int n = 0;
-			int len = sizeof(s);
-			
-			//n += snprintf(s+n, len-n, ">>> (%p) ", conn);
-			n += np_snprintfcall(s+n, len-n, rc);
+		 				&& conn->srv->debugprintf) {
+			char s[1024]; /* FIXME: user/t09 segfaults if =256 */
+			np_snprintfcall(s, sizeof (s), rc);
 			conn->srv->debugprintf(s);
 		}
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);

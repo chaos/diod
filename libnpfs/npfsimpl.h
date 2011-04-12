@@ -57,9 +57,6 @@ Npfcall *np_aread(Npreq *req, Npfcall *tc);
 Npfcall *np_awrite(Npreq *req, Npfcall *tc);
 #endif
 
-/* fmt.c */
-int np_dump(FILE *f, u8 *data, int datalen);
-
 /* srv.c */
 void np_srv_add_req(Npsrv *srv, Npreq *req);
 void np_srv_remove_req(Npsrv *srv, Npreq *req);

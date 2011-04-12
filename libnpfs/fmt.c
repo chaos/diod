@@ -46,10 +46,9 @@ np_printstr(char *s, int len, char *label, Npstr *str)
 static int
 np_printqid(char *s, int len, Npqid *q)
 {
-	int n;
+	int n = 0;
 	char buf[10];
 
-	n = 0;
 	if (q->type & P9_QTDIR)
 		buf[n++] = 'd';
 	if (q->type & P9_QTAPPEND)
@@ -82,7 +81,6 @@ np_sndump(char *s, int len, u8 *data, int datalen)
 
 		i++;
 	}
-	//n += snprintf(s + n, len - n, "\n");
 
 	return n;
 }
@@ -183,12 +181,6 @@ np_printlockstatus(char *s, int len, u8 status)
 			break;
 	}
 	return n;
-}
-
-int
-np_dumpdata(char *s, int len, u8 *buf, int buflen)
-{
-	return np_sndump(s, len, buf, buflen);
 }
 
 int
@@ -620,14 +612,4 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	}
 
 	return n;
-}
-
-int
-np_printfcall(FILE *f, Npfcall *fc)
-{
-	char s[256];
-
-	np_snprintfcall (s, sizeof(s), fc);
-
-	return fprintf (f, "%s", s);
 }

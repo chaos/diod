@@ -332,7 +332,6 @@ void np_buf_set(Npbuf *, u8 *, u32);
 Npconn *np_conn_create(Npsrv *, Nptrans *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
-void np_conn_reset(Npconn *, u32);
 void np_conn_shutdown(Npconn *);
 void np_conn_respond(Npreq *req);
 void np_respond(Npreq *, Npfcall *);
@@ -430,7 +429,6 @@ Npfcall *np_create_rlink(void);
 Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
 Npfcall *np_create_rmkdir(struct p9_qid *qid);
 
-int np_printfcall(FILE *f, Npfcall *fc);
 int np_snprintfcall(char *s, int len, Npfcall *fc);
 
 void np_user_incref(Npuser *);
