@@ -426,6 +426,7 @@ diod_conf_arm_sighup (void)
     }
 }
 
+#ifdef HAVE_LUA_H
 static void
 _parse_expopt (char *s, int *fp)
 {
@@ -447,7 +448,6 @@ _parse_expopt (char *s, int *fp)
     *fp = flags;
 }
 
-#ifdef HAVE_LUA_H
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
