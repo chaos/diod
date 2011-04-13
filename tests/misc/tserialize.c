@@ -46,6 +46,7 @@ static void test_tflush (void);         static void test_rflush (void);
 static void test_tattach (void);        static void test_rattach (void);
 static void test_twalk (void);          static void test_rwalk (void);
 static void test_tread (void);          static void test_rread (void);
+static void test_twrite (void);         static void test_rwrite (void);
 
 static void test_tclunk (void);         static void test_rclunk (void);
 static void test_tremove (void);        static void test_rremove (void);
@@ -96,7 +97,7 @@ main (int argc, char *argv[])
     test_tattach ();    test_rattach ();
     test_twalk ();      test_rwalk ();
     test_tread ();      test_rread ();
-    //test_twrite ();     test_rwrite ();
+    test_twrite ();     test_rwrite ();
     test_tclunk ();     test_rclunk ();
     test_tremove ();    test_rremove ();
 
@@ -796,6 +797,37 @@ test_rread (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     np_set_rread_count (fc, sizeof (buf));
     fc2 = _rcv_buf (fc, P9_RREAD, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_twrite (void)
+{
+    Npfcall *fc, *fc2;
+    u8 buf[128];
+
+    if (!(fc = np_create_twrite (1, 2, sizeof (buf), buf)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TWRITE, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rwrite (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rwrite (1)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RWRITE, __FUNCTION__);
 
     /* FILL IN */
 

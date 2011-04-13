@@ -39,6 +39,8 @@ test_twalk(110): 37
 test_rwalk(111): 61
 test_tread(116): 23
 test_rread(117): 139
+test_twrite(118): 151
+test_rwrite(119): 11
 test_tclunk(120): 11
 test_rclunk(121): 7
 test_tremove(122): 11

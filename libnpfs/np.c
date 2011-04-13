@@ -581,13 +581,12 @@ np_create_rread(u32 count, u8* data)
 void
 np_set_rread_count(Npfcall *fc, u32 count)
 {
-	int size;
+	int size = sizeof(u32) + sizeof(u8) + sizeof(u16)
+		 + sizeof(u32) + count;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
 	assert(count <= fc->u.rread.count);
-	bufp = &buffer;
-	size = 4 + 1 + 2 + 4 + count; /* size[4] id[1] tag[2] count[4] data[count] */
 
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
@@ -598,14 +597,11 @@ np_set_rread_count(Npfcall *fc, u32 count)
 Npfcall *
 np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
 {
-        int size;
+        int size = sizeof(u32) + sizeof(u64) + sizeof(u32) + count;
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
-        void *p;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 4 + 8 + 4 + count; /* fid[4] offset[8] count[4] data[count] */
         fc = np_create_common(bufp, size, P9_TWRITE);
         if (!fc)
                 return NULL;
@@ -613,8 +609,7 @@ np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
         buf_put_int32(bufp, fid, &fc->u.twrite.fid);
         buf_put_int64(bufp, offset, &fc->u.twrite.offset);
         buf_put_int32(bufp, count, &fc->u.twrite.count);
-        p = buf_alloc(bufp, count);
-        fc->u.twrite.data = p;
+        fc->u.twrite.data = buf_alloc(bufp, count);
         if (fc->u.twrite.data)
                 memmove(fc->u.twrite.data, data, count);
 
@@ -624,13 +619,11 @@ np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
 Npfcall *
 np_create_rwrite(u32 count)
 {
-	int size;
+	int size = sizeof(u32);
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 4; /* count[4] */
 	fc = np_create_common(bufp, size, P9_RWRITE);
 	if (!fc)
 		return NULL;
@@ -643,32 +636,28 @@ np_create_rwrite(u32 count)
 Npfcall *
 np_create_tclunk(u32 fid)
 {
-        int size;
+        int size = sizeof(u32);
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 4;       /* fid[4] */
         fc = np_create_common(bufp, size, P9_TCLUNK);
         if (!fc)
                 return NULL;
 
         buf_put_int32(bufp, fid, &fc->u.tclunk.fid);
+
         return np_post_check(fc, bufp);
 }
 
 Npfcall *
 np_create_rclunk(void)
 {
-	int size;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, P9_RCLUNK);
+	fc = np_create_common(bufp, 0, P9_RCLUNK);
 	if (!fc)
 		return NULL;
 
@@ -678,32 +667,30 @@ np_create_rclunk(void)
 Npfcall *
 np_create_tremove(u32 fid)
 {
-        int size;
+        int size = sizeof(u32);
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 4;       /* fid[4] */
         fc = np_create_common(bufp, size, P9_TREMOVE);
         if (!fc)
                 return NULL;
 
         buf_put_int32(bufp, fid, &fc->u.tremove.fid);
+
         return np_post_check(fc, bufp);
 }
 
 Npfcall *
 np_create_rremove(void)
 {
-	int size;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, P9_RREMOVE);
+	fc = np_create_common(bufp, 0, P9_RREMOVE);
+	if (!fc)
+		return NULL;
 
 	return np_post_check(fc, bufp);
 }
