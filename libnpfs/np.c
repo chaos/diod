@@ -367,15 +367,13 @@ np_create_rversion(u32 msize, char *version)
 Npfcall *
 np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
 {
-        int size = sizeof(fid) + 2 + 2 + sizeof(n_uname);
+        int size = sizeof(u32)
+		 + sizeof(u16) + (uname ? strlen (uname) : 0)
+		 + sizeof(u16) + (aname ? strlen (aname) : 0)
+		 + sizeof(u32);
         Npfcall *fc;
         struct cbuf buffer;
         struct cbuf *bufp = &buffer;
-
-        if (uname)
-                size += strlen(uname);
-        if (aname)
-                size += strlen(aname);
 
         fc = np_create_common(bufp, size, P9_TAUTH);
         if (!fc)
@@ -402,19 +400,18 @@ np_create_rauth(Npqid *aqid)
 		return NULL;
 
 	buf_put_qid(bufp, aqid, &fc->u.rauth.qid);
+
 	return np_post_check(fc, bufp);
 }
 
 Npfcall *
 np_create_tflush(u16 oldtag)
 {
-        int size;
+        int size = sizeof(u16);
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 2;
         fc = np_create_common(bufp, size, P9_TFLUSH);
         if (!fc)
                 return NULL;
@@ -427,14 +424,11 @@ np_create_tflush(u16 oldtag)
 Npfcall *
 np_create_rflush(void)
 {
-	int size;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 0;
-	fc = np_create_common(bufp, size, P9_RFLUSH);
+	fc = np_create_common(bufp, 0, P9_RFLUSH);
 	if (!fc)
 		return NULL;
 
@@ -444,15 +438,13 @@ np_create_rflush(void)
 Npfcall *
 np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
 {
-        int size = sizeof(fid) + sizeof(afid) + 2 + 2 + sizeof(n_uname);
+        int size = 2*sizeof(u32)
+		 + sizeof(u16) + (uname ? strlen(uname) : 0)
+		 + sizeof(u16) + (aname ? strlen(aname) : 0)
+		 + sizeof(u32);
         struct cbuf buffer;
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
-
-        if (uname)
-                size += strlen(uname);
-        if (aname)
-                size += strlen(aname);
 
         fc = np_create_common(bufp, size, P9_TATTACH);
         if (!fc)
@@ -470,39 +462,35 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
 Npfcall *
 np_create_rattach(Npqid *qid)
 {
-	int size;
+	int size = QIDSIZE;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = QIDSIZE; /* qid[13] */
 	fc = np_create_common(bufp, size, P9_RATTACH);
 	if (!fc)
 		return NULL;
 
 	buf_put_qid(bufp, qid, &fc->u.rattach.qid);
+
 	return np_post_check(fc, bufp);
 }
 
 Npfcall *
 np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
 {
-        int i, size;
+	int size = 2*sizeof(u32) + sizeof(u16);
+        int i;
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
         if (nwname > P9_MAXWELEM) {
                 fprintf(stderr, "nwqid > P9_MAXWELEM\n");
                 return NULL;
         }
-
-        bufp = &buffer;
-        size = 4 + 4 + 2 + nwname * 2; /* fid[4] newfid[4] nwname[2] nwname*wname[s] */
         for(i = 0; i < nwname; i++)
-                size += strlen(wnames[i]);
-
+                size += sizeof(u16) + strlen(wnames[i]);
         fc = np_create_common(bufp, size, P9_TWALK);
         if (!fc)
                 return NULL;
@@ -519,18 +507,16 @@ np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
 Npfcall *
 np_create_rwalk(int nwqid, Npqid *wqids)
 {
-	int i, size;
+	int size = sizeof(u16) + nwqid*QIDSIZE;
+	int i;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
+	struct cbuf *bufp = &buffer;
 
 	if (nwqid > P9_MAXWELEM) {
 		fprintf(stderr, "nwqid > P9_MAXWELEM\n");
 		return NULL;
 	}
-
-	bufp = &buffer;
-	size = 2 + nwqid*QIDSIZE; /* nwqid[2] nwqid*wqid[13] */
 	fc = np_create_common(bufp, size, P9_RWALK);
 	if (!fc)
 		return NULL;
@@ -546,13 +532,11 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 Npfcall *
 np_create_tread(u32 fid, u64 offset, u32 count)
 {
-        int size;
+        int size = sizeof(u32) + sizeof(u64) + sizeof(u32);
         Npfcall *fc;
         struct cbuf buffer;
-        struct cbuf *bufp;
+        struct cbuf *bufp = &buffer;
 
-        bufp = &buffer;
-        size = 4 + 8 + 4; /* fid[4] offset[8] count[4] */
         fc = np_create_common(bufp, size, P9_TREAD);
         if (!fc)
                 return NULL;
@@ -560,27 +544,24 @@ np_create_tread(u32 fid, u64 offset, u32 count)
         buf_put_int32(bufp, fid, &fc->u.tread.fid);
         buf_put_int64(bufp, offset, &fc->u.tread.offset);
         buf_put_int32(bufp, count, &fc->u.tread.count);
+
         return np_post_check(fc, bufp);
 }
 
 Npfcall *
 np_alloc_rread(u32 count)
 {
-	int size;
+	int size = sizeof(u32) + count;
 	Npfcall *fc;
 	struct cbuf buffer;
-	struct cbuf *bufp;
-	void *p;
+	struct cbuf *bufp = &buffer;
 
-	bufp = &buffer;
-	size = 4 + count; /* count[4] data[count] */
 	fc = np_create_common(bufp, size, P9_RREAD);
 	if (!fc)
 		return NULL;
 
 	buf_put_int32(bufp, count, &fc->u.rread.count);
-	p = buf_alloc(bufp, count);
-	fc->u.rread.data = p;
+	fc->u.rread.data = buf_alloc(bufp, count);
 
 	return np_post_check(fc, bufp);
 }
@@ -1238,6 +1219,21 @@ np_finalize_rreaddir(Npfcall *fc, u32 count)
 }
 
 Npfcall *
+np_create_tfsync(u32 fid)
+{
+	int size = sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TFSYNC)))
+		return NULL;
+	buf_put_int32(bufp, fid, &fc->u.tfsync.fid);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rfsync(void)
 {
 	Npfcall *fc;
@@ -1246,6 +1242,29 @@ np_create_rfsync(void)
 
 	if (!(fc = np_create_common(bufp, 0, P9_RFSYNC)))
 		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tlock(u32 fid, u8 type, u32 flags, u64 start, u64 length,
+                u32 proc_id, char *client_id)
+{
+	int size = sizeof(u32) + sizeof(u8) + sizeof(u32) + 2*sizeof(u64)
+		 + sizeof(u32) + sizeof(u16) + strlen(client_id);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TLOCK)))
+		return NULL;
+	buf_put_int32(bufp, fid, &fc->u.tlock.fid);
+	buf_put_int8(bufp, type, &fc->u.tlock.type);
+	buf_put_int32(bufp, flags, &fc->u.tlock.flags);
+	buf_put_int64(bufp, start, &fc->u.tlock.start);
+	buf_put_int64(bufp, length, &fc->u.tlock.length);
+	buf_put_int32(bufp, proc_id, &fc->u.tlock.proc_id);
+	buf_put_str(bufp, client_id, &fc->u.tlock.client_id);
 
 	return np_post_check(fc, bufp);
 }
@@ -1266,10 +1285,32 @@ np_create_rlock(u8 status)
 }
 
 Npfcall *
+np_create_tgetlock(u32 fid, u8 type, u64 start, u64 length, u32 proc_id,
+                   char *client_id)
+{
+	int size = sizeof(u32) + sizeof(u8) + 2*sizeof(u64) + sizeof(u32)
+		 + sizeof(u16) + strlen(client_id);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TGETLOCK)))
+		return NULL;
+	buf_put_int32(bufp, fid, &fc->u.tgetlock.fid);
+	buf_put_int8(bufp, type, &fc->u.tgetlock.type);
+	buf_put_int64(bufp, start, &fc->u.tgetlock.start);
+	buf_put_int64(bufp, length, &fc->u.tgetlock.length);
+	buf_put_int32(bufp, proc_id, &fc->u.tgetlock.proc_id);
+	buf_put_str(bufp, client_id, &fc->u.tgetlock.client_id);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rgetlock(u8 type, u64 start, u64 length, u32 proc_id, char *client_id)
 {
-	int size = sizeof(u8) + sizeof(u64) + sizeof(u64) + sizeof(u32)
-			+ strlen(client_id) + 2;
+	int size = sizeof(u8) + 2*sizeof(u64) + sizeof(u32)
+		 + sizeof(u16) + strlen(client_id);
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -1281,6 +1322,23 @@ np_create_rgetlock(u8 type, u64 start, u64 length, u32 proc_id, char *client_id)
 	buf_put_int64(bufp, length, &fc->u.rgetlock.length);
 	buf_put_int32(bufp, proc_id, &fc->u.rgetlock.proc_id);
 	buf_put_str(bufp, client_id, &fc->u.rgetlock.client_id);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tlink(u32 dfid, u32 fid, char *name)
+{
+	int size = 2*sizeof(u32) + sizeof(u16) + strlen(name);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TLINK)))
+		return NULL;
+	buf_put_int32(bufp, dfid, &fc->u.tlink.dfid);
+	buf_put_int32(bufp, fid, &fc->u.tlink.fid);
+	buf_put_str(bufp, name, &fc->u.tlink.name);
 
 	return np_post_check(fc, bufp);
 }

@@ -18,6 +18,7 @@ t04	Demonstrate that fcntl advisory locking does not treat threads
 	of multiple remote processes.
 t05	Unit test for diodmount option handling module.
 t06	Unit test for parsing diod.conf.
-t07	Use valgrind to check for leaks in libnpfs serialize/deserialize
+t07(+)	Use valgrind to check for leaks in libnpfs serialize/deserialize
 
-(*) Requires root, will be marked as NOTRUN if run as an unprivileged user.
+(*) NOTRUN if not run as root
+(+) NOTRUN if valgrind is not installed

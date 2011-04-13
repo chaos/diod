@@ -34,7 +34,21 @@ static void test_treadlink (void);      static void test_rreadlink (void);
 static void test_tgetattr (void);       static void test_rgetattr (void);
 static void test_tsetattr (void);       static void test_rsetattr (void);
 
+static void test_tfsync (void);         static void test_rfsync (void);
+static void test_tlock (void);          static void test_rlock (void);
+static void test_tgetlock (void);       static void test_rgetlock (void);
+static void test_tlink (void);          static void test_rlink (void);
+static void test_tmkdir (void);         static void test_rmkdir (void);
+
 static void test_tversion (void);       static void test_rversion (void);
+static void test_tauth (void);          static void test_rauth (void);
+static void test_tflush (void);         static void test_rflush (void);
+static void test_tattach (void);        static void test_rattach (void);
+static void test_twalk (void);          static void test_rwalk (void);
+static void test_tread (void);          static void test_rread (void);
+
+static void test_tclunk (void);         static void test_rclunk (void);
+static void test_tremove (void);        static void test_rremove (void);
 
 static void
 usage (void)
@@ -67,24 +81,24 @@ main (int argc, char *argv[])
     test_txattrcreate (); test_rxattrcreate ();
 #endif
     //test_treaddir ();   test_rreaddir ();
-    //test_tfsync ();     test_rfsync ();
-    //test_tlock ();      test_rlock ();
-    //test_tgetlock ();   test_rgetlock ();
-    //test_tlink ();      test_rlink ();
-    //test_tmkdir ();     test_rmkdir ();
+    test_tfsync ();     test_rfsync ();
+    test_tlock ();      test_rlock ();
+    test_tgetlock ();   test_rgetlock ();
+    test_tlink ();      test_rlink ();
+    test_tmkdir ();     test_rmkdir ();
 #if HAVE_LARGEIO
     //test_tawrite ();    test_rawrite ();
     //test_taread ();     test_raread ();
 #endif
     test_tversion ();   test_rversion ();
-    //test_tauth ();      test_rauth ();
-    //test_tflush ();     test_rflush ();
-    //test_tattach ();    test_rattach ();
-    //test_twalk ();      test_rwalk ();
-    //test_tread ();      test_rread ();
+    test_tauth ();      test_rauth ();
+    test_tflush ();     test_rflush ();
+    test_tattach ();    test_rattach ();
+    test_twalk ();      test_rwalk ();
+    test_tread ();      test_rread ();
     //test_twrite ();     test_rwrite ();
-    //test_tclunk ();     test_rclunk ();
-    //test_tremove ();    test_rremove ();
+    test_tclunk ();     test_rclunk ();
+    test_tremove ();    test_rremove ();
 
     exit (0);
 }
@@ -442,6 +456,153 @@ test_rsetattr (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RSETATTR,  __FUNCTION__);
 
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tfsync (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tfsync(1)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TFSYNC,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rfsync (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rfsync()))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RFSYNC,  __FUNCTION__);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tlock (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tlock (1, 2, 3, 4, 5, 6, "xyz")))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TLOCK,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rlock (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rlock (1)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RLOCK,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tgetlock (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tgetlock (1, 2, 3, 4, 5, "xyz")))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TGETLOCK,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rgetlock (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rgetlock (1, 2, 3, 4, "xyz")))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RGETLOCK,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tlink (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tlink (1, 2, "xyz")))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TLINK,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rlink (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rlink ()))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RLINK,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tmkdir (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tmkdir (1, "abc", 2, 3)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TMKDIR,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rmkdir (void)
+{
+    Npfcall *fc, *fc2;
+    struct p9_qid qid = { 1, 2, 3 };
+
+    if (!(fc = np_create_rmkdir (&qid)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RMKDIR,  __FUNCTION__);
+
     /* FILL IN */
 
     free (fc);
@@ -480,6 +641,227 @@ test_rversion (void)
     free (fc2);
 }
 
+static void
+test_tauth (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tauth (1, "abc", "xyz", 4)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TAUTH, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rauth (void)
+{
+    Npfcall *fc, *fc2;
+    struct p9_qid qid = { 1, 2, 3 };
+
+    if (!(fc = np_create_rauth (&qid)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RAUTH, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tflush (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tflush (1)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TFLUSH, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rflush (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rflush ()))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RFLUSH, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tattach (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tattach (1, 2, "abc", "xyz", 5)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TATTACH, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rattach (void)
+{
+    Npfcall *fc, *fc2;
+    struct p9_qid qid = { 1, 2, 3 };
+
+    if (!(fc = np_create_rattach (&qid)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RATTACH, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_twalk (void)
+{
+    Npfcall *fc, *fc2;
+    char *wnames[4] = {
+        "abc", "def", "ghi", "jkl",
+    };
+
+    if (!(fc = np_create_twalk (1, 2, 4, wnames)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TWALK, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rwalk (void)
+{
+    Npfcall *fc, *fc2;
+    struct p9_qid wqids [4] = { 
+        { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
+    };
+
+    if (!(fc = np_create_rwalk (4, wqids)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RWALK, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tread (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tread (1, 2, 3)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TREAD, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rread (void)
+{
+    Npfcall *fc, *fc2;
+    u8 buf[128];
+
+    memset (buf, 0xf0, sizeof(buf));
+
+    if (!(fc = np_create_rread (sizeof (buf), buf)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    np_set_rread_count (fc, sizeof (buf));
+    fc2 = _rcv_buf (fc, P9_RREAD, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tclunk (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tclunk (1)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TCLUNK, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rclunk (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rclunk ()))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RCLUNK, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tremove (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tremove (1)))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_TREMOVE, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rremove (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rremove ()))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RREMOVE, __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
