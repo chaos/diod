@@ -860,6 +860,23 @@ np_create_rlerror(u32 ecode)
 }
 
 Npfcall *
+np_create_tstatfs(u32 fid)
+{
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	int size = sizeof(u32);
+	Npfcall *fc; 
+
+	if (!(fc = np_create_common(bufp, size, P9_TSTATFS)))
+		return NULL;
+
+	buf_put_int32(bufp, fid,    &fc->u.tstatfs.fid);	
+
+	return np_post_check(fc, bufp);
+}
+
+
+Npfcall *
 np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 files, u64 ffree, u64 fsid, u32 namelen)
 {
 	struct cbuf buffer;
@@ -955,6 +972,25 @@ np_create_rlcreate(struct p9_qid *qid, u32 iounit)
 }
 
 Npfcall *
+np_create_tsymlink(u32 fid, char *name, char *symtgt, u32 gid)
+{
+	int size = sizeof(u32) + sizeof(u16) + strlen(name)
+		 + sizeof(u16) + strlen(symtgt) + sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TSYMLINK)))
+		return NULL;
+        buf_put_int32(bufp, fid, &fc->u.tsymlink.fid);
+        buf_put_str(bufp, name, &fc->u.tsymlink.name);
+        buf_put_str(bufp, symtgt, &fc->u.tsymlink.symtgt);
+        buf_put_int32(bufp, gid, &fc->u.tsymlink.gid);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rsymlink(struct p9_qid *qid)
 {
 	int size = QIDSIZE;
@@ -965,6 +1001,27 @@ np_create_rsymlink(struct p9_qid *qid)
 	if (!(fc = np_create_common(bufp, size, P9_RSYMLINK)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rsymlink.qid);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tmknod (u32 fid, char *name, u32 mode, u32 major, u32 minor, u32 gid)
+{
+	int size = sizeof(u32) + sizeof(u16) + strlen(name)
+		 + sizeof(u32) + sizeof(u32) + sizeof(u32) + sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TMKNOD)))
+		return NULL;
+        buf_put_int32(bufp, fid, &fc->u.tmknod.fid);
+        buf_put_str(bufp, name, &fc->u.tmknod.name);
+        buf_put_int32(bufp, mode, &fc->u.tmknod.mode);
+        buf_put_int32(bufp, major, &fc->u.tmknod.major);
+        buf_put_int32(bufp, minor, &fc->u.tmknod.minor);
+        buf_put_int32(bufp, gid, &fc->u.tmknod.gid);
 
 	return np_post_check(fc, bufp);
 }
@@ -985,6 +1042,23 @@ np_create_rmknod (struct p9_qid *qid)
 }
 
 Npfcall *
+np_create_trename(u32 fid, u32 dfid, char *name)
+{
+	int size = sizeof(u32) + sizeof(u32) + sizeof(u16) + strlen(name);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TRENAME)))
+		return NULL;
+        buf_put_int32(bufp, fid, &fc->u.trename.fid);
+        buf_put_int32(bufp, dfid, &fc->u.trename.dfid);
+        buf_put_str(bufp, name, &fc->u.trename.name);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_rrename(void)
 {
 	Npfcall *fc;
@@ -996,6 +1070,22 @@ np_create_rrename(void)
 
 	return np_post_check(fc, bufp);
 }
+
+Npfcall *
+np_create_treadlink (u32 fid)
+{
+	int size = sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TREADLINK)))
+		return NULL;
+        buf_put_int32(bufp, fid, &fc->u.treadlink.fid);
+
+	return np_post_check(fc, bufp);
+}
+
 
 Npfcall *
 np_create_rreadlink(char *target)
@@ -1066,6 +1156,31 @@ np_create_rgetattr(u64 valid, struct p9_qid *qid, u32 mode,
 	buf_put_int64(bufp, btime_nsec, &fc->u.rgetattr.btime_nsec);
 	buf_put_int64(bufp, gen, &fc->u.rgetattr.gen);
 	buf_put_int64(bufp, data_version, &fc->u.rgetattr.data_version);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tsetattr(u32 fid, u32 valid, u32 mode, u32 uid, u32 gid,
+	 u64 size, u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
+{
+	int bufsize = 5*sizeof(u32) + 5*sizeof(u64);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, bufsize, P9_TSETATTR)))
+		return NULL;
+	buf_put_int32(bufp, fid, &fc->u.tsetattr.fid);
+	buf_put_int32(bufp, valid, &fc->u.tsetattr.valid);
+	buf_put_int32(bufp, mode, &fc->u.tsetattr.mode);
+	buf_put_int32(bufp, uid, &fc->u.tsetattr.uid);
+	buf_put_int32(bufp, gid, &fc->u.tsetattr.gid);
+	buf_put_int64(bufp, size, &fc->u.tsetattr.size);
+	buf_put_int64(bufp, atime_sec, &fc->u.tsetattr.atime_sec);
+	buf_put_int64(bufp, atime_nsec, &fc->u.tsetattr.atime_nsec);
+	buf_put_int64(bufp, mtime_sec, &fc->u.tsetattr.mtime_sec);
+	buf_put_int64(bufp, mtime_nsec, &fc->u.tsetattr.mtime_nsec);
 
 	return np_post_check(fc, bufp);
 }

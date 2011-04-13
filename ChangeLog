@@ -1,7 +1,8 @@
 2011-04-13 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/np.c : Fix problem with too large wire size found
-	by valgrind (issue 20).
+	by valgrind (issue 20).  Add some missing .L message creation
+	functions.
 
 	* tests/misc/t07*, tests/misc/tserialize.c : New valgrind test for
 	serialize/deserialize functions.

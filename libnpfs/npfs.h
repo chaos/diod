@@ -414,7 +414,9 @@ Npfcall *np_create_rgetattr(u64 valid, struct p9_qid *qid,
                 u64 ctime_sec, u64 ctime_nsec,
                 u64 btime_sec, u64 btime_nsec,
                 u64 gen, u64 data_version);
-Npfcall *np_create_tsetattr(u32 fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size);
+Npfcall *np_create_tsetattr(u32 fid, u32 valid, u32 mode, u32 uid, u32 gid,
+			    u64 size, u64 atime_sec, u64 atime_nsec,
+                            u64 mtime_sec, u64 mtime_nsec);
 Npfcall *np_create_rsetattr(void);
 Npfcall *np_create_treaddir(u32 fid, u64 offset, u32 count);
 Npfcall *np_create_rreaddir(u32 count);
