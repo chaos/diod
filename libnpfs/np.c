@@ -34,6 +34,9 @@
 #include "npfs.h"
 #include "npfsimpl.h"
 
+/* wire sizes */
+#define QIDSIZE (sizeof(u8) + sizeof(u32) + sizeof(u64))
+
 struct cbuf {
 	unsigned char *sp;
 	unsigned char *p;
@@ -389,7 +392,7 @@ np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
 Npfcall *
 np_create_rauth(Npqid *aqid)
 {
-	int size = sizeof(*aqid);
+	int size = QIDSIZE;
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -473,7 +476,7 @@ np_create_rattach(Npqid *qid)
 	struct cbuf *bufp;
 
 	bufp = &buffer;
-	size = 13; /* qid[13] */
+	size = QIDSIZE; /* qid[13] */
 	fc = np_create_common(bufp, size, P9_RATTACH);
 	if (!fc)
 		return NULL;
@@ -527,7 +530,7 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 	}
 
 	bufp = &buffer;
-	size = 2 + nwqid*13; /* nwqid[2] nwqid*wqid[13] */
+	size = 2 + nwqid*QIDSIZE; /* nwqid[2] nwqid*wqid[13] */
 	fc = np_create_common(bufp, size, P9_RWALK);
 	if (!fc)
 		return NULL;
@@ -900,7 +903,7 @@ np_create_tlopen(u32 fid, u32 mode)
 Npfcall *
 np_create_rlopen(Npqid *qid, u32 iounit)
 {
-	int size = sizeof(*qid) + sizeof(u32);
+	int size = QIDSIZE + sizeof(u32);
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
@@ -938,7 +941,7 @@ np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
 Npfcall *
 np_create_rlcreate(struct p9_qid *qid, u32 iounit)
 {
-	int size = sizeof(*qid) + sizeof(u32);
+	int size = QIDSIZE + sizeof(u32);
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -954,7 +957,7 @@ np_create_rlcreate(struct p9_qid *qid, u32 iounit)
 Npfcall *
 np_create_rsymlink(struct p9_qid *qid)
 {
-	int size = sizeof(*qid);
+	int size = QIDSIZE;
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -969,7 +972,7 @@ np_create_rsymlink(struct p9_qid *qid)
 Npfcall *
 np_create_rmknod (struct p9_qid *qid)
 {
-	int size = sizeof(*qid);
+	int size = QIDSIZE;
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -1035,7 +1038,7 @@ np_create_rgetattr(u64 valid, struct p9_qid *qid, u32 mode,
 		u64 btime_sec, u64 btime_nsec,
 		u64 gen, u64 data_version)
 {
-	int bufsize = sizeof(u64) + sizeof(*qid) + 3*sizeof(u32) + 15*sizeof(u64);
+	int bufsize = sizeof(u64) + QIDSIZE + 3*sizeof(u32) + 15*sizeof(u64);
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -1201,7 +1204,7 @@ np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid)
 Npfcall *
 np_create_rmkdir(struct p9_qid *qid)
 {
-	int size = sizeof(*qid);
+	int size = QIDSIZE;
 	Npfcall *fc;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -1529,7 +1532,7 @@ np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
 {
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
-	int size = sizeof(*qid) + sizeof(u64) + sizeof(u8) + strlen(name) + 2;
+	int size = QIDSIZE + sizeof(u64) + sizeof(u8) + strlen(name) + 2;
 	Npstr nstr;
 	Npqid nqid;
 

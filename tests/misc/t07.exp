@@ -1,0 +1,4 @@
+test_tversion: 21
+test_rversion: 21
+test_tgetattr: 19
+test_rgetattr: 160

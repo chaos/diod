@@ -1,3 +1,11 @@
+2011-04-13 Jim Garlick <garlick@llnl.gov>
+
+	* libnpfs/np.c : Fix problem with too large wire size found
+	by valgrind (issue 20).
+
+	* tests/misc/t07*, tests/misc/tserialize.c : New valgrind test for
+	serialize/deserialize functions.
+
 2011-04-12 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/srv.c, libnpfs/conn.c : Handle unchecked malloc () results.
