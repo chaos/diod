@@ -228,7 +228,7 @@ opt_check_allowed_csv (Opt o, const char *csv)
     assert (o->magic == OPT_MAGIC);
 
     allow = opt_create ();
-    opt_addf (allow, csv);
+    opt_addf (allow, "%s", csv);
 
     if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");

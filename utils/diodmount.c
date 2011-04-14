@@ -136,7 +136,7 @@ main (int argc, char *argv[])
                 vopt++;
                 break;
             case 'o':   /* --options OPT[,OPT]... */
-                opt_addf (o, optarg);
+                opt_addf (o, "%s", optarg);
                 break;
             default:
                 usage ();
