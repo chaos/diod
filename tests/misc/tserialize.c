@@ -34,6 +34,7 @@ static void test_treadlink (void);      static void test_rreadlink (void);
 static void test_tgetattr (void);       static void test_rgetattr (void);
 static void test_tsetattr (void);       static void test_rsetattr (void);
 
+static void test_treaddir (void);       static void test_rreaddir (void);
 static void test_tfsync (void);         static void test_rfsync (void);
 static void test_tlock (void);          static void test_rlock (void);
 static void test_tgetlock (void);       static void test_rgetlock (void);
@@ -81,7 +82,7 @@ main (int argc, char *argv[])
     test_txattrwalk (); test_rxattrwalk ();
     test_txattrcreate (); test_rxattrcreate ();
 #endif
-    //test_treaddir ();   test_rreaddir ();
+    test_treaddir ();   test_rreaddir ();
     test_tfsync ();     test_rfsync ();
     test_tlock ();      test_rlock ();
     test_tgetlock ();   test_rgetlock ();
@@ -456,6 +457,67 @@ test_rsetattr (void)
     if (!(fc = np_create_rsetattr ()))
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RSETATTR,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_treaddir (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_treaddir(1, 2, 3)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TREADDIR,  __FUNCTION__);
+
+    /* FILL IN */
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rreaddir (void)
+{
+    Npfcall *fc, *fc2;
+    int n = 0, len = 256;
+    struct p9_qid qid[3] = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } }, qid2[3];
+    char *name[3] = { "abc", "def", "ghi" }, name2[3][128];
+    u64 offset;
+    u8 type;
+
+    if (!(fc = np_create_rreaddir (len)))
+        msg_exit ("out of memory");
+    n += np_serialize_p9dirent (&qid[0], 0, 1, name[0],
+                                fc->u.rreaddir.data + n, len - n);
+    n += np_serialize_p9dirent (&qid[1], 50, 2, name[1],
+                                fc->u.rreaddir.data + n, len - n);
+    n += np_serialize_p9dirent (&qid[2], 100, 3, name[2],
+                                fc->u.rreaddir.data + n, len - n);
+    assert (n < len);
+    np_finalize_rreaddir (fc, n);
+    fc2 = _rcv_buf (fc, P9_RREADDIR,  __FUNCTION__);
+
+    n = 0;
+    n += np_deserialize_p9dirent (&qid2[0], &offset, &type, name2[0], 128,
+                           fc2->u.rreaddir.data + n, fc2->u.rreaddir.count - n);
+    assert (offset == 0);
+    assert (type == 1);
+    assert (strcmp (name2[0], name[0]) == 0);
+    n += np_deserialize_p9dirent (&qid2[1], &offset, &type, name2[1], 128,
+                           fc2->u.rreaddir.data + n, fc2->u.rreaddir.count - n);
+    assert (offset == 50);
+    assert (type == 2);
+    assert (strcmp (name2[1], name[1]) == 0);
+    n += np_deserialize_p9dirent (&qid2[2], &offset, &type, name2[2], 128,
+                           fc2->u.rreaddir.data + n, fc2->u.rreaddir.count - n);
+    assert (offset == 100);
+    assert (type == 3);
+    assert (strcmp (name2[2], name[2]) == 0);
+    assert (n == fc2->u.rreaddir.count);
 
     free (fc);
     free (fc2);

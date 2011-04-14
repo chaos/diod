@@ -1169,11 +1169,6 @@ np_create_rsetattr(void)
 /* FIXME: Npfcall * np_create_rxattrwalk() */
 /* FIXME: Npfcall * np_create_rxattrcreate() */
 
-/* srv->readdir () should:
- * 1) call np_alloc_rreaddir ()
- * 2) copy up to count bytes of dirent data in u.readdir.data
- * 3) call np_set_rreaddir_count () to set actual byte count
- */
 Npfcall *
 np_create_rreaddir(u32 count)
 {
@@ -1203,6 +1198,24 @@ np_finalize_rreaddir(Npfcall *fc, u32 count)
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
 	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
+}
+
+Npfcall *
+np_create_treaddir(u32 fid, u64 offset, u32 count)
+{
+	int size = sizeof(u32) + sizeof(u64) + sizeof(u32);
+	Npfcall *fc;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+
+	if (!(fc = np_create_common(bufp, size, P9_TREADDIR)))
+		return NULL;
+
+	buf_put_int32(bufp, fid, &fc->u.treaddir.fid);
+	buf_put_int64(bufp, offset, &fc->u.treaddir.offset);
+	buf_put_int32(bufp, count, &fc->u.treaddir.count);
+
+	return np_post_check(fc, bufp);
 }
 
 Npfcall *
@@ -1692,7 +1705,8 @@ np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
 {
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
-	int size = QIDSIZE + sizeof(u64) + sizeof(u8) + strlen(name) + 2;
+	int size = QIDSIZE + sizeof(u64) + sizeof(u8)
+		 + sizeof(u16) + strlen(name);
 	Npstr nstr;
 	Npqid nqid;
 
@@ -1709,3 +1723,25 @@ np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
 
 	return bufp->p - bufp->sp;
 }
+
+int
+np_deserialize_p9dirent(Npqid *qid, u64 *offset, u8 *type,
+			char *name, int namelen, u8 *buf, int buflen)
+{
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	struct p9_str s9;
+
+	buf_init(bufp, buf, buflen);
+	buf_get_qid(bufp, qid);
+	*offset = buf_get_int64(bufp);
+	*type = buf_get_int8(bufp);
+	buf_get_str(bufp, &s9);
+	snprintf (name, namelen, "%.*s", s9.len, s9.str);
+
+	if (buf_check_overflow (bufp))
+		return 0;
+
+	return bufp->p - bufp->sp;
+}
+			

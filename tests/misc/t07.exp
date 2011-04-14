@@ -17,6 +17,8 @@ test_tgetattr(24): 19
 test_rgetattr(25): 160
 test_tsetattr(26): 67
 test_rsetattr(27): 7
+test_treaddir(40): 23
+test_rreaddir(41): 267
 test_tfsync(50): 11
 test_rfsync(51): 7
 test_tlock(52): 41

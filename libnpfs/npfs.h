@@ -353,6 +353,8 @@ int np_trans_write(Nptrans *, u8 *, u32);
 int np_deserialize(Npfcall*, u8*);
 int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,
                           int buflen);
+int np_deserialize_p9dirent(Npqid *qid, u64 *offset, u8 *type, char *name,
+			    int namelen, u8 *buf, int buflen);
 
 void np_strzero(Npstr *str);
 char *np_strdup(Npstr *str);
