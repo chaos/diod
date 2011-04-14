@@ -1,3 +1,7 @@
+2011-04-14 Jim Garlick <garlick@llnl.gov>
+
+	* tests/misc/tserialize.c : Verify packet content on remaining ops.
+
 2011-04-13 Jim Garlick <garlick@llnl.gov>
 
 	* libnpfs/np.c : Fix problem with too large wire size found

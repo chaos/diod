@@ -205,7 +205,8 @@ test_tlopen (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TLOPEN,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tlopen.fid == fc2->u.tlopen.fid);
+    assert (fc->u.tlopen.mode == fc2->u.tlopen.mode);
 
     free (fc);
     free (fc2);
@@ -221,7 +222,10 @@ test_rlopen (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RLOPEN,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rlopen.qid.type == fc2->u.rlopen.qid.type);
+    assert (fc->u.rlopen.qid.version == fc2->u.rlopen.qid.version);
+    assert (fc->u.rlopen.qid.path == fc2->u.rlopen.qid.path);
+    assert (fc->u.rlopen.iounit == fc2->u.rlopen.iounit);
 
     free (fc);
     free (fc2);
@@ -236,7 +240,11 @@ test_tlcreate (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TLCREATE,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tlcreate.fid == fc2->u.tlcreate.fid);
+    assert (_str9cmp (&fc->u.tlcreate.name, &fc2->u.tlcreate.name) == 0);
+    assert (fc->u.tlcreate.flags == fc2->u.tlcreate.flags);
+    assert (fc->u.tlcreate.mode == fc2->u.tlcreate.mode);
+    assert (fc->u.tlcreate.gid == fc2->u.tlcreate.gid);
 
     free (fc);
     free (fc2);
@@ -252,7 +260,10 @@ test_rlcreate (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RLCREATE,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rlcreate.qid.type == fc2->u.rlcreate.qid.type);
+    assert (fc->u.rlcreate.qid.version == fc2->u.rlcreate.qid.version);
+    assert (fc->u.rlcreate.qid.path == fc2->u.rlcreate.qid.path);
+    assert (fc->u.rlcreate.iounit == fc2->u.rlcreate.iounit);
 
     free (fc);
     free (fc2);
@@ -267,7 +278,10 @@ test_tsymlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TSYMLINK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tsymlink.fid == fc2->u.tsymlink.fid);
+    assert (_str9cmp (&fc->u.tsymlink.name, &fc2->u.tsymlink.name) == 0);
+    assert (_str9cmp (&fc->u.tsymlink.symtgt, &fc2->u.tsymlink.symtgt) == 0);
+    assert (fc->u.tsymlink.gid == fc2->u.tsymlink.gid);
 
     free (fc);
     free (fc2);
@@ -283,7 +297,9 @@ test_rsymlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RSYMLINK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rsymlink.qid.type == fc2->u.rsymlink.qid.type);
+    assert (fc->u.rsymlink.qid.version == fc2->u.rsymlink.qid.version);
+    assert (fc->u.rsymlink.qid.path == fc2->u.rsymlink.qid.path);
 
     free (fc);
     free (fc2);
@@ -298,7 +314,12 @@ test_tmknod (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TMKNOD,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tmknod.fid == fc2->u.tmknod.fid);
+    assert (_str9cmp (&fc->u.tmknod.name, &fc2->u.tmknod.name) == 0);
+    assert (fc->u.tmknod.mode == fc2->u.tmknod.mode);
+    assert (fc->u.tmknod.major == fc2->u.tmknod.major);
+    assert (fc->u.tmknod.minor == fc2->u.tmknod.minor);
+    assert (fc->u.tmknod.gid == fc2->u.tmknod.gid);
 
     free (fc);
     free (fc2);
@@ -314,7 +335,9 @@ test_rmknod (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RMKNOD,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rmknod.qid.type == fc2->u.rmknod.qid.type);
+    assert (fc->u.rmknod.qid.version == fc2->u.rmknod.qid.version);
+    assert (fc->u.rmknod.qid.path == fc2->u.rmknod.qid.path);
 
     free (fc);
     free (fc2);
@@ -329,7 +352,9 @@ test_trename (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TRENAME,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.trename.fid == fc2->u.trename.fid);
+    assert (fc->u.trename.dfid == fc2->u.trename.dfid);
+    assert (_str9cmp (&fc->u.trename.name, &fc2->u.trename.name) == 0);
 
     free (fc);
     free (fc2);
@@ -344,8 +369,6 @@ test_rrename(void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RRENAME,  __FUNCTION__);
 
-    /* FILL IN */
-
     free (fc);
     free (fc2);
 }
@@ -359,7 +382,7 @@ test_treadlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TREADLINK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.treadlink.fid == fc2->u.treadlink.fid);
 
     free (fc);
     free (fc2);
@@ -374,7 +397,7 @@ test_rreadlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RREADLINK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (_str9cmp (&fc->u.rreadlink.target, &fc2->u.rreadlink.target) == 0);
 
     free (fc);
     free (fc2);
@@ -443,7 +466,16 @@ test_tsetattr (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TSETATTR,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tsetattr.fid == fc2->u.tsetattr.fid);
+    assert (fc->u.tsetattr.valid == fc2->u.tsetattr.valid);
+    assert (fc->u.tsetattr.mode == fc2->u.tsetattr.mode);
+    assert (fc->u.tsetattr.uid == fc2->u.tsetattr.uid);
+    assert (fc->u.tsetattr.gid == fc2->u.tsetattr.gid);
+    assert (fc->u.tsetattr.size == fc2->u.tsetattr.size);
+    assert (fc->u.tsetattr.atime_sec == fc2->u.tsetattr.atime_sec);
+    assert (fc->u.tsetattr.atime_nsec == fc2->u.tsetattr.atime_nsec);
+    assert (fc->u.tsetattr.mtime_sec == fc2->u.tsetattr.mtime_sec);
+    assert (fc->u.tsetattr.mtime_nsec == fc2->u.tsetattr.mtime_nsec);
 
     free (fc);
     free (fc2);
@@ -458,8 +490,6 @@ test_rsetattr (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RSETATTR,  __FUNCTION__);
 
-    /* FILL IN */
-
     free (fc);
     free (fc2);
 }
@@ -473,7 +503,9 @@ test_treaddir (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TREADDIR,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.treaddir.fid == fc2->u.treaddir.fid);
+    assert (fc->u.treaddir.offset == fc2->u.treaddir.offset);
+    assert (fc->u.treaddir.count == fc2->u.treaddir.count);
 
     free (fc);
     free (fc2);
@@ -500,6 +532,8 @@ test_rreaddir (void)
     assert (n < len);
     np_finalize_rreaddir (fc, n);
     fc2 = _rcv_buf (fc, P9_RREADDIR,  __FUNCTION__);
+
+    assert (fc->u.rreaddir.count == fc2->u.rreaddir.count);
 
     n = 0;
     n += np_deserialize_p9dirent (&qid2[0], &offset, &type, name2[0], 128,
@@ -532,7 +566,7 @@ test_tfsync (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TFSYNC,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tfsync.fid == fc2->u.treaddir.fid);
 
     free (fc);
     free (fc2);
@@ -560,7 +594,12 @@ test_tlock (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TLOCK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tlock.fid == fc2->u.tlock.fid);
+    assert (fc->u.tlock.type == fc2->u.tlock.type);
+    assert (fc->u.tlock.flags == fc2->u.tlock.flags);
+    assert (fc->u.tlock.start == fc2->u.tlock.start);
+    assert (fc->u.tlock.length == fc2->u.tlock.length);
+    assert (_str9cmp (&fc->u.tlock.client_id, &fc2->u.tlock.client_id) == 0);
 
     free (fc);
     free (fc2);
@@ -575,7 +614,7 @@ test_rlock (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RLOCK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rlock.status == fc2->u.rlock.status);
 
     free (fc);
     free (fc2);
@@ -590,7 +629,12 @@ test_tgetlock (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TGETLOCK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tgetlock.fid == fc2->u.tgetlock.fid);
+    assert (fc->u.tgetlock.type == fc2->u.tgetlock.type);
+    assert (fc->u.tgetlock.start == fc2->u.tgetlock.start);
+    assert (fc->u.tgetlock.length == fc2->u.tgetlock.length);
+    assert (fc->u.tgetlock.proc_id == fc2->u.tgetlock.proc_id);
+    assert (_str9cmp (&fc->u.tgetlock.client_id, &fc2->u.tgetlock.client_id) == 0);
 
     free (fc);
     free (fc2);
@@ -605,7 +649,11 @@ test_rgetlock (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RGETLOCK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rgetlock.type == fc2->u.rgetlock.type);
+    assert (fc->u.rgetlock.start == fc2->u.rgetlock.start);
+    assert (fc->u.rgetlock.length == fc2->u.rgetlock.length);
+    assert (fc->u.rgetlock.proc_id == fc2->u.rgetlock.proc_id);
+    assert (_str9cmp (&fc->u.rgetlock.client_id, &fc2->u.rgetlock.client_id) == 0);
 
     free (fc);
     free (fc2);
@@ -620,7 +668,9 @@ test_tlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TLINK,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tlink.dfid == fc2->u.tlink.dfid);
+    assert (fc->u.tlink.fid == fc2->u.tlink.fid);
+    assert (_str9cmp (&fc->u.tlink.name, &fc2->u.tlink.name) == 0);
 
     free (fc);
     free (fc2);
@@ -635,8 +685,6 @@ test_rlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RLINK,  __FUNCTION__);
 
-    /* FILL IN */
-
     free (fc);
     free (fc2);
 }
@@ -650,7 +698,10 @@ test_tmkdir (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TMKDIR,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tmkdir.fid == fc2->u.tmkdir.fid);
+    assert (_str9cmp (&fc->u.tmkdir.name, &fc2->u.tmkdir.name) == 0);
+    assert (fc->u.tmkdir.mode == fc2->u.tmkdir.mode);
+    assert (fc->u.tmkdir.gid == fc2->u.tmkdir.gid);
 
     free (fc);
     free (fc2);
@@ -666,7 +717,9 @@ test_rmkdir (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RMKDIR,  __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rmkdir.qid.type == fc2->u.rmkdir.qid.type);
+    assert (fc->u.rmkdir.qid.version == fc2->u.rmkdir.qid.version);
+    assert (fc->u.rmkdir.qid.path == fc2->u.rmkdir.qid.path);
 
     free (fc);
     free (fc2);
@@ -713,7 +766,10 @@ test_tauth (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TAUTH, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tauth.afid == fc2->u.tauth.afid);
+    assert (_str9cmp (&fc->u.tauth.uname, &fc2->u.tauth.uname) == 0);
+    assert (_str9cmp (&fc->u.tauth.aname, &fc2->u.tauth.aname) == 0);
+    assert (fc->u.tauth.n_uname == fc2->u.tauth.n_uname);
 
     free (fc);
     free (fc2);
@@ -729,7 +785,9 @@ test_rauth (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RAUTH, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rauth.qid.type == fc2->u.rauth.qid.type);
+    assert (fc->u.rauth.qid.version == fc2->u.rauth.qid.version);
+    assert (fc->u.rauth.qid.path == fc2->u.rauth.qid.path);
 
     free (fc);
     free (fc2);
@@ -744,7 +802,7 @@ test_tflush (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TFLUSH, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tflush.oldtag == fc2->u.tflush.oldtag);
 
     free (fc);
     free (fc2);
@@ -759,8 +817,6 @@ test_rflush (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RFLUSH, __FUNCTION__);
 
-    /* FILL IN */
-
     free (fc);
     free (fc2);
 }
@@ -774,7 +830,11 @@ test_tattach (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TATTACH, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tattach.fid == fc2->u.tattach.fid);
+    assert (fc->u.tattach.afid == fc2->u.tattach.afid);
+    assert (_str9cmp (&fc->u.tattach.uname, &fc2->u.tattach.uname) == 0);
+    assert (_str9cmp (&fc->u.tattach.aname, &fc2->u.tattach.aname) == 0);
+    assert (fc->u.tattach.n_uname == fc2->u.tattach.n_uname);
 
     free (fc);
     free (fc2);
@@ -790,7 +850,9 @@ test_rattach (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RATTACH, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rattach.qid.type == fc2->u.rattach.qid.type);
+    assert (fc->u.rattach.qid.version == fc2->u.rattach.qid.version);
+    assert (fc->u.rattach.qid.path == fc2->u.rattach.qid.path);
 
     free (fc);
     free (fc2);
@@ -808,7 +870,14 @@ test_twalk (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TWALK, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.twalk.fid == fc2->u.twalk.fid);
+    assert (fc->u.twalk.newfid == fc2->u.twalk.newfid);
+    assert (fc->u.twalk.nwname == fc2->u.twalk.nwname);
+
+    assert (_str9cmp (&fc->u.twalk.wnames[0], &fc2->u.twalk.wnames[0]) == 0);
+    assert (_str9cmp (&fc->u.twalk.wnames[1], &fc2->u.twalk.wnames[1]) == 0);
+    assert (_str9cmp (&fc->u.twalk.wnames[2], &fc2->u.twalk.wnames[2]) == 0);
+    assert (_str9cmp (&fc->u.twalk.wnames[3], &fc2->u.twalk.wnames[3]) == 0);
 
     free (fc);
     free (fc2);
@@ -826,7 +895,20 @@ test_rwalk (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RWALK, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rwalk.nwqid == fc2->u.rwalk.nwqid);
+
+    assert (fc->u.rwalk.wqids[0].type == fc2->u.rwalk.wqids[0].type);
+    assert (fc->u.rwalk.wqids[0].version == fc2->u.rwalk.wqids[0].version);
+    assert (fc->u.rwalk.wqids[0].path == fc2->u.rwalk.wqids[0].path);
+    assert (fc->u.rwalk.wqids[1].type == fc2->u.rwalk.wqids[1].type);
+    assert (fc->u.rwalk.wqids[1].version == fc2->u.rwalk.wqids[1].version);
+    assert (fc->u.rwalk.wqids[1].path == fc2->u.rwalk.wqids[1].path);
+    assert (fc->u.rwalk.wqids[2].type == fc2->u.rwalk.wqids[2].type);
+    assert (fc->u.rwalk.wqids[2].version == fc2->u.rwalk.wqids[2].version);
+    assert (fc->u.rwalk.wqids[2].path == fc2->u.rwalk.wqids[2].path);
+    assert (fc->u.rwalk.wqids[3].type == fc2->u.rwalk.wqids[3].type);
+    assert (fc->u.rwalk.wqids[3].version == fc2->u.rwalk.wqids[3].version);
+    assert (fc->u.rwalk.wqids[3].path == fc2->u.rwalk.wqids[3].path);
 
     free (fc);
     free (fc2);
@@ -841,7 +923,9 @@ test_tread (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TREAD, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tread.fid == fc2->u.tread.fid);
+    assert (fc->u.tread.offset == fc2->u.tread.offset);
+    assert (fc->u.tread.count == fc2->u.tread.count);
 
     free (fc);
     free (fc2);
@@ -860,7 +944,8 @@ test_rread (void)
     np_set_rread_count (fc, sizeof (buf));
     fc2 = _rcv_buf (fc, P9_RREAD, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rread.count == fc2->u.rread.count);
+    assert (memcmp (fc->u.rread.data, fc2->u.rread.data, fc->u.rread.count) == 0);
 
     free (fc);
     free (fc2);
@@ -872,11 +957,16 @@ test_twrite (void)
     Npfcall *fc, *fc2;
     u8 buf[128];
 
+    memset (buf, 0x0f, sizeof(buf));
+
     if (!(fc = np_create_twrite (1, 2, sizeof (buf), buf)))
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TWRITE, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.twrite.fid == fc2->u.twrite.fid);
+    assert (fc->u.twrite.offset == fc2->u.twrite.offset);
+    assert (fc->u.twrite.count == fc2->u.twrite.count);
+    assert (memcmp (fc->u.twrite.data, fc2->u.twrite.data, fc->u.twrite.count) == 0);
 
     free (fc);
     free (fc2);
@@ -891,7 +981,7 @@ test_rwrite (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RWRITE, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.rwrite.count == fc2->u.rwrite.count);
 
     free (fc);
     free (fc2);
@@ -906,7 +996,7 @@ test_tclunk (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TCLUNK, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tclunk.fid == fc2->u.tclunk.fid);
 
     free (fc);
     free (fc2);
@@ -921,8 +1011,6 @@ test_rclunk (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RCLUNK, __FUNCTION__);
 
-    /* FILL IN */
-
     free (fc);
     free (fc2);
 }
@@ -936,7 +1024,7 @@ test_tremove (void)
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TREMOVE, __FUNCTION__);
 
-    /* FILL IN */
+    assert (fc->u.tremove.fid == fc2->u.tremove.fid);
 
     free (fc);
     free (fc2);
@@ -950,8 +1038,6 @@ test_rremove (void)
     if (!(fc = np_create_rremove ()))
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RREMOVE, __FUNCTION__);
-
-    /* FILL IN */
 
     free (fc);
     free (fc2);
