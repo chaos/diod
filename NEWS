@@ -1,3 +1,8 @@
+1.0-pre21:
+	Fix minor memory problems uncovered by valgrind.
+	Improved test coverage.
+	Cleanup.
+
 1.0-pre20:
 	Add 'allsquash' config option to remap all users to nobody.
 	Improve portability to RHEL 5 (glibc-2.5) based systems.

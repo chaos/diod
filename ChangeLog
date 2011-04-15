@@ -1,5 +1,7 @@
 2011-04-14 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre21
+
 	* libnpfs/fmt.c : Fix segfault on buffer overflow.  Clean up.
 
 	* libnpfs/npfs.h, libnpfs/conn.c : Cleanup:
