@@ -1390,6 +1390,16 @@ np_create_rmkdir(struct p9_qid *qid)
 }
 
 int
+np_peek_size(u8 *buf, int len)
+{
+	int size = 0;
+
+	if (len >= 4)
+		size = buf[0] | (buf[1]<<8) | (buf[2]<<16) | (buf[3]<<24);
+	return size;
+}
+
+int
 np_deserialize(Npfcall *fc, u8 *data)
 {
 	int i;

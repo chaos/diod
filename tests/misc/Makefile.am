@@ -11,7 +11,7 @@ check_PROGRAMS = \
 	tnpsrv
 
 TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10
-XFAIL_TESTS = t10
+#XFAIL_TESTS = t10
 
 CLEANFILES = *.out *.diff *.stats
 

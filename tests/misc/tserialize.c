@@ -111,6 +111,7 @@ static Npfcall *
 _rcv_buf (Npfcall *fc, int type, const char *fun)
 {
     Npfcall *fc2;
+    char s[256];
 
     printf ("%s(%d): %d\n", fun, type, fc->size);
 
@@ -131,6 +132,9 @@ _rcv_buf (Npfcall *fc, int type, const char *fun)
         msg_exit ("size mismatch in %s", fun);
     if (fc->type != fc2->type)
         msg_exit ("type mismatch in %s", fun);
+
+    np_snprintfcall (s, sizeof (s), fc);
+    printf ("%s\n", s);
 
     return fc2;
 }
@@ -862,22 +866,27 @@ static void
 test_twalk (void)
 {
     Npfcall *fc, *fc2;
-    char *wnames[4] = {
+    char *wnames[P9_MAXWELEM] = {
+        "abc", "def", "ghi", "jkl",
+        "abc", "def", "ghi", "jkl",
+        "abc", "def", "ghi", "jkl",
         "abc", "def", "ghi", "jkl",
     };
+    int i;
 
-    if (!(fc = np_create_twalk (1, 2, 4, wnames)))
+    assert (P9_MAXWELEM == 16);
+    if (!(fc = np_create_twalk (1, 2, P9_MAXWELEM, wnames)))
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_TWALK, __FUNCTION__);
 
     assert (fc->u.twalk.fid == fc2->u.twalk.fid);
     assert (fc->u.twalk.newfid == fc2->u.twalk.newfid);
     assert (fc->u.twalk.nwname == fc2->u.twalk.nwname);
+    assert (fc->u.twalk.nwname == P9_MAXWELEM);
 
-    assert (_str9cmp (&fc->u.twalk.wnames[0], &fc2->u.twalk.wnames[0]) == 0);
-    assert (_str9cmp (&fc->u.twalk.wnames[1], &fc2->u.twalk.wnames[1]) == 0);
-    assert (_str9cmp (&fc->u.twalk.wnames[2], &fc2->u.twalk.wnames[2]) == 0);
-    assert (_str9cmp (&fc->u.twalk.wnames[3], &fc2->u.twalk.wnames[3]) == 0);
+    for (i = 0; i < P9_MAXWELEM; i++) {
+        assert (_str9cmp (&fc->u.twalk.wnames[i], &fc2->u.twalk.wnames[i]) ==0);
+    }
 
     free (fc);
     free (fc2);
@@ -887,28 +896,28 @@ static void
 test_rwalk (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid wqids [4] = { 
+    struct p9_qid wqids [P9_MAXWELEM] = { 
+        { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
+        { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
+        { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
         { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
     };
+    int i;
 
-    if (!(fc = np_create_rwalk (4, wqids)))
+    assert (P9_MAXWELEM == 16);
+
+    if (!(fc = np_create_rwalk (P9_MAXWELEM, wqids)))
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RWALK, __FUNCTION__);
 
+    assert (fc->u.rwalk.nwqid == P9_MAXWELEM);
     assert (fc->u.rwalk.nwqid == fc2->u.rwalk.nwqid);
 
-    assert (fc->u.rwalk.wqids[0].type == fc2->u.rwalk.wqids[0].type);
-    assert (fc->u.rwalk.wqids[0].version == fc2->u.rwalk.wqids[0].version);
-    assert (fc->u.rwalk.wqids[0].path == fc2->u.rwalk.wqids[0].path);
-    assert (fc->u.rwalk.wqids[1].type == fc2->u.rwalk.wqids[1].type);
-    assert (fc->u.rwalk.wqids[1].version == fc2->u.rwalk.wqids[1].version);
-    assert (fc->u.rwalk.wqids[1].path == fc2->u.rwalk.wqids[1].path);
-    assert (fc->u.rwalk.wqids[2].type == fc2->u.rwalk.wqids[2].type);
-    assert (fc->u.rwalk.wqids[2].version == fc2->u.rwalk.wqids[2].version);
-    assert (fc->u.rwalk.wqids[2].path == fc2->u.rwalk.wqids[2].path);
-    assert (fc->u.rwalk.wqids[3].type == fc2->u.rwalk.wqids[3].type);
-    assert (fc->u.rwalk.wqids[3].version == fc2->u.rwalk.wqids[3].version);
-    assert (fc->u.rwalk.wqids[3].path == fc2->u.rwalk.wqids[3].path);
+    for (i = 0; i < P9_MAXWELEM; i++) {
+        assert (fc->u.rwalk.wqids[i].type == fc2->u.rwalk.wqids[i].type);
+        assert (fc->u.rwalk.wqids[i].version == fc2->u.rwalk.wqids[i].version);
+        assert (fc->u.rwalk.wqids[i].path == fc2->u.rwalk.wqids[i].path);
+    }
 
     free (fc);
     free (fc2);

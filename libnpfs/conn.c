@@ -20,6 +20,20 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+/* Server should:
+ * 1) accept a connection from client
+ * 2) create a 'trans' instance for the connection
+ * 3) call np_conn_create () to create 'conn' and thread to service requests
+ */
+
+/* Conn reference counting:
+ * . np_conn_create () ref=0
+ * . np_conn_read_proc () start ref++, finish ref--
+ * . np_srv_add_conn () ref++,         np_srv_remove_conn () ref--
+ * . np_req_alloc () ref++	       np_req_unref () ref--
+ */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -30,42 +44,55 @@
 #include <errno.h>
 #include <pthread.h>
 #include <assert.h>
+
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 
-static Npfcall *np_conn_new_incall(Npconn *conn);
-static void np_conn_free_incall(Npconn *, Npfcall *, int);
+static Npfcall *_alloc_npfcall(int msize);
+static void _free_npfcall(Npfcall *rc);
 static void *np_conn_read_proc(void *);
-static void np_conn_reset(Npconn *conn, u32 msize);
+static void np_conn_reset(Npconn *conn);
 
 Npconn*
 np_conn_create(Npsrv *srv, Nptrans *trans)
 {
 	Npconn *conn;
+	int err;
 
-	conn = malloc(sizeof(*conn));
-	if (!conn)
+	if (!(conn = malloc(sizeof(*conn)))) {
+		errno = ENOMEM;
 		return NULL;
-
-	//fprintf(stderr, "np_conn_create %p\n", conn);
+	}
 	pthread_mutex_init(&conn->lock, NULL);
 	pthread_mutex_init(&conn->wlock, NULL);
 	pthread_cond_init(&conn->resetcond, NULL);
 	pthread_cond_init(&conn->resetdonecond, NULL);
+
 	conn->refcount = 0;
 	conn->resetting = 0;
 	conn->srv = srv;
 	conn->msize = srv->msize;
 	conn->shutdown = 0;
-	conn->fidpool = np_fidpool_create();
+	if (!(conn->fidpool = np_fidpool_create())) {
+		free (conn);
+		errno = ENOMEM;
+		return NULL;
+	}
+
 	conn->trans = trans;
 	conn->aux = NULL;
-	conn->freercnum = 0;
-	conn->freerclist = NULL;
 	np_srv_add_conn(srv, conn);
 
-	pthread_create(&conn->rthread, NULL, np_conn_read_proc, conn);
+	err = pthread_create(&conn->rthread, NULL, np_conn_read_proc, conn);
+	if (err != 0) {
+		np_srv_remove_conn (srv, conn);
+		free (conn);
+		conn = NULL;
+		errno = err;
+		return NULL;
+	}
+
 	return conn;
 }
 
@@ -80,8 +107,6 @@ np_conn_incref(Npconn *conn)
 void
 np_conn_decref(Npconn *conn)
 {
-	Npfcall *fc, *fc1;
-
 	pthread_mutex_lock(&conn->lock);
 	assert(conn->refcount > 0);
 	conn->refcount--;
@@ -95,14 +120,6 @@ np_conn_decref(Npconn *conn)
 		conn->fidpool = NULL;
 	}
 	
-	fc = conn->freerclist;
-	conn->freerclist = NULL;
-	while (fc != NULL) {
-		fc1 = fc->next;
-		free(fc);
-		fc = fc1;
-	}
-
 	pthread_mutex_unlock(&conn->lock);
 	pthread_mutex_destroy(&conn->lock);
 	pthread_cond_destroy(&conn->resetcond);
@@ -110,22 +127,32 @@ np_conn_decref(Npconn *conn)
 	free(conn);
 }
 
+static void
+_debug_trace (Npsrv *srv, Npfcall *fc)
+{
+	char s[512];
+
+	np_snprintfcall(s, sizeof (s), fc);
+	srv->debugprintf("%s", s);
+}
+
+/* Per-connection read thread.
+ */
 static void *
 np_conn_read_proc(void *a)
 {
 	int i, n, size, msize;
 	Npsrv *srv;
-	Npconn *conn;
+	Npconn *conn = (Npconn *)a;
 	Nptrans *trans;
 	Npreq *req;
 	Npfcall *fc, *fc1;
 
 	pthread_detach(pthread_self());
-	conn = a;
 	np_conn_incref(conn);
 	srv = conn->srv;
 	msize = conn->msize;
-	fc = np_conn_new_incall(conn);
+	fc = _alloc_npfcall(msize);
 	n = 0;
 	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, msize - n)) > 0) {
 		pthread_mutex_lock(&conn->lock);
@@ -138,25 +165,17 @@ np_conn_read_proc(void *a)
 		n += i;
 
 again:
-		if (n < 4)
-			continue;
-
-		size = fc->pkt[0] | (fc->pkt[1]<<8) | (fc->pkt[2]<<16) | (fc->pkt[3]<<24);
-		if (n < size)
+		size = np_peek_size (fc->pkt, n);
+		if (size == 0 || n < size)
 			continue;
 
 		if (!np_deserialize(fc, fc->pkt))
 			break;
 
-		if ((conn->srv->debuglevel & DEBUG_9P_TRACE)
-		 				&& conn->srv->debugprintf) {
-			char s[1024];
-			
-			np_snprintfcall(s, sizeof (s), fc);
-			conn->srv->debugprintf(s);
-		}
+		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->debugprintf)
+			_debug_trace (srv, fc);
 
-		fc1 = np_conn_new_incall(conn);
+		fc1 = _alloc_npfcall(msize);
 		if (!fc1)
 			break; /* FIXME */
 		if (n > size)
@@ -181,11 +200,11 @@ again:
 	pthread_mutex_lock(&conn->lock);
 	trans = conn->trans;
 	conn->trans = NULL;
-	np_conn_free_incall(conn, fc, 0);
+	_free_npfcall(fc);
 	pthread_mutex_unlock(&conn->lock);
 
 	np_srv_remove_conn(conn->srv, conn);
-	np_conn_reset(conn, 0);
+	np_conn_reset(conn);
 
 	if (trans)
 		np_trans_destroy(trans);
@@ -195,12 +214,11 @@ again:
 }
 
 static void
-np_conn_reset(Npconn *conn, u32 msize)
+np_conn_reset(Npconn *conn)
 {
 	int i, n;
 	Npsrv *srv;
 	Npreq *req, *req1, *preqs, **reqs;
-	Npfcall *fc, *fc1;
 
 	pthread_mutex_lock(&conn->lock);
 	conn->resetting = 1;
@@ -225,23 +243,25 @@ np_conn_reset(Npconn *conn, u32 msize)
 	n = 0;
 	req = conn->srv->workreqs;
 	while (req != NULL) {
-		if (req->conn == conn && (msize==0 || req->tcall->type != P9_TVERSION)) 
+		if (req->conn == conn && req->tcall->type != P9_TVERSION)
 			n++;
 
 		req = req->next;
 	}
 
 	reqs = malloc(n * sizeof(Npreq *));
-	if (!reqs) /* FIXME: bailing out here is probably wrong */
-		return;
-	n = 0;
-	req = conn->srv->workreqs;
-	while (req != NULL) {
-		if (req->conn == conn && (msize==0 || req->tcall->type != P9_TVERSION))
-			reqs[n++] = np_req_ref(req);
-		req = req->next;
+	if (reqs) {
+		n = 0;
+		req = conn->srv->workreqs;
+		while (req != NULL) {
+			if (req->conn == conn && req->tcall->type != P9_TVERSION)
+				reqs[n++] = np_req_ref(req);
+			req = req->next;
+		}
 	}
 	pthread_mutex_unlock(&conn->srv->lock);
+	if (!reqs) /* out of memory */
+		return;
 
 	req = preqs;
 	while (req != NULL) {
@@ -274,7 +294,7 @@ np_conn_reset(Npconn *conn, u32 msize)
 	pthread_mutex_lock(&srv->lock);
 	while (1) {
 		for(req = srv->workreqs; req != NULL; req = req->next)
-			if (req->conn == conn && (msize==0 || req->tcall->type != P9_TVERSION))
+			if (req->conn==conn && req->tcall->type != P9_TVERSION)
 				break;
 
 		if (req == NULL)
@@ -284,25 +304,11 @@ np_conn_reset(Npconn *conn, u32 msize)
 	}
 	pthread_mutex_unlock(&srv->lock);
 
-	/* free old pool of fcalls */	
-	fc = conn->freerclist;
-	conn->freerclist = NULL;
-	while (fc != NULL) {
-		fc1 = fc->next;
-		free(fc);
-		fc = fc1;
-	}
-
 	if (conn->fidpool) {
 		np_fidpool_destroy(conn->fidpool);
 		conn->fidpool = NULL;
 	}
 
-	if (msize) {
-		conn->resetting = 0;
-		conn->fidpool = np_fidpool_create();
-		pthread_cond_broadcast(&conn->resetdonecond);
-	}
 	conn->resetting = 0;
 	pthread_mutex_unlock(&conn->lock);
 
@@ -329,33 +335,26 @@ np_conn_shutdown(Npconn *conn)
 void
 np_conn_respond(Npreq *req)
 {
-	int n, send;
-	Npconn *conn;
-	Nptrans *trans;
-	Npfcall *rc;
+	int n;
+	Npconn *conn = req->conn;
+	Npsrv *srv = conn->srv;
+	Nptrans *trans = NULL;
+	Npfcall *rc = req->rcall;
 
-	trans = NULL;
-	conn = req->conn;
-	rc = req->rcall;
 	if (!rc)
 		goto done;
 
 	pthread_mutex_lock(&conn->lock);
-	send = conn->trans && !conn->resetting;
 	pthread_mutex_unlock(&conn->lock);
 
-	if (send) {
+	if (conn->trans && !conn->resetting) {
+		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->debugprintf)
+			_debug_trace (srv, rc);
 		pthread_mutex_lock(&conn->wlock);
-		if ((conn->srv->debuglevel & DEBUG_9P_TRACE)
-		 				&& conn->srv->debugprintf) {
-			char s[1024]; /* FIXME: user/t09 segfaults if =256 */
-			np_snprintfcall(s, sizeof (s), rc);
-			conn->srv->debugprintf(s);
-		}
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);
 		pthread_mutex_unlock(&conn->wlock);
 
-		if (n <= 0) {
+		if (n <= 0) { /* write error */
 			pthread_mutex_lock(&conn->lock);
 			trans = conn->trans;
 			conn->trans = NULL;
@@ -364,7 +363,7 @@ np_conn_respond(Npreq *req)
 	}
 
 done:
-	np_conn_free_incall(req->conn, req->tcall, 1);
+	_free_npfcall(req->tcall);
 	free(req->rcall);
 	req->tcall = NULL;
 	req->rcall = NULL;
@@ -380,53 +379,19 @@ done:
 }
 
 static Npfcall *
-np_conn_new_incall(Npconn *conn)
+_alloc_npfcall(int msize)
 {
 	Npfcall *fc;
 
-	pthread_mutex_lock(&conn->lock);
-//	if (!conn->trans) {
-//		pthread_mutex_unlock(&conn->lock);
-//		return NULL;
-//	}
-
-	if (conn->freerclist) {
-		fc = conn->freerclist;
-		conn->freerclist = fc->next;
-		conn->freercnum--;
-	} else {
-		fc = malloc(sizeof(*fc) + conn->msize);
-	}
-
-	if (!fc) {
-		pthread_mutex_unlock(&conn->lock);
-		return NULL;
-	}
-
-	fc->pkt = (u8*) fc + sizeof(*fc);
-	pthread_mutex_unlock(&conn->lock);
+	if ((fc = malloc(sizeof(*fc) + msize)))
+		fc->pkt = (u8*) fc + sizeof(*fc);
 
 	return fc;
 }
 
 static void
-np_conn_free_incall(Npconn* conn, Npfcall *rc, int lock)
+_free_npfcall(Npfcall *rc)
 {
-	if (!rc)
-		return;
-
-	if (lock)
-		pthread_mutex_lock(&conn->lock);
-
-	if (conn->freercnum < 64) {
-		rc->next = conn->freerclist;
-		conn->freerclist = rc;
-		rc = NULL;
-	}
-
-	if (lock)
-		pthread_mutex_unlock(&conn->lock);
-
 	if (rc)
-		free(rc);
+		free (rc);
 }

@@ -22,19 +22,18 @@
 int
 main (int argc, char *argv[])
 {
+#if 0
     Npsrv *srv;
     Npconn *conn;
     Nptrans *trans;
 
     diod_log_init (argv[0]);
-
     if (!(srv = np_srv_create (16)))
         msg_exit ("out of memory");
     if (!(trans = np_fdtrans_create (0, 0)))
         msg_exit ("np_fdtrans_create");
     if (!(conn = np_conn_create (srv, trans)))
         msg_exit  ("np_conn_create failure");
-
 
     np_conn_shutdown (conn);
     //np_conn_incref (conn);
@@ -45,6 +44,7 @@ main (int argc, char *argv[])
 
     diod_log_fini ();
 
+#endif
     exit (0);
 }
 

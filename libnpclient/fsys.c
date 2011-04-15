@@ -170,15 +170,9 @@ _read_response (Npcfsys *fs, Npfcall *rc)
 
 	while ((i = np_trans_read(fs->trans, rc->pkt + n, fs->msize - n)) > 0) {
 		n += i;
-		if (n < 4)
+		size = np_peek_size (rc->pkt, n);
+		if (size == 0 || n < size)
 			continue;
-
-		size = rc->pkt[0] | (rc->pkt[1]<<8)
-				  | (rc->pkt[2]<<16) 
-				  | (rc->pkt[3]<<24);
-		if (n < size)
-			continue;
-
 		if (!np_deserialize(rc, rc->pkt)) {
 			np_uerror (EIO); /* failed to parse */
 			break;

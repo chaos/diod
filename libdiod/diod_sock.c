@@ -222,7 +222,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
                  
     conn = np_conn_create (srv, trans);
     if (!conn) {
-        msg ("np_conn_create failure: %s%s", host, svc);
+        err ("np_conn_create (%s%s)", host, svc);
         diod_trans_destroy (trans);
         return;
     }

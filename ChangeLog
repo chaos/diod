@@ -1,5 +1,19 @@
 2011-04-14 Jim Garlick <garlick@llnl.gov>
 
+	* libnpfs/fmt.c : Fix segfault on buffer overflow.  Clean up.
+
+	* libnpfs/npfs.h, libnpfs/conn.c : Cleanup:
+	- handle errors returned by np_fidpool_create () and pthread_create ()
+	- tidy up debug trace code
+	- drop msize change handling in np_conn_reset () as it gets rid of
+	  an unchecked np_fidpool_create () and we're not using it
+	- drop Npfcall cache and use malloc/free directly.
+
+	* libnpfs/npfs.h, libnpfs/conn.c, libnpfs/np.c, libnpclient/fsys.c :
+	Factor np_peek_size () out of np_conn_read_proc () and npc_rpc ().
+
+2011-04-14 Jim Garlick <garlick@llnl.gov>
+
 	* liblsd/list.c : Replace internal memory management with malloc/free.
 
 	* libdiod/diod_conf.c : Misc cleanup and fix one memory leak.

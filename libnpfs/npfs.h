@@ -166,8 +166,6 @@ struct Npconn {
 	Npsrv*		srv;
 	Nptrans*	trans;
 	Npfidpool*	fidpool;
-	int		freercnum;
-	Npfcall*	freerclist;
 	void*		aux;
 	pthread_t	rthread;
 
@@ -350,6 +348,7 @@ void np_trans_destroy(Nptrans *);
 int np_trans_read(Nptrans *, u8 *, u32);
 int np_trans_write(Nptrans *, u8 *, u32);
 
+int np_peek_size(u8 *buf, int len);
 int np_deserialize(Npfcall*, u8*);
 int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,
                           int buflen);
@@ -437,7 +436,7 @@ Npfcall *np_create_rlink(void);
 Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
 Npfcall *np_create_rmkdir(struct p9_qid *qid);
 
-int np_snprintfcall(char *s, int len, Npfcall *fc);
+void np_snprintfcall(char *s, int len, Npfcall *fc);
 
 void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
