@@ -82,6 +82,8 @@
 #define LIST_ALLOC 32
 #define LIST_MAGIC 0xDEADBEEF
 
+#define USE_INTERNAL_ALLOC 0
+
 
 /****************
  *  Data Types  *
@@ -144,7 +146,9 @@ static ListNode list_free_nodes = NULL;
 static ListIterator list_free_iterators = NULL;
 
 #ifdef WITH_PTHREADS
+#if USE_INTERNAL_ALLOC
 static pthread_mutex_t list_free_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
 #endif /* WITH_PTHREADS */
 
 
@@ -763,7 +767,7 @@ list_iterator_free (ListIterator i)
     return;
 }
 
-
+#if USE_INTERNAL_ALLOC
 static void *
 list_alloc_aux (int size, void *pfreelist)
 {
@@ -814,6 +818,19 @@ list_free_aux (void *x, void *pfreelist)
     list_mutex_unlock(&list_free_lock);
     return;
 }
+#else
+static void *
+list_alloc_aux (int size, void *pfreelist)
+{
+    return malloc (size);
+}
+
+static void
+list_free_aux (void *x, void *pfreelist)
+{
+    free (x);
+}
+#endif
 
 
 #ifndef NDEBUG

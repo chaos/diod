@@ -29,6 +29,7 @@ enum {
 };
 
 void	diod_conf_init (void);
+void	diod_conf_fini (void);
 void    diod_conf_init_config_file (char *path);
 void    diod_conf_arm_sighup (void);
 

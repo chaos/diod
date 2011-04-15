@@ -23,6 +23,19 @@
 
 /* diod_conf.c - config registry for distributed I/O daemon */
 
+/* Attributes are set with the following precedence:
+ *
+ *    command line, config file, compiled-in default
+ *
+ * Users should call:
+ * 1) diod_conf_init () - sets initial defaults
+ * 2) diod_config_init_config_file () - override defaults with config file
+ * 3) diod_conf_set_* - override config file with command line
+ *
+ * Config file can be reloaded on SIGHUP - any command line settings
+ * will be protected from update with readonly flag (see below)
+ */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -53,20 +66,21 @@
 #define _PATH_PROC_MOUNTS "/proc/mounts"
 #endif
 
-#define OF_DEBUGLEVEL       0x0001
-#define OF_NWTHREADS        0x0002
-#define OF_FOREGROUND       0x0004
-#define OF_AUTH_REQUIRED    0x0008
-#define OF_RUNASUID         0x0010
-#define OF_DIODPATH         0x0020
-#define OF_DIODLISTEN       0x0040
-#define OF_DIODCTLLISTEN    0x0080
-#define OF_EXPORTS          0x0100
-#define OF_STATSLOG         0x0200
-#define OF_CONFIGPATH       0x0400
-#define OF_LOGDEST          0x0800
-#define OF_EXPORTALL        0x1000
-#define OF_ALLSQUASH        0x2000
+/* ro_mask values to protect attribute from overwrite by config file */
+#define RO_DEBUGLEVEL       0x0001
+#define RO_NWTHREADS        0x0002
+#define RO_FOREGROUND       0x0004
+#define RO_AUTH_REQUIRED    0x0008
+#define RO_RUNASUID         0x0010
+#define RO_DIODPATH         0x0020
+#define RO_DIODLISTEN       0x0040
+#define RO_DIODCTLLISTEN    0x0080
+#define RO_EXPORTS          0x0100
+#define RO_STATSLOG         0x0200
+#define RO_CONFIGPATH       0x0400
+#define RO_LOGDEST          0x0800
+#define RO_EXPORTALL        0x1000
+#define RO_ALLSQUASH        0x2000
 
 typedef struct {
     int          debuglevel;
@@ -83,7 +97,7 @@ typedef struct {
     FILE        *statslog;
     char        *configpath;
     char        *logdest;
-    int         oflags;   /* bit set means value overridden by cmdline */
+    int         ro_mask; 
 } Conf;
 
 static Conf config;
@@ -114,18 +128,25 @@ _xlist_append (List l, void *item)
 }
 
 static Export *
-_create_export (void)
+_create_export (char *path)
 {
     Export *x = malloc (sizeof (*x));
-    if (x)
-        memset (x, 0, sizeof (*x));
+    if (!x)
+        return NULL;
+    if (!(x->path = strdup (path))) {
+        free (x);
+        return NULL;
+    }
+    x->opts = NULL;
+    x->hosts = NULL;
+    x->users = NULL;
     return x;
 }
 
 static Export *
-_xcreate_export (void)
+_xcreate_export (char *path)
 {
-    Export *x = _create_export ();
+    Export *x = _create_export (path);
     if (!x)
         msg_exit ("out of memory");
     return x;
@@ -134,14 +155,14 @@ _xcreate_export (void)
 static void
 _destroy_export (Export *x)
 {
-    if (x->path)
-        free (x->path);
+    free (x->path);
     if (x->opts)
         free (x->opts);
-    if (x->users)
-        free (x->users);
     if (x->hosts)
         free (x->hosts);
+    if (x->users)
+        free (x->users);
+    free (x);
 }
 
 void
@@ -162,107 +183,126 @@ diod_conf_init (void)
     config.statslog = NULL;
     config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
     config.logdest = NULL;
-    config.oflags = 0;
+    config.ro_mask = 0;
+}
+
+void
+diod_conf_fini (void)
+{
+    if (config.diodpath)
+        free (config.diodpath);
+    if (config.diodlisten)
+        list_destroy (config.diodlisten);
+    if (config.diodctllisten)
+        list_destroy (config.diodctllisten);
+    if (config.exports)
+        list_destroy (config.exports);
+    if (config.statslog)
+        fclose (config.statslog);
+    if (config.configpath)
+        free (config.configpath);
+    if (config.logdest)
+        free (config.logdest);
 }
 
 /* logdest - logging destination
  */
 char *diod_conf_get_logdest (void) { return config.logdest; }
-int diod_conf_opt_logdest (void) { return config.oflags & OF_LOGDEST; }
+int diod_conf_opt_logdest (void) { return config.ro_mask & RO_LOGDEST; }
 void diod_conf_set_logdest (char *s)
 {
     if (config.logdest)
         free (config.logdest);
     config.logdest = _xstrdup (s);
-    config.oflags |= OF_LOGDEST;
+    config.ro_mask |= RO_LOGDEST;
 }
 
 /* configpath - config file path
  *    (set in diod_conf_init_config_file)
  */
 char *diod_conf_get_configpath (void) { return config.configpath; }
-int diod_conf_opt_configpath (void) { return config.oflags & OF_CONFIGPATH; }
+int diod_conf_opt_configpath (void) { return config.ro_mask & RO_CONFIGPATH; }
 
 /* debuglevel - turn debug channels on/off
  */
 int diod_conf_get_debuglevel (void) { return config.debuglevel; }
-int diod_conf_opt_debuglevel (void) { return config.oflags & OF_DEBUGLEVEL; }
+int diod_conf_opt_debuglevel (void) { return config.ro_mask & RO_DEBUGLEVEL; }
 void diod_conf_set_debuglevel (int i)
 {
     config.debuglevel = i;
-    config.oflags |= OF_DEBUGLEVEL;
+    config.ro_mask |= RO_DEBUGLEVEL;
 }
 
 /* nwthreads - number of worker threads to spawn in libnpfs
  */
 int diod_conf_get_nwthreads (void) { return config.nwthreads; }
-int diod_conf_opt_nwthreads (void) { return config.oflags & OF_NWTHREADS; }
+int diod_conf_opt_nwthreads (void) { return config.ro_mask & RO_NWTHREADS; }
 void diod_conf_set_nwthreads (int i)
 {
     config.nwthreads = i;
-    config.oflags |= OF_NWTHREADS;
+    config.ro_mask |= RO_NWTHREADS;
 }
 
 /* foreground - run daemon in foreground
  */
 int diod_conf_get_foreground (void) { return config.foreground; }
-int diod_conf_opt_foreground (void) { return config.oflags & OF_FOREGROUND; }
+int diod_conf_opt_foreground (void) { return config.ro_mask & RO_FOREGROUND; }
 void diod_conf_set_foreground (int i)
 {
     config.foreground = i;
-    config.oflags |= OF_FOREGROUND;
+    config.ro_mask |= RO_FOREGROUND;
 }
 
 /* auth_required - whether to accept unauthenticated attaches
  */
 int diod_conf_get_auth_required (void) { return config.auth_required; }
-int diod_conf_opt_auth_required (void) { return config.oflags & OF_AUTH_REQUIRED; }
+int diod_conf_opt_auth_required (void) { return config.ro_mask & RO_AUTH_REQUIRED; }
 void diod_conf_set_auth_required (int i)
 {
     config.auth_required = i;
-    config.oflags |= OF_AUTH_REQUIRED;
+    config.ro_mask |= RO_AUTH_REQUIRED;
 }
 
 /* allsquash - run server as nobody:nobody and remap all attaches
  */
 int diod_conf_get_allsquash (void) { return config.allsquash; }
-int diod_conf_opt_allsquash (void) { return config.oflags & OF_ALLSQUASH; }
+int diod_conf_opt_allsquash (void) { return config.ro_mask & RO_ALLSQUASH; }
 void diod_conf_set_allsquash (int i)
 {
     config.allsquash = i;
-    config.oflags |= OF_AUTH_REQUIRED;
+    config.ro_mask |= RO_AUTH_REQUIRED;
 }
 
 /* runasuid - set to run server as one user (mount -o access=uid)
  */
 uid_t diod_conf_get_runasuid (void) { return config.runasuid; }
-int diod_conf_opt_runasuid (void) { return config.oflags & OF_RUNASUID; }
+int diod_conf_opt_runasuid (void) { return config.ro_mask & RO_RUNASUID; }
 void diod_conf_set_runasuid (uid_t uid)
 {
     config.runasuid = uid;
-    config.oflags |= OF_RUNASUID;
+    config.ro_mask |= RO_RUNASUID;
 }
 
 /* diodpath - path to diod executable for diodctl
  */
 char *diod_conf_get_diodpath (void) { return config.diodpath; }
-int diod_conf_opt_diodpath (void) { return config.oflags & OF_DIODPATH; }
+int diod_conf_opt_diodpath (void) { return config.ro_mask & RO_DIODPATH; }
 void diod_conf_set_diodpath (char *s)
 {
     free (config.diodpath);
     config.diodpath = _xstrdup (s);
-    config.oflags |= OF_DIODPATH;
+    config.ro_mask |= RO_DIODPATH;
 }
 
 /* diodlisten - list of host:port strings for diod to listen on.
  */
 List diod_conf_get_diodlisten (void) { return config.diodlisten; }
-int diod_conf_opt_diodlisten (void) { return config.oflags & OF_DIODLISTEN; }
+int diod_conf_opt_diodlisten (void) { return config.ro_mask & RO_DIODLISTEN; }
 void diod_conf_clr_diodlisten (void)
 {
     list_destroy (config.diodlisten);
     config.diodlisten = _xlist_create ((ListDelF)free);
-    config.oflags |= OF_DIODLISTEN;
+    config.ro_mask |= RO_DIODLISTEN;
 }
 
 /* diodctllisten - list of host:port strings for diodctl to listen on.
@@ -270,33 +310,33 @@ void diod_conf_clr_diodlisten (void)
 List diod_conf_get_diodctllisten (void) { return config.diodctllisten; }
 int diod_conf_opt_diodctllisten (void)
 {
-    return config.oflags & OF_DIODCTLLISTEN;
+    return config.ro_mask & RO_DIODCTLLISTEN;
 }
 void diod_conf_add_diodlisten (char *s)
 {
     _xlist_append (config.diodlisten, _xstrdup (s));
-    config.oflags |= OF_DIODLISTEN;
+    config.ro_mask |= RO_DIODLISTEN;
 }
 void diod_conf_clr_diodctllisten (void)
 {
     list_destroy (config.diodctllisten);
     config.diodctllisten = _xlist_create ((ListDelF)free);
-    config.oflags |= OF_DIODCTLLISTEN;
+    config.ro_mask |= RO_DIODCTLLISTEN;
 }
 void diod_conf_add_diodctllisten (char *s)
 {
     _xlist_append (config.diodctllisten, _xstrdup (s));
-    config.oflags |= OF_DIODCTLLISTEN;
+    config.ro_mask |= RO_DIODCTLLISTEN;
 }
 
 /* exportall - export everything in /proc/mounts
  */
 int diod_conf_get_exportall (void) { return config.exportall; }
-int diod_conf_opt_exportall (void) { return config.oflags & OF_EXPORTALL; }
+int diod_conf_opt_exportall (void) { return config.ro_mask & RO_EXPORTALL; }
 void diod_conf_set_exportall (int i)
 {
     config.exportall = i;
-    config.oflags |= OF_EXPORTALL;
+    config.ro_mask |= RO_EXPORTALL;
 }
 List diod_conf_get_mounts (void)
 {
@@ -320,10 +360,12 @@ List diod_conf_get_mounts (void)
         if (!(p = strchr (path, ' ')))
             continue;
         *p = '\0';
-        if (!(x = _create_export ()))
+        if (!(x = _create_export (path)))
             goto error;
-        x->path = _xstrdup (path);
-        _xlist_append (l, x);
+        if (!list_append (l, x)) {
+            _destroy_export (x);
+            goto error;
+        }
     }
     fclose (f);
     return l;
@@ -338,19 +380,18 @@ error:
 /* exports - list of paths of exported file systems
  */
 List diod_conf_get_exports (void) { return config.exports; }
-int diod_conf_opt_exports (void) { return config.oflags & OF_EXPORTS; }
+int diod_conf_opt_exports (void) { return config.ro_mask & RO_EXPORTS; }
 void diod_conf_clr_exports (void)
 {
     list_destroy (config.exports);
     config.exports = _xlist_create ((ListDelF)_destroy_export);
-    config.oflags |= OF_EXPORTS;
+    config.ro_mask |= RO_EXPORTS;
 }
 void diod_conf_add_exports (char *path)
 {
-    Export *x = _xcreate_export ();
-    x->path = _xstrdup (path);
+    Export *x = _xcreate_export (path);
     _xlist_append (config.exports, x);
-    config.oflags |= OF_EXPORTS;
+    config.ro_mask |= RO_EXPORTS;
 }
 void diod_conf_validate_exports (void)
 {
@@ -371,14 +412,14 @@ void diod_conf_validate_exports (void)
 }
 
 FILE *diod_conf_get_statslog (void) { return config.statslog; }
-int diod_conf_opt_statslog (void) { return config.oflags & OF_STATSLOG; }
+int diod_conf_opt_statslog (void) { return config.ro_mask & RO_STATSLOG; }
 void diod_conf_set_statslog (char *path)
 {
     if (config.statslog)
         fclose (config.statslog);
     if (!(config.statslog = fopen (path, "w")))
         err_exit ("error opening %s", path);
-    config.oflags |= OF_STATSLOG;
+    config.ro_mask |= RO_STATSLOG;
 }
 
 static void *
@@ -557,15 +598,16 @@ _lua_getglobal_exports (char *path, lua_State *L, List *lp)
             if (lua_isnil (L, -1))
                 break;
             if (lua_isstring (L, -1)) {
-                x = _xcreate_export ();
-                x->path = _xstrdup ((char *)lua_tostring (L, -1));
+                x = _xcreate_export ((char *)lua_tostring (L, -1));
                 _xlist_append (l, x);
             } else if (lua_istable(L, -1)) {
-                x = _xcreate_export ();
-                _lua_get_expattr (path, i, L, "path", &x->path);
-                if (!x->path)
+                char *p = NULL;
+                _lua_get_expattr (path, i, L, "path", &p);
+                if (!p)
                     msg_exit ("%s: `exports[%d]' path is a required attribute",
                               path, i);
+                x = _xcreate_export (p);
+                free (p);
                 _lua_get_expattr (path, i, L, "opts", &x->opts);
                 if (x->opts)
                     _parse_expopt (x->opts, &x->oflags);
@@ -597,7 +639,7 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
     if (path) {
         free (config.configpath);
         config.configpath = _xstrdup (path);
-        config.oflags |= OF_CONFIGPATH;
+        config.ro_mask |= RO_CONFIGPATH;
     } else {
         if (access (config.configpath, R_OK) == 0)
             path = config.configpath;  /* missing default file is not fatal */
@@ -616,35 +658,35 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
 
         /* Don't override cmdline options when rereading config file.
          */
-        if (!(config.oflags & OF_NWTHREADS)) {
+        if (!(config.ro_mask & RO_NWTHREADS)) {
             _lua_getglobal_int (path, L, "nwthreads",
                                 &config.nwthreads);
         }
-        if (!(config.oflags & OF_AUTH_REQUIRED)) {
+        if (!(config.ro_mask & RO_AUTH_REQUIRED)) {
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
         }
-        if (!(config.oflags & OF_ALLSQUASH)) {
+        if (!(config.ro_mask & RO_ALLSQUASH)) {
             _lua_getglobal_int (path, L, "allsquash",
                                 &config.allsquash);
         }
-        if (!(config.oflags & OF_DIODCTLLISTEN)) {
+        if (!(config.ro_mask & RO_DIODCTLLISTEN)) {
             _lua_getglobal_list_of_strings (path, L, "diodctllisten",
                                 &config.diodctllisten);
         }
-        if (!(config.oflags & OF_DIODLISTEN)) {
+        if (!(config.ro_mask & RO_DIODLISTEN)) {
             _lua_getglobal_list_of_strings (path, L, "diodlisten",
                                 &config.diodlisten);
         }
-        if (!(config.oflags & OF_LOGDEST)) {
+        if (!(config.ro_mask & RO_LOGDEST)) {
             _lua_getglobal_string (path, L, "logdest",
                                 &config.logdest);
         }
-        if (!(config.oflags & OF_EXPORTALL)) {
+        if (!(config.ro_mask & RO_EXPORTALL)) {
             _lua_getglobal_int (path, L, "exportall",
                                 &config.exportall);
         }
-        if (!(config.oflags & OF_EXPORTS))
+        if (!(config.ro_mask & RO_EXPORTS))
             _lua_getglobal_exports (path, L, &config.exports);
         lua_close(L);
     }
@@ -662,7 +704,7 @@ diod_conf_init_config_file (char *path)
     if (path) {
         free (config.configpath);
         config.configpath = _xstrdup (path);
-        config.oflags |= OF_CONFIGPATH;
+        config.ro_mask |= RO_CONFIGPATH;
     } else {
         if (access (config.configpath, R_OK) == 0)
             path = config.configpath;  /* missing default file is not fatal */

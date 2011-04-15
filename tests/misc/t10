@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+TEST=$(basename $0 | cut -d- -f1)
+# test $(id -u) == 0 || exit 77 #skip if not root
+which valgrind >/dev/null 2>&1 || exit 77 # skip if no valgrind
+
+valgrind --error-exitcode=1 --tool=memcheck --track-origins=yes \
+	 --leak-check=yes --quiet ./tnpsrv >$TEST.out 2>&1
+diff $TEST.exp $TEST.out >$TEST.diff

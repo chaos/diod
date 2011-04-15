@@ -6,9 +6,12 @@ check_PROGRAMS = \
 	tsuppgrp \
 	topt \
 	tconf \
-	tserialize
+	tserialize \
+	tlist \
+	tnpsrv
 
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10
+XFAIL_TESTS = t10
 
 CLEANFILES = *.out *.diff *.stats
 
@@ -39,5 +42,7 @@ tfcntl_SOURCES = tfcntl.c $(common_sources)
 topt_SOURCES = topt.c $(common_sources) 
 tconf_SOURCES = tconf.c $(common_sources) 
 tserialize_SOURCES = tserialize.c $(common_sources) 
+tlist_SOURCES = tlist.c $(common_sources) 
+tnpsrv_SOURCES = tnpsrv.c $(common_sources) 
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf

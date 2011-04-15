@@ -1,5 +1,11 @@
 2011-04-14 Jim Garlick <garlick@llnl.gov>
 
+	* liblsd/list.c : Replace internal memory management with malloc/free.
+
+	* libdiod/diod_conf.c : Misc cleanup and fix one memory leak.
+
+	* tests/misc/t[08,09,10]* : Add more valgrind tests.
+
 	* tests/misc/tserialize.c : Verify packet content on remaining ops.
 
 2011-04-13 Jim Garlick <garlick@llnl.gov>

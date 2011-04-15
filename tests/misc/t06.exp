@@ -1,6 +1,6 @@
-path=/g/g1 opts=NULL(0x0) users=NULL hosts=NULL
-path=/g/g2 opts=NULL(0x0) users=NULL hosts=NULL
+path=/g/g1
+path=/g/g2
 path=/g/g3 opts=ro(0x1) users=jim,bob hosts=foo[1-64]
-path=/g/g5 opts=NULL(0x0) users=NULL hosts=NULL
+path=/g/g5
 path=/g/g4 opts=NULL(0x0) users=jim,bob hosts=NULL
-path=/g/g6 opts=NULL(0x0) users=NULL hosts=NULL
+path=/g/g6

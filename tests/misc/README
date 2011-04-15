@@ -19,6 +19,9 @@ t04	Demonstrate that fcntl advisory locking does not treat threads
 t05	Unit test for diodmount option handling module.
 t06	Unit test for parsing diod.conf.
 t07(+)	Use valgrind to check for leaks in libnpfs serialize/deserialize
+t08(+)	Use valgrind to check for leaks in libdiod conf/log
+t09(+)	Use valgrind to check for leaks in list package
+	Actually this was to run down a specific case, now fixed.
 
 (*) NOTRUN if not run as root
 (+) NOTRUN if valgrind is not installed
