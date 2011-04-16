@@ -1,8 +1,10 @@
 2011-04-16 Jim Garlick <garlick@llnl.gov>
+	
+	* srv.c : Add missing np_uerror(0) initialization in np_srv_create ().
 
 	* tests/misc/tnpsrv.c : Add test transport.
 
-	* diod/diod.c, diodctl/diodctl.c : In teardown, call np_srv_destroy(),
+	* diod/diod.c, diodctl/diodctl.c : In teardown, call np_srv_destroy (),
 	diod_log_fini (), and diod_conf_fini ().
 
 	* libnpfs/conn.c, libnpfs/srv.c : Cleanup:

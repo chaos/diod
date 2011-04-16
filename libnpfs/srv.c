@@ -82,6 +82,7 @@ np_srv_create(int nwthread)
 	int i;
 	Npsrv *srv;
 
+	np_uerror (0);
 	if (!(srv = malloc(sizeof(*srv)))) {
 		errno = ENOMEM;
 		return NULL;
