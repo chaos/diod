@@ -1,4 +1,19 @@
-2011-04-14 Jim Garlick <garlick@llnl.gov>
+2011-04-16 Jim Garlick <garlick@llnl.gov>
+
+	* tests/misc/tnpsrv.c : Add test transport.
+
+	* diod/diod.c, diodctl/diodctl.c : In teardown, call np_srv_destroy(),
+	diod_log_fini (), and diod_conf_fini ().
+
+	* libnpfs/conn.c, libnpfs/srv.c : Cleanup:
+	- adjust conn->msize if negotated downward in the version message
+	- avoid NULL dereference in reader thread in out of memory case
+	- drop np_conn_shutdown (), np_srv_shutdown (), and srv->shuttingdown
+	- have np_srv_destroy () join with terminating workers then free self
+	- add wt->state enum and set it in np_wthread_proc ()
+	- drop srv->lock in np_wthread_proc () in shutdown path
+
+2011-04-15 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre21
 

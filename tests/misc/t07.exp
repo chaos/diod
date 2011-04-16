@@ -1,104 +1,104 @@
 test_rlerror(7): 11
-P9_RLERROR tag 65535 ecode 42
+P9_RLERROR tag 42 ecode 42
 test_tstatfs(8): 11
-P9_TSTATFS tag 65535 fid 42
+P9_TSTATFS tag 42 fid 42
 test_rstatfs(9): 67
-P9_RSTATFS tag 65535 type 1 bsize 2 blocks 3 bfree 4 bavail 5 files 6 ffree 7 fsid 8 namelen 9
+P9_RSTATFS tag 42 type 1 bsize 2 blocks 3 bfree 4 bavail 5 files 6 ffree 7 fsid 8 namelen 9
 test_tlopen(12): 15
-P9_TLOPEN tag 65535 fid 1 mode 02
+P9_TLOPEN tag 42 fid 1 mode 02
 test_rlopen(13): 24
-P9_RLOPEN tag 65535 qid (0000000000000003 2 '') iounit 2
+P9_RLOPEN tag 42 qid (0000000000000003 2 '') iounit 2
 test_tlcreate(14): 28
-P9_TLCREATE tag 65535 fid 1 name xyz flags 0x3 mode 04 gid 5
+P9_TLCREATE tag 42 fid 1 name xyz flags 0x3 mode 04 gid 5
 test_rlcreate(15): 24
-P9_RLCREATE tag 65535 qid (0000000000000003 2 '') iounit 2
+P9_RLCREATE tag 42 qid (0000000000000003 2 '') iounit 2
 test_tsymlink(16): 25
-P9_TSYMLINK tag 65535 fid 1 name xyz symtgt abc gid 4
+P9_TSYMLINK tag 42 fid 1 name xyz symtgt abc gid 4
 test_rsymlink(17): 20
-P9_RSYMLINK tag 65535 qid (0000000000000003 2 '')
+P9_RSYMLINK tag 42 qid (0000000000000003 2 '')
 test_tmknod(18): 32
-P9_TMKNOD tag 65535 fid 1 name xyz mode 03 major 4 minor 5 gid 6
+P9_TMKNOD tag 42 fid 1 name xyz mode 03 major 4 minor 5 gid 6
 test_rmknod(19): 20
-P9_RMKNOD tag 65535 qid (0000000000000003 2 '')
+P9_RMKNOD tag 42 qid (0000000000000003 2 '')
 test_trename(20): 20
-P9_TRENAME tag 65535 fid 1 dfid2 name xyz
+P9_TRENAME tag 42 fid 1 dfid2 name xyz
 test_rrename(21): 7
-P9_RRENAME tag 65535
+P9_RRENAME tag 42
 test_treadlink(22): 11
-P9_TREADLINK tag 65535 fid 1
+P9_TREADLINK tag 42 fid 1
 test_rreadlink(23): 12
-P9_RREADLINK tag 65535 target xyz
+P9_RREADLINK tag 42 target xyz
 test_tgetattr(24): 19
-P9_TGETATTR tag 65535 fid 42 request_mask 0x1388
+P9_TGETATTR tag 42 fid 42 request_mask 0x1388
 test_rgetattr(25): 160
-P9_RGETATTR tag 65535 valid 0x1 qid X mode 04 uid X gid X nlink X rdev X size X blksize 10 blocks X atime X mtime X ctime X btime X gen X data_version X
+P9_RGETATTR tag 42 valid 0x1 qid X mode 04 uid X gid X nlink X rdev X size X blksize 10 blocks X atime X mtime X ctime X btime X gen X data_version X
 test_tsetattr(26): 67
-P9_TSETATTR tag 65535 fid 1 valid 0x2 mode X uid 4 gid X size X atime X mtime X
+P9_TSETATTR tag 42 fid 1 valid 0x2 mode X uid 4 gid X size X atime X mtime X
 test_rsetattr(27): 7
-P9_RSETATTR tag 65535
+P9_RSETATTR tag 42
 test_treaddir(40): 23
-P9_TREADDIR tag 65535 fid 1 offset 2 count 3
+P9_TREADDIR tag 42 fid 1 offset 2 count 3
 test_rreaddir(41): 92
-P9_RREADDIR tag 65535 count 81
+P9_RREADDIR tag 42 count 81
 01020000 00030000 00000000 00000000 00000000 00010300 61626304 05000000 
 06000000 00000000 32000000 00000000 02030064 65660708 00000009 00000000 
 test_tfsync(50): 11
-P9_TFSYNC tag 65535 fid 1
+P9_TFSYNC tag 42 fid 1
 test_rfsync(51): 7
-P9_RFSYNC tag 65535
+P9_RFSYNC tag 42
 test_tlock(52): 41
-P9_TLOCK tag 65535 fid 1 type F_UNLCK flags 3 start 4 length 5 proc_id 6 client_id xyz
+P9_TLOCK tag 42 fid 1 type F_UNLCK flags 3 start 4 length 5 proc_id 6 client_id xyz
 test_rlock(53): 8
-P9_RLOCK tag 65535 status P9_LOCK_BLOCKED
+P9_RLOCK tag 42 status P9_LOCK_BLOCKED
 test_tgetlock(54): 37
-P9_TGETLOCK tag 65535 fid 1 type F_UNLCK start 3 length 4 proc_id 5 client_id xyz
+P9_TGETLOCK tag 42 fid 1 type F_UNLCK start 3 length 4 proc_id 5 client_id xyz
 test_rgetlock(55): 33
-P9_RGETLOCK tag 65535 type F_WRLCK start 2 length 3 proc_id 4 client_id xyz
+P9_RGETLOCK tag 42 type F_WRLCK start 2 length 3 proc_id 4 client_id xyz
 test_tlink(70): 20
-P9_TLINK tag 65535 dfid 1 fid 2 name xyz
+P9_TLINK tag 42 dfid 1 fid 2 name xyz
 test_rlink(71): 7
-P9_RLINK tag 65535
+P9_RLINK tag 42
 test_tmkdir(72): 24
-P9_TMKDIR tag 65535 fid 1 name abc mode 02 gid 3
+P9_TMKDIR tag 42 fid 1 name abc mode 02 gid 3
 test_rmkdir(73): 20
-P9_RMKDIR tag 65535 qid (0000000000000003 2 '')
+P9_RMKDIR tag 42 qid (0000000000000003 2 '')
 test_tversion(100): 21
-P9_TVERSION tag 65535 msize 4096 version 9p2000.L
+P9_TVERSION tag 42 msize 4096 version 9p2000.L
 test_rversion(101): 21
-P9_RVERSION tag 65535 msize 4096 version 9p2000.L
+P9_RVERSION tag 42 msize 4096 version 9p2000.L
 test_tauth(102): 25
-P9_TAUTH tag 65535 afid 1 uname abc aname xyz n_uname 4
+P9_TAUTH tag 42 afid 1 uname abc aname xyz n_uname 4
 test_rauth(103): 20
-P9_RAUTH tag 65535 qid (0000000000000003 2 '')
+P9_RAUTH tag 42 qid (0000000000000003 2 '')
 test_tflush(108): 9
-P9_TFLUSH tag 65535 oldtag 1
+P9_TFLUSH tag 42 oldtag 1
 test_rflush(109): 7
-P9_RFLUSH tag 65535
+P9_RFLUSH tag 42
 test_tattach(104): 29
-P9_TATTACH tag 65535 fid 1 afid 2 uname abc aname xyz n_uname 5
+P9_TATTACH tag 42 fid 1 afid 2 uname abc aname xyz n_uname 5
 test_rattach(105): 20
-P9_RATTACH tag 65535 qid (0000000000000003 2 '')
+P9_RATTACH tag 42 qid (0000000000000003 2 '')
 test_twalk(110): 97
-P9_TWALK tag 65535 fid 1 newfid 2 nwname 16 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl'
+P9_TWALK tag 42 fid 1 newfid 2 nwname 16 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl'
 test_rwalk(111): 217
-P9_RWALK tag 65535 nwqid 16(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000
+P9_RWALK tag 42 nwqid 16(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000000
 test_tread(116): 23
-P9_TREAD tag 65535 fid 1 offset 2 count 3
+P9_TREAD tag 42 fid 1 offset 2 count 3
 test_rread(117): 139
-P9_RREAD tag 65535 count 128
+P9_RREAD tag 42 count 128
 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 
 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 f0f0f0f0 
 test_twrite(118): 151
-P9_TWRITE tag 65535 fid 1 offset 2 count 128
+P9_TWRITE tag 42 fid 1 offset 2 count 128
 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 
 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 0f0f0f0f 
 test_rwrite(119): 11
-P9_RWRITE tag 65535 count 1
+P9_RWRITE tag 42 count 1
 test_tclunk(120): 11
-P9_TCLUNK tag 65535 fid 1
+P9_TCLUNK tag 42 fid 1
 test_rclunk(121): 7
-P9_RCLUNK tag 65535
+P9_RCLUNK tag 42
 test_tremove(122): 11
-P9_TREMOVE tag 65535 fid 1
+P9_TREMOVE tag 42 fid 1
 test_rremove(123): 7
-P9_RREMOVE tag 65535
+P9_RREMOVE tag 42

@@ -222,6 +222,10 @@ main(int argc, char **argv)
     diod_sock_accept_loop (srv, fds, nfds);
     /*NOTREACHED*/
 
+    np_srv_destroy (srv);
+    diod_log_fini ();
+    diod_conf_fini ();
+
     exit (0);
 }
 

@@ -141,7 +141,7 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 static void *
 np_conn_read_proc(void *a)
 {
-	int i, n, size, msize;
+	int i, n, size;
 	Npsrv *srv;
 	Npconn *conn = (Npconn *)a;
 	Nptrans *trans;
@@ -151,10 +151,9 @@ np_conn_read_proc(void *a)
 	pthread_detach(pthread_self());
 	np_conn_incref(conn);
 	srv = conn->srv;
-	msize = conn->msize;
-	fc = _alloc_npfcall(msize);
+	fc = _alloc_npfcall(conn->msize);
 	n = 0;
-	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, msize - n)) > 0) {
+	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n)) > 0) {
 		pthread_mutex_lock(&conn->lock);
 		if (conn->resetting) {
 			pthread_cond_wait(&conn->resetdonecond, &conn->lock);
@@ -175,13 +174,18 @@ again:
 		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->debugprintf)
 			_debug_trace (srv, fc);
 
-		fc1 = _alloc_npfcall(msize);
+		/* Replace fc, and copy any data past the current packet
+		 * to the replacement.
+		 */
+		fc1 = _alloc_npfcall(conn->msize);
 		if (!fc1)
 			break; /* FIXME */
 		if (n > size)
 			memmove(fc1->pkt, fc->pkt + size, n - size);
 		n -= size;
 
+		/* Encapsulate fc in a request and hand to srv worker threads.
+		 */
 		req = np_req_alloc(conn, fc);
 		if (!req)
 			break; /* FIXME */
@@ -196,11 +200,15 @@ again:
 			goto again;
 
 	}
+	/* Just got EOF on read, or some other fatal error for the
+	 * connection like out of memory.
+	 */
 
 	pthread_mutex_lock(&conn->lock);
 	trans = conn->trans;
 	conn->trans = NULL;
-	_free_npfcall(fc);
+	if (fc)
+		_free_npfcall(fc);
 	pthread_mutex_unlock(&conn->lock);
 
 	np_srv_remove_conn(conn->srv, conn);
@@ -213,6 +221,9 @@ again:
 	return NULL;
 }
 
+/* Clear all state associated with conn out of the srv.
+ * No more I/O is possible; we have disassociated the trans from the conn.
+ */
 static void
 np_conn_reset(Npconn *conn)
 {
@@ -318,42 +329,30 @@ np_conn_reset(Npconn *conn)
 	free(reqs);
 }
 
-void
-np_conn_shutdown(Npconn *conn)
-{
-	Nptrans *trans;
-
-	pthread_mutex_lock(&conn->lock);
-	trans = conn->trans;
-	conn->trans = NULL;
-	pthread_mutex_unlock(&conn->lock);
-
-	if (trans)
-		np_trans_destroy(trans);
-}
-
+/* Called by srv workers to transmit req->rcall->pkt.
+ */
 void
 np_conn_respond(Npreq *req)
 {
-	int n;
+	int n, send;
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
-	Nptrans *trans = NULL;
 	Npfcall *rc = req->rcall;
+	Nptrans *trans = NULL;
 
 	if (!rc)
 		goto done;
 
 	pthread_mutex_lock(&conn->lock);
+	send = conn->trans && !conn->resetting;
 	pthread_mutex_unlock(&conn->lock);
 
-	if (conn->trans && !conn->resetting) {
+	if (send) {
 		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->debugprintf)
 			_debug_trace (srv, rc);
 		pthread_mutex_lock(&conn->wlock);
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);
 		pthread_mutex_unlock(&conn->wlock);
-
 		if (n <= 0) { /* write error */
 			pthread_mutex_lock(&conn->lock);
 			trans = conn->trans;
@@ -374,8 +373,8 @@ done:
 		pthread_mutex_unlock(&conn->srv->lock);
 	}
 
-	if (trans)
-		np_trans_destroy(trans); /* np_conn_read_proc will take care of resetting */
+	if (trans) /* np_conn_read_proc will take care of resetting */
+		np_trans_destroy(trans); 
 }
 
 static Npfcall *

@@ -42,7 +42,6 @@ struct Reqpool {
 } reqpool = { PTHREAD_MUTEX_INITIALIZER, 0, NULL };
 
 static int np_wthread_create(Npsrv *srv);
-static void np_srv_destroy(Npsrv *srv);
 static void *np_wthread_proc(void *a);
 
 static Npfcall* np_default_version(Npconn *, u32, Npstr *);
@@ -95,7 +94,6 @@ np_srv_create(int nwthread)
 	srv->msize = 8216;
 	srv->srvaux = NULL;
 	srv->treeaux = NULL;
-	srv->shuttingdown = 0;
 	srv->auth = NULL;
 
 	srv->start = NULL;
@@ -145,7 +143,6 @@ np_srv_create(int nwthread)
 	srv->debuglevel = 0;
 	srv->debugprintf = NULL;
 	srv->nwthread = nwthread;
-
 	for(i = 0; i < nwthread; i++) {
 		if (np_wthread_create(srv) < 0) {
 			free (srv);
@@ -157,31 +154,33 @@ np_srv_create(int nwthread)
 }
 
 void
+np_srv_destroy(Npsrv *srv)
+{
+	Npwthread *wt, *next;
+
+	for(wt = srv->wthreads; wt != NULL; wt = wt->next) {
+		wt->shutdown = 1;
+	}
+	pthread_cond_broadcast(&srv->reqcond);
+
+	/* FIXME: will block here forever if wt is blocked in the
+	 * kernel on some op.  Consider signaling?
+	 */
+	for (wt = srv->wthreads; wt != NULL; wt = next) {
+		next = wt->next;
+		pthread_join (wt->thread, NULL);
+		free (wt);
+	}
+	if (srv->destroy)
+		(*srv->destroy)(srv);
+	free (srv);
+}
+
+void
 np_srv_start(Npsrv *srv)
 {
 	if (srv->start)
 		(*srv->start)(srv);
-}
-
-void
-np_srv_shutdown(Npsrv *srv, int shutconns)
-{
-	Npconn *conn = NULL, *conn1;
-
-	pthread_mutex_lock(&srv->lock);
-	srv->shuttingdown = 1;
-	(*srv->shutdown)(srv);
-	if (shutconns) {
-		conn = srv->conns;
-		srv->conns = NULL;
-	}
-	pthread_mutex_unlock(&srv->lock);
-
-	while (conn != NULL) {
-		conn1 = conn->next;
-		np_conn_shutdown(conn);
-		conn = conn1;
-	}
 }
 
 int
@@ -192,15 +191,13 @@ np_srv_add_conn(Npsrv *srv, Npconn *conn)
 	ret = 0;
 	pthread_mutex_lock(&srv->lock);
 	np_conn_incref(conn);
-	if (!srv->shuttingdown) {
-		conn->srv = srv;
-		conn->next = srv->conns;
-		srv->conns = conn;
-		ret = 1;
-		srv->conncount++;
-		srv->connhistory++;
-		pthread_cond_signal(&srv->conncountcond);
-	}
+	conn->srv = srv;
+	conn->next = srv->conns;
+	srv->conns = conn;
+	ret = 1;
+	srv->conncount++;
+	srv->connhistory++;
+	pthread_cond_signal(&srv->conncountcond);
 	pthread_mutex_unlock(&srv->lock);
 
 	if (srv->connopen)
@@ -232,13 +229,14 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 		(*srv->connclose)(conn);
 
 	np_conn_decref(conn);
-	if (srv->shuttingdown && !srv->conns)
-		np_srv_destroy(srv);
 	srv->conncount--;
 	pthread_cond_signal(&srv->conncountcond);
 	pthread_mutex_unlock(&srv->lock);
 }
 
+/* Block the caller until the server has no active connections,
+ * and there have been at least 'count' connections historically.
+ */
 void
 np_srv_wait_conncount(Npsrv *srv, int count)
 {
@@ -248,6 +246,9 @@ np_srv_wait_conncount(Npsrv *srv, int count)
 	pthread_mutex_unlock(&srv->lock);
 }
 
+/* Block the caller until the server has no active connections for
+ * 'inactivity_secs'.
+ */
 void
 np_srv_wait_timeout(Npsrv *srv, int inactivity_secs)
 {
@@ -270,17 +271,6 @@ np_srv_wait_timeout(Npsrv *srv, int inactivity_secs)
 	} while (rc != ETIMEDOUT);
 }
 
-static void
-np_srv_destroy(Npsrv *srv)
-{
-	Npwthread *wt;
-
-	for(wt = srv->wthreads; wt != NULL; wt = wt->next) {
-		wt->shutdown = 1;
-	}
-	pthread_cond_broadcast(&srv->reqcond);
-	(*srv->destroy)(srv);
-}
 
 void
 np_srv_add_req(Npsrv *srv, Npreq *req)
@@ -345,6 +335,7 @@ np_wthread_create(Npsrv *srv)
 	}
 	wt->srv = srv;
 	wt->shutdown = 0;
+	wt->state = WT_START;
 	err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt);
 	if (err) {
 		errno = err;
@@ -509,19 +500,16 @@ np_process_request(Npreq *req)
 static void *
 np_wthread_proc(void *a)
 {
-	Npwthread *wt;
-	Npsrv *srv;
-	Npreq *req;
+	Npwthread *wt = (Npwthread *)a;
+	Npsrv *srv = wt->srv;
+	Npreq *req = NULL;
 	Npfcall *rc;
-
-	wt = a;
-	srv = wt->srv;
-	req = NULL;
 
 	pthread_mutex_lock(&srv->lock);
 	while (!wt->shutdown) {
 		req = srv->reqs_first;
 		if (!req) {
+			wt->state = WT_IDLE;
 			pthread_cond_wait(&srv->reqcond, &srv->lock);
 			continue;
 		}
@@ -531,12 +519,17 @@ np_wthread_proc(void *a)
 		pthread_mutex_unlock(&srv->lock);
 
 		req->wthread = wt;
+		wt->state = WT_WORK;
 		rc = np_process_request(req);
-		if (rc)
+		if (rc) {
+			wt->state = WT_REPLY;
 			np_respond(req, rc);
+		}
 
 		pthread_mutex_lock(&srv->lock);
 	}
+	pthread_mutex_unlock (&srv->lock);
+	wt->state = WT_SHUT;
 
 	return NULL;
 }
@@ -592,19 +585,16 @@ np_default_version(Npconn *conn, u32 msize, Npstr *version)
 {
 	Npfcall *rc = NULL;
 
-	if (msize > conn->srv->msize)
-		msize = conn->srv->msize;
-	if (msize < P9_IOHDRSZ) {
+	/* msize already checked for > P9_IOHDRSZ */
+	if (msize > conn->msize)
+		msize = conn->msize;
+	if (msize < conn->msize)
+		conn->msize = msize; /* conn->msize can only be reduced */
+	if (np_strcmp(version, "9P2000.L") == 0) {
+		if (!(rc = np_create_rversion(msize, "9P2000.L")))
+			np_uerror(ENOMEM);
+	} else
 		np_uerror(EIO);
-		goto done;
-	}
-	if (np_strcmp(version, "9P2000.L") == 0)
-		rc = np_create_rversion(msize, "9P2000.L");
-	else
-		rc = np_create_rversion(msize, "unknown");
-	if (rc == NULL)
-		np_uerror(ENOMEM);
-done:
 	return rc;
 }
 

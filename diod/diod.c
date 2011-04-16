@@ -281,6 +281,10 @@ main(int argc, char **argv)
         /*NOTREACHED*/
     }
 
+    np_srv_destroy (srv);
+    diod_conf_fini ();
+    diod_log_fini ();
+
     exit (0);
 }
 

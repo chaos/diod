@@ -114,6 +114,7 @@ _rcv_buf (Npfcall *fc, int type, const char *fun)
     char s[256];
 
     printf ("%s(%d): %d\n", fun, type, fc->size);
+    np_set_tag (fc, 42);
 
     /* see conn.c:np_conn_new_incall () */
     if (!(fc2 = malloc (sizeof (*fc2) + TEST_MSIZE)))

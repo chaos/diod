@@ -116,6 +116,8 @@ void
 diod_log_fini (void)
 {
     closelog ();
+    if (logf != NULL)
+        fflush (logf);
     if (logf != stdout && logf != stderr && logf != NULL)
         fclose (logf);
 }

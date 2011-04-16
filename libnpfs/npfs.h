@@ -192,6 +192,7 @@ struct Npreq {
 struct Npwthread {
 	Npsrv*		srv;
 	int		shutdown;
+	enum { WT_START, WT_IDLE, WT_WORK, WT_REPLY, WT_SHUT } state;
 	pthread_t	thread;
 
 	Npwthread	*next;
@@ -227,7 +228,6 @@ struct Npsrv {
 	void		(*fiddestroy)(Npfid *);
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);
-//	Npfcall*	(*auth)(Npfid *afid, Npstr *uname, Npstr *aname);
 	Npfcall*	(*attach)(Npfid *fid, Npfid *afid, Npstr *aname);
 	void		(*flush)(Npreq *req);
 	int		(*clone)(Npfid *fid, Npfid *newfid);
@@ -269,7 +269,6 @@ struct Npsrv {
 	pthread_cond_t	conncountcond;
 	int		conncount;
 	int		connhistory;
-	int		shuttingdown;
 	Npconn*		conns;
 	int		nwthread;
 	Npwthread*	wthreads;
@@ -317,9 +316,9 @@ struct Npuserpool {
 extern Npuserpool *np_default_users;
 
 Npsrv *np_srv_create(int nwthread);
+void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
 void np_srv_start(Npsrv *);
-void np_srv_shutdown(Npsrv *, int wait);
 int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
 void np_srv_wait_timeout(Npsrv *srv, int inactivity_secs);
@@ -330,7 +329,6 @@ void np_buf_set(Npbuf *, u8 *, u32);
 Npconn *np_conn_create(Npsrv *, Nptrans *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
-void np_conn_shutdown(Npconn *);
 void np_conn_respond(Npreq *req);
 void np_respond(Npreq *, Npfcall *);
 
