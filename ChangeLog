@@ -1,5 +1,7 @@
 2011-04-16 Jim Garlick <garlick@llnl.gov>
 
+	* : tag 1.0-pre22
+
 	* tests/misc/Makefile.am : Add t08.conf to EXTRA_DIST
 	
 	* srv.c : Add missing np_uerror(0) initialization in np_srv_create ().
@@ -19,7 +21,7 @@
 
 2011-04-15 Jim Garlick <garlick@llnl.gov>
 
-	* : tag 1.0-pre21
+	* : tag 1.0-pre21 (broken diodctl)
 
 	* libnpfs/fmt.c : Fix segfault on buffer overflow.  Clean up.
 

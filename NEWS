@@ -1,4 +1,9 @@
-1.0-pre21:
+1.0-pre22:
+	Fixed initialization problem in diodctl introduced in pre21.
+	Properly handle msize negotiation.
+	Improved cleanup during shutdown.
+
+1.0-pre21: (do not use)
 	Fix minor memory problems uncovered by valgrind.
 	Improved test coverage.
 	Cleanup.
