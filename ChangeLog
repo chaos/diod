@@ -1,4 +1,6 @@
 2011-04-16 Jim Garlick <garlick@llnl.gov>
+
+	* tests/misc/Makefile.am : Add t08.conf to EXTRA_DIST
 	
 	* srv.c : Add missing np_uerror(0) initialization in np_srv_create ().
 

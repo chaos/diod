@@ -45,4 +45,4 @@ tserialize_SOURCES = tserialize.c $(common_sources)
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources) 
 
-EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf t08.conf
