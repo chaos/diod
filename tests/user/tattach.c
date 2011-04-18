@@ -43,6 +43,8 @@ main (int argc, char *argv[])
     if (npc_umount (fs) < 0)
         err_exit ("npc_umount");
 
+    diod_log_fini ();
+
     exit (0);
 }
 

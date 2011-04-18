@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2005 by Latchesar Ionkov <lucho@ionkov.net>
- *
- * Permission is hereby granted, free of charge, to any person obtaining a
+ * * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
  * the rights to use, copy, modify, merge, publish, distribute, sublicense,
@@ -52,10 +51,6 @@ Npfcall *np_lock(Npreq *req, Npfcall *tc);
 Npfcall *np_getlock(Npreq *req, Npfcall *tc);
 Npfcall *np_link(Npreq *req, Npfcall *tc);
 Npfcall *np_mkdir(Npreq *req, Npfcall *tc);
-#if HAVE_LARGEIO
-Npfcall *np_aread(Npreq *req, Npfcall *tc);
-Npfcall *np_awrite(Npreq *req, Npfcall *tc);
-#endif
 
 /* srv.c */
 void np_srv_add_req(Npsrv *srv, Npreq *req);

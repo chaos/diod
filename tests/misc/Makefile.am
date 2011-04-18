@@ -14,7 +14,7 @@ check_PROGRAMS = \
 TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
 #XFAIL_TESTS = t10
 
-CLEANFILES = *.out *.diff *.stats
+CLEANFILES = *.out *.diff
 
 AM_CFLAGS = @GCCWARN@
 

@@ -53,10 +53,6 @@ static Npfcall* np_default_read(Npfid *, u64, u32, Npreq *);
 static Npfcall* np_default_write(Npfid *, u64, u32, u8*, Npreq *);
 static Npfcall* np_default_clunk(Npfid *);
 static Npfcall* np_default_remove(Npfid *);
-#if HAVE_LARGEIO
-static Npfcall* np_default_aread(Npfid *, u8, u64, u32, u32, Npreq *);
-static Npfcall* np_default_awrite(Npfid *, u64, u32, u32, u8*, Npreq *);
-#endif
 static Npfcall* np_default_statfs(Npfid *);
 static Npfcall* np_default_lopen(Npfid *, u32);
 static Npfcall* np_default_lcreate(Npfid *, Npstr *, u32, u32, u32);
@@ -109,10 +105,7 @@ np_srv_create(int nwthread)
 	srv->clunk = np_default_clunk;
 	srv->remove = np_default_remove;
 	srv->upool = NULL;
-#if HAVE_LARGEIO
-	srv->aread = np_default_aread;
-	srv->awrite = np_default_awrite;
-#endif
+
 	srv->statfs = np_default_statfs;
 	srv->lopen = np_default_lopen;
 	srv->lcreate = np_default_lcreate;
@@ -413,16 +406,6 @@ np_process_request(Npreq *req)
 			rc = np_mkdir(req, tc);
 			op = "mkdir";
 			break;
-#if HAVE_LARGEIO
-		case P9_TAREAD:
-			rc = np_aread(req, tc);
-			op = "aread";
-			break;
-		case P9_TAWRITE:
-			rc = np_awrite(req, tc);
-			op = "awrite";
-			break;
-#endif
 		case P9_TVERSION:
 			rc = np_version(req, tc);
 			op = "version";
@@ -627,21 +610,6 @@ np_default_remove(Npfid *fid)
 	return NULL;
 }
 
-#if HAVE_LARGEIO
-static Npfcall*
-np_default_aread(Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize, Npreq *req)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_awrite(Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-#endif
 static Npfcall*
 np_default_statfs(Npfid *fid)
 {

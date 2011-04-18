@@ -1,7 +1,0 @@
-#!/bin/bash -e
-
-echo creating file in regular file system
-dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_EXPDIR/a count=4
-
-echo reading file with 1mb transfers
-dd status=noxfer bs=1048576 of=/dev/null if=$PATH_MNTDIR/a

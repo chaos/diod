@@ -37,15 +37,6 @@ typedef struct Npuser Npuser;
 typedef struct Npgroup Npgroup;
 typedef struct Npuserpool Npuserpool;
 
-#if HAVE_LARGEIO
-/* datacheck values */
-enum {
-	P9_CHECK_NONE = 0,
-	P9_CHECK_ADLER32 = 1,
-};
-#define P9_AIOHDRSZ (P9_IOHDRSZ+4+1+4)
-#endif 
-
 #define FID_HTABLE_SIZE 64
 
 struct Npfcall {
@@ -89,12 +80,7 @@ struct Npfcall {
 	   struct p9_rlink rlink;
 	   struct p9_tmkdir tmkdir;
 	   struct p9_rmkdir rmkdir;
-#if HAVE_LARGEIO
-	   struct p9_tawrite tawrite;
-	   struct p9_rawrite rawrite;
-	   struct p9_taread taread;
-	   struct p9_raread raread;
-#endif
+
 	   struct p9_tversion tversion;
 	   struct p9_rversion rversion;
 	   struct p9_tauth tauth;
@@ -250,12 +236,7 @@ struct Npsrv {
 	Npfcall*	(*getlock)(Npfid *, u8 type, u64, u64, u32, Npstr *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
-#if HAVE_LARGEIO
-	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
-				 u32 count, u32 rsize, Npreq *req);
-	Npfcall*	(*awrite)(Npfid *fid, u64 offset, u32 count,
-				  u32 rsize, u8 *data, Npreq *req);
-#endif
+
 	/* implementation specific */
 	pthread_mutex_t	lock;
 	pthread_cond_t	reqcond;
@@ -376,15 +357,6 @@ Npfcall *np_create_rremove(void);
 Npfcall *np_create_tread(u32 fid, u64 offset, u32 count);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
-#if HAVE_LARGEIO
-Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count,
-			  u32 rsize);
-Npfcall *np_create_raread(u32 count);
-void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
-Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count,
-			   u32 rsize, u8 *data);
-Npfcall *np_create_rawrite(u32 count);
-#endif
 Npfcall *np_create_rlerror(u32 ecode);
 Npfcall *np_create_tstatfs(u32 fid);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,

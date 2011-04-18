@@ -509,61 +509,6 @@ done:
 	return rc;
 }
 
-#if HAVE_LARGEIO
-Npfcall *
-np_aread(Npreq *req, Npfcall *tc)
-{
-	Npconn *conn = req->conn;
-	Npfid *fid = np_fid_find(conn, tc->u.taread.fid);
-	Npfcall *rc = NULL;
-
-	if (!fid) {
-		np_uerror(EIO);
-		goto done;
-	}
-	np_fid_incref(fid);
-	req->fid = fid;
-	rc = (*conn->srv->aread)(fid,
-				tc->u.taread.datacheck,
-				tc->u.taread.offset,
-				tc->u.taread.count,
-				tc->u.taread.rsize, req);
-done:
-	return rc;
-}
-
-Npfcall *
-np_awrite(Npreq *req, Npfcall *tc)
-{
-	Npconn *conn = req->conn;
-	Npfid *fid = np_fid_find(conn, tc->u.tawrite.fid);
-	Npfcall *rc = NULL;
-	u32 check;
-
-	if (!fid) {
-		np_uerror(EIO);
-		goto done;
-	}
-	np_fid_incref(fid);
-	req->fid = fid;
-	if (tc->u.tawrite.datacheck == P9_CHECK_ADLER32) {
-		check = adler32(0L, Z_NULL, 0);
-		check = adler32(check, tc->u.tawrite.data, tc->u.tawrite.rsize);
-		if (tc->u.tawrite.check != check) {
-			np_uerror(EAGAIN);
-			goto done;
-		}
-	}
-	rc = (*conn->srv->awrite)(fid,
-				tc->u.tawrite.offset,
-				tc->u.tawrite.count,
-				tc->u.tawrite.rsize,
-				tc->u.tawrite.data, req);
-done:
-	return rc;
-}
-#endif
-
 static Npfid *
 _getfid_incref(Npreq *req, u32 fid)
 {

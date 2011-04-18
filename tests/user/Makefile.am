@@ -19,7 +19,7 @@ $(TESTS): exp.d
 exp.d:
 	mkdir -p $@
 
-CLEANFILES = *.out *.diff *.stats *.diod
+CLEANFILES = *.out *.diff *.diod
 
 AM_CFLAGS = @GCCWARN@
 

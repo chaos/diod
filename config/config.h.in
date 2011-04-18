@@ -12,9 +12,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define if using large I/O protocol extensions */
-#undef HAVE_LARGEIO
-
 /* Define to 1 if you have the `lua' library (-llua). */
 #undef HAVE_LIBLUA
 

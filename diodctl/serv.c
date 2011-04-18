@@ -94,8 +94,6 @@ _free_server (Server *s)
         if (kill (s->pid, SIGTERM) < 0)
             err ("could not send SIGTERM to pid %d", s->pid);
     }
-    if (s->fds != NULL)
-        free (s->fds);
     if (s->av) {
         for (i = 0; i < s->ac; i++)
             if (s->av[i])
@@ -104,6 +102,8 @@ _free_server (Server *s)
     }
     for (i = 0; i < s->nfds; i++)
         (void) close (s->fds[i].fd);
+    if (s->fds)
+        free (s->fds);
     if (s->jobid)
         free (s->jobid);
     free (s);

@@ -94,10 +94,11 @@ typedef struct {
     List         diodctllisten;
     int          exportall;
     List         exports;
-    FILE        *statslog;
     char        *configpath;
     char        *logdest;
     int         ro_mask; 
+    int         sigthread_running;
+    pthread_t   sigthread;
 } Conf;
 
 static Conf config;
@@ -180,10 +181,10 @@ diod_conf_init (void)
     _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.exportall = 0;
-    config.statslog = NULL;
     config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
     config.logdest = NULL;
     config.ro_mask = 0;
+    config.sigthread_running = 0;
 }
 
 void
@@ -197,12 +198,15 @@ diod_conf_fini (void)
         list_destroy (config.diodctllisten);
     if (config.exports)
         list_destroy (config.exports);
-    if (config.statslog)
-        fclose (config.statslog);
     if (config.configpath)
         free (config.configpath);
     if (config.logdest)
         free (config.logdest);
+    if (config.sigthread_running) {
+        config.sigthread_running = 0;
+        pthread_kill (config.sigthread, SIGUSR1);
+        pthread_join (config.sigthread, NULL);
+    }
 }
 
 /* logdest - logging destination
@@ -411,25 +415,18 @@ void diod_conf_validate_exports (void)
     list_iterator_destroy (itr);
 }
 
-FILE *diod_conf_get_statslog (void) { return config.statslog; }
-int diod_conf_opt_statslog (void) { return config.ro_mask & RO_STATSLOG; }
-void diod_conf_set_statslog (char *path)
-{
-    if (config.statslog)
-        fclose (config.statslog);
-    if (!(config.statslog = fopen (path, "w")))
-        err_exit ("error opening %s", path);
-    config.ro_mask |= RO_STATSLOG;
-}
-
 static void *
 _sigthread (void *arg)
 {
-    sigset_t *set = (sigset_t *)arg;
+    sigset_t set;
     int s, sig;
 
-    for (;;) {
-        if ((s = sigwait (set, &sig)) > 0) {
+    sigemptyset (&set);
+    sigaddset (&set, SIGHUP);
+    sigaddset (&set, SIGUSR1);
+
+    while (config.sigthread_running) {
+        if ((s = sigwait (&set, &sig)) > 0) {
             errno = s;
             err_exit ("sigwait");
         }
@@ -437,6 +434,8 @@ _sigthread (void *arg)
             case SIGHUP:
                 msg ("reloading config file");
                 diod_conf_init_config_file (NULL);
+                break;
+            case SIGUSR1:
                 break;
             default:
                 msg ("caught signal %d", sig);
@@ -450,18 +449,21 @@ _sigthread (void *arg)
 void
 diod_conf_arm_sighup (void)
 {
-    static pthread_t thread;
     static sigset_t set;
     int s;
 
     sigemptyset (&set);
     sigaddset (&set, SIGHUP);
+    sigaddset (&set, SIGUSR1);
 
+    /* New threads will inherit this mask.
+     */ 
     if ((s = pthread_sigmask (SIG_BLOCK, &set, NULL))) {
         errno = s;
         err_exit ("pthread_sigmask");
     }
-    if ((s = pthread_create (&thread, NULL, &_sigthread, (void *)&set))) {
+    config.sigthread_running = 1;
+    if ((s = pthread_create (&config.sigthread, NULL, &_sigthread, NULL))) {
         errno = s;
         err_exit ("pthread_create");
     }

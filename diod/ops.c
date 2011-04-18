@@ -100,21 +100,6 @@ typedef struct {
     struct stat      stat;
     /* advisory locking */
     int              lock_type;
-    /* atomic I/O */
-    void            *rc_data;
-    u64              rc_offset;
-    u32              rc_length;
-    u32              rc_pos;
-    void            *wc_data;
-    u64              wc_offset;
-    u32              wc_length;
-    u32              wc_pos;
-    /* stats */
-    u64              write_ops;
-    u64              write_bytes;
-    u64              read_ops;
-    u64              read_bytes;
-    struct timeval   birth;
     /* export flags */
     int              xflags;
 } Fid;
@@ -130,12 +115,6 @@ Npfcall     *diod_remove (Npfid *fid);
 void         diod_flush  (Npreq *req);
 void         diod_fiddestroy(Npfid *fid);
 
-#if HAVE_LARGEIO
-Npfcall     *diod_aread  (Npfid *fid, u8 datacheck, u64 offset, u32 count,
-                          u32 rsize, Npreq *req);
-Npfcall     *diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize,
-                          u8 *data, Npreq *req);
-#endif
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
 Npfcall     *diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode,
@@ -179,10 +158,7 @@ diod_register_ops (Npsrv *srv)
     srv->fiddestroy = diod_fiddestroy;
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->debugprintf = msg;
-#if HAVE_LARGEIO
-    srv->aread = diod_aread;
-    srv->awrite = diod_awrite;
-#endif
+
     srv->statfs = diod_statfs;
     srv->lopen = diod_lopen;
     srv->lcreate = diod_lcreate;
@@ -270,9 +246,6 @@ _pread (Npfid *fid, void *buf, size_t count, off_t offset)
         np_uerror (errno);
         if (errno == EIO)
             err ("read %s", f->path);
-    } else {
-        f->read_ops++;
-        f->read_bytes += n;
     }
     return n;
 }
@@ -290,9 +263,6 @@ _pwrite (Npfid *fid, void *buf, size_t count, off_t offset)
         np_uerror (errno);
         if (errno == EIO)
             err ("write %s", f->path);
-    } else {
-        f->write_ops++;
-        f->write_bytes += n;
     }
     return n;
 }
@@ -311,18 +281,7 @@ _fidalloc (void)
         f->fd = -1;
         f->dir = NULL;
         f->dirent = NULL;
-        f->rc_data = NULL;
-        f->wc_data = NULL;
-        f->read_ops = 0;
-        f->read_bytes = 0;
-        f->write_ops = 0;
-        f->write_bytes = 0;
         f->lock_type = LOCK_UN;
-        if (gettimeofday (&f->birth, NULL) < 0) {
-            np_uerror (errno);
-            free (f);
-            f = NULL;
-        }
         f->xflags = 0;
     }
   
@@ -339,41 +298,9 @@ _fidfree (Fid *f)
             close (f->fd);
         if (f->dir) 
             closedir(f->dir);
-        if (f->rc_data)
-            free(f->rc_data);
-        if (f->wc_data)
-            free(f->wc_data);
         if (f->path)
             free(f->path);
         free(f);
-    }
-}
-
-static void
-_dumpstats (Fid *f)
-{
-    FILE *lf = diod_conf_get_statslog ();
-    struct timeval death;
-    double lifetime;
-
-    //assert (f != NULL);
-
-    if (f && lf) {
-        lifetime = (double)death.tv_sec + 10E-6*(double)death.tv_usec
-                 - ((double)f->birth.tv_sec + 10E-6*(double)f->birth.tv_usec);
-        if (f->read_bytes + f->write_bytes > 0) {
-            if (gettimeofday (&death, NULL) == 0) {
-                fprintf (lf,
-                        "%s:%"PRIu64":%"PRIu64":%"PRIu64":%"PRIu64":%lf\n",
-                        f->path,
-                        f->read_ops,
-                        f->read_bytes,
-                        f->write_ops,
-                        f->write_bytes,
-                        lifetime);
-                fflush (lf);
-            }
-        }
     }
 }
 
@@ -385,7 +312,6 @@ diod_fiddestroy (Npfid *fid)
 {
     Fid *f = fid->aux;
 
-    _dumpstats (f);
     _fidfree (f);
     fid->aux = NULL;
 }
@@ -787,226 +713,8 @@ done:
 void
 diod_flush(Npreq *req)
 {
-    /* FIXME: need to clear aread/awrite/readdir state ? */
     return;
 }
-
-#if HAVE_LARGEIO
-/* helper for diod_aread */
-static int
-_cache_read (Npfid *fid, void *buf, u32 rsize, u64 offset, int debug)
-{
-    Fid *f = fid->aux;
-    int ret = 0;
-
-    if (f->rc_data) {
-        if (f->rc_offset + f->rc_pos == offset) {
-            ret = f->rc_length - f->rc_pos;
-            if (ret > rsize)
-                ret = rsize;
-            memcpy (buf, f->rc_data + f->rc_pos, ret);
-            if (debug)
-                msg ("aread:   read %d bytes from cache", ret);
-            f->rc_pos += ret;
-        }
-        if (ret == 0 || f->rc_pos == f->rc_length) {
-            free (f->rc_data);
-            f->rc_data = NULL;
-            if (debug)
-                msg ("aread:   freed %u byte cache", f->rc_length);
-        }
-    }
-    return ret;
-}
-
-/* helper for diod_aread */
-static int
-_cache_read_ahead (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset,
-                   int debug)
-{
-    Fid *f = fid->aux;
-    u32 atomic_max = (u32)diod_conf_get_atomic_max () * 1024 * 1024;
-
-    if (count > atomic_max)
-        count = atomic_max;
-
-    if (!f->rc_data || f->rc_length < count) {
-        assert (f->rc_data == NULL);
-        if (!(f->rc_data = _malloc (count))) {
-            msg ("diod_aread: out of memory (allocating %d bytes)", count);
-            return -1;
-        }
-        if (debug)
-            msg ("aread:  allocated %u byte cache", count);
-    }
-    f->rc_length = _pread (fid, f->rc_data, count, offset);
-    f->rc_offset = offset;
-    f->rc_pos = 0;
-    if (f->rc_length < 0) {
-        free (f->rc_data);
-        f->rc_data = NULL;
-        return -1;
-    } 
-    if (debug)
-        msg ("aread:   read %d bytes at offset %llu", f->rc_length, 
-             (unsigned long long)offset);
-    return _cache_read (fid, buf, rsize, offset, debug);
-}
-
-/* Taread - atomic read
- */
-Npfcall*
-diod_aread (Npfid *fid, u8 datacheck, u64 offset, u32 count, u32 rsize,
-            Npreq *req)
-{
-    int debug = (diod_conf_get_debuglevel () & DEBUG_ATOMIC);
-    int n;
-    Npfcall *ret = NULL;
-
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_aread: error switching user");
-        goto done;
-    }
-    if (!(ret = np_create_raread (rsize))) {
-        np_uerror (ENOMEM);
-        msg ("diod_aread: out of memory");
-        goto done;
-    }
-    if (debug)
-        msg ("aread: rsize %u count %u offset %llu", rsize, count,
-             (unsigned long long)offset);
-    n = _cache_read (fid, ret->data, rsize, offset, debug);
-    if (n == 0) {
-        if (count > rsize)
-            n = _cache_read_ahead (fid, ret->data, count, rsize, offset, debug);
-        else {
-            n = _pread (fid, ret->data, rsize, offset);
-            if (debug)
-                msg ("aread: directly read %d bytes at offset %llu", n,
-                     (unsigned long long)offset);
-        }
-    }
-    if (np_rerror ()) {
-        if (ret) {
-            free (ret);
-            ret = NULL;
-        }
-    } else
-        np_finalize_raread (ret, n, datacheck);
-done:
-    return ret;
-}
-
-/* helper for diod_awrite */
-static int
-_cache_write (Npfid *fid, void *buf, u32 rsize, u64 offset, int debug)
-{
-    Fid *f = fid->aux;
-    int ret = 0, i = 0, n;
-
-    if (f->wc_data) {
-        if (f->wc_offset + f->wc_pos == offset) {
-            ret = f->wc_length - f->wc_pos;
-            if (ret > rsize)
-                ret = rsize;
-            memcpy (f->wc_data + f->wc_pos, buf, ret);
-            if (debug)
-                msg ("awrite:   cached %d bytes", ret);
-            f->wc_pos += ret;
-        }
-        if (f->wc_pos == f->wc_length) {
-            while (i < f->wc_pos) {
-                n = _pwrite (fid, f->wc_data + i,
-                            f->wc_pos - i, f->wc_offset + i);
-                if (n < 0) {
-                    free (f->wc_data);
-                    f->wc_data = NULL;
-                    return -1;
-                }
-                if (debug)
-                    msg ("awrite:   wrote %d bytes at offset %llu",
-                         f->wc_pos - i,
-                         (unsigned long long)f->wc_offset + i);
-                i += n;
-            }
-            free (f->wc_data);
-            if (debug)
-                msg ("awrite:   freed %u byte cache", f->wc_length);
-            f->wc_data = NULL;
-        }
-    }
-    return ret;
-}
-
-/* helper for diod_awrite */
-static int
-_cache_write_behind (Npfid *fid, void *buf, u32 count, u32 rsize, u64 offset,
-                     int debug)
-{
-    Fid *f = fid->aux;
-    u32 atomic_max = (u32)diod_conf_get_atomic_max () * 1024 * 1024;
-
-    if (count > atomic_max)
-        count = atomic_max;
-    assert (f->wc_data == NULL);
-    if (!(f->wc_data = _malloc (count))) {
-        msg ("diod_awrite: out of memory (allocating %d bytes)", count);
-        return -1;
-    }
-    if (debug)
-        msg ("awrite:  allocated %u byte cache", count);
-    f->wc_length = count;
-    f->wc_offset = offset;
-    f->wc_pos = 0;
-
-    return _cache_write (fid, buf, rsize, offset, debug);
-}
-
-/* Tawrite - atomic write
- */
-Npfcall*
-diod_awrite (Npfid *fid, u64 offset, u32 count, u32 rsize, u8 *data, Npreq *req)
-{
-    Fid *f = fid->aux;
-    int debug = (diod_conf_get_debuglevel () & DEBUG_ATOMIC);
-    int n;
-    Npfcall *ret = NULL;
-
-    if ((f->xflags & XFLAGS_RO)) {
-        np_uerror (EROFS);
-        goto done;
-    }
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_awrite: error switching user");
-        goto done;
-    }
-    if (debug)
-        msg ("awrite: rsize %u count %u offset %llu", rsize, count,
-             (unsigned long long)offset);
-    n = _cache_write (fid, data, rsize, offset, debug);
-    if (n == 0) {
-        if (count > rsize)
-            n = _cache_write_behind (fid, data, count, rsize, offset, debug);
-        else {
-            n = _pwrite (fid, data, rsize, offset);
-            if (n < 0)
-                goto done;
-            if (debug)
-                msg ("awrite: directly wrote %d bytes at offset %llu", n,
-                     (unsigned long long)offset);
-        }
-    }
-
-    if (!(ret = np_create_rawrite (n))) {
-        np_uerror (ENOMEM);
-        msg ("diod_awrite: out of memory");
-        goto done;
-    }
-
-done:
-    return ret;
-}
-#endif
 
 /* Tstatfs - read file system  information (9P2000.L)
  * N.B. must call statfs() and statvfs() as
@@ -1054,6 +762,11 @@ diod_lopen (Npfid *fid, u32 mode)
     Npfcall *res = NULL;
     Npqid qid;
 
+    /* FIXME: [valgrind]
+     * ==17656== Thread 15:
+     * ==17656== Conditional jump or move depends on uninitialised value(s)
+     * ==17656==    at 0x405205: diod_lopen (ops.c:765)
+     */
     if ((f->xflags & XFLAGS_RO) && ((mode & O_WRONLY) || (mode & O_RDWR))) {
         np_uerror (EROFS);
         goto done;

@@ -484,34 +484,6 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_RMKDIR tag %u qid ", fc->tag);
 		np_printqid(s, len, &fc->u.rmkdir.qid);
 		break;
-#if HAVE_LARGEIO
-	case P9_TAREAD:
-		spf (s, len, "P9_TAREAD tag %u", fc->tag);
-		spf (s, len, " fid %"PRIu32, fc->u.taread.fid);
-		spf (s, len, " datacheck %u", fc->u.taread.datacheck);
-		spf (s, len, " offset %"PRIu64, fc->u.taread.offset);
-		spf (s, len, " count %"PRIu32, fc->u.taread.count);
-		spf (s, len, " rsize %"PRIu32, fc->u.taread.rsize);
-		break;
-	case P9_RAREAD:
-		spf (s, len, "P9_RAREAD tag %u", fc->tag);
-		spf (s, len, " count %"PRIu32, fc->u.raread.count);
-		np_printdata(s, len, fc->u.raread.data, fc->u.raread.count);
-		break;
-	case P9_TAWRITE:
-		spf (s, len, "P9_TAWRITE tag %u", fc->tag);
-		spf (s, len, " fid %"PRIu32, fc->u.tawrite.fid);
-		spf (s, len, " datacheck %u", fc->u.tawrite.datacheck);
-		spf (s, len, " offset %"PRIu64, fc->u.tawrite.offset);
-		spf (s, len, " count %"PRIu32, fc->u.tawrite.count);
-		spf (s, len, " rsize %"PRIu32, fc->u.tawrite.rsize);
-		np_printdata(s, len, fc->u.tawrite.data, fc->u.tawrite.rsize);
-		break;
-	case P9_RAWRITE:
-		spf (s, len, "P9_RAWRITE.diod tag %u", fc->tag);
-		spf (s, len, " count %"PRIu32, fc->u.rawrite.count);
-		break;
-#endif
 	case P9_TVERSION:
 		spf (s, len, "P9_TVERSION tag %u", fc->tag);
 		spf (s, len, " msize %u", fc->u.tversion.msize);

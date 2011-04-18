@@ -20,10 +20,6 @@ t18	Simple test to check that BSD advisory file locks are properly
 	arbitrated between two processes.
 t19	Simple test to check that POSIX advisory record locks are properly
 	arbitrated between two processes.
-t20	Read a 4MB file with 1MB I/O's with debugging on.
-        [FIXME: need to set diod -A debugging flag]
-t21	Write a 4MB file with 1MB I/O's with debugging on.
-        [FIXME: need to set diod -A debugging flag]
 t22	Append to a file.  I added this test because I was momentarily
 	freaked out by a pwrite at offset 0 during an append, but it turns
 	out this is OK when the device is opened in append mode.

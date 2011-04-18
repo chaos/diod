@@ -41,7 +41,7 @@ rm -f $TEST.diod $TEST.out
 ulimit -c unlimited
 
 ./kconjoin \
-    "$PATH_DIOD -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR -s $TEST.stats" \
+    "$PATH_DIOD -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
     "$PATH_DIODMOUNT -n -owfdno=0,rfdno=0 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST" \
     >$TEST.out 2>&1

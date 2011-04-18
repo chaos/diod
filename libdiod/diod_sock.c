@@ -329,6 +329,7 @@ diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds)
     a.nfds = nfds;
     pthread_create (&thd, NULL, _accept_thread, &a);
     np_srv_wait_timeout(srv, 30);  /* exit after no conns for 30s */
+    /* FIXME: [valgrind] need to terminate then join with _accept_thread (). */
 }
 
 /* Try to connect to host:port.

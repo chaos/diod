@@ -126,10 +126,6 @@ enum p9_msg_t {
 	P9_RLINK,
 	P9_TMKDIR = 72,
 	P9_RMKDIR,
-	P9_TAREAD = 80,		/* diod */
-	P9_RAREAD,
-	P9_TAWRITE = 82,	/* diod */
-	P9_RAWRITE,
 	P9_TVERSION = 100,
 	P9_RVERSION,
 	P9_TAUTH = 102,
@@ -483,19 +479,6 @@ struct p9_tawrite {
 };
 struct p9_rawrite {
 	u32 count;
-};
-struct p9_taread {
-	u32 fid;
-	u8 datacheck;
-	u64 offset;
-	u32 count;
-	u32 rsize;
-};
-struct p9_raread {
-	u32 count;
-	u8 datacheck;
-	u8 *data;
-	u32 check;
 };
 struct p9_tversion {
 	u32 msize;

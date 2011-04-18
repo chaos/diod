@@ -82,6 +82,8 @@ main (int argc, char *argv[])
     if (close (fd) < 0)
         err_exit ("close");
 
+    diod_log_fini ();
+
     exit (0);
 }
 

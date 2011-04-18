@@ -1,5 +1,12 @@
 2011-04-18 Jim Garlick <garlick@llnl.gov>
 
+	* diodctl/serv.c : Fix small memory leak in _free_server ().
+
+	* diod/ops.c, diod/diod.c, libnpfs/* : Drop diod -s (stats) option.
+	Drop atomic I/O support for now.
+
+	* libdiod/diod_conf.c : Clean up sighup thread on diod_conf_fini ().
+
 	* tests/misc/tnpsrv.c : Expand test coverage a bit.
 
 	* libnpfs/srv.c : Drop little used DEBUG_9P_ERRORS support.

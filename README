@@ -21,11 +21,6 @@ configure options:
 	munge, you will have to run the server with --no-auth
 	which is likely a big security vulnerability.
 
-    --enable-largeio
-	Enable aread/awrite ops for large atomic I/O.
-	This requires client (9p.ko) modifications and is currently
-	under construction.  Do not use.
-
 +---------+
 | Testing |
 +---------+

@@ -61,7 +61,7 @@ static void          _setrlimit (void);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:e:EF:u:SL:s:nc:"
+#define OPTIONS "fd:l:w:e:EF:u:SL:nc:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -77,7 +77,6 @@ static const struct option longopts[] = {
     {"runas-uid",       required_argument,  0, 'u'},
     {"allsquash",       no_argument,        0, 'S'},
     {"logdest",         required_argument,  0, 'L'},
-    {"stats",           required_argument,  0, 's'},
     {"config-file",     required_argument,  0, 'c'},
     {0, 0, 0, 0},
 };
@@ -101,7 +100,6 @@ usage()
 "   -S,--allsquash         map all users to nobody\n"
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -d,--debug MASK        set debugging mask\n"
-"   -s,--stats FILE        log detailed I/O stats to FILE\n"
 "   -c,--config-file FILE  set config file path\n"
     );
     exit (1);
@@ -198,9 +196,6 @@ main(int argc, char **argv)
             case 'L':   /* --logdest DEST */
                 diod_conf_set_logdest (optarg);
                 diod_log_set_dest (optarg);
-                break;
-            case 's':   /* --stats PATH */
-                diod_conf_set_statslog (optarg);
                 break;
             default:
                 usage();

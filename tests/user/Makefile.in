@@ -42,7 +42,6 @@ ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
-	$(top_srcdir)/config/x_ac_largeio.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
 	$(top_srcdir)/config/x_ac_munge.m4 \
 	$(top_srcdir)/config/x_ac_wrap.m4 $(top_srcdir)/configure.ac
@@ -258,7 +257,7 @@ TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODCONF=$(top_builddir)/etc/diod.conf" \
 	"PATH_EXPDIR=$(shell readlink -f exp.d)" "./runtest"
 TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09
-CLEANFILES = *.out *.diff *.stats *.diod
+CLEANFILES = *.out *.diff *.diod
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \

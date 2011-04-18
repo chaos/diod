@@ -639,8 +639,6 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-LARGEIO_FALSE
-LARGEIO_TRUE
 MUNGE_FALSE
 MUNGE_TRUE
 LIBMUNGE
@@ -774,7 +772,6 @@ enable_option_checking
 enable_maintainer_mode
 enable_dependency_tracking
 enable_munge
-enable_largeio
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1421,7 +1418,6 @@ Optional Features:
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
   --disable-munge         Build wout MUNGE support
-  --enable-largeio        Build to use large I/O protocol extensions
 
 Some influential environment variables:
   CC          C compiler command
@@ -6299,30 +6295,6 @@ fi
 
 
 
-  # Check whether --enable-largeio was given.
-if test "${enable_largeio+set}" = set; then
-  enableval=$enable_largeio; enable_largeio=$enableval
-else
-  enable_largeio=no
-fi
-
-  if test x$enable_largeio == xyes; then
-
-cat >>confdefs.h <<\_ACEOF
-#define HAVE_LARGEIO 1
-_ACEOF
-
-  fi
-   if test x$enable_largeio == xyes; then
-  LARGEIO_TRUE=
-  LARGEIO_FALSE='#'
-else
-  LARGEIO_TRUE='#'
-  LARGEIO_FALSE=
-fi
-
-
-
 ##
 # For list.c, hostlist.c, hash.c
 ##
@@ -6479,13 +6451,6 @@ if test -z "${MUNGE_TRUE}" && test -z "${MUNGE_FALSE}"; then
   { { $as_echo "$as_me:$LINENO: error: conditional \"MUNGE\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 $as_echo "$as_me: error: conditional \"MUNGE\" was never defined.
-Usually this means the macro was only invoked conditionally." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-if test -z "${LARGEIO_TRUE}" && test -z "${LARGEIO_FALSE}"; then
-  { { $as_echo "$as_me:$LINENO: error: conditional \"LARGEIO\" was never defined.
-Usually this means the macro was only invoked conditionally." >&5
-$as_echo "$as_me: error: conditional \"LARGEIO\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi

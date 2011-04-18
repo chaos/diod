@@ -23,16 +23,12 @@ TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
 
 #XFAIL_TESTS =
 
-if LARGEIO
-TESTS += t20 t21
-endif
-
 $(TESTS): mnt.d exp.d
 
 mnt.d exp.d:
 	mkdir -p $@
 
-CLEANFILES = *.out *.diff *.stats *.diod
+CLEANFILES = *.out *.diff *.diod
 
 AM_CFLAGS = @GCCWARN@
 

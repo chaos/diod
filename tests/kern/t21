@@ -1,6 +1,0 @@
-#!/bin/bash -e
-
-echo writing file with 1mb transfers and verifying
-dd status=noxfer bs=1048576 if=/dev/zero of=$PATH_MNTDIR/a count=4
-cmp $PATH_EXPDIR/a $PATH_MNTDIR/a
-echo "size is `stat -c "%s" $PATH_EXPDIR/a`"
