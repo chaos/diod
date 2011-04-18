@@ -1,2 +1,8 @@
 tnpsrv: P9_TVERSION tag 65535 msize 8192 version 9P2000.L
 tnpsrv: P9_RVERSION tag 65535 msize 8192 version 9P2000.L
+tnpsrv: P9_TAUTH tag 0 afid 0 uname  aname /foo n_uname 0
+tnpsrv: P9_RLERROR tag 0 ecode 5
+tnpsrv: P9_TATTACH tag 1 fid 0 afid -1 uname  aname /foo n_uname 0
+tnpsrv: P9_RATTACH tag 1 qid (0000000000000003 2 '')
+tnpsrv: P9_TCLUNK tag 2 fid 0
+tnpsrv: P9_RCLUNK tag 2

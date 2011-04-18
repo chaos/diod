@@ -77,6 +77,10 @@ np_auth(Npreq *req, Npfcall *tc)
 	else
 		np_fid_incref(afid);
 
+	if (!srv->upool || !srv->upool->uname2user || !srv->upool->uid2user) {
+		np_uerror (EIO);
+		goto done;
+	}
 	if (tc->u.tauth.uname.len && tc->u.tauth.n_uname==P9_NONUNAME) {
 		uname = np_strdup(&tc->u.tauth.uname);
 		if (!uname) 
@@ -165,6 +169,10 @@ np_attach(Npreq *req, Npfcall *tc)
 		np_fid_incref(afid);
 	}
 
+	if (!srv->upool || !srv->upool->uname2user || !srv->upool->uid2user) {
+		np_uerror (EIO);
+		goto done;
+	}
 	if (tc->u.tattach.uname.len && tc->u.tattach.n_uname==P9_NONUNAME) {
 		uname = np_strdup(&tc->u.tattach.uname);
 		if (!uname) 
