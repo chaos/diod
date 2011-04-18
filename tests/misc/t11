@@ -5,5 +5,5 @@ TEST=$(basename $0 | cut -d- -f1)
 which valgrind >/dev/null 2>&1 || exit 77 # skip if no valgrind
 
 valgrind --error-exitcode=1 --tool=memcheck \
-	 --leak-check=yes --quiet ./tserialize >$TEST.out 2>&1
+	 --leak-check=yes --quiet ./tnpcli >$TEST.out 2>&1
 diff $TEST.exp $TEST.out >$TEST.diff

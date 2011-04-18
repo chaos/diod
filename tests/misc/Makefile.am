@@ -8,9 +8,10 @@ check_PROGRAMS = \
 	tconf \
 	tserialize \
 	tlist \
-	tnpsrv
+	tnpsrv \
+	tnpcli
 
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
 #XFAIL_TESTS = t10
 
 CLEANFILES = *.out *.diff *.stats
@@ -19,6 +20,7 @@ AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \
+        -I$(top_srcdir)/libnpclient \
 	-I$(top_srcdir)/liblsd \
 	-I$(top_srcdir)/libdiod \
 	-I$(top_srcdir)/utils
@@ -45,5 +47,6 @@ tconf_SOURCES = tconf.c $(common_sources)
 tserialize_SOURCES = tserialize.c $(common_sources) 
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources) 
+tnpcli_SOURCES = tnpcli.c $(common_sources) 
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf t08.conf

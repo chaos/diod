@@ -48,10 +48,10 @@ main (int argc, char *argv[])
     srv->attach = myattach;
     srv->clunk = myclunk;
 
+#if TEST_DIOD_USERAUTH
     /* Diod_auth module presumes diod_trans transport.
      * Disable auth_required to avoid triggering an assertion.
      */
-#if TEST_DIOD_USERAUTH
     diod_conf_init ();
     srv->upool = diod_upool;
     srv->auth = diod_auth;

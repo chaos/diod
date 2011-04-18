@@ -22,6 +22,8 @@ t07(+)	Use valgrind to check for leaks in libnpfs serialize/deserialize
 t08(+)	Use valgrind to check for leaks in libdiod conf/log
 t09(+)	Use valgrind to check for leaks in list package
 	Actually this was to run down a specific case, now fixed.
+t10(+)	Use valgrind to check for leaks in a skeletal libnpfs server
+t11(+)	Use valgrind to check for leaks in a skeletal libnpclient client
 
 (*) NOTRUN if not run as root
 (+) NOTRUN if valgrind is not installed
