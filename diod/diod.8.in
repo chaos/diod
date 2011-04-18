@@ -77,8 +77,6 @@ Set the debug mask.  The bit values are:
 .br
 0x01 - log decoded 9P protocol messages
 .br
-0x02 - log any 9P RLERROR responses
-.br
 .TP
 .I "-s, --stats PATH"
 Write I/O statistics to PATH as each file is closed.

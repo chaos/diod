@@ -207,8 +207,7 @@ struct Npauth {
 };	
 
 enum {
-	DEBUG_9P_TRACE=0x01,
-        DEBUG_9P_ERRORS=0x02,
+	DEBUG_9P_TRACE=1,
 };
 
 struct Npsrv {
@@ -251,7 +250,6 @@ struct Npsrv {
 	Npfcall*	(*getlock)(Npfid *, u8 type, u64, u64, u32, Npstr *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
-
 #if HAVE_LARGEIO
 	Npfcall*	(*aread)(Npfid *fid, u8 datacheck, u64 offset,
 				 u32 count, u32 rsize, Npreq *req);
@@ -310,6 +308,7 @@ struct Npuserpool {
 
 extern Npuserpool *np_default_users;
 
+/* srv.c */
 Npsrv *np_srv_create(int nwthread);
 void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
@@ -317,15 +316,14 @@ int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
 void np_srv_wait_timeout(Npsrv *srv, int inactivity_secs);
 
-void np_buf_init(Npbuf *, void *, void (*)(void *), void (*)(void *, int));
-void np_buf_set(Npbuf *, u8 *, u32);
-
+/* conn.c */
 Npconn *np_conn_create(Npsrv *, Nptrans *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
 void np_conn_respond(Npreq *req);
 void np_respond(Npreq *, Npfcall *);
 
+/* fidpool.c */
 Npfidpool *np_fidpool_create(void);
 void np_fidpool_destroy(Npfidpool *);
 Npfid *np_fid_find(Npconn *, u32);
@@ -334,25 +332,27 @@ void np_fid_destroy(Npfid *);
 void np_fid_incref(Npfid *);
 void np_fid_decref(Npfid *);
 
+/* trans.c */
 Nptrans *np_trans_create(void *aux, int (*read)(u8 *, u32, void *),
 	int (*write)(u8 *, u32, void *), void (*destroy)(void *));
 void np_trans_destroy(Nptrans *);
 int np_trans_read(Nptrans *, u8 *, u32);
 int np_trans_write(Nptrans *, u8 *, u32);
 
+/* npstring.c */
+void np_strzero(Npstr *str);
+char *np_strdup(Npstr *str);
+int np_strcmp(Npstr *str, char *cs);
+int np_strncmp(Npstr *str, char *cs, int len);
+int np_str9cmp(Npstr *s1, Npstr *s2);
+
+/* np.c */
 int np_peek_size(u8 *buf, int len);
 int np_deserialize(Npfcall*, u8*);
 int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,
                           int buflen);
 int np_deserialize_p9dirent(Npqid *qid, u64 *offset, u8 *type, char *name,
 			    int namelen, u8 *buf, int buflen);
-
-void np_strzero(Npstr *str);
-char *np_strdup(Npstr *str);
-int np_strcmp(Npstr *str, char *cs);
-int np_strncmp(Npstr *str, char *cs, int len);
-
-/* np.c */
 void np_set_tag(Npfcall *, u16);
 Npfcall *np_create_tversion(u32 msize, char *version);
 Npfcall *np_create_rversion(u32 msize, char *version);
@@ -360,7 +360,8 @@ Npfcall *np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname);
 Npfcall *np_create_rauth(Npqid *aqid);
 Npfcall *np_create_tflush(u16 oldtag);
 Npfcall *np_create_rflush(void);
-Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname);
+Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname,
+		   u32 n_uname);
 Npfcall *np_create_rattach(Npqid *qid);
 Npfcall *np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames);
 Npfcall *np_create_rwalk(int nwqid, Npqid *wqids);
@@ -376,10 +377,12 @@ Npfcall *np_create_tread(u32 fid, u64 offset, u32 count);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
 #if HAVE_LARGEIO
-Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize);
+Npfcall *np_create_taread(u32 fid, u8 datacheck, u64 offset, u32 count,
+			  u32 rsize);
 Npfcall *np_create_raread(u32 count);
 void np_finalize_raread(Npfcall *fc, u32 count, u8 datacheck);
-Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count, u32 rsize, u8 *data);
+Npfcall *np_create_tawrite(u32 fid, u8 datacheck, u64 offset, u32 count,
+			   u32 rsize, u8 *data);
 Npfcall *np_create_rawrite(u32 count);
 #endif
 Npfcall *np_create_rlerror(u32 ecode);
@@ -395,7 +398,8 @@ Npfcall *np_create_tsymlink(u32 fid, char *name, char *symtgt, u32 gid);
 Npfcall *np_create_rsymlink (struct p9_qid *qid);
 Npfcall *np_create_treadlink(u32 fid);
 Npfcall *np_create_rreadlink(char *symtgt);
-Npfcall *np_create_tmknod(u32 dfid, char *name, u32 mode, u32 major, u32 minor, u32 gid);
+Npfcall *np_create_tmknod(u32 dfid, char *name, u32 mode,
+			  u32 major, u32 minor, u32 gid);
 Npfcall *np_create_rmknod (struct p9_qid *qid);
 Npfcall *np_create_trename(u32 fid, u32 dfid, char *name);
 Npfcall *np_create_rrename(void);

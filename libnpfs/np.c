@@ -242,52 +242,6 @@ buf_get_qid(struct cbuf *buf, Npqid *qid)
 }
 
 void
-np_strzero(Npstr *str)
-{
-	str->str = NULL;
-	str->len = 0;
-}
-
-char *
-np_strdup(Npstr *str)
-{
-	char *ret;
-
-	ret = malloc(str->len + 1);
-	if (ret) {
-		memmove(ret, str->str, str->len);
-		ret[str->len] = '\0';
-	}
-
-	return ret;
-}
-
-int
-np_strcmp(Npstr *str, char *cs)
-{
-	int ret;
-
-	ret = strncmp(str->str, cs, str->len);
-	if (!ret && cs[str->len])
-		ret = 1;
-
-	return ret;
-}
-
-int
-np_strncmp(Npstr *str, char *cs, int len)
-{
-	int ret;
-
-	if (str->len >= len)
-		ret = strncmp(str->str, cs, len);
-	else
-		ret = np_strcmp(str, cs);
-
-	return ret;
-}
-
-void
 np_set_tag(Npfcall *fc, u16 tag)
 {
 	fc->tag = tag;

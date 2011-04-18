@@ -59,7 +59,8 @@ libnpfs_a_AR = $(AR) $(ARFLAGS)
 libnpfs_a_LIBADD =
 am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
 	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) fmt.$(OBJEXT) np.$(OBJEXT) \
-	srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) file.$(OBJEXT)
+	srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) file.$(OBJEXT) \
+	npstring.$(OBJEXT)
 libnpfs_a_OBJECTS = $(am_libnpfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -219,6 +220,7 @@ libnpfs_a_SOURCES = \
 	trans.c \
 	user.c \
 	file.c \
+	npstring.c \
 	npfs.h \
 	npfsimpl.h \
 	9p.h
@@ -279,6 +281,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/file.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fmt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/np.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/npstring.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/srv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trans.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/user.Po@am__quote@

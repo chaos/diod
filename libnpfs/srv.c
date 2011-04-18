@@ -468,11 +468,6 @@ np_process_request(Npreq *req)
 		if (rc)
 			free(rc);
 		rc = np_create_rlerror(ecode);
-		if ((req->conn->srv->debuglevel & DEBUG_9P_ERRORS)
-		  			&& req->conn->srv->debugprintf) {
-			req->conn->srv->debugprintf ("%s error: %s",
-					op, strerror(ecode));
-		}
 	}
 
 	return rc;

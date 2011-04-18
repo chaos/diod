@@ -139,14 +139,6 @@ _rcv_buf (Npfcall *fc, int type, const char *fun)
     return fc2;
 }
 
-static int
-_str9cmp (Npstr *s1, Npstr *s2)
-{
-    if (s1->len != s2->len)
-        return 1;
-    return memcmp (s1->str, s2->str, s1->len);
-}
-
 static void
 test_rlerror (void)
 {
@@ -245,7 +237,7 @@ test_tlcreate (void)
     fc2 = _rcv_buf (fc, P9_TLCREATE,  __FUNCTION__);
 
     assert (fc->u.tlcreate.fid == fc2->u.tlcreate.fid);
-    assert (_str9cmp (&fc->u.tlcreate.name, &fc2->u.tlcreate.name) == 0);
+    assert (np_str9cmp (&fc->u.tlcreate.name, &fc2->u.tlcreate.name) == 0);
     assert (fc->u.tlcreate.flags == fc2->u.tlcreate.flags);
     assert (fc->u.tlcreate.mode == fc2->u.tlcreate.mode);
     assert (fc->u.tlcreate.gid == fc2->u.tlcreate.gid);
@@ -283,8 +275,8 @@ test_tsymlink (void)
     fc2 = _rcv_buf (fc, P9_TSYMLINK,  __FUNCTION__);
 
     assert (fc->u.tsymlink.fid == fc2->u.tsymlink.fid);
-    assert (_str9cmp (&fc->u.tsymlink.name, &fc2->u.tsymlink.name) == 0);
-    assert (_str9cmp (&fc->u.tsymlink.symtgt, &fc2->u.tsymlink.symtgt) == 0);
+    assert (np_str9cmp (&fc->u.tsymlink.name, &fc2->u.tsymlink.name) == 0);
+    assert (np_str9cmp (&fc->u.tsymlink.symtgt, &fc2->u.tsymlink.symtgt) == 0);
     assert (fc->u.tsymlink.gid == fc2->u.tsymlink.gid);
 
     free (fc);
@@ -319,7 +311,7 @@ test_tmknod (void)
     fc2 = _rcv_buf (fc, P9_TMKNOD,  __FUNCTION__);
 
     assert (fc->u.tmknod.fid == fc2->u.tmknod.fid);
-    assert (_str9cmp (&fc->u.tmknod.name, &fc2->u.tmknod.name) == 0);
+    assert (np_str9cmp (&fc->u.tmknod.name, &fc2->u.tmknod.name) == 0);
     assert (fc->u.tmknod.mode == fc2->u.tmknod.mode);
     assert (fc->u.tmknod.major == fc2->u.tmknod.major);
     assert (fc->u.tmknod.minor == fc2->u.tmknod.minor);
@@ -358,7 +350,7 @@ test_trename (void)
 
     assert (fc->u.trename.fid == fc2->u.trename.fid);
     assert (fc->u.trename.dfid == fc2->u.trename.dfid);
-    assert (_str9cmp (&fc->u.trename.name, &fc2->u.trename.name) == 0);
+    assert (np_str9cmp (&fc->u.trename.name, &fc2->u.trename.name) == 0);
 
     free (fc);
     free (fc2);
@@ -401,7 +393,7 @@ test_rreadlink (void)
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RREADLINK,  __FUNCTION__);
 
-    assert (_str9cmp (&fc->u.rreadlink.target, &fc2->u.rreadlink.target) == 0);
+    assert (np_str9cmp (&fc->u.rreadlink.target, &fc2->u.rreadlink.target) == 0);
 
     free (fc);
     free (fc2);
@@ -509,7 +501,7 @@ test_txattrwalk (void)
 
     assert (fc->u.txattrwalk.fid == fc2->u.txattrwalk.fid);
     assert (fc->u.txattrwalk.attrfid == fc2->u.txattrwalk.attrfid);
-    assert (_str9cmp (&fc->u.txattrwalk.name, &fc2->u.txattrwalk.name) == 0);
+    assert (np_str9cmp (&fc->u.txattrwalk.name, &fc2->u.txattrwalk.name) == 0);
 
     free (fc);
     free (fc2);
@@ -540,7 +532,7 @@ test_txattrcreate (void)
     fc2 = _rcv_buf (fc, P9_TXATTRCREATE,  __FUNCTION__);
 
     assert (fc->u.txattrcreate.fid == fc2->u.txattrcreate.fid);
-    assert (_str9cmp (&fc->u.txattrcreate.name, &fc2->u.txattrcreate.name) == 0);
+    assert (np_str9cmp (&fc->u.txattrcreate.name, &fc2->u.txattrcreate.name) == 0);
     assert (fc->u.txattrcreate.size == fc2->u.txattrcreate.size);
     assert (fc->u.txattrcreate.flag == fc2->u.txattrcreate.flag);
 
@@ -666,7 +658,7 @@ test_tlock (void)
     assert (fc->u.tlock.flags == fc2->u.tlock.flags);
     assert (fc->u.tlock.start == fc2->u.tlock.start);
     assert (fc->u.tlock.length == fc2->u.tlock.length);
-    assert (_str9cmp (&fc->u.tlock.client_id, &fc2->u.tlock.client_id) == 0);
+    assert (np_str9cmp (&fc->u.tlock.client_id, &fc2->u.tlock.client_id) == 0);
 
     free (fc);
     free (fc2);
@@ -701,7 +693,7 @@ test_tgetlock (void)
     assert (fc->u.tgetlock.start == fc2->u.tgetlock.start);
     assert (fc->u.tgetlock.length == fc2->u.tgetlock.length);
     assert (fc->u.tgetlock.proc_id == fc2->u.tgetlock.proc_id);
-    assert (_str9cmp (&fc->u.tgetlock.client_id, &fc2->u.tgetlock.client_id) == 0);
+    assert (np_str9cmp (&fc->u.tgetlock.client_id, &fc2->u.tgetlock.client_id) == 0);
 
     free (fc);
     free (fc2);
@@ -720,7 +712,7 @@ test_rgetlock (void)
     assert (fc->u.rgetlock.start == fc2->u.rgetlock.start);
     assert (fc->u.rgetlock.length == fc2->u.rgetlock.length);
     assert (fc->u.rgetlock.proc_id == fc2->u.rgetlock.proc_id);
-    assert (_str9cmp (&fc->u.rgetlock.client_id, &fc2->u.rgetlock.client_id) == 0);
+    assert (np_str9cmp (&fc->u.rgetlock.client_id, &fc2->u.rgetlock.client_id) == 0);
 
     free (fc);
     free (fc2);
@@ -737,7 +729,7 @@ test_tlink (void)
 
     assert (fc->u.tlink.dfid == fc2->u.tlink.dfid);
     assert (fc->u.tlink.fid == fc2->u.tlink.fid);
-    assert (_str9cmp (&fc->u.tlink.name, &fc2->u.tlink.name) == 0);
+    assert (np_str9cmp (&fc->u.tlink.name, &fc2->u.tlink.name) == 0);
 
     free (fc);
     free (fc2);
@@ -766,7 +758,7 @@ test_tmkdir (void)
     fc2 = _rcv_buf (fc, P9_TMKDIR,  __FUNCTION__);
 
     assert (fc->u.tmkdir.fid == fc2->u.tmkdir.fid);
-    assert (_str9cmp (&fc->u.tmkdir.name, &fc2->u.tmkdir.name) == 0);
+    assert (np_str9cmp (&fc->u.tmkdir.name, &fc2->u.tmkdir.name) == 0);
     assert (fc->u.tmkdir.mode == fc2->u.tmkdir.mode);
     assert (fc->u.tmkdir.gid == fc2->u.tmkdir.gid);
 
@@ -802,7 +794,7 @@ test_tversion (void)
     fc2 = _rcv_buf (fc, P9_TVERSION,  __FUNCTION__);
 
     assert (fc->u.tversion.msize == fc2->u.tversion.msize);
-    assert (_str9cmp (&fc->u.tversion.version, &fc2->u.tversion.version) == 0);
+    assert (np_str9cmp (&fc->u.tversion.version, &fc2->u.tversion.version) == 0);
 
     free (fc);
     free (fc2);
@@ -818,7 +810,7 @@ test_rversion (void)
     fc2 = _rcv_buf (fc, P9_RVERSION, __FUNCTION__);
 
     assert (fc->u.rversion.msize == fc2->u.rversion.msize);
-    assert (_str9cmp (&fc->u.rversion.version, &fc2->u.rversion.version) == 0);
+    assert (np_str9cmp (&fc->u.rversion.version, &fc2->u.rversion.version) == 0);
 
     free (fc);
     free (fc2);
@@ -834,8 +826,8 @@ test_tauth (void)
     fc2 = _rcv_buf (fc, P9_TAUTH, __FUNCTION__);
 
     assert (fc->u.tauth.afid == fc2->u.tauth.afid);
-    assert (_str9cmp (&fc->u.tauth.uname, &fc2->u.tauth.uname) == 0);
-    assert (_str9cmp (&fc->u.tauth.aname, &fc2->u.tauth.aname) == 0);
+    assert (np_str9cmp (&fc->u.tauth.uname, &fc2->u.tauth.uname) == 0);
+    assert (np_str9cmp (&fc->u.tauth.aname, &fc2->u.tauth.aname) == 0);
     assert (fc->u.tauth.n_uname == fc2->u.tauth.n_uname);
 
     free (fc);
@@ -899,8 +891,8 @@ test_tattach (void)
 
     assert (fc->u.tattach.fid == fc2->u.tattach.fid);
     assert (fc->u.tattach.afid == fc2->u.tattach.afid);
-    assert (_str9cmp (&fc->u.tattach.uname, &fc2->u.tattach.uname) == 0);
-    assert (_str9cmp (&fc->u.tattach.aname, &fc2->u.tattach.aname) == 0);
+    assert (np_str9cmp (&fc->u.tattach.uname, &fc2->u.tattach.uname) == 0);
+    assert (np_str9cmp (&fc->u.tattach.aname, &fc2->u.tattach.aname) == 0);
     assert (fc->u.tattach.n_uname == fc2->u.tattach.n_uname);
 
     free (fc);
@@ -948,7 +940,7 @@ test_twalk (void)
     assert (fc->u.twalk.nwname == P9_MAXWELEM);
 
     for (i = 0; i < P9_MAXWELEM; i++) {
-        assert (_str9cmp (&fc->u.twalk.wnames[i], &fc2->u.twalk.wnames[i]) ==0);
+        assert (np_str9cmp (&fc->u.twalk.wnames[i], &fc2->u.twalk.wnames[i]) ==0);
     }
 
     free (fc);

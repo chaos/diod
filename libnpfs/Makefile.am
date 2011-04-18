@@ -17,6 +17,7 @@ libnpfs_a_SOURCES = \
 	trans.c \
 	user.c \
 	file.c \
+	npstring.c \
 	npfs.h \
 	npfsimpl.h \
 	9p.h

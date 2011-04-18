@@ -1,5 +1,9 @@
 2011-04-18 Jim Garlick <garlick@llnl.gov>
 
+	* libnpfs/srv.c : Drop little used DEBUG_9P_ERRORS support.
+
+	* libnpfs/npstring.c, libnpfs/np.c : Split string stuff to npstring.c
+
 	* libnpfs/npfs.h, libnpfs/np.c, libnpfs/srv.c, libnpfs/fmt.c :
 	Add mising extended attribute support.
 

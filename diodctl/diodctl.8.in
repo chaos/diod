@@ -25,8 +25,6 @@ Set the debug mask.  The bit values are:
 .br
 0x01 - log decoded 9P protocol messages
 .br
-0x02 - log any 9P RLERROR responses
-.br
 The debug level is inherited by any spawned \fBdiod\fR processes.
 .TP
 .I "-l, --listen IP:PORT"
