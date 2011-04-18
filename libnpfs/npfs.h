@@ -220,11 +220,6 @@ struct Npsrv {
 	Npauth*		auth;
 	Npuserpool*	upool;
 
-	void		(*start)(Npsrv *);
-	void		(*shutdown)(Npsrv *);
-	void		(*destroy)(Npsrv *);
-	void		(*connopen)(Npconn *);
-	void		(*connclose)(Npconn *);
 	void		(*fiddestroy)(Npfid *);
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);
@@ -248,8 +243,8 @@ struct Npsrv {
 	Npfcall*	(*getattr)(Npfid *, u64);
 	Npfcall*	(*setattr)(Npfid *, u32, u32, u32, u32, u64, u64, u64,
 				   u64, u64);
-	Npfcall*	(*xattrwalk)(void); /* FIXME */
-	Npfcall*	(*xattrcreate)(void); /* FIXME */
+	Npfcall*	(*xattrwalk)(Npfid *, Npfid *, Npstr *);
+	Npfcall*	(*xattrcreate)(Npfid *, Npstr *, u64, u32);
 	Npfcall*	(*readdir)(Npfid *, u64, u32, Npreq *);
 	Npfcall*	(*fsync)(Npfid *);
 	Npfcall*	(*llock)(Npfid *, u8, u32, u64, u64, u32, Npstr *);
@@ -318,7 +313,6 @@ extern Npuserpool *np_default_users;
 Npsrv *np_srv_create(int nwthread);
 void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
-void np_srv_start(Npsrv *);
 int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
 void np_srv_wait_timeout(Npsrv *srv, int inactivity_secs);
@@ -358,6 +352,7 @@ char *np_strdup(Npstr *str);
 int np_strcmp(Npstr *str, char *cs);
 int np_strncmp(Npstr *str, char *cs, int len);
 
+/* np.c */
 void np_set_tag(Npfcall *, u16);
 Npfcall *np_create_tversion(u32 msize, char *version);
 Npfcall *np_create_rversion(u32 msize, char *version);
@@ -417,6 +412,10 @@ Npfcall *np_create_tsetattr(u32 fid, u32 valid, u32 mode, u32 uid, u32 gid,
 			    u64 size, u64 atime_sec, u64 atime_nsec,
                             u64 mtime_sec, u64 mtime_nsec);
 Npfcall *np_create_rsetattr(void);
+Npfcall *np_create_txattrwalk(u32 fid, u32 attrfid, char *name);
+Npfcall *np_create_rxattrwalk(u64 size);
+Npfcall *np_create_txattrcreate(u32 fid, char *name, u64 size, u32 flag);
+Npfcall *np_create_rxattrcreate(void);
 Npfcall *np_create_treaddir(u32 fid, u64 offset, u32 count);
 Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);
@@ -434,8 +433,10 @@ Npfcall *np_create_rlink(void);
 Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
 Npfcall *np_create_rmkdir(struct p9_qid *qid);
 
+/* fmt.c */
 void np_snprintfcall(char *s, int len, Npfcall *fc);
 
+/* user.c */
 void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
 void np_group_incref(Npgroup *);
@@ -443,8 +444,10 @@ void np_group_decref(Npgroup *);
 int np_change_user(Npuser *u);
 Npuser* np_current_user(void);
 
+/* fdtrans.c */
 Nptrans *np_fdtrans_create(int, int);
 
+/* error.c */
 int np_rerror(void);
 void np_uerror(int ecode);
 

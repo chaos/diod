@@ -1,3 +1,13 @@
+2011-04-18 Jim Garlick <garlick@llnl.gov>
+
+	* libnpfs/npfs.h, libnpfs/np.c, libnpfs/srv.c, libnpfs/fmt.c :
+	Add mising extended attribute support.
+
+	* libnpfs/np.c : Cleanup, handle out of memory in np_create_rread ().
+
+	* libnpfs/npfs.h, libnpfs/srv.c : Drop unused srv ops: start,
+	shutdown, destroy, connopen, connclose.
+	
 2011-04-16 Jim Garlick <garlick@llnl.gov>
 
 	* : tag 1.0-pre22

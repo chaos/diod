@@ -168,6 +168,9 @@ again:
 		if (size == 0 || n < size)
 			continue;
 
+		/* Corruption on the transport, unhandled op, etc.
+		 * is fatal to the connection.
+		 */
 		if (!np_deserialize(fc, fc->pkt))
 			break;
 

@@ -384,17 +384,27 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_RSETATTR:
 		spf (s, len, "P9_RSETATTR tag %u", fc->tag);
 		break;
-	case P9_TXATTRWALK: /* FIXME */
+	case P9_TXATTRWALK:
 		spf (s, len, "P9_TXATTRWALK tag %u", fc->tag);
+		spf (s, len, " fid %"PRIu32, fc->u.txattrwalk.fid);
+		spf (s, len, " attrfid %"PRIu32, fc->u.txattrwalk.attrfid);
+		spf (s, len, " name %.*s", fc->u.txattrwalk.name.len,
+					   fc->u.txattrwalk.name.str);
 		break;
-	case P9_RXATTRWALK: /* FIXME */
+	case P9_RXATTRWALK:
 		spf (s, len, "P9_RXATTRWALK tag %u", fc->tag);
+		spf (s, len, " size %"PRIu64, fc->u.rxattrwalk.size);
 		break;
-	case P9_TXATTRCREATE: /* FIXME */
-		spf (s, len, "P9_TXATTRWALKCREATE tag %u", fc->tag);
+	case P9_TXATTRCREATE:
+		spf (s, len, "P9_TXATTRCREATE tag %u", fc->tag);
+		spf (s, len, " fid %"PRIu32, fc->u.txattrcreate.fid);
+		spf (s, len, " name %.*s", fc->u.txattrcreate.name.len,
+					   fc->u.txattrcreate.name.str);
+		spf (s, len, " size %"PRIu64, fc->u.txattrcreate.size);
+		spf (s, len, " flag %"PRIu32, fc->u.txattrcreate.flag);
 		break;
-	case P9_RXATTRCREATE: /* FIXME */
-		spf (s, len, "P9_RXATTRWALKCREATE tag %u", fc->tag);
+	case P9_RXATTRCREATE:
+		spf (s, len, "P9_RXATTRCREATE tag %u", fc->tag);
 		break;
 	case P9_TREADDIR:
 		spf (s, len, "P9_TREADDIR tag %u", fc->tag);

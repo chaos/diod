@@ -67,8 +67,8 @@ static Npfcall* np_default_readlink(Npfid *);
 static Npfcall* np_default_getattr(Npfid *, u64);
 static Npfcall* np_default_setattr(Npfid *, u32, u32, u32, u32, u64,
                                    u64, u64, u64, u64);
-static Npfcall* np_default_xattrwalk(void); /* FIXME */
-static Npfcall* np_default_xattrcreate(void); /* FIXME */
+static Npfcall* np_default_xattrwalk(Npfid *, Npfid *, Npstr *);
+static Npfcall* np_default_xattrcreate(Npfid *, Npstr *, u64, u32);
 static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
 static Npfcall* np_default_fsync(Npfid *);
 static Npfcall* np_default_lock(Npfid *, u8, u32, u64, u64, u32, Npstr *);
@@ -97,11 +97,6 @@ np_srv_create(int nwthread)
 	srv->treeaux = NULL;
 	srv->auth = NULL;
 
-	srv->start = NULL;
-	srv->shutdown = NULL;
-	srv->destroy = NULL;
-	srv->connopen = NULL;
-	srv->connclose = NULL;
 	srv->fiddestroy = NULL;
 
 	srv->version = np_default_version;
@@ -172,16 +167,7 @@ np_srv_destroy(Npsrv *srv)
 		pthread_join (wt->thread, NULL);
 		free (wt);
 	}
-	if (srv->destroy)
-		(*srv->destroy)(srv);
 	free (srv);
-}
-
-void
-np_srv_start(Npsrv *srv)
-{
-	if (srv->start)
-		(*srv->start)(srv);
 }
 
 int
@@ -200,9 +186,6 @@ np_srv_add_conn(Npsrv *srv, Npconn *conn)
 	srv->connhistory++;
 	pthread_cond_signal(&srv->conncountcond);
 	pthread_mutex_unlock(&srv->lock);
-
-	if (srv->connopen)
-		(*srv->connopen)(conn);
 
 	return ret;
 }
@@ -225,9 +208,6 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 		pc = &c->next;
 		c = *pc;
 	}
-
-	if (srv->connclose)
-		(*srv->connclose)(conn);
 
 	np_conn_decref(conn);
 	srv->conncount--;
@@ -724,16 +704,14 @@ np_default_setattr(Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 	return NULL;
 }
 static Npfcall*
-np_default_xattrwalk(void) 
+np_default_xattrwalk(Npfid *fid, Npfid *attrfid, Npstr *name) 
 {
-	/* FIXME: args */
 	np_uerror(ENOSYS);
 	return NULL;
 }
 static Npfcall*
-np_default_xattrcreate(void) 
+np_default_xattrcreate(Npfid *fid, Npstr *name, u64 size, u32 flag) 
 {
-	/* FIXME: args */
 	np_uerror(ENOSYS);
 	return NULL;
 }

@@ -400,16 +400,20 @@ struct p9_tsetattr {
 struct p9_rsetattr {
 };
 struct p9_txattrwalk {
-	/* FIXME */
+	u32 fid;
+	u32 attrfid;
+	struct p9_str name;
 };
 struct p9_rxattrwalk {
-	/* FIXME */
+	u64 size;
 };
 struct p9_txattrcreate {
-	/* FIXME */
+	u32 fid;
+	struct p9_str name;
+	u64 size;
+	u32 flag;
 };
 struct p9_rxattrcreate {
-	/* FIXME */
 };
 struct p9_treaddir {
 	u32 fid;

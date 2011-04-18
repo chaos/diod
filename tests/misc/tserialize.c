@@ -33,7 +33,8 @@ static void test_trename (void);        static void test_rrename(void);
 static void test_treadlink (void);      static void test_rreadlink (void);
 static void test_tgetattr (void);       static void test_rgetattr (void);
 static void test_tsetattr (void);       static void test_rsetattr (void);
-
+static void test_txattrwalk (void);     static void test_rxattrwalk (void);
+static void test_txattrcreate (void);   static void test_rxattrcreate (void);
 static void test_treaddir (void);       static void test_rreaddir (void);
 static void test_tfsync (void);         static void test_rfsync (void);
 static void test_tlock (void);          static void test_rlock (void);
@@ -78,10 +79,8 @@ main (int argc, char *argv[])
     test_treadlink();   test_rreadlink ();
     test_tgetattr ();   test_rgetattr ();
     test_tsetattr ();   test_rsetattr ();
-#if 0
     test_txattrwalk (); test_rxattrwalk ();
     test_txattrcreate (); test_rxattrcreate ();
-#endif
     test_treaddir ();   test_rreaddir ();
     test_tfsync ();     test_rfsync ();
     test_tlock ();      test_rlock ();
@@ -494,6 +493,69 @@ test_rsetattr (void)
     if (!(fc = np_create_rsetattr ()))
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RSETATTR,  __FUNCTION__);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_txattrwalk (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_txattrwalk(1, 2, "abc")))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TXATTRWALK,  __FUNCTION__);
+
+    assert (fc->u.txattrwalk.fid == fc2->u.txattrwalk.fid);
+    assert (fc->u.txattrwalk.attrfid == fc2->u.txattrwalk.attrfid);
+    assert (_str9cmp (&fc->u.txattrwalk.name, &fc2->u.txattrwalk.name) == 0);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rxattrwalk (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rxattrwalk(1)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RXATTRWALK,  __FUNCTION__);
+
+    assert (fc->u.rxattrwalk.size == fc2->u.rxattrwalk.size);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_txattrcreate (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_txattrcreate(1, "abc", 3, 4)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TXATTRCREATE,  __FUNCTION__);
+
+    assert (fc->u.txattrcreate.fid == fc2->u.txattrcreate.fid);
+    assert (_str9cmp (&fc->u.txattrcreate.name, &fc2->u.txattrcreate.name) == 0);
+    assert (fc->u.txattrcreate.size == fc2->u.txattrcreate.size);
+    assert (fc->u.txattrcreate.flag == fc2->u.txattrcreate.flag);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rxattrcreate (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rxattrcreate()))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RXATTRCREATE,  __FUNCTION__);
 
     free (fc);
     free (fc2);

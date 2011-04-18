@@ -36,6 +36,14 @@ test_tsetattr(26): 67
 P9_TSETATTR tag 42 fid 1 valid 0x2 mode X uid 4 gid X size X atime X mtime X
 test_rsetattr(27): 7
 P9_RSETATTR tag 42
+test_txattrwalk(30): 20
+P9_TXATTRWALK tag 42 fid 1 attrfid 2 name abc
+test_rxattrwalk(31): 15
+P9_RXATTRWALK tag 42 size 1
+test_txattrcreate(32): 28
+P9_TXATTRCREATE tag 42 fid 1 name abc size 3 flag 4
+test_rxattrcreate(33): 7
+P9_RXATTRCREATE tag 42
 test_treaddir(40): 23
 P9_TREADDIR tag 42 fid 1 offset 2 count 3
 test_rreaddir(41): 92

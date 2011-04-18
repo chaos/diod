@@ -723,13 +723,36 @@ done:
 Npfcall *
 np_xattrwalk(Npreq *req, Npfcall *tc)
 {
-	assert(0); /*FIXME*/
+	Npfid *fid = _getfid_incref(req, tc->u.txattrwalk.fid);
+	Npfid *attrfid;
+	Npfcall *rc = NULL;
+
+	if (!fid)
+		goto done;
+	if (!(attrfid = np_fid_find(req->conn, tc->u.txattrwalk.attrfid))) {
+		np_uerror(EIO);
+		goto done;
+	}
+	np_fid_incref(attrfid);
+	rc = (*req->conn->srv->xattrwalk)(fid, attrfid, &tc->u.txattrwalk.name);
+done:
+	return rc;
 }
 
 Npfcall *
 np_xattrcreate(Npreq *req, Npfcall *tc)
 {
-	assert(0); /*FIXME*/
+	Npfid *fid = _getfid_incref(req, tc->u.txattrcreate.fid);
+	Npfcall *rc = NULL;
+
+	if (!fid)
+		goto done;
+	rc = (*req->conn->srv->xattrcreate)(fid,
+					    &tc->u.txattrcreate.name,
+					    tc->u.txattrcreate.size,
+					    tc->u.txattrcreate.flag);
+done:
+	return rc;
 }
 
 Npfcall *
