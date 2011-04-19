@@ -63,7 +63,7 @@ am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1)
 diodexp_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodmount_OBJECTS = diodmount.$(OBJEXT) $(am__objects_1)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
@@ -139,7 +139,6 @@ LIBOBJS = @LIBOBJS@
 LIBPTHREAD = @LIBPTHREAD@
 LIBS = @LIBS@
 LIBWRAP = @LIBWRAP@
-LIBZ = @LIBZ@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@

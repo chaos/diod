@@ -1,4 +1,28 @@
+2011-04-19 Jim Garlick <garlick@llnl.gov>
+
+	* libdiod/diod_conf.c : If HAVE_LUA is not defined, don't
+	complain if the config file is unavailable.
+
+	* diod/diod.c, diodctl/diodctl.c : Refactor server start/stop
+	code.  Start a single service thread for accepting connections and 
+	handling SIGHUP/SIGTERM.  Tear it down on orderly shutdown.
+
+	* libnpfs/npfs.h, libnpfs/srv.c : Add np_srv_shutdown () to assist
+	with orderly server teardown.
+
+	* configure.ac, libnpfs/np.c, libnpfs/fcall.c : Remove vestigual
+	configure/include of zlib.h.
+
+	* libdiod/diod_conf.[ch] : Drop diod_conf_arm_sighup () and
+	associated thread management.
+
+	* libdiod/diod_sock.[ch] : Drop diod_sock_accept_batch () and
+	associated thread management.
+
 2011-04-18 Jim Garlick <garlick@llnl.gov>
+
+	* libdiod/diod_sock.c : Get rid of extraneous connect error logs
+	from diodctl as it waits for diod to start.
 
 	* diodctl/serv.c : Fix small memory leak in _free_server ().
 

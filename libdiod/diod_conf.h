@@ -31,8 +31,6 @@ enum {
 void	diod_conf_init (void);
 void	diod_conf_fini (void);
 void    diod_conf_init_config_file (char *path);
-void    diod_conf_arm_sighup (void);
-
 
 char   *diod_conf_get_logdest (void);
 int     diod_conf_opt_logdest (void);

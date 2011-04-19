@@ -31,7 +31,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <assert.h>
-#include <zlib.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"

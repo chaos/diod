@@ -65,7 +65,7 @@ int         deny_severity = LOG_WARNING;
  * and expand pollfd array (*fdsp) to contain the new file descriptors,
  * updating its size (*nfdsp) also.
  * Return the number of file descriptors added (can be 0).
- * This is a helper for diod_sock_listen_hostport_list ().
+ * This is a helper for diod_sock_listen_hostports ().
  */
 static int 
 _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp, int flags)
@@ -145,7 +145,7 @@ _listen_fds (struct pollfd *fds, int nfds)
  * Return the number of file descriptors opened (can return 0).
  */
 int
-diod_sock_listen_hostport_list (List l, struct pollfd **fdsp, int *nfdsp,
+diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
                                 char *nport, int flags)
 {
     ListIterator itr;
@@ -207,8 +207,7 @@ done:
 }
 
 void
-diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
-                   int blocking)
+diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc)
 {
     Npconn *conn;
     Nptrans *trans;
@@ -226,15 +225,13 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc,
         diod_trans_destroy (trans);
         return;
     }
-    if (blocking)
-        np_srv_wait_conncount(srv, 1);
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
  * This is a helper for diod_sock_accept_loop ().
  */
-static void
-_accept_one (Npsrv *srv, int fd)
+void
+diod_sock_accept_one (Npsrv *srv, int fd)
 {
     struct sockaddr_storage addr;
     socklen_t addr_size = sizeof(addr);
@@ -269,7 +266,7 @@ _accept_one (Npsrv *srv, int fd)
         return;
     }
 #endif
-    diod_sock_startfd (srv, fd, host, ip, svc, 0);
+    diod_sock_startfd (srv, fd, host, ip, svc);
 }
  
 /* Loop forever, accepting and handling new 9P connections.
@@ -292,44 +289,11 @@ diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds)
         }
         for (i = 0; i < nfds; i++) {
             if ((fds[i].revents & POLLIN)) {
-                _accept_one (srv, fds[i].fd);
+                diod_sock_accept_one (srv, fds[i].fd);
             }
         }
     }
     /*NOTREACHED*/
-}
-
-/* Glue so diod_sock_accept_batch can start diod_sock_accept_loop thread.
- */
-typedef struct  {
-    Npsrv *srv;
-    struct pollfd *fds;
-    int nfds;
-} ala_t;
-
-static void *
-_accept_thread (void *ap)
-{
-    ala_t *a = ap;
-    diod_sock_accept_loop (a->srv, a->fds, a->nfds);
-    return NULL;
-}
-
-/* Loop accepting and handling new 9P connections.
- * Quit once connection count goes above zero then drops to zero again.
- */
-void
-diod_sock_accept_batch (Npsrv *srv, struct pollfd *fds, int nfds)
-{
-    ala_t a;
-    pthread_t thd;
-
-    a.srv = srv;
-    a.fds = fds;
-    a.nfds = nfds;
-    pthread_create (&thd, NULL, _accept_thread, &a);
-    np_srv_wait_timeout(srv, 30);  /* exit after no conns for 30s */
-    /* FIXME: [valgrind] need to terminate then join with _accept_thread (). */
 }
 
 /* Try to connect to host:port.
@@ -378,6 +342,45 @@ done:
     return fd;
 }
 
+/* Try to connect to host:port (quietly!) once.  Immediately close the fd.
+ * Return 1 on success, 0 on failure.
+ */
+static int
+_tryconnect_one (char *host, char *port)
+{
+    int error, fd;
+    struct addrinfo hints, *res = NULL, *r;
+    int result = 0;
+
+    memset (&hints, 0, sizeof (hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((error = getaddrinfo (host, port, &hints, &res)) != 0) {
+        msg ("getaddrinfo %s:%s: %s", host, port, gai_strerror (error));
+        goto done;
+    }
+    if (!res) {
+        msg ("could not look up %s:%s", host, port);
+        goto done;
+    }
+    for (r = res; r != NULL; r = r->ai_next) {
+        if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0)
+            continue;
+        if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
+            close (fd);
+            continue;
+        }
+        close (fd);
+        result = 1;
+        break;
+    }
+    if (res)
+        freeaddrinfo (res);
+done:
+    return result;
+}
+
 /* Try to connect to any members of host:port list.
  * If nport is non-NULL, substitute that for :port.
  * Make maxtries attempts, waiting retry_wait_ms milliseconds between attempts.
@@ -387,7 +390,7 @@ done:
 int
 diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
 {
-    int i, fd, res = 0;
+    int i, result = 0;
     char *hostport, *host, *port;
     ListIterator itr;
 
@@ -410,9 +413,7 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
             *port++ = '\0';
             if (nport)
                 port = nport;
-            if ((fd = diod_sock_connect (host, port, 1, 0)) >= 0) {
-                close (fd);
-                res = 1;
+            if ((result = _tryconnect_one (host, port))) {
                 goto done;
             }
         }
@@ -420,7 +421,7 @@ diod_sock_tryconnect (List l, char *nport, int maxtries, int retry_wait_ms)
 done:
     if (itr)
         list_iterator_destroy(itr);
-    return res;
+    return result;
 }
 
     

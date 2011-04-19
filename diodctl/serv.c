@@ -384,7 +384,7 @@ _alloc_ports (List l, struct pollfd **fdsp, int *nfdsp, char **portp)
     }
     for (i = BASE_PORT; i <= MAX_PORT; i++) {
         snprintf (port, NI_MAXSERV, "%d", i);
-        ret = diod_sock_listen_hostport_list (l, fdsp, nfdsp, port, flags);
+        ret = diod_sock_listen_hostports (l, fdsp, nfdsp, port, flags);
         if (ret > 0) {
             *portp = port;
             break;

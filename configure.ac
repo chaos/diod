@@ -33,7 +33,6 @@ AC_PROG_RANLIB
 AC_HEADER_STDC
 AC_CHECK_HEADERS( \
   getopt.h \
-  zlib.h \
   lua.h \
   pthread.h \
 )
@@ -55,7 +54,6 @@ AC_CHECK_FUNCS( \
 )
 X_AC_CHECK_PTHREADS
 X_AC_WRAP
-X_AC_CHECK_COND_LIB(z, compress)
 X_AC_CHECK_COND_LIB(lua, luaL_newstate)
 
 ##

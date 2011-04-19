@@ -26,7 +26,13 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#define _BSD_SOURCE         /* daemon */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE         /* ppoll () */
+#endif
+#include <poll.h>
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE         /* daemon () */
+#endif
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -40,7 +46,8 @@
 #include <sys/param.h>
 #include <sys/resource.h>
 #include <string.h>
-#include <poll.h>
+#include <signal.h>
+#include <pthread.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -54,8 +61,11 @@
 
 #include "ops.h"
 
+typedef enum { SRV_STDIN, SRV_DIODCTL, SRV_NORMAL } srvmode_t;
+
 static void          _daemonize (void);
 static void          _setrlimit (void);
+static void          _service_run (srvmode_t mode, int Fopt);
 
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
@@ -108,14 +118,13 @@ usage()
 int
 main(int argc, char **argv)
 {
-    Npsrv *srv;
     int c;
     int Fopt = 0;
     int eopt = 0;
     int lopt = 0;
     char *copt = NULL;
     char *end;
-    int client_on_stdin = 1;
+    srvmode_t mode = SRV_STDIN;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
@@ -177,7 +186,7 @@ main(int argc, char **argv)
                 break;
             case 'F':   /* --listen-fds N */
                 Fopt = strtoul (optarg, NULL, 10);
-                client_on_stdin = 0;
+                mode = SRV_DIODCTL;
                 break;
             case 'u':   /* --runas-uid UID */
                 if (geteuid () == 0) {
@@ -206,13 +215,13 @@ main(int argc, char **argv)
 
     diod_conf_validate_exports ();
 
-    if (client_on_stdin) {
+    if (mode == SRV_STDIN) {
         List hplist = diod_conf_get_diodlisten ();
 
         if (hplist && list_count (hplist) > 0)
-            client_on_stdin = 0; 
+            mode = SRV_NORMAL;
     }
-    if (client_on_stdin)
+    if (mode == SRV_STDIN)
         diod_conf_set_foreground (1);
 
     if (geteuid () == 0)
@@ -221,11 +230,10 @@ main(int argc, char **argv)
     if (!diod_conf_get_foreground ()) {
         char *logdest = diod_conf_get_logdest ();
 
-        if (!Fopt)
+        if (mode != SRV_DIODCTL)
             _daemonize ();
         diod_log_set_dest (logdest ? logdest : "syslog");
     }
-    diod_conf_arm_sighup ();
 
     /* Drop root permission if running as one user.
      * If not root, arrange to run (only) as current effective uid.
@@ -241,42 +249,8 @@ main(int argc, char **argv)
             diod_become_user (NULL, uid, 1); /* exits on error */
     }
 
-    srv = np_srv_create (diod_conf_get_nwthreads ());
-    if (!srv)
-        err_exit ("np_srv_create");
-    diod_register_ops (srv);
+    _service_run (mode, Fopt);
 
-    /* Client inherited on fd=0.  Exit on disconnect.
-     */
-    if (client_on_stdin) {
-        diod_sock_startfd (srv, 0, "stdin", "0.0.0.0", "0", 1);
-
-    /* Listen on bound sockets 0 thru value of Fopt inherited
-     * from diodctl.  Exit after a period of 30s with no connections.
-     */
-    } else if (Fopt) {
-        struct pollfd *fds = NULL;
-        int nfds = 0;
-
-        if (!diod_sock_listen_nfds (&fds, &nfds, Fopt, 3))
-            msg_exit ("failed to set up listen ports");
-        diod_sock_accept_batch (srv, fds, nfds);
-
-    /* Listen on interface/port designation from -L or config file.
-     * Run forever.
-     */
-    } else {
-        List hplist = diod_conf_get_diodlisten ();
-        struct pollfd *fds = NULL;
-        int nfds = 0;
-    
-        if (!diod_sock_listen_hostport_list (hplist, &fds, &nfds, NULL, 0))
-            msg_exit ("failed to set up listen ports");
-        diod_sock_accept_loop (srv, fds, nfds);
-        /*NOTREACHED*/
-    }
-
-    np_srv_destroy (srv);
     diod_conf_fini ();
     diod_log_fini ();
 
@@ -315,7 +289,7 @@ _setrlimit (void)
 }
 
 /* Create run directory if it doesn't exist and chdir there.
- * Disassociate from parents controlling tty.  Switch logging to syslog.
+ * Disassociate from parent's controlling tty.  Switch logging to syslog.
  * Exit on error.
  */
 static void
@@ -326,8 +300,10 @@ _daemonize (void)
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
     if (stat (rdir, &sb) < 0) {
-        if (mkdir (rdir, 0755) < 0)
-            err_exit ("mkdir %s", rdir);
+        if (mkdir (rdir, 0755) < 0) {
+            msg ("failed to find/create %s, running out of /tmp", rdir);
+            snprintf (rdir, sizeof(rdir), "/tmp");
+        }
     } else if (!S_ISDIR (sb.st_mode))
         msg_exit ("%s is not a directory", rdir);
 
@@ -335,6 +311,155 @@ _daemonize (void)
         err_exit ("chdir %s", rdir);
     if (daemon (1, 0) < 0)
         err_exit ("daemon");
+}
+
+/**
+ ** Service startup
+ **/
+
+struct svc_struct {
+    Npsrv *srv;
+    struct pollfd *fds;
+    int nfds;
+    pthread_t t;
+    int shutdown;
+    int reload;
+};
+static struct svc_struct ss;
+
+static void
+_sighand (int sig)
+{
+    switch (sig) {
+        case SIGHUP:
+            msg ("caught SIGHUP: reloading config");
+            ss.reload = 1;
+            break;
+        case SIGTERM:
+            msg ("caught SIGTERM: shutting down");
+            ss.shutdown = 1;
+            break;
+        default:
+            msg ("caught signal %d: ignoring", sig);
+            break;
+    }
+}
+
+/* Thread to handle SIGHUP, SIGTERM, and new connections on listen ports.
+ */
+static void *
+_service_loop (void *arg)
+{
+    sigset_t sigs;
+    int i;
+
+    sigfillset (&sigs);
+    sigdelset (&sigs, SIGHUP);
+    sigdelset (&sigs, SIGTERM);
+
+    if (ss.nfds == 0)
+        diod_sock_startfd (ss.srv, 0, "stdin", "0.0.0.0", "0");
+    while (!ss.shutdown) {
+        if (ss.reload) {
+            diod_conf_init_config_file (NULL);
+            ss.reload = 0;
+        }
+        for (i = 0; i < ss.nfds; i++) {
+            ss.fds[i].events = POLLIN;
+            ss.fds[i].revents = 0;
+        }
+        if (ppoll (ss.fds, ss.nfds, NULL, &sigs) < 0) {
+            if (errno == EINTR)
+                continue;
+            err_exit ("ppoll");
+        }
+        for (i = 0; i < ss.nfds; i++) {
+            if ((ss.fds[i].revents & POLLIN)) {
+                diod_sock_accept_one (ss.srv, ss.fds[i].fd);
+            }
+        }
+    }
+    np_srv_shutdown (ss.srv);
+    return NULL;
+}
+
+/* Set up signal handlers for SIGHUP and SIGTERM and block them.
+ * Threads will inherit this signal mask; _service_loop () will unblock.
+ */
+static void
+_service_sigsetup (void)
+{
+    struct sigaction sa;
+    sigset_t sigs;
+
+    sa.sa_flags = 0;
+    sigemptyset (&sa.sa_mask);
+    sa.sa_handler = _sighand;
+    if (sigaction (SIGHUP, &sa, NULL) < 0)
+        err_exit ("sigaction");
+    if (sigaction (SIGTERM, &sa, NULL) < 0)
+        err_exit ("sigaction");
+
+    sigemptyset (&sigs);
+    sigaddset (&sigs, SIGHUP);
+    sigaddset (&sigs, SIGTERM);
+    if ((sigprocmask (SIG_BLOCK, &sigs, NULL) < 0))
+        err_exit ("sigprocmask");
+}
+
+static void
+_service_run (srvmode_t mode, int Fopt)
+{
+    List l = diod_conf_get_diodlisten ();
+    int nt = diod_conf_get_nwthreads ();
+    int n;
+
+    ss.shutdown = 0;
+    ss.reload = 0;
+    _service_sigsetup ();
+
+    if (!(ss.srv = np_srv_create (nt)))
+        err_exit ("np_srv_create");
+    diod_register_ops (ss.srv);
+
+    ss.fds = NULL;
+    ss.nfds = 0;
+    switch (mode) {
+        case SRV_STDIN:
+            break;
+        case SRV_DIODCTL:
+            if (!diod_sock_listen_nfds (&ss.fds, &ss.nfds, Fopt, 3))
+                msg_exit ("failed to set up listen ports");
+            break;
+        case SRV_NORMAL:
+            if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL, 0))
+                msg_exit ("failed to set up listen ports");
+            break;
+    }
+
+    if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {
+        errno = n;
+        err_exit ("pthread_create _service_loop");
+    }
+
+    switch (mode) {
+        case SRV_STDIN:
+            np_srv_wait_conncount (ss.srv, 1);
+            pthread_kill (ss.t, SIGTERM);
+            break;
+        case SRV_DIODCTL:
+            np_srv_wait_timeout (ss.srv, 30);
+            pthread_kill (ss.t, SIGTERM);
+            break;
+        case SRV_NORMAL:
+            break;
+    }
+    if ((n = pthread_join (ss.t, NULL))) {
+        errno = n;
+        err_exit ("pthread_join _service_loop");
+    }
+
+    np_srv_destroy (ss.srv);
 }
 
 /*

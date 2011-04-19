@@ -97,8 +97,6 @@ typedef struct {
     char        *configpath;
     char        *logdest;
     int         ro_mask; 
-    int         sigthread_running;
-    pthread_t   sigthread;
 } Conf;
 
 static Conf config;
@@ -181,10 +179,13 @@ diod_conf_init (void)
     _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.exportall = 0;
+#ifdef HAVE_LUA_H
     config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
+#else
+    config.configpath = NULL;
+#endif
     config.logdest = NULL;
     config.ro_mask = 0;
-    config.sigthread_running = 0;
 }
 
 void
@@ -202,11 +203,6 @@ diod_conf_fini (void)
         free (config.configpath);
     if (config.logdest)
         free (config.logdest);
-    if (config.sigthread_running) {
-        config.sigthread_running = 0;
-        pthread_kill (config.sigthread, SIGUSR1);
-        pthread_join (config.sigthread, NULL);
-    }
 }
 
 /* logdest - logging destination
@@ -415,60 +411,6 @@ void diod_conf_validate_exports (void)
     list_iterator_destroy (itr);
 }
 
-static void *
-_sigthread (void *arg)
-{
-    sigset_t set;
-    int s, sig;
-
-    sigemptyset (&set);
-    sigaddset (&set, SIGHUP);
-    sigaddset (&set, SIGUSR1);
-
-    while (config.sigthread_running) {
-        if ((s = sigwait (&set, &sig)) > 0) {
-            errno = s;
-            err_exit ("sigwait");
-        }
-        switch (sig) {
-            case SIGHUP:
-                msg ("reloading config file");
-                diod_conf_init_config_file (NULL);
-                break;
-            case SIGUSR1:
-                break;
-            default:
-                msg ("caught signal %d", sig);
-                break;
-        }
-    }
-    /*NOTREACHED*/
-    return NULL;
-}
-
-void
-diod_conf_arm_sighup (void)
-{
-    static sigset_t set;
-    int s;
-
-    sigemptyset (&set);
-    sigaddset (&set, SIGHUP);
-    sigaddset (&set, SIGUSR1);
-
-    /* New threads will inherit this mask.
-     */ 
-    if ((s = pthread_sigmask (SIG_BLOCK, &set, NULL))) {
-        errno = s;
-        err_exit ("pthread_sigmask");
-    }
-    config.sigthread_running = 1;
-    if ((s = pthread_create (&config.sigthread, NULL, &_sigthread, NULL))) {
-        errno = s;
-        err_exit ("pthread_create");
-    }
-}
-
 #ifdef HAVE_LUA_H
 static void
 _parse_expopt (char *s, int *fp)
@@ -639,11 +581,12 @@ void
 diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
 {
     if (path) {
-        free (config.configpath);
+        if (config.configpath)
+            free (config.configpath);
         config.configpath = _xstrdup (path);
         config.ro_mask |= RO_CONFIGPATH;
     } else {
-        if (access (config.configpath, R_OK) == 0)
+        if (config.configpath && access (config.configpath, R_OK) == 0)
             path = config.configpath;  /* missing default file is not fatal */
     }
     if (path) {
@@ -704,11 +647,12 @@ diod_conf_init_config_file (char *path)
     struct stat sb;
 
     if (path) {
-        free (config.configpath);
+        if (config.configpath)
+            free (config.configpath);
         config.configpath = _xstrdup (path);
         config.ro_mask |= RO_CONFIGPATH;
     } else {
-        if (access (config.configpath, R_OK) == 0)
+        if (config.configpath && access (config.configpath, R_OK) == 0)
             path = config.configpath;  /* missing default file is not fatal */
     }
     if (path) {
