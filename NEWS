@@ -1,3 +1,16 @@
+//1.0-pre23:
+	Terminate diod children when diodctl is terminated with SIGTERM.
+	Reconfigure diod children when diodctl is reconfiged with SIGHUP.
+	Implement orderly shutdown on SIGTERM in both servers and libnpfs.
+	Don't error on missing config file if built without lua (issue 24).
+	Remove vestiges of atomic IO extensions.
+	Get rid of superfluous connect errors from diodctl as it starts diod.
+	Fix some small memory leaks/problems.
+	Remove diod -s,--stats IO stats option.
+	Drop DEBUG_9P_ERRORS debug bit.	
+	Prep libnpfs for extended attributes.
+	Cleanup.
+	
 1.0-pre22:
 	Fixed initialization problem in diodctl introduced in pre21.
 	Properly handle msize negotiation.

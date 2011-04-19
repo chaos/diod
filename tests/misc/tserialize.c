@@ -49,7 +49,6 @@ static void test_tattach (void);        static void test_rattach (void);
 static void test_twalk (void);          static void test_rwalk (void);
 static void test_tread (void);          static void test_rread (void);
 static void test_twrite (void);         static void test_rwrite (void);
-
 static void test_tclunk (void);         static void test_rclunk (void);
 static void test_tremove (void);        static void test_rremove (void);
 
@@ -87,10 +86,7 @@ main (int argc, char *argv[])
     test_tgetlock ();   test_rgetlock ();
     test_tlink ();      test_rlink ();
     test_tmkdir ();     test_rmkdir ();
-#if HAVE_LARGEIO
-    //test_tawrite ();    test_rawrite ();
-    //test_taread ();     test_raread ();
-#endif
+
     test_tversion ();   test_rversion ();
     test_tauth ();      test_rauth ();
     test_tflush ();     test_rflush ();

@@ -1,7 +1,15 @@
 2011-04-19 Jim Garlick <garlick@llnl.gov>
 
+	* diodctl/diodctl.c, diod/diod.c : Use SIGUSR1 for internal
+	termination instead of SIGTERM to avoid extra log entry.
+
+	* diodctl/diodctl.c, diodctl/serv.c : Signal propagation:
+	- call diodctl_serv_fini () on SIGTERM, which SIGTERMs children.
+	- call diodctl_serv_reload () on SIGHUP, which SIGHUPs children.
+	Ensure that spawned waitpid threads are cleaned up properly.
+
 	* libdiod/diod_conf.c : If HAVE_LUA is not defined, don't
-	complain if the config file is unavailable.
+	complain if the config file is unavailable. [issue 24]
 
 	* diod/diod.c, diodctl/diodctl.c : Refactor server start/stop
 	code.  Start a single service thread for accepting connections and 

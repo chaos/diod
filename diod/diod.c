@@ -339,6 +339,9 @@ _sighand (int sig)
             msg ("caught SIGTERM: shutting down");
             ss.shutdown = 1;
             break;
+        case SIGUSR1:
+            ss.shutdown = 1;
+            break;
         default:
             msg ("caught signal %d: ignoring", sig);
             break;
@@ -356,6 +359,7 @@ _service_loop (void *arg)
     sigfillset (&sigs);
     sigdelset (&sigs, SIGHUP);
     sigdelset (&sigs, SIGTERM);
+    sigdelset (&sigs, SIGUSR1);
 
     if (ss.nfds == 0)
         diod_sock_startfd (ss.srv, 0, "stdin", "0.0.0.0", "0");
@@ -399,10 +403,13 @@ _service_sigsetup (void)
         err_exit ("sigaction");
     if (sigaction (SIGTERM, &sa, NULL) < 0)
         err_exit ("sigaction");
+    if (sigaction (SIGUSR1, &sa, NULL) < 0)
+        err_exit ("sigaction");
 
     sigemptyset (&sigs);
     sigaddset (&sigs, SIGHUP);
     sigaddset (&sigs, SIGTERM);
+    sigaddset (&sigs, SIGUSR1);
     if ((sigprocmask (SIG_BLOCK, &sigs, NULL) < 0))
         err_exit ("sigprocmask");
 }
@@ -445,11 +452,11 @@ _service_run (srvmode_t mode, int Fopt)
     switch (mode) {
         case SRV_STDIN:
             np_srv_wait_conncount (ss.srv, 1);
-            pthread_kill (ss.t, SIGTERM);
+            pthread_kill (ss.t, SIGUSR1);
             break;
         case SRV_DIODCTL:
             np_srv_wait_timeout (ss.srv, 30);
-            pthread_kill (ss.t, SIGTERM);
+            pthread_kill (ss.t, SIGUSR1);
             break;
         case SRV_NORMAL:
             break;
