@@ -55,11 +55,7 @@ AC_CHECK_FUNCS( \
 X_AC_CHECK_PTHREADS
 X_AC_WRAP
 X_AC_CHECK_COND_LIB(lua, luaL_newstate)
-
-##
-# Check for package feature enablement
-##
-X_AC_MUNGE
+X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 
 ##
 # For list.c, hostlist.c, hash.c

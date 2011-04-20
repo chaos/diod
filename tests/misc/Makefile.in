@@ -37,7 +37,8 @@ target_triplet = @target@
 check_PROGRAMS = tfcntl$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsetuid$(EXEEXT) tsuppgrp$(EXEEXT) \
 	topt$(EXEEXT) tconf$(EXEEXT) tserialize$(EXEEXT) \
-	tlist$(EXEEXT) tnpsrv$(EXEEXT) tnpcli$(EXEEXT)
+	tlist$(EXEEXT) tnpsrv$(EXEEXT) tnpcli$(EXEEXT) \
+	tnpfile$(EXEEXT)
 subdir = tests/misc
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -45,7 +46,6 @@ am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
-	$(top_srcdir)/config/x_ac_munge.m4 \
 	$(top_srcdir)/config/x_ac_wrap.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -86,6 +86,15 @@ am_tnpcli_OBJECTS = tnpcli.$(OBJEXT) $(am__objects_1)
 tnpcli_OBJECTS = $(am_tnpcli_OBJECTS)
 tnpcli_LDADD = $(LDADD)
 tnpcli_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_tnpfile_OBJECTS = tnpfile.$(OBJEXT) $(am__objects_1)
+tnpfile_OBJECTS = $(am_tnpfile_OBJECTS)
+tnpfile_LDADD = $(LDADD)
+tnpfile_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -163,13 +172,13 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(tlist_SOURCES) \
-	$(tnpcli_SOURCES) $(tnpsrv_SOURCES) $(topt_SOURCES) \
-	$(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tnpcli_SOURCES) $(tnpfile_SOURCES) $(tnpsrv_SOURCES) \
+	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
 	$(tsuppgrp_SOURCES)
 DIST_SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(tlist_SOURCES) \
-	$(tnpcli_SOURCES) $(tnpsrv_SOURCES) $(topt_SOURCES) \
-	$(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tnpcli_SOURCES) $(tnpfile_SOURCES) $(tnpsrv_SOURCES) \
+	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
 	$(tsuppgrp_SOURCES)
 ETAGS = etags
@@ -305,8 +314,8 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
-#XFAIL_TESTS = t10
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12
+XFAIL_TESTS = t12
 CLEANFILES = *.out *.diff
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
@@ -338,6 +347,7 @@ tserialize_SOURCES = tserialize.c $(common_sources)
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources) 
 tnpcli_SOURCES = tnpcli.c $(common_sources) 
+tnpfile_SOURCES = tnpfile.c $(common_sources) 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf t08.conf
 all: all-am
 
@@ -388,6 +398,9 @@ tlist$(EXEEXT): $(tlist_OBJECTS) $(tlist_DEPENDENCIES)
 tnpcli$(EXEEXT): $(tnpcli_OBJECTS) $(tnpcli_DEPENDENCIES) 
 	@rm -f tnpcli$(EXEEXT)
 	$(LINK) $(tnpcli_OBJECTS) $(tnpcli_LDADD) $(LIBS)
+tnpfile$(EXEEXT): $(tnpfile_OBJECTS) $(tnpfile_DEPENDENCIES) 
+	@rm -f tnpfile$(EXEEXT)
+	$(LINK) $(tnpfile_OBJECTS) $(tnpfile_LDADD) $(LIBS)
 tnpsrv$(EXEEXT): $(tnpsrv_OBJECTS) $(tnpsrv_DEPENDENCIES) 
 	@rm -f tnpsrv$(EXEEXT)
 	$(LINK) $(tnpsrv_OBJECTS) $(tnpsrv_LDADD) $(LIBS)
@@ -421,6 +434,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpcli.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpfile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpsrv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/topt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tserialize.Po@am__quote@

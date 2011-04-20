@@ -1,4 +1,4 @@
-/* tnpsrv.c - test skeleton libnpfs server (valgrind me) */
+/* tnpfile.c - test skeleton libnpfs npfile server (valgrind me) */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -12,9 +12,13 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <pthread.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <sys/fcntl.h>
 
 #include "9p.h"
 #include "npfs.h"
+#include "npfile.h"
 
 #include "list.h"
 #include "diod_log.h"
@@ -24,11 +28,8 @@
 
 #define TEST_MSIZE 8192
 
-#define TEST_DIOD_USERAUTH 1
-
-static Npfcall* myattach (Npfid *fid, Npfid *afid, Npstr *aname);
-static Npfcall *myclunk (Npfid *fid);
 static Nptrans *ttrans_create(void);
+static Npfile *_file_root_create (void);
 
 int
 main (int argc, char *argv[])
@@ -43,18 +44,14 @@ main (int argc, char *argv[])
         msg_exit ("out of memory");
     srv->debuglevel |= DEBUG_9P_TRACE;
     srv->debugprintf = msg;
-    srv->attach = myattach;
-    srv->clunk = myclunk;
+    npfile_init_srv (srv, _file_root_create ());
 
-#if TEST_DIOD_USERAUTH
     /* Diod_auth module presumes diod_trans transport.
      * Disable auth_required to avoid triggering an assertion.
      */
     diod_conf_init ();
     srv->upool = diod_upool;
-    srv->auth = diod_auth;
     diod_conf_set_auth_required (0);
-#endif
 
     /* create one connection */
     if (!(trans = ttrans_create ()))
@@ -66,37 +63,109 @@ main (int argc, char *argv[])
     np_srv_wait_conncount (srv, 1);
     np_srv_destroy (srv);
 
-#if TEST_DIOD_USERAUTH
     diod_conf_fini ();
-#endif
     diod_log_fini ();
     exit (0);
 }
 
-static Npfcall *
-myattach (Npfid *fid, Npfid *afid, Npstr *aname)
+static Npfile *
+_root_first (Npfile *dir)
 {
-    Npqid qid = { 1, 2, 3};
-    Npfcall *ret = NULL;
+    if (dir->dirfirst)
+        npfile_incref(dir->dirfirst);
 
-    if (!(ret = np_create_rattach(&qid))) {
-        np_uerror (ENOMEM);
-        return NULL;
-    }
-    np_fid_incref (fid);
-    return ret;
+    return dir->dirfirst;
 }
 
-static Npfcall *
-myclunk (Npfid *fid)
+static Npfile *
+_root_next (Npfile *dir, Npfile *prevchild)
 {
-    Npfcall *ret;
+    if (prevchild->next)
+        npfile_incref (prevchild->next);
 
-    if (!(ret = np_create_rclunk ())) {
-        np_uerror (ENOMEM);
-        return NULL;
-    }
-    return ret;
+    return prevchild->next;
+}
+
+static int
+_foo_read (Npfilefid *file, u64 offset, u32 count, u8 *data, Npreq *req)
+{
+    return 0;
+}
+
+static void
+_foo_closefid (Npfilefid *file)
+{
+}
+
+static int
+_foo_openfid (Npfilefid *file)
+{
+    return 1;
+}
+
+static int
+_bar_read (Npfilefid *file, u64 offset, u32 count, u8 *data, Npreq *req)
+{
+    return 0;
+}
+
+static int
+_bar_write (Npfilefid* file, u64 offset, u32 count, u8* data, Npreq *req)
+{
+    return 0;
+}
+
+static void
+_bar_closefid (Npfilefid *file)
+{
+}
+
+static int
+_bar_openfid (Npfilefid *file)
+{
+    return 1;
+}
+
+static Npdirops root_ops = {
+        .first = _root_first,
+        .next =  _root_next,
+};
+static Npfileops foo_ops = {
+        .read  = _foo_read,
+        .closefid = _foo_closefid,
+        .openfid = _foo_openfid,
+};
+static Npfileops bar_ops = {
+        .read = _bar_read,
+        .write = _bar_write,
+        .closefid = _bar_closefid,
+        .openfid = _bar_openfid,
+};
+
+static Npfile *
+_file_root_create (void)
+{
+    Npfile *root, *foo, *bar;
+
+    if (!(root = npfile_alloc (NULL, "", 0555|S_IFDIR, 0, &root_ops, NULL)))
+        msg_exit ("out of memory");
+    root->parent = root;
+    npfile_incref(root);
+
+    if (!(foo = npfile_alloc(root, "foo", 0444|S_IFREG, 1, &foo_ops, NULL)))
+        msg_exit ("out of memory");
+    npfile_incref(foo);
+
+    if (!(bar = npfile_alloc(root, "bar", 0666|S_IFREG, 3, &bar_ops, NULL)))
+        msg_exit ("out of memory");
+    npfile_incref(bar);
+
+    root->dirfirst = bar;
+    bar->next = foo;
+    root->dirlast = foo;
+
+    return root;
+
 }
 
 /**

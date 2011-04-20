@@ -53,7 +53,7 @@
 #include <grp.h>
 #include <errno.h>
 #include <assert.h>
-#if HAVE_MUNGE
+#if HAVE_LIBMUNGE
 #define GPL_LICENSED 1
 #include <munge.h>
 #endif
@@ -90,7 +90,7 @@ Npauth *diod_auth = &_auth;
 struct diod_auth_struct {
     int magic;
     enum { DA_UNVERIFIED, DA_VERIFIED } state;
-#if HAVE_MUNGE
+#if HAVE_LIBMUNGE
     char *mungecred;
     munge_ctx_t mungectx;
     munge_err_t mungerr;
@@ -110,7 +110,7 @@ _da_create (void)
     }
     da->magic = DIOD_AUTH_MAGIC;
     da->state = DA_UNVERIFIED;
-#if HAVE_MUNGE
+#if HAVE_LIBMUNGE
     da->mungecred = NULL;
     if (!(da->mungectx = munge_ctx_create ())) {
         np_uerror (ENOMEM);
@@ -127,7 +127,7 @@ static void
 _da_destroy (da_t da)
 {
     assert (da->magic == DIOD_AUTH_MAGIC);
-#if HAVE_MUNGE
+#if HAVE_LIBMUNGE
     if (da->mungecred)
         free (da->mungecred);
     if (da->mungectx)
@@ -148,7 +148,7 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 
     if (! diod_conf_get_auth_required ())
         goto done;
-#if ! HAVE_MUNGE
+#if ! HAVE_LIBMUNGE
     msg ("warning: auth started but server was not built with MUNGE support");
 #endif
     aqid->path = 0;
@@ -235,7 +235,7 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
         goto done;
     }
 
-#if HAVE_MUNGE
+#if HAVE_LIBMUNGE
     if (offset == 0 && !da->mungecred) {
         da->mungecred = malloc (count + 1); 
     } else if (da->mungecred && offset == strlen (da->mungecred)) {
@@ -278,7 +278,7 @@ int
 diod_auth_client_handshake (Npcfid *afid, u32 uid)
 {
     int ret = -1; 
-#if HAVE_MUNGE
+#if HAVE_LIBMUNGE
     char *cred = NULL;
     int saved_errno = 0;
     munge_ctx_t ctx = NULL;

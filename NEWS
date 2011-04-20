@@ -1,4 +1,5 @@
 //1.0-pre23:
+	Don't require explicit confirmation if munge isn't found (issue 23)
 	Terminate diod children when diodctl is terminated with SIGTERM.
 	Reconfigure diod children when diodctl is reconfiged with SIGHUP.
 	Implement orderly shutdown on SIGTERM in both servers and libnpfs.

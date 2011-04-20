@@ -24,12 +24,6 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* Define if using MUNGE authentication */
-#undef HAVE_MUNGE
-
-/* Define to 1 if you have the <munge.h> header file. */
-#undef HAVE_MUNGE_H
-
 /* Define to 1 if you have the <pthread.h> header file. */
 #undef HAVE_PTHREAD_H
 

@@ -154,8 +154,7 @@ np_srv_destroy(Npsrv *srv)
 	}
 	pthread_cond_broadcast(&srv->reqcond);
 
-	/* FIXME: will block here forever if wt is blocked in the
-	 * kernel on some op.  Consider signaling?
+	/* FIXME: will block here forever if wt is blocked in the kernel.
 	 */
 	for (wt = srv->wthreads; wt != NULL; wt = next) {
 		next = wt->next;
