@@ -175,6 +175,7 @@ diod_conf_init (void)
     config.runasuid = 0;
     config.diodpath = _xstrdup (X_SBINDIR "/diod");
     config.diodlisten = _xlist_create ((ListDelF)free);
+    _xlist_append (config.diodlisten, _xstrdup ("0.0.0.0:564"));
     config.diodctllisten = _xlist_create ((ListDelF)free);
     _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
@@ -184,7 +185,7 @@ diod_conf_init (void)
 #else
     config.configpath = NULL;
 #endif
-    config.logdest = NULL;
+    config.logdest = _xstrdup ("syslog:daemon:err");
     config.ro_mask = 0;
 }
 

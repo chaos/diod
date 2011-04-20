@@ -1,15 +1,3 @@
-Here are some diod configuration options that may be useful:
-
-  --disable-munge        Build without MUNGE authentication
-
-Without munge support enabled, authorization is based on source
-IP address and is therefore spoofable.  Munge provides authentication
-based on a shared private key.  You can get munge from
-  http://code.google.com/p/munge/
-or grab your distro's package.
-
-Generic autoconf installation instructions follow.
-
 Installation Instructions
 *************************
 

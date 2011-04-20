@@ -1,4 +1,6 @@
-//1.0-pre23:
+1.0-pre23:
+	Make -s,--stdin option explicit in diod and diodctl.
+	Have diod listen by default on the well known 9pfs port 564.
 	Don't require explicit confirmation if munge isn't found (issue 23)
 	Terminate diod children when diodctl is terminated with SIGTERM.
 	Reconfigure diod children when diodctl is reconfiged with SIGHUP.

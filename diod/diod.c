@@ -71,19 +71,20 @@ static void          _service_run (srvmode_t mode, int Fopt);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:e:EF:u:SL:nc:"
+#define OPTIONS "fsd:l:w:e:EF:u:SL:nc:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"foreground",      no_argument,        0, 'f'},
+    {"stdin",           no_argument,        0, 's'},
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
     {"export",          required_argument,  0, 'e'},
     {"export-all",      no_argument,        0, 'E'},
     {"no-auth",         no_argument,        0, 'n'},
-    {"listen-fds",      required_argument,  0, 'F'},
+    {"diodctl",         required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"allsquash",       no_argument,        0, 'S'},
     {"logdest",         required_argument,  0, 'L'},
@@ -100,8 +101,9 @@ usage()
     fprintf (stderr, 
 "Usage: diod [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
+"   -s,--stdin             service connected client on stdin\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
-"   -F,--listen-fds N      listen for connections on the first N fds\n"
+"   -F,--diodctl N         listen for connections on the first N fds\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -E,--export-all        export all mounted file systems\n"
@@ -120,11 +122,9 @@ main(int argc, char **argv)
 {
     int c;
     int Fopt = 0;
-    int eopt = 0;
-    int lopt = 0;
     char *copt = NULL;
     char *end;
-    srvmode_t mode = SRV_STDIN;
+    srvmode_t mode = SRV_NORMAL;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
@@ -151,14 +151,16 @@ main(int argc, char **argv)
             case 'f':   /* --foreground */
                 diod_conf_set_foreground (1);
                 break;
+            case 's':   /* --stdin */
+                mode = SRV_STDIN;
+                diod_conf_set_foreground (1);
+                break;
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
             case 'l':   /* --listen HOST:PORT */
-                if (!lopt) {
+                if (!diod_conf_opt_diodlisten ())
                     diod_conf_clr_diodlisten ();
-                    lopt = 1;
-                }
                 if (!strchr (optarg, ':'))
                     usage ();
                 diod_conf_add_diodlisten (optarg);
@@ -169,10 +171,8 @@ main(int argc, char **argv)
             case 'c':   /* --config-file PATH */
                 break;
             case 'e':   /* --export PATH */
-                if (!eopt) {
+                if (!diod_conf_opt_exports ())
                     diod_conf_clr_exports ();
-                    eopt = 1;
-                }
                 diod_conf_add_exports (optarg);
                 break;
             case 'E':   /* --export-all */
@@ -184,9 +184,10 @@ main(int argc, char **argv)
             case 'S':   /* --allsquash */
                 diod_conf_set_allsquash (1);
                 break;
-            case 'F':   /* --listen-fds N */
-                Fopt = strtoul (optarg, NULL, 10);
+            case 'F':   /* --diodctl N */
                 mode = SRV_DIODCTL;
+                Fopt = strtoul (optarg, NULL, 10);
+                diod_conf_set_foreground (1);
                 break;
             case 'u':   /* --runas-uid UID */
                 if (geteuid () == 0) {
@@ -215,25 +216,8 @@ main(int argc, char **argv)
 
     diod_conf_validate_exports ();
 
-    if (mode == SRV_STDIN) {
-        List hplist = diod_conf_get_diodlisten ();
-
-        if (hplist && list_count (hplist) > 0)
-            mode = SRV_NORMAL;
-    }
-    if (mode == SRV_STDIN)
-        diod_conf_set_foreground (1);
-
     if (geteuid () == 0)
         _setrlimit ();
-
-    if (!diod_conf_get_foreground ()) {
-        char *logdest = diod_conf_get_logdest ();
-
-        if (mode != SRV_DIODCTL)
-            _daemonize ();
-        diod_log_set_dest (logdest ? logdest : "syslog");
-    }
 
     /* Drop root permission if running as one user.
      * If not root, arrange to run (only) as current effective uid.
@@ -442,6 +426,10 @@ _service_run (srvmode_t mode, int Fopt)
             if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL, 0))
                 msg_exit ("failed to set up listen ports");
             break;
+    }
+    if (!diod_conf_get_foreground ()) {
+        _daemonize ();
+        diod_log_set_dest (diod_conf_get_logdest ());
     }
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {

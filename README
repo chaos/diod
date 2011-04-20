@@ -2,24 +2,16 @@
 | Building | 
 +----------+
 
-You need a few prerequisites (shared library versions):
+To build all of diod's features, you need a few prerequisites:
 
     lua, lua-devel 
-	A LUA parser is used to parse the config file.
+	For config file support.
 
     munge, munge-libs, munge-devel
-	Needed if --enable-munge (see below).
+	For authentication support.
 
     tcp_wrappers, tcp_wrappers-libs, tcp_wrappers-devel
-	Needed if you want built-in TCP wrapper functionality.
-
-configure options:
-
-    --enable-munge
-	Build with MUNGE support.  Currrently this is the only
-	supported authentication method.  If you don't enable
-	munge, you will have to run the server with --no-auth
-	which is likely a big security vulnerability.
+	For TCP wrapper functionality.
 
 +---------+
 | Testing |
@@ -30,6 +22,7 @@ Unit tests (make check):
     ./tests/misc
 	Miscellaneous unit tests.
 	Some tests will be skipped if not root.
+	Others will be skipped if valgrind is not installed.
 
     ./tests/user
 	User space client and server running across a socketpair.

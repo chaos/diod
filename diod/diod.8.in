@@ -21,19 +21,19 @@ Do not change working directory to @X_LOCALSTATEDIR@/run,
 drop the controlling terminal, or run in the background.
 Send logs to stderr not syslog, unless sent somewhere else by \fI\-L\fR.
 .TP
+.I "-s, --stdin"
+Serve a connected client inherited on stdin.
+This option is mainly used in testing.
+.TP
 .I "-l, --listen IP:PORT"
-Set the listen address.
+Set the listen address (default 0.0.0.0:564).
 This option may be specified more than once.
 It overrides the \fIdiodlisten\fR config file setting.
-If neither listen ports nor \fI-F\fR are specified, assume connected
-client is inherited on file descriptor 0.
 .TP
-.I "-F, --listen-fds N"
-Listen for connection on file descriptors zero through N.
+.I "-F, --diodctl N"
+Listen for connection on file descriptors 3 through N+3.
 This is the mechanism that \fBdiodctl\fR uses to pass dynamically
-allocated ports, possibly on multiple interfaces, to \fBdiod\fR.
-If neither \fI-l\fR nor \fI-F\fR are specified, assume connected
-client is inherited on file descriptor 0.
+allocated sockets, possibly on multiple interfaces, to \fBdiod\fR.
 .TP
 .I "-w, --nwthreads INT"
 Set the number of worker threads to spawn to handle 9P operations.
@@ -46,7 +46,7 @@ This option may be specified more than once.
 It overrides the \fIexports\fR setting in diod.conf (5).
 .TP
 .I "-E, --export-all"
-Export everything in /proc/mounts.
+Export everything in the server's /proc/mounts.
 .TP
 .I "-n, --no-auth"
 This option allows users to attach without security credentials.
@@ -55,7 +55,7 @@ It overrides  the \fIauth_required\fR setting in diod.conf (5).
 .I "-S, --allsquash"
 Remap all users to "nobody".
 The attaching user need not be present in the server's password file.
-It overrides the \fIallsquash\fR setting in diod.conf (5).
+This option overrides the \fIallsquash\fR setting in diod.conf (5).
 .TP
 .I "-u, --runas-uid UID"
 Run the server as UID and only allow that user to attach.
@@ -78,24 +78,11 @@ Set the debug mask.  The bit values are:
 0x01 - log decoded 9P protocol messages
 .br
 .TP
-.I "-s, --stats PATH"
-Write I/O statistics to PATH as each file is closed.
-Each line represents one file I/O session and is of the form:
-.nf
-path:read-ops:read-bytes:write-ops:write-bytes:time-seconds
-.fi
-.TP
 .I "-c, --config-file PATH"
 Set config file path.
-.SH "LOGGING"
-If listen ports were specified, \fBdiod\fR logs all messages to the
-LOG_DAEMON syslog facility at LOG_ERR severity unless overridden as
-described above.  Otherwise it logs to stderr.
 .SH "FILES"
 @X_SBINDIR@/diod
 .br
 @X_SYSCONFDIR@/diod.conf
-.br
-@X_LOCALSTATEDIR@/run/diod.pid
 .SH "SEE ALSO"
 diodctl (8), diod.conf (5), mount.diod (8), hosts_access (5)

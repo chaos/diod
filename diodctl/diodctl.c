@@ -82,11 +82,12 @@ static void          _service_run (srvmode_t mode);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fd:l:w:c:nSD:L:e:E"
+#define OPTIONS "fsd:l:w:c:nSD:L:e:E"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"foreground",      no_argument,        0, 'f'},
+    {"stdin",           no_argument,        0, 's'},
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 'w'},
@@ -109,6 +110,7 @@ usage()
     fprintf (stderr, 
 "Usage: diodctl [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
+"   -s,--stdin             service connected client on stdin\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple OK)\n"
 "   -w,--nwthreads INT     set number of diodctl worker threads\n"
@@ -118,6 +120,7 @@ usage()
 "   -D,--diod-path PATH    set path to diod executable\n"
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
+"   -E,--export-all        export all mounted file systems\n"
 "Note: command line overrides config file\n");
     exit (1);
 }
@@ -126,11 +129,8 @@ int
 main(int argc, char **argv)
 {
     int c;
-    int lopt = 0;
-    int eopt = 0;
     char *copt = NULL;
-    char *Lopt = NULL;
-    srvmode_t mode = SRV_STDIN;
+    srvmode_t mode = SRV_NORMAL;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
@@ -157,14 +157,16 @@ main(int argc, char **argv)
             case 'f':   /* --foreground */
                 diod_conf_set_foreground (1);
                 break;
+            case 's':   /* --stdin */
+                mode = SRV_STDIN;
+                diod_conf_set_foreground (1);
+                break;
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
             case 'l':   /* --listen HOST:PORT */
-                if (!lopt) {
+                if (!diod_conf_opt_diodctllisten ())
                     diod_conf_clr_diodctllisten ();
-                    lopt = 1;
-                }
                 if (!strchr (optarg, ':'))
                     usage ();
                 diod_conf_add_diodctllisten (optarg);
@@ -186,14 +188,10 @@ main(int argc, char **argv)
                 break;
             case 'L':   /* --logdest DEST */
                 diod_conf_set_logdest (optarg);
-                diod_log_set_dest (optarg);
-                Lopt = optarg;
                 break;
             case 'e':   /* --export DIR */
-                if (!eopt) {
+                if (!diod_conf_opt_exports ())
                     diod_conf_clr_exports ();
-                    eopt = 1;
-                }
                 diod_conf_add_exports (optarg);
                 break;
             case 'E':   /* --export-all */
@@ -212,16 +210,6 @@ main(int argc, char **argv)
     if (geteuid () != 0)
         msg_exit ("must run as root");
     _setrlimit ();
-
-    if (!diod_conf_get_foreground ())
-        _daemonize ();
-
-    if (mode == SRV_STDIN) {
-        List hplist = diod_conf_get_diodctllisten ();
-
-        if (hplist && list_count (hplist) > 0)
-        mode = SRV_NORMAL;
-    }
 
     _service_run (mode);
 
@@ -417,6 +405,10 @@ _service_run (srvmode_t mode)
             if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL, 0))
                 msg_exit ("failed to set up listen ports");
             break;
+    }
+    if (!diod_conf_get_foreground ()) {
+        _daemonize ();
+        diod_log_set_dest (diod_conf_get_logdest ());
     }
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {
