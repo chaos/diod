@@ -73,6 +73,7 @@ typedef struct {
 
 typedef struct {
     List servers;           /* list of (Server *) */
+    pthread_mutex_t lock;   /* search/create must be atomic */
 } Serverlist;
 
 static Serverlist *serverlist = NULL;
@@ -143,10 +144,16 @@ done:
 void
 diodctl_serv_init (void)
 {
+    int n;
+
     if (!(serverlist = malloc (sizeof (Serverlist))))
         msg_exit ("out of memory");
     if (!(serverlist->servers = list_create ((ListDelF)_free_server)))
         msg_exit ("out of memory");
+    if ((n = pthread_mutex_init (&serverlist->lock, NULL))) {
+        errno = n;
+        err ("pthread_mutex_init");
+    }
 }
 
 void
@@ -199,18 +206,30 @@ _remove_server (Server *s)
 {
     ListIterator itr;
     Server *key;
+    int n;
 
     if (!(itr = list_iterator_create (serverlist->servers))) {
         msg ("out of memory");
         goto done;
     }
+    if ((n = pthread_mutex_lock (&serverlist->lock))) {
+        errno = n;
+        err ("failed to lock serverlist");
+        goto done;
+    }
     if (!list_find (itr, (ListFindF)_smatch, s)) {
         /* can happen if startup failed, so keep silent */
-        goto done;
+        goto unlock_and_done;
     }
     key = list_remove (itr);
     assert (key == s);
     _free_server (s);
+unlock_and_done:
+    if ((n = pthread_mutex_unlock (&serverlist->lock))) {
+        errno = n;
+        err ("failed to unlock serverlist");
+        goto done;
+    }
 done:
     if (itr)
         list_iterator_destroy (itr);
@@ -484,9 +503,14 @@ diodctl_serv_readctl (Npuser *user, char *opts, u64 offset, u32 count, u8* data)
 {
     int cpylen = 0;
     Server *s, *key;
+    int n;
 
     if (!(key = _alloc_server (user->uid, opts)))
         goto done;
+    if ((n = pthread_mutex_lock (&serverlist->lock))) {
+        np_uerror (n);
+        goto done;
+    }
     s = list_find_first (serverlist->servers, (ListFindF)_smatch, key);
     free (key);
     if (!s)
@@ -500,6 +524,10 @@ diodctl_serv_readctl (Npuser *user, char *opts, u64 offset, u32 count, u8* data)
         memcpy (data, s->port + offset, cpylen);
     } else
         np_uerror (ESRCH);
+    if ((n = pthread_mutex_unlock (&serverlist->lock))) {
+        np_uerror (n);
+        goto done;
+    }
 done:
     return cpylen;
 }

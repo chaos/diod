@@ -310,13 +310,8 @@ static Npfile *
 _ctl_root_create (void)
 {
     Npfile *root, *exports, *ctl;
-    Npuser *user;
 
-    if (!(user = diod_upool->uid2user (diod_upool, 0)))
-        msg_exit ("out of memory");
-
-    if (!(root = npfile_alloc (NULL, "", 0555|S_IFDIR, 0,
-                               &root_ops, NULL)))
+    if (!(root = npfile_alloc (NULL, "", 0555|S_IFDIR, 0, &root_ops, NULL)))
         msg_exit ("out of memory");
     root->parent = root;
     npfile_incref(root);
@@ -326,8 +321,7 @@ _ctl_root_create (void)
         msg_exit ("out of memory");
     npfile_incref(exports);
 
-    if (!(ctl = npfile_alloc(root, "ctl", 0666|S_IFREG, 3,
-                             &ctl_ops, NULL)))
+    if (!(ctl = npfile_alloc(root, "ctl", 0666|S_IFREG, 3, &ctl_ops, NULL)))
         msg_exit ("out of memory");
     npfile_incref(ctl);
 

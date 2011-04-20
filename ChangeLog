@@ -1,5 +1,9 @@
 2011-04-19 Jim Garlick <garlick@llnl.gov>
 
+	* diodctl/serv.c : Restore mutex on server list removed yesterday.
+
+2011-04-19 Jim Garlick <garlick@llnl.gov>
+
 	* diodctl/diodctl.c, diod/diod.c : Use SIGUSR1 for internal
 	termination instead of SIGTERM to avoid extra log entry.
 
