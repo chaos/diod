@@ -123,7 +123,6 @@ main(int argc, char **argv)
     int c;
     int Fopt = 0;
     char *copt = NULL;
-    char *end;
     srvmode_t mode = SRV_NORMAL;
    
     diod_log_init (argv[0]); 
@@ -153,7 +152,6 @@ main(int argc, char **argv)
                 break;
             case 's':   /* --stdin */
                 mode = SRV_STDIN;
-                diod_conf_set_foreground (1);
                 break;
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
@@ -185,13 +183,13 @@ main(int argc, char **argv)
                 diod_conf_set_allsquash (1);
                 break;
             case 'F':   /* --diodctl N */
-                mode = SRV_DIODCTL;
                 Fopt = strtoul (optarg, NULL, 10);
-                diod_conf_set_foreground (1);
+                mode = SRV_DIODCTL;
                 break;
             case 'u':   /* --runas-uid UID */
                 if (geteuid () == 0) {
                     uid_t uid;
+                    char *end;
 
                     errno = 0;
                     uid = strtoul (optarg, &end, 10);
@@ -293,7 +291,7 @@ _daemonize (void)
 
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
-    if (daemon (1, 1) < 0)
+    if (daemon (1, 0) < 0)
         err_exit ("daemon");
 }
 
@@ -423,10 +421,10 @@ _service_run (srvmode_t mode, int Fopt)
                 msg_exit ("failed to set up listen ports");
             break;
     }
-    if (!diod_conf_get_foreground ()) {
+    if (!diod_conf_get_foreground ()) 
         diod_log_set_dest (diod_conf_get_logdest ());
+    if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
         _daemonize (); /* implicit fork - no pthreads before this */
-    }
 
     if (!(ss.srv = np_srv_create (nt))) /* starts worker threads */
         err_exit ("np_srv_create");

@@ -1,3 +1,9 @@
+2011-04-20 Jim Garlick <garlick@llnl.gov>
+
+	* diodctl/diodctl.c, diod/diod.c : Fix daemonization logic
+	so we close stdio in the right cases and enable syslog logging
+	in diod when it is run from diodctl.
+
 2011-04-19 Jim Garlick <garlick@llnl.gov>
 
 	* tests/misc/* : When lua is not installed, SKIP config file tests.
