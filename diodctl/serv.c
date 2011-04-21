@@ -378,6 +378,7 @@ done:
 static void
 _exec_server (Server *s)
 {
+    int maxfd = sysconf (_SC_OPEN_MAX);
     int i;
 
     /* skip stdio 0..2, 3..3+nfds duped listen fds, close the rest */
@@ -389,7 +390,7 @@ _exec_server (Server *s)
         if (close (s->fds[i].fd) < 0)
             _exit (1);
     }
-    for (i = 0; i < _SC_OPEN_MAX; i++)
+    for (i = 0; i < maxfd; i++)
         (void)close (i + 3 + s->nfds);
 
     execv (diod_conf_get_diodpath (), s->av);

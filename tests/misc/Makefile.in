@@ -38,7 +38,7 @@ check_PROGRAMS = tfcntl$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsetuid$(EXEEXT) tsuppgrp$(EXEEXT) \
 	topt$(EXEEXT) tconf$(EXEEXT) tserialize$(EXEEXT) \
 	tlist$(EXEEXT) tnpsrv$(EXEEXT) tnpcli$(EXEEXT) \
-	tnpfile$(EXEEXT)
+	tnpfile$(EXEEXT) tlua$(EXEEXT)
 subdir = tests/misc
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -77,6 +77,15 @@ am_tlist_OBJECTS = tlist.$(OBJEXT) $(am__objects_1)
 tlist_OBJECTS = $(am_tlist_OBJECTS)
 tlist_LDADD = $(LDADD)
 tlist_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_tlua_OBJECTS = tlua.$(OBJEXT) $(am__objects_1)
+tlua_OBJECTS = $(am_tlua_OBJECTS)
+tlua_LDADD = $(LDADD)
+tlua_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -172,15 +181,15 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(tlist_SOURCES) \
-	$(tnpcli_SOURCES) $(tnpfile_SOURCES) $(tnpsrv_SOURCES) \
-	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
-	$(tsuppgrp_SOURCES)
+	$(tlua_SOURCES) $(tnpcli_SOURCES) $(tnpfile_SOURCES) \
+	$(tnpsrv_SOURCES) $(topt_SOURCES) $(tserialize_SOURCES) \
+	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
+	$(tsetuid_SOURCES) $(tsuppgrp_SOURCES)
 DIST_SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(tlist_SOURCES) \
-	$(tnpcli_SOURCES) $(tnpfile_SOURCES) $(tnpsrv_SOURCES) \
-	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
-	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
-	$(tsuppgrp_SOURCES)
+	$(tlua_SOURCES) $(tnpcli_SOURCES) $(tnpfile_SOURCES) \
+	$(tnpsrv_SOURCES) $(topt_SOURCES) $(tserialize_SOURCES) \
+	$(tsetfsuid_SOURCES) $(tsetfsuidsupp_SOURCES) \
+	$(tsetuid_SOURCES) $(tsuppgrp_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -239,6 +248,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
@@ -348,6 +358,7 @@ tlist_SOURCES = tlist.c $(common_sources)
 tnpsrv_SOURCES = tnpsrv.c $(common_sources) 
 tnpcli_SOURCES = tnpcli.c $(common_sources) 
 tnpfile_SOURCES = tnpfile.c $(common_sources) 
+tlua_SOURCES = tlua.c $(common_sources) 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf t08.conf
 all: all-am
 
@@ -395,6 +406,9 @@ tfcntl$(EXEEXT): $(tfcntl_OBJECTS) $(tfcntl_DEPENDENCIES)
 tlist$(EXEEXT): $(tlist_OBJECTS) $(tlist_DEPENDENCIES) 
 	@rm -f tlist$(EXEEXT)
 	$(LINK) $(tlist_OBJECTS) $(tlist_LDADD) $(LIBS)
+tlua$(EXEEXT): $(tlua_OBJECTS) $(tlua_DEPENDENCIES) 
+	@rm -f tlua$(EXEEXT)
+	$(LINK) $(tlua_OBJECTS) $(tlua_LDADD) $(LIBS)
 tnpcli$(EXEEXT): $(tnpcli_OBJECTS) $(tnpcli_DEPENDENCIES) 
 	@rm -f tnpcli$(EXEEXT)
 	$(LINK) $(tnpcli_OBJECTS) $(tnpcli_LDADD) $(LIBS)
@@ -433,6 +447,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlist.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlua.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpcli.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpfile.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpsrv.Po@am__quote@

@@ -233,11 +233,6 @@ main(int argc, char **argv)
             diod_become_user (NULL, uid, 1); /* exits on error */
     }
 
-    if (!diod_conf_get_foreground ()) {
-        diod_log_set_dest (diod_conf_get_logdest ());
-        _daemonize ();
-    }
-
     _service_run (mode, Fopt);
 
     diod_conf_fini ();
@@ -414,10 +409,6 @@ _service_run (srvmode_t mode, int Fopt)
     ss.reload = 0;
     _service_sigsetup ();
 
-    if (!(ss.srv = np_srv_create (nt)))
-        err_exit ("np_srv_create");
-    diod_register_ops (ss.srv);
-
     ss.fds = NULL;
     ss.nfds = 0;
     switch (mode) {
@@ -432,6 +423,15 @@ _service_run (srvmode_t mode, int Fopt)
                 msg_exit ("failed to set up listen ports");
             break;
     }
+    if (!diod_conf_get_foreground ()) {
+        diod_log_set_dest (diod_conf_get_logdest ());
+        _daemonize (); /* implicit fork - no pthreads before this */
+    }
+
+    if (!(ss.srv = np_srv_create (nt))) /* starts worker threads */
+        err_exit ("np_srv_create");
+    diod_register_ops (ss.srv);
+
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {
         errno = n;

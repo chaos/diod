@@ -211,11 +211,6 @@ main(int argc, char **argv)
         msg_exit ("must run as root");
     _setrlimit ();
 
-    if (!diod_conf_get_foreground ()) {
-        _daemonize ();
-        diod_log_set_dest (diod_conf_get_logdest ());
-    }
-
     _service_run (mode);
 
     diodctl_serv_fini ();
@@ -226,8 +221,7 @@ main(int argc, char **argv)
 }
 
 /* Create run directory if it doesn't exist and chdir there.
- * Disassociate from parents controlling tty.  Switch logging to syslog.
- * Exit on error.
+ * Disassociate from parents controlling tty.  Exit on error.
  */
 static void
 _daemonize (void)
@@ -241,9 +235,7 @@ _daemonize (void)
             msg ("failed to find/create %s, running out of /tmp", rdir);
             snprintf (rdir, sizeof(rdir), "/tmp");
         }
-    } else if (!S_ISDIR (sb.st_mode))
-        msg_exit ("%s is not a directory", rdir);
-    
+    }
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
     if (daemon (1, 1) < 0)
@@ -394,10 +386,6 @@ _service_run (srvmode_t mode)
     ss.reload = 0;
     _service_sigsetup ();
 
-    if (!(ss.srv = np_srv_create (nt)))
-        err_exit ("np_srv_create");
-    diodctl_register_ops (ss.srv);
-
     ss.fds = NULL;
     ss.nfds = 0;
     switch (mode) {
@@ -408,6 +396,14 @@ _service_run (srvmode_t mode)
                 msg_exit ("failed to set up listen ports");
             break;
     }
+    if (!diod_conf_get_foreground ()) {
+        _daemonize (); /* implicit fork - no pthreads before this */
+        diod_log_set_dest (diod_conf_get_logdest ());
+    }
+
+    if (!(ss.srv = np_srv_create (nt))) /* starts worker threads */
+        err_exit ("np_srv_create");
+    diodctl_register_ops (ss.srv);
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {
         errno = n;

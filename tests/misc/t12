@@ -3,8 +3,7 @@
 TEST=$(basename $0 | cut -d- -f1)
 # test $(id -u) == 0 || exit 77 #skip if not root
 which valgrind >/dev/null 2>&1 || exit 77 # skip if no valgrind
-./tlua || exit 77 # skip if no lua
 
 valgrind --error-exitcode=1 --tool=memcheck \
-	 --leak-check=yes --quiet ./tconf -c $TEST.conf >$TEST.out 2>&1
+	 --leak-check=yes --quiet ./tnpfile >$TEST.out 2>&1
 diff $TEST.exp $TEST.out >$TEST.diff

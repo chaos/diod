@@ -1,5 +1,17 @@
 2011-04-19 Jim Garlick <garlick@llnl.gov>
 
+	* tests/misc/* : When lua is not installed, SKIP config file tests.
+
+	* diodctl/diodctl.c, diod/diod.c : Do daemonization later to avoid
+	the impression of silent failure, e.g. when binding to listen address.
+
+	* configure.ac : Don't require explicit confirmation if munge
+	isn't found (issue 23).  
+
+	* diodctl/diodctl.c, diod/diod.c : Add -s,--stdin option.
+
+	* libdiod/diod_conf.c : Have diod listen by default on port 564.
+
 	* diodctl/serv.c : Restore mutex on server list removed yesterday.
 
 2011-04-19 Jim Garlick <garlick@llnl.gov>
