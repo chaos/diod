@@ -389,8 +389,7 @@ _exec_server (Server *s)
         if (close (s->fds[i].fd) < 0)
             _exit (1);
     }
-    /* FIXME: use _SC_OPEN_MAX? */
-    for (i = 0; i < 256; i++)
+    for (i = 0; i < _SC_OPEN_MAX; i++)
         (void)close (i + 3 + s->nfds);
 
     execv (diod_conf_get_diodpath (), s->av);

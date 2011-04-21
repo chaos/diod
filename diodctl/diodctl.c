@@ -211,6 +211,11 @@ main(int argc, char **argv)
         msg_exit ("must run as root");
     _setrlimit ();
 
+    if (!diod_conf_get_foreground ()) {
+        _daemonize ();
+        diod_log_set_dest (diod_conf_get_logdest ());
+    }
+
     _service_run (mode);
 
     diodctl_serv_fini ();
@@ -229,7 +234,6 @@ _daemonize (void)
 {
     char rdir[PATH_MAX];
     struct stat sb;
-    char *logdest;
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
     if (stat (rdir, &sb) < 0) {
@@ -242,10 +246,8 @@ _daemonize (void)
     
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
-    if (daemon (1, 0) < 0)
+    if (daemon (1, 1) < 0)
         err_exit ("daemon");
-    logdest = diod_conf_get_logdest ();
-    diod_log_set_dest (logdest ? logdest : "syslog");
 }
 
 /* Remove any resource limits that might hamper our (non-root) children.
@@ -405,10 +407,6 @@ _service_run (srvmode_t mode)
             if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL, 0))
                 msg_exit ("failed to set up listen ports");
             break;
-    }
-    if (!diod_conf_get_foreground ()) {
-        _daemonize ();
-        diod_log_set_dest (diod_conf_get_logdest ());
     }
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {

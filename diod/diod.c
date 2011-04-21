@@ -233,6 +233,11 @@ main(int argc, char **argv)
             diod_become_user (NULL, uid, 1); /* exits on error */
     }
 
+    if (!diod_conf_get_foreground ()) {
+        diod_log_set_dest (diod_conf_get_logdest ());
+        _daemonize ();
+    }
+
     _service_run (mode, Fopt);
 
     diod_conf_fini ();
@@ -293,7 +298,7 @@ _daemonize (void)
 
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
-    if (daemon (1, 0) < 0)
+    if (daemon (1, 1) < 0)
         err_exit ("daemon");
 }
 
@@ -426,10 +431,6 @@ _service_run (srvmode_t mode, int Fopt)
             if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL, 0))
                 msg_exit ("failed to set up listen ports");
             break;
-    }
-    if (!diod_conf_get_foreground ()) {
-        _daemonize ();
-        diod_log_set_dest (diod_conf_get_logdest ());
     }
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {
