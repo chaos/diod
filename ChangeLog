@@ -1,5 +1,11 @@
 2011-04-20 Jim Garlick <garlick@llnl.gov>
 
+	* : migration to git@github.com:chaos/diod.git
+
+2011-04-20 Jim Garlick <garlick@llnl.gov>
+
+	* : tag 1.0-pre23
+
 	* diodctl/diodctl.c, diod/diod.c : Fix daemonization logic
 	so we close stdio in the right cases and enable syslog logging
 	in diod when it is run from diodctl.
