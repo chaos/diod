@@ -254,12 +254,12 @@ struct Npsrv {
 
 struct Npuser {
 	pthread_mutex_t	lock;
-	int			refcount;
+	int		refcount;
 	Npuserpool*	upool;
 	char*		uname;
 	uid_t		uid;
 	Npgroup*	dfltgroup;
-	int			ngroups;	
+	int		ngroups;	
 	Npgroup**	groups;
 	void*		aux;
 
@@ -268,8 +268,8 @@ struct Npuser {
 
 struct Npgroup {
 	pthread_mutex_t	lock;
-	int			refcount;
-	Npuserpool* upool;
+	int		refcount;
+	Npuserpool* 	upool;
 	char*		gname;
 	gid_t		gid;
 	void*		aux;
