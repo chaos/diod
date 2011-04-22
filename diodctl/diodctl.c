@@ -66,7 +66,6 @@
 #include "diod_log.h"
 #include "diod_conf.h"
 #include "diod_trans.h"
-#include "diod_upool.h"
 #include "diod_sock.h"
 
 #include "ops.h"

@@ -34,8 +34,6 @@ typedef struct Npwthread Npwthread;
 typedef struct Npauth Npauth;
 typedef struct Npsrv Npsrv;
 typedef struct Npuser Npuser;
-typedef struct Npgroup Npgroup;
-typedef struct Npuserpool Npuserpool;
 
 #define FID_HTABLE_SIZE 64
 
@@ -203,7 +201,6 @@ struct Npsrv {
 	int		debuglevel;
 	void		(*debugprintf)(const char *, ...);
 	Npauth*		auth;
-	Npuserpool*	upool;
 
 	void		(*fiddestroy)(Npfid *);
 
@@ -255,40 +252,12 @@ struct Npsrv {
 struct Npuser {
 	pthread_mutex_t	lock;
 	int		refcount;
-	Npuserpool*	upool;
 	char*		uname;
 	uid_t		uid;
-	Npgroup*	dfltgroup;
-	int		ngroups;	
-	Npgroup**	groups;
-	void*		aux;
-
-	Npuser*		next;
-};
-
-struct Npgroup {
-	pthread_mutex_t	lock;
-	int		refcount;
-	Npuserpool* 	upool;
-	char*		gname;
 	gid_t		gid;
-	void*		aux;
-
-	Npgroup*	next;
+	int		nsg;	
+	gid_t		sg[64];
 };
-
-struct Npuserpool {
-	void*		aux;
-	Npuser*		(*uname2user)(Npuserpool *, char *uname);
-	Npuser*		(*uid2user)(Npuserpool *, u32 uid);
-	Npgroup*	(*gname2group)(Npuserpool *, char *gname);
-	Npgroup*	(*gid2group)(Npuserpool *, u32 gid);
-	int		(*ismember)(Npuserpool *, Npuser *u, Npgroup *g);
-	void		(*udestroy)(Npuserpool *, Npuser *u);
-	void		(*gdestroy)(Npuserpool *, Npgroup *g);
-};
-
-extern Npuserpool *np_default_users;
 
 /* srv.c */
 Npsrv *np_srv_create(int nwthread);
@@ -417,10 +386,9 @@ void np_snprintfcall(char *s, int len, Npfcall *fc);
 /* user.c */
 void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
-void np_group_incref(Npgroup *);
-void np_group_decref(Npgroup *);
-int np_change_user(Npuser *u);
-Npuser* np_current_user(void);
+Npuser *np_uid2user (u32 n_uname);
+Npuser *np_uname2user (char *uname);
+Npuser *np_9name2user (Npstr *uname);
 
 /* fdtrans.c */
 Nptrans *np_fdtrans_create(int, int);

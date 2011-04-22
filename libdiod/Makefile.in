@@ -55,8 +55,7 @@ ARFLAGS = cru
 libdiod_a_AR = $(AR) $(ARFLAGS)
 libdiod_a_LIBADD =
 am_libdiod_a_OBJECTS = diod_auth.$(OBJEXT) diod_log.$(OBJEXT) \
-	diod_conf.$(OBJEXT) diod_trans.$(OBJEXT) diod_upool.$(OBJEXT) \
-	diod_sock.$(OBJEXT)
+	diod_conf.$(OBJEXT) diod_trans.$(OBJEXT) diod_sock.$(OBJEXT)
 libdiod_a_OBJECTS = $(am_libdiod_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -213,8 +212,6 @@ libdiod_a_SOURCES = \
 	diod_conf.h \
 	diod_trans.c \
 	diod_trans.h \
-	diod_upool.c \
-	diod_upool.h \
 	diod_sock.c \
 	diod_sock.h
 
@@ -271,7 +268,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_sock.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_trans.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_upool.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

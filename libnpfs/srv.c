@@ -106,7 +106,6 @@ np_srv_create(int nwthread)
 	srv->write = np_default_write;
 	srv->clunk = np_default_clunk;
 	srv->remove = np_default_remove;
-	srv->upool = NULL;
 
 	srv->statfs = np_default_statfs;
 	srv->lopen = np_default_lopen;

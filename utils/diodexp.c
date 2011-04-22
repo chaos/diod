@@ -52,7 +52,6 @@
 #include "hash.h"
 #include "hostlist.h"
 #include "diod_log.h"
-#include "diod_upool.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "opt.h"

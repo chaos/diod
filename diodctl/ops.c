@@ -55,7 +55,6 @@
 #include "diod_log.h"
 #include "diod_conf.h"
 #include "diod_trans.h"
-#include "diod_upool.h"
 #include "diod_auth.h"
 #include "diod_sock.h"
 
@@ -70,7 +69,6 @@ diodctl_register_ops (Npsrv *srv)
     npfile_init_srv (srv, _ctl_root_create ());
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->debugprintf = msg;
-    srv->upool = diod_upool;
     srv->auth = diod_auth;
     srv->attach = _ctl_attach;
 }

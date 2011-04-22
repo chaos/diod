@@ -57,9 +57,9 @@
 #include "diod_conf.h"
 #include "diod_trans.h"
 #include "diod_sock.h"
-#include "diod_upool.h"
 
 #include "ops.h"
+#include "user.h"
 
 typedef enum { SRV_STDIN, SRV_DIODCTL, SRV_NORMAL } srvmode_t;
 
@@ -221,7 +221,7 @@ main(int argc, char **argv)
      * If not root, arrange to run (only) as current effective uid.
      */
     if (diod_conf_get_allsquash ())
-        diod_become_squashuser (); /* exits on error */
+        diod_become_user (SQUASH_UNAME, -1, 1); /* exits on error */
     else if (geteuid () != 0)
         diod_conf_set_runasuid (geteuid ());
     else if (diod_conf_opt_runasuid ()) {

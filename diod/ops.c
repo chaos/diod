@@ -87,10 +87,10 @@
 #include "diod_conf.h"
 #include "diod_log.h"
 #include "diod_trans.h"
-#include "diod_upool.h"
 #include "diod_auth.h"
 
 #include "ops.h"
+#include "user.h"
 
 typedef struct {
     char            *path;
@@ -145,7 +145,10 @@ void
 diod_register_ops (Npsrv *srv)
 {
     srv->msize = 65536;
-    srv->upool = diod_upool;
+    srv->fiddestroy = diod_fiddestroy;
+    srv->debuglevel = diod_conf_get_debuglevel ();
+    srv->debugprintf = msg;
+
     srv->auth = diod_auth;
     srv->attach = diod_attach;
     srv->clone = diod_clone;
@@ -155,10 +158,6 @@ diod_register_ops (Npsrv *srv)
     srv->clunk = diod_clunk;
     srv->remove = diod_remove;
     srv->flush = diod_flush;
-    srv->fiddestroy = diod_fiddestroy;
-    srv->debuglevel = diod_conf_get_debuglevel ();
-    srv->debugprintf = msg;
-
     srv->statfs = diod_statfs;
     srv->lopen = diod_lopen;
     srv->lcreate = diod_lcreate;
@@ -493,6 +492,11 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         msg ("diod_attach: %s not exported", f->path);
         goto done;
     }
+    if (diod_conf_get_allsquash ()) {
+        np_user_decref (fid->user);
+        if (!(fid->user = np_uname2user (SQUASH_UNAME)))
+            goto done;
+    }
     if (_fidstat (f) < 0) {
         msg ("diod_attach: could not stat mount point");
         goto done;
@@ -762,11 +766,6 @@ diod_lopen (Npfid *fid, u32 mode)
     Npfcall *res = NULL;
     Npqid qid;
 
-    /* FIXME: [valgrind]
-     * ==17656== Thread 15:
-     * ==17656== Conditional jump or move depends on uninitialised value(s)
-     * ==17656==    at 0x405205: diod_lopen (ops.c:765)
-     */
     if ((f->xflags & XFLAGS_RO) && ((mode & O_WRONLY) || (mode & O_RDWR))) {
         np_uerror (EROFS);
         goto done;

@@ -18,7 +18,6 @@
 
 #include "list.h"
 #include "diod_log.h"
-#include "diod_upool.h"
 #include "diod_conf.h"
 #include "diod_auth.h"
 
@@ -38,6 +37,7 @@ main (int argc, char *argv[])
     Nptrans *trans;
 
     diod_log_init (argv[0]);
+    diod_conf_init ();
 
     if (!(srv = np_srv_create (16)))
         msg_exit ("out of memory");
@@ -50,8 +50,6 @@ main (int argc, char *argv[])
     /* Diod_auth module presumes diod_trans transport.
      * Disable auth_required to avoid triggering an assertion.
      */
-    diod_conf_init ();
-    srv->upool = diod_upool;
     srv->auth = diod_auth;
     diod_conf_set_auth_required (0);
 #endif
@@ -66,9 +64,7 @@ main (int argc, char *argv[])
     np_srv_wait_conncount (srv, 1);
     np_srv_destroy (srv);
 
-#if TEST_DIOD_USERAUTH
     diod_conf_fini ();
-#endif
     diod_log_fini ();
     exit (0);
 }

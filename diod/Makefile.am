@@ -15,7 +15,9 @@ diod_LDADD = \
 diod_SOURCES = \
 	diod.c \
 	ops.c \
-	ops.h
+	ops.h \
+	user.c \
+	user.h
 
 man8_MANS = \
         diod.8

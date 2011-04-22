@@ -20,6 +20,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+
+/* hardwired to UNIX scheme -jg */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -30,11 +33,23 @@
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
-#include <grp.h>
 #include <sys/syscall.h>
+#include <sys/fsuid.h>
+#include <pwd.h>
+#include <grp.h>
+#include <assert.h>
+
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
+
+static void
+_free_user (Npuser *u)
+{
+	if (u->uname)
+		free (u->uname);
+	free (u);
+}
 
 void
 np_user_incref(Npuser *u)
@@ -50,7 +65,6 @@ np_user_incref(Npuser *u)
 void
 np_user_decref(Npuser *u)
 {
-	int i;
 	if (!u)
 		return;
 
@@ -61,46 +75,130 @@ np_user_decref(Npuser *u)
 		return;
 	}
 
-	if (u->upool->udestroy)
-		(*u->upool->udestroy)(u->upool, u);
-
-	for(i = 0; i < u->ngroups; i++)
-		np_group_decref(u->groups[i]);
-	if (u->dfltgroup)
-		np_group_decref(u->dfltgroup);
-	if (u->groups)
-		free(u->groups);
-
 	pthread_mutex_destroy(&u->lock);
-	free(u);
+	_free_user (u);
 }
 
-void
-np_group_incref(Npgroup *g)
+static Npuser *
+_alloc_user (struct passwd *pwd)
 {
-	if (!g)
-		return;
-	pthread_mutex_lock(&g->lock);
-	g->refcount++;
-	pthread_mutex_unlock(&g->lock);
-}
+	Npuser *u;
+	int err;
 
-void
-np_group_decref(Npgroup *g)
-{
-	if (!g)
-		return;
-
-	pthread_mutex_lock(&g->lock);
-	g->refcount--;
-	if (g->refcount > 0) {
-		pthread_mutex_unlock(&g->lock);
-		return;
+	if (!(u = malloc (sizeof (*u)))) {
+		np_uerror (ENOMEM);
+		goto error;
 	}
+	if (!(u->uname = strdup (pwd->pw_name))) {
+		np_uerror (ENOMEM);
+		goto error;
+	}
+	u->uid = pwd->pw_uid;
+	u->nsg = sizeof (u->sg) / sizeof (u->sg[0]);
+	if (getgrouplist(pwd->pw_name, pwd->pw_gid, u->sg, &u->nsg) == -1) {
+		np_uerror (EIO);
+		goto error;		
+	}
+	if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
+		np_uerror (err);
+		goto error;
+	}
+	u->refcount = 0;
+	return u;
+error:
+	if (u)
+		_free_user (u);
+	return NULL; 
+}
 
-	if (g->upool->gdestroy)
-		(*g->upool->gdestroy)(g->upool, g);
+Npuser *
+np_uid2user (uid_t uid)
+{
+	Npuser *u = NULL; 
+	int err;
+	struct passwd pw, *pwd;
+	int len = sysconf(_SC_GETPW_R_SIZE_MAX);
+	char *buf = NULL; 
 
-	pthread_mutex_destroy(&g->lock);
-	free(g);
+	if (len == -1) {
+		np_uerror (EIO);
+		goto error;
+	}	
+	if (!(buf = malloc (len))) {
+		np_uerror (ENOMEM);
+		goto error;
+	}
+	if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0) {
+		np_uerror (err);
+		goto error;
+	}
+	if (!pwd) {
+		np_uerror (ESRCH);
+		goto error;
+	}
+	if (!(u = _alloc_user (pwd)))
+		goto error;
+	free (buf);
+	np_user_incref (u);
+	return u;
+error:
+	if (u)
+		_free_user (u);
+	if (buf)
+		free (buf);
+	return NULL;
+}
+
+Npuser *
+np_uname2user (char *uname)
+{
+	Npuser *u = NULL; 
+	int err;
+	struct passwd pw, *pwd = NULL;
+	int len = sysconf(_SC_GETPW_R_SIZE_MAX);
+	char *buf = NULL;
+
+	if (len == -1) {
+		np_uerror (EIO);
+		goto error;
+	}	
+	if (!(buf = malloc (len))) {
+		np_uerror (ENOMEM);
+		goto error;
+	}
+	if ((err = getpwnam_r (uname, &pw, buf, len, &pwd)) != 0) {
+		np_uerror (err);
+		goto error;
+	}
+	if (!pwd) {
+		np_uerror (ESRCH);
+		goto error;
+	}
+	if (!(u = _alloc_user (pwd)))
+		goto error;
+	free (buf);
+	np_user_incref (u);
+	return u;
+error:
+	if (u)
+		_free_user (u);
+	if (buf)
+		free (buf);
+	return NULL;
+}
+
+Npuser *
+np_9name2user (Npstr *uname)
+{
+	Npuser *u = NULL;
+	char *name;
+
+	if (!(name = np_strdup (uname))) {
+		np_uerror (ENOMEM);
+		goto done;
+	}
+	u = np_uname2user (name);
+	free (name);
+done:
+	return u;
 }

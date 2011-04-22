@@ -22,7 +22,6 @@
 
 #include "list.h"
 #include "diod_log.h"
-#include "diod_upool.h"
 #include "diod_conf.h"
 #include "diod_auth.h"
 
@@ -50,7 +49,6 @@ main (int argc, char *argv[])
      * Disable auth_required to avoid triggering an assertion.
      */
     diod_conf_init ();
-    srv->upool = diod_upool;
     diod_conf_set_auth_required (0);
 
     /* create one connection */

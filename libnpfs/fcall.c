@@ -52,52 +52,32 @@ Npfcall *
 np_auth(Npreq *req, Npfcall *tc)
 {
 	int n;
-	char *uname, *aname;
-	Npconn *conn;
-	Npsrv *srv;
+	char *aname = NULL;
+	Npconn *conn = req->conn;
 	Npfid *afid;
-	Npfcall *rc;
+	Npfcall *rc = NULL;
 	Npuser *user;
 	Npqid aqid;
 
-	rc = NULL;
-	aname = NULL;
-	conn = req->conn;
-	srv = conn->srv;
 	afid = np_fid_find(conn, tc->u.tauth.afid);
 	if (afid) {
 		np_uerror(EIO);
 		goto done;
 	}
-
 	afid = np_fid_create(conn, tc->u.tauth.afid, NULL);
 	if (!afid)
 		goto done;
 	else
 		np_fid_incref(afid);
 
-	if (!srv->upool || !srv->upool->uname2user || !srv->upool->uid2user) {
-		np_uerror (EIO);
-		goto done;
-	}
 	if (tc->u.tauth.uname.len && tc->u.tauth.n_uname==P9_NONUNAME) {
-		uname = np_strdup(&tc->u.tauth.uname);
-		if (!uname) 
+		user = np_9name2user (&tc->u.tauth.uname);
+		if (!user)
 			goto done;
-
-		user = (*srv->upool->uname2user)(srv->upool, uname);
-		free(uname);
-		if (!user) {
-			np_uerror(EIO);
-			goto done;
-		}
-		tc->u.tauth.n_uname = user->uid;
 	} else {
-		user = (*srv->upool->uid2user)(srv->upool, tc->u.tauth.n_uname);
-		if (!user) {
-			np_uerror(EIO);
+		user = np_uid2user (tc->u.tauth.n_uname);
+		if (!user)
 			goto done;
-		}
 	}
 
 	if (tc->u.tauth.aname.len) {
@@ -109,8 +89,8 @@ np_auth(Npreq *req, Npfcall *tc)
 
 	afid->user = user;
 	afid->type = P9_QTAUTH;
-	if (srv->auth && srv->auth->startauth)
-		n = (*srv->auth->startauth)(afid, aname, &aqid);
+	if (conn->srv->auth && conn->srv->auth->startauth)
+		n = (*conn->srv->auth->startauth)(afid, aname, &aqid);
 	else
 		n = 0;
 
@@ -129,24 +109,17 @@ done:
 Npfcall *
 np_attach(Npreq *req, Npfcall *tc)
 {
-	char *uname, *aname;
-	Npconn *conn;
-	Npsrv *srv;
-	Npfid *fid, *afid;
-	Npfcall *rc;
+	char *aname = NULL;
+	Npconn *conn = req->conn;
+	Npfid *fid, *afid = NULL;
+	Npfcall *rc = NULL;
 	Npuser *user;
 
-	rc = NULL;
-	aname = NULL;
-	conn = req->conn;
-	srv = conn->srv;
-	afid = NULL;
 	fid = np_fid_find(conn, tc->u.tattach.fid);
 	if (fid) {
 		np_uerror(EIO);
 		goto done;
 	}
-
 	fid = np_fid_create(conn, tc->u.tattach.fid, NULL);
 	if (!fid)
 		goto done;
@@ -168,29 +141,14 @@ np_attach(Npreq *req, Npfcall *tc)
 		np_fid_incref(afid);
 	}
 
-	if (!srv->upool || !srv->upool->uname2user || !srv->upool->uid2user) {
-		np_uerror (EIO);
-		goto done;
-	}
 	if (tc->u.tattach.uname.len && tc->u.tattach.n_uname==P9_NONUNAME) {
-		uname = np_strdup(&tc->u.tattach.uname);
-		if (!uname) 
+		user = np_9name2user(&tc->u.tattach.uname);
+		if (!user)
 			goto done;
-
-		user = srv->upool->uname2user(srv->upool, uname);
-		free(uname);
-		if (!user) {
-			np_uerror(EIO);
-			goto done;
-		}
-
-		tc->u.tattach.n_uname = user->uid;
 	} else {
-		user = srv->upool->uid2user(srv->upool, tc->u.tattach.n_uname);
-		if (!user) {
-			np_uerror(EIO);
+		user = np_uid2user(tc->u.tattach.n_uname);
+		if (!user)
 			goto done;
-		}
 	}
 
 	fid->user = user;
@@ -202,7 +160,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		aname = NULL;
 
 	if (conn->srv->auth && conn->srv->auth->checkauth
-	&& !(*conn->srv->auth->checkauth)(fid, afid, aname))
+			&& !(*conn->srv->auth->checkauth)(fid, afid, aname))
 		goto done;
 
 	rc = (*conn->srv->attach)(fid, afid, &tc->u.tattach.aname);

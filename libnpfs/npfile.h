@@ -60,7 +60,7 @@ struct Npdirops {
 	void		(*ref)(Npfile *, Npfilefid *);
 	void		(*unref)(Npfile *, Npfilefid *);
 	Npfile*		(*create)(Npfile *dir, char *name, u32 perm, 
-				Npuser *uid, Npgroup *gid, char *extension);
+				u32 uid, u32 gid, char *extension);
 	Npfile*		(*first)(Npfile *dir);
 	Npfile*		(*next)(Npfile *dir, Npfile *prevchild);
 	//int		(*wstat)(Npfile*, Npstat*);

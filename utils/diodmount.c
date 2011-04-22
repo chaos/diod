@@ -62,7 +62,6 @@
 #include "list.h"
 #include "hostlist.h"
 #include "diod_log.h"
-#include "diod_upool.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "opt.h"
@@ -83,6 +82,7 @@ static const struct option longopts[] = {
 #endif
 
 #define DIOD_DEFAULT_MSIZE 65512
+static void _become_user (char *uname);
 static void _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt,
                          int fopt, int nopt);
 static void _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt);
@@ -167,7 +167,7 @@ main (int argc, char *argv[])
      * The uname user becomes the euid which will be used by munge auth.
      */
     _parse_uname_access (o);
-    diod_become_user (opt_find (o, "uname"), 0, 0);
+    _become_user (opt_find (o, "uname"));
 
     /* We require -otrans=fd because auth occurs in user space, then live fd
      * is passed to the kernel via -orfdno,wfdno.
@@ -282,6 +282,18 @@ done:
         hostlist_destroy (hl);
     opt_destroy (o);
     exit (0);
+}
+
+/* Running as root.  Need to set effective uid to the named one.
+ */
+static void
+_become_user (char *uname)
+{
+    struct passwd *pw;
+
+    if (!(pw = getpwnam (uname)))
+        msg_exit ("could not look up uname='%s'", uname);
+    seteuid (pw->pw_uid);
 }
 
 static hostlist_t

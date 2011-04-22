@@ -139,6 +139,7 @@ _create_export (char *path)
     x->opts = NULL;
     x->hosts = NULL;
     x->users = NULL;
+    x->oflags = 0;
     return x;
 }
 

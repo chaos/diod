@@ -51,7 +51,6 @@
 #include "npclient.h"
 #include "list.h"
 #include "diod_log.h"
-#include "diod_upool.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
 
