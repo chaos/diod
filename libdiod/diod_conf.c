@@ -662,8 +662,6 @@ diod_conf_init_config_file (char *path)
             err_exit ("%s", path);
         if (sb.st_size > 0)
             msg_exit ("no LUA suport - cannot parse contents of %s", path);
-        if (config.configpath)
-            free (config.configpath);
     }
 }
 #endif /* HAVE_LUA_H */
