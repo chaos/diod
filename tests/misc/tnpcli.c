@@ -31,7 +31,7 @@ main (int argc, char *argv[])
 
     if (!(fs = npc_create_fsys (0, TEST_MSIZE)))
         err_exit ("npc_create_fsys");
-    npc_disconnect_fsys (fs); /* closes stdin */
+    npc_finish (fs); /* closes stdin */
 
     diod_log_fini ();
     exit (0);
