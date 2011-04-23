@@ -228,7 +228,6 @@ diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc)
 }
 
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
- * This is a helper for diod_sock_accept_loop ().
  */
 void
 diod_sock_accept_one (Npsrv *srv, int fd)
@@ -269,33 +268,6 @@ diod_sock_accept_one (Npsrv *srv, int fd)
     diod_sock_startfd (srv, fd, host, ip, svc);
 }
  
-/* Loop forever, accepting and handling new 9P connections.
- * This comprises the main service loop in diod -L and diodctl daemons.
- */
-void
-diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds)
-{
-    int i;
-
-    while (1) {
-        for (i = 0; i < nfds; i++) {
-            fds[i].events = POLLIN;
-            fds[i].revents = 0;
-        }
-        if (poll (fds, nfds, -1) < 0) {
-            if (errno == EINTR)
-                continue; 
-            err_exit ("poll");
-        }
-        for (i = 0; i < nfds; i++) {
-            if ((fds[i].revents & POLLIN)) {
-                diod_sock_accept_one (srv, fds[i].fd);
-            }
-        }
-    }
-    /*NOTREACHED*/
-}
-
 /* Try to connect to host:port.
  * Return fd on success, -1 on failure.
  */

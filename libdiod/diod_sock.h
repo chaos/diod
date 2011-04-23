@@ -14,8 +14,6 @@ void diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc);
 int  diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
                                      char *nport, int flags);
 
-void diod_sock_accept_loop (Npsrv *srv, struct pollfd *fds, int nfds);
-
 int diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms);
 
 int diod_sock_tryconnect (List l, char *port, int maxtries, int retry_wait_ms);
