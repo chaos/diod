@@ -33,7 +33,6 @@ AC_PROG_RANLIB
 AC_HEADER_STDC
 AC_CHECK_HEADERS( \
   getopt.h \
-  lua.h \
   pthread.h \
 )
 
@@ -54,8 +53,10 @@ AC_CHECK_FUNCS( \
 )
 X_AC_CHECK_PTHREADS
 X_AC_WRAP
-X_AC_CHECK_COND_LIB(lua, luaL_newstate)
 X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
+AX_LUA_HEADERS
+AX_LUA_HEADERS(501)
+AX_LUA_LIBS
 
 ##
 # For list.c, hostlist.c, hash.c

@@ -4,7 +4,7 @@
 
 To build all of diod's features, you need a few prerequisites:
 
-    lua, lua-devel 
+    lua, lua-devel (version 5.1 or better)
 	For config file support.
 
     munge, munge-libs, munge-devel
@@ -12,6 +12,10 @@ To build all of diod's features, you need a few prerequisites:
 
     tcp_wrappers, tcp_wrappers-libs, tcp_wrappers-devel
 	For TCP wrapper functionality.
+
+Note: on Debian/Ubuntu, install liblua5.1-dev and configure with:
+
+    ./configure CPPFLAGS="-I/usr/include/lua5.1" --with-lua-suffix=5.1
 
 +---------+
 | Testing |

@@ -5,7 +5,7 @@
 int
 main (int argc, char *argv[])
 {
-#if HAVE_LUA_H
+#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
 	return 0;
 #else
 	return 1;

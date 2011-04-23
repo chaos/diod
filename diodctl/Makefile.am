@@ -10,7 +10,7 @@ diodctl_LDADD = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
 
 diodctl_SOURCES = \
 	diodctl.c \

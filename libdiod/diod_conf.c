@@ -47,7 +47,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
-#if HAVE_LUA_H
+#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -181,7 +181,7 @@ diod_conf_init (void)
     _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.exportall = 0;
-#ifdef HAVE_LUA_H
+#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
     config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
 #else
     config.configpath = NULL;
@@ -413,7 +413,7 @@ void diod_conf_validate_exports (void)
     list_iterator_destroy (itr);
 }
 
-#ifdef HAVE_LUA_H
+#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
 static void
 _parse_expopt (char *s, int *fp)
 {

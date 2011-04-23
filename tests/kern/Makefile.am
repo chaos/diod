@@ -41,7 +41,7 @@ AM_CPPFLAGS = \
 LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
+        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = test.h
 

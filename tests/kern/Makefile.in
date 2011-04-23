@@ -41,7 +41,8 @@ check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
 subdir = tests/kern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/config/x_ac_check_cond_lib.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
+	$(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
@@ -216,6 +217,7 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
+PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
@@ -308,7 +310,7 @@ AM_CPPFLAGS = \
 LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LIBZ) $(LIBLUA) $(LIBMUNGE)
+        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = test.h
 kconjoin_SOURCES = kconjoin.c $(common_sources)
