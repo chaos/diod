@@ -603,7 +603,6 @@ EGREP
 GREP
 CPP
 RANLIB
-GCCWARNRPC
 GCCWARN
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
@@ -4093,8 +4092,7 @@ fi
 
 
 if test "$GCC" = yes; then
-  GCCWARN="-Wall -Werror"
-
+  GCCWARN="-Wall"
 
 fi
 if test -n "$ac_tool_prefix"; then
