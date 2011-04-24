@@ -147,7 +147,7 @@ diod_register_ops (Npsrv *srv)
     srv->msize = 65536;
     srv->fiddestroy = diod_fiddestroy;
     srv->debuglevel = diod_conf_get_debuglevel ();
-    srv->debugprintf = msg;
+    srv->msg = msg;
 
     srv->auth = diod_auth;
     srv->attach = diod_attach;

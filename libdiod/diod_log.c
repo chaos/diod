@@ -205,10 +205,11 @@ done:
 static void
 _verr (int errnum, const char *fmt, va_list ap)
 {
-    char buf[1024];
+    char buf[128];
     char errbuf[64];
 
-    strerror_r (errnum, errbuf, sizeof (errbuf));
+    if (strerror_r (errnum, errbuf, sizeof (errbuf)) == -1) /* XSI version */
+        snprintf (errbuf, sizeof (errbuf), "unknown error code"); 
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {

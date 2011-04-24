@@ -46,7 +46,7 @@ main (int argc, char *argv[])
     if (!(srv = np_srv_create (16)))
         msg_exit ("out of memory");
     srv->debuglevel |= DEBUG_9P_TRACE;
-    srv->debugprintf = msg;
+    srv->msg = msg;
     srv->auth = diod_auth;
     diod_conf_set_auth_required (0); /* diod_auth presumes diod_trans */
 

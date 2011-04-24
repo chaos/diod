@@ -549,19 +549,16 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		for(i = 0; i < fc->u.rwalk.nwqid; i++)
 			np_printqid(s, len, &fc->u.rwalk.wqids[i]);
 		break;
-		
 	case P9_TREAD:
 		spf (s, len, "P9_TREAD tag %u fid %d offset %"PRIu64" count %u", 
 			fc->tag, fc->u.tread.fid, fc->u.tread.offset,
 			fc->u.tread.count);
 		break;
-		
 	case P9_RREAD:
 		spf (s, len, "P9_RREAD tag %u count %u", fc->tag,
 			fc->u.rread.count);
 		np_printdata(s, len, fc->u.rread.data, fc->u.rread.count);
 		break;
-		
 	case P9_TWRITE:
 		spf (s, len, "P9_TWRITE tag %u", fc->tag);
 		spf (s, len, " fid %d", fc->u.twrite.fid);
@@ -569,29 +566,45 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, " count %u", fc->u.twrite.count);
 		np_printdata(s, len, fc->u.twrite.data, fc->u.twrite.count);
 		break;
-		
 	case P9_RWRITE:
 		spf (s, len, "P9_RWRITE tag %u count %u", fc->tag, fc->u.rwrite.count);
 		break;
-		
 	case P9_TCLUNK:
 		spf (s, len, "P9_TCLUNK tag %u fid %d", fc->tag, fc->u.tclunk.fid);
 		break;
-		
 	case P9_RCLUNK:
 		spf (s, len, "P9_RCLUNK tag %u", fc->tag);
 		break;
-		
 	case P9_TREMOVE:
 		spf (s, len, "P9_TREMOVE tag %u fid %d", fc->tag, fc->u.tremove.fid);
 		break;
-		
 	case P9_RREMOVE:
 		spf (s, len, "P9_RREMOVE tag %u", fc->tag);
 		break;
-		
+	/* unused ops that we consider a protocol error */
+	case P9_RERROR:
+		spf (s, len, "P9_RERROR: deprecated protocol op");
+		break;
+	case P9_TOPEN:
+		spf (s, len, "P9_TOPEN: deprecated protocol op");
+		break;
+	case P9_ROPEN:
+		spf (s, len, "P9_ROPEN: deprecated protocol op");
+		break;
+	case P9_TCREATE:
+		spf (s, len, "P9_TCREATE: deprecated protocol op");
+		break;
+	case P9_RCREATE:
+		spf (s, len, "P9_RCREATE: deprecated protocol op");
+		break;
+	case P9_TSTAT:
+		spf (s, len, "P9_TSTAT: deprecated protocol op");
+		break;
+	case P9_RSTAT:
+		spf (s, len, "P9_RSTAT: deprecated protocol op");
+		break;
 	default:
-		spf (s, len, "unknown type %d", fc->type);
+		spf (s, len, "unknown protocol op (%d)", fc->type);
 		break;
 	}
 }

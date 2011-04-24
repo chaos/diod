@@ -68,7 +68,7 @@ diodctl_register_ops (Npsrv *srv)
 {
     npfile_init_srv (srv, _ctl_root_create ());
     srv->debuglevel = diod_conf_get_debuglevel ();
-    srv->debugprintf = msg;
+    srv->msg = msg;
     srv->auth = diod_auth;
     srv->attach = _ctl_attach;
 }

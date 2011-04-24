@@ -133,7 +133,7 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 	char s[512];
 
 	np_snprintfcall(s, sizeof (s), fc);
-	srv->debugprintf("%s", s);
+	srv->msg("%s", s);
 }
 
 /* Per-connection read thread.
@@ -171,10 +171,15 @@ again:
 		/* Corruption on the transport, unhandled op, etc.
 		 * is fatal to the connection.
 		 */
-		if (!np_deserialize(fc, fc->pkt))
+		if (!np_deserialize(fc, fc->pkt)) {
+			if (srv->msg) {
+				_debug_trace (srv, fc);
+				srv->msg ("protocol error - "
+					  "dropping connection");
+			}
 			break;
-
-		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->debugprintf)
+		}
+		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->msg)
 			_debug_trace (srv, fc);
 
 		/* Replace fc, and copy any data past the current packet
@@ -351,7 +356,7 @@ np_conn_respond(Npreq *req)
 	pthread_mutex_unlock(&conn->lock);
 
 	if (send) {
-		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->debugprintf)
+		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->msg)
 			_debug_trace (srv, rc);
 		pthread_mutex_lock(&conn->wlock);
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);

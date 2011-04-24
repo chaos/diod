@@ -431,10 +431,8 @@ _service_run (srvmode_t mode, int Fopt)
     diod_register_ops (ss.srv);
 
 
-    if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL))) {
-        errno = n;
-        err_exit ("pthread_create _service_loop");
-    }
+    if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL)))
+        errn_exit (n, "pthread_create _service_loop");
 
     switch (mode) {
         case SRV_STDIN:
@@ -448,10 +446,8 @@ _service_run (srvmode_t mode, int Fopt)
         case SRV_NORMAL:
             break;
     }
-    if ((n = pthread_join (ss.t, NULL))) {
-        errno = n;
-        err_exit ("pthread_join _service_loop");
-    }
+    if ((n = pthread_join (ss.t, NULL)))
+        errn_exit (n, "pthread_join _service_loop");
 
     np_srv_destroy (ss.srv);
 }

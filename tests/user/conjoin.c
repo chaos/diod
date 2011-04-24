@@ -44,7 +44,7 @@
 static void
 usage (void)
 {
-    fprintf (stderr, "Usage: conjoin cmd1 cmd2\n");
+    fprintf (stderr, "Usage: conjoin srv-cmd tst-cmd\n");
     exit (1);
 }
 
@@ -95,16 +95,17 @@ main (int argc, char *argv[])
         case -1:
             err_exit ("fork");
             /*NOTREACHED*/
-        case 0:     /* child */
+        case 0:     /* child - tst-cmd */
             close (s[0]);
             if (dup2 (s[1], 0) < 0)
                 err_exit ("dup2 for %s leg", _cmd (cmd2));
+            close (s[1]);
             if ((cs = system (cmd2)) == -1)
                 err_exit ("fork for %s leg", _cmd (cmd2));
             _interpret_status (cs, _cmd (cmd2));
             exit (0);
             /*NOTREACHED*/
-        default:    /* parent */
+        default:    /* parent - srv-cmd */
             close (s[1]);
             if (dup2 (s[0], 0) < 0) {
                 err ("dup2 for %s leg", _cmd (cmd1));
@@ -113,6 +114,7 @@ main (int argc, char *argv[])
             close (s[0]);
             if ((cs = system (cmd1)) == -1)
                 err ("fork for %s leg", _cmd (cmd1));
+            close (0);
             break;
     }
 

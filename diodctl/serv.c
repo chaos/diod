@@ -149,10 +149,8 @@ diodctl_serv_init (void)
         msg_exit ("out of memory");
     if (!(serverlist->servers = list_create ((ListDelF)_free_server)))
         msg_exit ("out of memory");
-    if ((n = pthread_mutex_init (&serverlist->lock, NULL))) {
-        errno = n;
-        err ("pthread_mutex_init");
-    }
+    if ((n = pthread_mutex_init (&serverlist->lock, NULL)))
+        errn (n, "pthread_mutex_init");
 }
 
 void
@@ -212,8 +210,7 @@ _remove_server (Server *s)
         goto done;
     }
     if ((n = pthread_mutex_lock (&serverlist->lock))) {
-        errno = n;
-        err ("failed to lock serverlist");
+        errn (n, "failed to lock serverlist");
         goto done;
     }
     if (!list_find (itr, (ListFindF)_smatch, s)) {
@@ -225,8 +222,7 @@ _remove_server (Server *s)
     _free_server (s);
 unlock_and_done:
     if ((n = pthread_mutex_unlock (&serverlist->lock))) {
-        errno = n;
-        err ("failed to unlock serverlist");
+        errn (n, "failed to unlock serverlist");
         goto done;
     }
 done:

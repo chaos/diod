@@ -535,7 +535,7 @@ _mount (const char *source, const char *target, unsigned long mountflags,
 
     if (seteuid (0) < 0)
         err_exit ("failed to set effective uid to root");
-    if (mount (source, target, "9p", mountflags, data))
+    if (mount (source, target, "9p", mountflags, data) < 0)
         err_exit ("mount");
     if (seteuid (saved_euid) < 0)
         err_exit ("failed to restore effective uid to %d", saved_euid);

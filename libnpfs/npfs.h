@@ -199,7 +199,7 @@ struct Npsrv {
 	void*		srvaux;
 	void*		treeaux;
 	int		debuglevel;
-	void		(*debugprintf)(const char *, ...);
+	void		(*msg)(const char *, ...);
 	Npauth*		auth;
 
 	void		(*fiddestroy)(Npfid *);

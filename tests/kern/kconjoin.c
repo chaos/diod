@@ -43,10 +43,6 @@
 #define PATH_MAX 1024
 #endif
 
-#ifndef SHUT_RDRW
-#define SHUT_RDRW 2
-#endif
-
 static void
 usage (void)
 {
@@ -124,10 +120,12 @@ main (int argc, char *argv[])
                 err ("dup2 for %s leg", _cmd (srvcmd));
                 break;
             }
+            close (s[1]);
             if ((cs = system (srvcmd)) == -1) {
                 err ("fork for %s leg", _cmd (srvcmd));
                 break;
             }
+            close (0);
             break;
     }
 
