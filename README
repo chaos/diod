@@ -1,19 +1,38 @@
++---------------------+
+| Client Requirements | 
++---------------------+
+
+Diod is a user space server for the kernel v9fs client (9p.ko, 9pnet.ko).
+Although the kernel client supports several 9P variants, diod only supports
+9P2000.L, and only in its feature-complete form, as it appeared in 2.6.38.
+
+Earlier versions of the kernel that do not support 9P2000.L will fail
+at mount time when version negotiation fails.  Some pre-2.6.38 versions
+of the kernel that have 9P2000.L but still send some 9P2000.u ops will
+fail in various ways, typically with the diod server detecting a protocol
+error and dropping the connection.
+
+Use a 2.6.38 or later kernel.  Alternatively, use a backport of v9fs
+to an earlier kernel.  A 2.6.38-rc2 v9fs backported to RHEL 6.x is
+what is currently being used at LLNL.  See svn repo here:
+   http://diod.googlecode.com/svn/branches/v9fs-2.6.38.rc2-rhel6
+
 +----------+
 | Building | 
 +----------+
 
 To build all of diod's features, you need a few prerequisites:
 
-    lua, lua-devel (version 5.1 or better)
+    lua, lua-devel (version 5.1 or better) [on debian/ubuntu liblua5.1-dev]
 	For config file support.
 
     munge, munge-libs, munge-devel
 	For authentication support.
 
     tcp_wrappers, tcp_wrappers-libs, tcp_wrappers-devel
-	For TCP wrapper functionality.
+	For TCP wrapper support.
 
-Note: on Debian/Ubuntu, install liblua5.1-dev and configure with:
+Note: on Debian/Ubuntu, LUA requires the following configure flags:
 
     ./configure CPPFLAGS="-I/usr/include/lua5.1" --with-lua-suffix=5.1
 
@@ -39,12 +58,56 @@ Unit tests (make check):
 
 Running by hand for debugging:
 
-    Start diod server with one export, no auth, protocol debug:
-	sudo ./diod -l 0.0.0.0:550 -d 1 -n -e /tmp/9 
+    Start diod server in foreground, with proto debug, no-auth, one export:
+	sudo ./diod -f -d 1 -n -e /tmp/9
 
-    Mount with diodmount:
-	sudo ./diodmount -p 550 -n mrhankey:/tmp/9 /mnt
+    Mount it:
+        sudo mount -t 9p -n 127.0.0.1 /mnt \
+            -oaname=/tmp/9,version=9p2000.L,uname=root,access=user
 
-    Alternatively, mount with mount:
-        sudo mount -t 9p -n 192.168.50.135 /mnt \
- -oaname=/tmp/9,msize=65512,version=9p2000.L,uname=root,access=user,port=550"
+    Alternatively, mount with diodmount:
+	sudo ./diodmount -oport=564 -n localhost:/tmp/9 /mnt
+
+Running diod for I/O forwarding on clusters:
+
+    On I/O node, set up /etc/diod.conf containing exports - see diod.conf(5),
+       chkconfig diodctl on
+       service diodctl start
+
+    On compute node, if I/O node is fritz42, add entries like this to fstab:
+       fritz42:/g/g0  /g/g0         diod  default 0 0
+       ...
+
+    Alternatively, use "zero-config" automounter method:
+       set DIOD_SERVERS="fritz42" in /etc/sysconfig/auto.diod
+       add to /etc/auto.master "/d /etc/auto.diod"
+       mkdir /d
+       chkconfig autofs on
+       service autofs start
+       ln -s /g/g0 /d/g0
+       ...
+
+    Note that at this point it's only being tested with NFS file systems.
+    Use it with Lustre or GPFS at your own peril - but if you do, please
+    report issues!
+
++---------+
+| Support |
++---------+
+
+    Use the issue tracker, see the wiki, download releases at:
+
+        http://diod.googlecode.com/
+
+    Until we get a real mailing list, you may email the author directly at:
+
+        garlick dot jim at gmail dot com
+        garlick at llnl dot gov
+
+    For general v9fs/9p discussion, use the v9fs-developer mailing list:
+
+        https://lists.sourceforge.net/lists/listinfo/v9fs-developer
+
+    The source resides at github.  Patches welcome!
+   
+        https://github.com/chaos/diod 
