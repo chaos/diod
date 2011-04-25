@@ -1,3 +1,14 @@
+1.0-pre24:
+	Fix fid refcounting bug in remove handler (issue 29)
+	Add more verbose logging in auth path (issue 28)
+	Drop diod trans plugin and use fdtrans.
+	Fix test suite deadlock	in Ubuntu 2.6.35 kernel.
+	Drop -Werror from default CFLAGS
+	Provide more sophisticated lua configure glue (issue 21)
+	Fix double-free with diod -c and !HAVE_LUA_H
+	Fix various memory issues.
+	Drop upool module and integrate UNIX user handling into libnpfs.
+
 1.0-pre23:
 	Make -s,--stdin option explicit in diod and diodctl.
 	Have diod listen by default on the well known 9pfs port 564.
