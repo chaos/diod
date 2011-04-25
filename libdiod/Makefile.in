@@ -56,7 +56,7 @@ ARFLAGS = cru
 libdiod_a_AR = $(AR) $(ARFLAGS)
 libdiod_a_LIBADD =
 am_libdiod_a_OBJECTS = diod_auth.$(OBJEXT) diod_log.$(OBJEXT) \
-	diod_conf.$(OBJEXT) diod_trans.$(OBJEXT) diod_sock.$(OBJEXT)
+	diod_conf.$(OBJEXT) diod_sock.$(OBJEXT)
 libdiod_a_OBJECTS = $(am_libdiod_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -123,7 +123,6 @@ PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
 PACKAGE_NAME = @PACKAGE_NAME@
 PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
-PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 RANLIB = @RANLIB@
@@ -211,8 +210,6 @@ libdiod_a_SOURCES = \
 	diod_log.h \
 	diod_conf.c \
 	diod_conf.h \
-	diod_trans.c \
-	diod_trans.h \
 	diod_sock.c \
 	diod_sock.h
 
@@ -268,7 +265,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_conf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_log.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_sock.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diod_trans.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
