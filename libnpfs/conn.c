@@ -169,7 +169,9 @@ again:
 			continue;
 
 		/* Corruption on the transport, unhandled op, etc.
-		 * is fatal to the connection.
+		 * is fatal to the connection.  We could consider returning
+		 * an error to the client here.   However, various kernels
+		 * may not handle that well, depending on where it happens.
 		 */
 		if (!np_deserialize(fc, fc->pkt)) {
 			if (srv->msg) {
@@ -186,8 +188,12 @@ again:
 		 * to the replacement.
 		 */
 		fc1 = _alloc_npfcall(conn->msize);
-		if (!fc1)
-			break; /* FIXME */
+		if (!fc1) {
+			if (srv->msg)
+				srv->msg ("out of memory in receive path - "
+					  "dropping connection");
+			break;
+		}
 		if (n > size)
 			memmove(fc1->pkt, fc->pkt + size, n - size);
 		n -= size;
@@ -195,8 +201,12 @@ again:
 		/* Encapsulate fc in a request and hand to srv worker threads.
 		 */
 		req = np_req_alloc(conn, fc);
-		if (!req)
-			break; /* FIXME */
+		if (!req) {
+			if (srv->msg)
+				srv->msg ("out of memory in receive path - "
+					  "dropping connection");
+			break;
+		}
 		pthread_mutex_lock(&srv->lock);
 		if (!conn->resetting)
 			np_srv_add_req(srv, req);

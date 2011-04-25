@@ -37,7 +37,7 @@ target_triplet = @target@
 check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
 	trename$(EXEEXT) tstat$(EXEEXT) tflock$(EXEEXT) \
 	tflock2$(EXEEXT) tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) \
-	tconfig$(EXEEXT) tfsgid$(EXEEXT)
+	tfsgid$(EXEEXT)
 subdir = tests/kern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -59,14 +59,6 @@ kconjoin_OBJECTS = $(am_kconjoin_OBJECTS)
 kconjoin_LDADD = $(LDADD)
 am__DEPENDENCIES_1 =
 kconjoin_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpfs/libnpfs.a \
-	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
-tconfig_SOURCES = tconfig.c
-tconfig_OBJECTS = tconfig.$(OBJEXT)
-tconfig_LDADD = $(LDADD)
-tconfig_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -151,11 +143,10 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(kconjoin_SOURCES) tconfig.c tfcntl2.c tfcntl3.c \
-	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
-	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
-	$(tsuppgrp_SOURCES)
-DIST_SOURCES = $(kconjoin_SOURCES) tconfig.c tfcntl2.c tfcntl3.c \
+SOURCES = $(kconjoin_SOURCES) tfcntl2.c tfcntl3.c $(tflock_SOURCES) \
+	tflock2.c $(tfsgid_SOURCES) $(trename_SOURCES) \
+	$(tstat_SOURCES) $(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
+DIST_SOURCES = $(kconjoin_SOURCES) tfcntl2.c tfcntl3.c \
 	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
 	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
 	$(tsuppgrp_SOURCES)
@@ -360,9 +351,6 @@ clean-checkPROGRAMS:
 kconjoin$(EXEEXT): $(kconjoin_OBJECTS) $(kconjoin_DEPENDENCIES) 
 	@rm -f kconjoin$(EXEEXT)
 	$(LINK) $(kconjoin_OBJECTS) $(kconjoin_LDADD) $(LIBS)
-tconfig$(EXEEXT): $(tconfig_OBJECTS) $(tconfig_DEPENDENCIES) 
-	@rm -f tconfig$(EXEEXT)
-	$(LINK) $(tconfig_OBJECTS) $(tconfig_LDADD) $(LIBS)
 tfcntl2$(EXEEXT): $(tfcntl2_OBJECTS) $(tfcntl2_DEPENDENCIES) 
 	@rm -f tfcntl2$(EXEEXT)
 	$(LINK) $(tfcntl2_OBJECTS) $(tfcntl2_LDADD) $(LIBS)
@@ -398,7 +386,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kconjoin.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconfig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tflock.Po@am__quote@

@@ -226,7 +226,7 @@ _verr (int errnum, const char *fmt, va_list ap)
 static void
 _vlog (const char *fmt, va_list ap)
 {
-    char buf[1024];
+    char buf[1024]; /* make it large enough for protocol debug output */
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {

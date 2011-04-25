@@ -346,124 +346,95 @@ np_wthread_create(Npsrv *srv)
 static Npfcall*
 np_process_request(Npreq *req)
 {
-	Npconn *conn;
-	Npfcall *tc, *rc;
-	char *op;
+	Npconn *conn = req->conn;
+	Npfcall *rc = NULL;
+	Npfcall *tc = req->tcall;
 	int ecode;
-
-	conn = req->conn;
-	rc = NULL;
-	tc = req->tcall;
 
 	np_uerror(0);
 	switch (tc->type) {
 		case P9_TSTATFS:
 			rc = np_statfs(req, tc);
-			op = "statfs";
 			break;
 		case P9_TLOPEN:
 			rc = np_lopen(req, tc);
-			op = "lopen";
 			break;
 		case P9_TLCREATE:
 			rc = np_lcreate(req, tc);
-			op = "lcreate";
 			break;
 		case P9_TSYMLINK:
 			rc = np_symlink(req, tc);
-			op = "symlink";
 			break;
 		case P9_TMKNOD:
 			rc = np_mknod(req, tc);
-			op = "mknod";
 			break;
 		case P9_TRENAME:
 			rc = np_rename(req, tc);
-			op = "rename";
 			break;
 		case P9_TREADLINK:
 			rc = np_readlink(req, tc);
-			op = "readlink";
 			break;
 		case P9_TGETATTR:
 			rc = np_getattr(req, tc);
-			op = "getattr";
 			break;
 		case P9_TSETATTR:
 			rc = np_setattr(req, tc);
-			op = "setattr";
 			break;
 		case P9_TXATTRWALK:
 			rc = np_xattrwalk(req, tc);
-			op = "xattrwalk";
 			break;
 		case P9_TXATTRCREATE:
 			rc = np_xattrcreate(req, tc);
-			op = "xattrcreate";
 			break;
 		case P9_TREADDIR:
 			rc = np_readdir(req, tc);
-			op = "readdir";
 			break;
 		case P9_TFSYNC:
 			rc = np_fsync(req, tc);
-			op = "fsync";
 			break;
 		case P9_TLOCK:
 			rc = np_lock(req, tc);
-			op = "lock";
 			break;
 		case P9_TGETLOCK:
 			rc = np_getlock(req, tc);
-			op = "getlock";
 			break;
 		case P9_TLINK:
 			rc = np_link(req, tc);
-			op = "link";
 			break;
 		case P9_TMKDIR:
 			rc = np_mkdir(req, tc);
-			op = "mkdir";
 			break;
 		case P9_TVERSION:
 			rc = np_version(req, tc);
-			op = "version";
 			break;
 		case P9_TAUTH:
 			rc = np_auth(req, tc);
-			op = "auth";
 			break;
 		case P9_TATTACH:
 			rc = np_attach(req, tc);
-			op = "attach";
 			break;
 		case P9_TFLUSH:
 			rc = np_flush(req, tc);
-			op = "flush";
 			break;
 		case P9_TWALK:
 			rc = np_walk(req, tc);
-			op = "walk";
 			break;
 		case P9_TREAD:
 			rc = np_read(req, tc);
-			op = "read";
 			break;
 		case P9_TWRITE:
 			rc = np_write(req, tc);
-			op = "write";
 			break;
 		case P9_TCLUNK:
 			rc = np_clunk(req, tc);
-			op = "clunk";
 			break;
 		case P9_TREMOVE:
 			rc = np_remove(req, tc);
-			op = "remove";
 			break;
-		default:
+		default: /* N.B. shouldn't get here - unhandled ops are
+			  * caught in np_deserialize ().
+			  */
 			np_uerror(ENOSYS);
-			op = "<unknown>";
 			break;
 	}
 	if ((ecode = np_rerror())) {

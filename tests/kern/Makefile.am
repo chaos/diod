@@ -8,7 +8,6 @@ check_PROGRAMS = \
 	tflock2 \
 	tfcntl2 \
 	tfcntl3 \
-	tconfig \
 	tfsgid
 
 TESTS_ENVIRONMENT = env

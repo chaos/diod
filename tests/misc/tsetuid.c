@@ -2,7 +2,7 @@
 
 /* This was an assumption made in the old npfs code, no longer true
  * post-linuxthreads.  It's here as a demonstration of that fact,
- * and in case anything changes in this ware we might want to flag it.
+ * and in case anything changes in this area we might want to flag it.
  */
 
 #include <unistd.h>

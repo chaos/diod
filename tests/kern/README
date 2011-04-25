@@ -15,7 +15,7 @@ t14	Demonstrate that statfs returns correct data.
 t15	Demonstrate that fsync does not return an error.
 t16	Create files and compare their stat(2) results.
 t17	Set all the mode bits (7777) on a file and directory on server
-	and verify that they are reflected in client stat, the do the reverse.
+	and verify that they are reflected in client stat, then do the reverse.
 t18	Simple test to check that BSD advisory file locks are properly
 	arbitrated between two processes.
 t19	Simple test to check that POSIX advisory record locks are properly
