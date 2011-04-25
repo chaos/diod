@@ -518,7 +518,7 @@ np_remove(Npreq *req, Npfcall *tc)
 
 	req->fid = fid;
 	rc = (*conn->srv->remove)(fid);
-	if (rc && rc->type == P9_RREMOVE)
+	if (fid) /* spec says clunk the fid even if the remove fails */
 		np_fid_decref(fid);
 
 done:
