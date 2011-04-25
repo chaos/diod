@@ -38,6 +38,12 @@ if ! test -d $PATH_EXPDIR; then
 fi
 rm -rf $PATH_EXPDIR/*
 rm -f $TEST.diod $TEST.out
+# Special case for t29 which requires tclsh
+if [ "`basename $TEST`" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
+    echo "tclsh is not installed" >$TEST.out
+    exit 77
+fi
+
 ulimit -c unlimited
 
 ./kconjoin \

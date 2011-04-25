@@ -1,0 +1,12 @@
+#!/bin/bash -e
+# Test for issue 29: EIO during tcl.tk file delete -force
+
+echo creating dir tree in diod fs
+mkdir -p $PATH_MNTDIR/x/y
+#touch $PATH_MNTDIR/x/a
+
+cd $PATH_MNTDIR
+echo removing them with tclsh remove
+tclsh <<EOT
+file delete -force x
+EOT

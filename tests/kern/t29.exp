@@ -1,0 +1,5 @@
+kconjoin: diodmount exited with rc=0
+creating dir tree in diod fs
+removing them with tclsh remove
+kconjoin: t29 exited with rc=0
+kconjoin: diod exited with rc=0
