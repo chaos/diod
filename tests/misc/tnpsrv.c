@@ -48,7 +48,7 @@ main (int argc, char *argv[])
     srv->debuglevel |= DEBUG_9P_TRACE;
     srv->msg = msg;
     srv->auth = diod_auth;
-    diod_conf_set_auth_required (0); /* diod_auth presumes diod_trans */
+    diod_conf_set_auth_required (0);
 
     srv->attach = myattach;
     srv->clunk = myclunk;
@@ -56,7 +56,7 @@ main (int argc, char *argv[])
     /* create one connection */
     if (!(trans = ttrans_create ()))
         err_exit ("ttrans_create");
-    if (!(conn = np_conn_create (srv, trans)))
+    if (!(conn = np_conn_create (srv, trans, "loopback")))
         msg_exit  ("np_conn_create failure");
 
     _send_tversion (trans);

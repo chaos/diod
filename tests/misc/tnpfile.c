@@ -44,13 +44,13 @@ main (int argc, char *argv[])
     srv->debuglevel |= DEBUG_9P_TRACE;
     srv->msg = msg;
     srv->auth = diod_auth;
-    diod_conf_set_auth_required (0); /* diod_auth presumes diod_trans */
+    diod_conf_set_auth_required (0);
     npfile_init_srv (srv, _file_root_create ());
 
     /* create one connection */
     if (!(trans = ttrans_create ()))
         err_exit ("ttrans_create");
-    if (!(conn = np_conn_create (srv, trans)))
+    if (!(conn = np_conn_create (srv, trans, "loopback")))
         msg_exit  ("np_conn_create failure");
 
     /* do stuff */
