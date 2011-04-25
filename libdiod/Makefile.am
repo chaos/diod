@@ -12,7 +12,5 @@ libdiod_a_SOURCES = \
 	diod_log.h \
 	diod_conf.c \
 	diod_conf.h \
-	diod_trans.c \
-	diod_trans.h \
 	diod_sock.c \
 	diod_sock.h

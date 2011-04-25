@@ -65,7 +65,6 @@
 #include "list.h"
 #include "diod_conf.h"
 #include "diod_log.h"
-#include "diod_trans.h"
 #include "diod_auth.h"
 
 static int _auth_start(Npfid *afid, char *aname, Npqid *aqid);
@@ -112,6 +111,7 @@ _da_create (void)
     da->state = DA_UNVERIFIED;
 #if HAVE_LIBMUNGE
     da->mungecred = NULL;
+    da->mungerr = EMUNGE_SUCCESS;
     if (!(da->mungectx = munge_ctx_create ())) {
         np_uerror (ENOMEM);
         free (da);
@@ -127,13 +127,13 @@ static void
 _da_destroy (da_t da)
 {
     assert (da->magic == DIOD_AUTH_MAGIC);
+    da->magic = 0;
 #if HAVE_LIBMUNGE
     if (da->mungecred)
         free (da->mungecred);
     if (da->mungectx)
         munge_ctx_destroy (da->mungectx);
 #endif
-    da->magic = 0;
     free (da);
 }
 
@@ -143,70 +143,100 @@ _da_destroy (da_t da)
 static int
 _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 {
+    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
     int ret = 0;
-    //msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
+
+    if (debug)
+        msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
 
     if (! diod_conf_get_auth_required ())
         goto done;
 #if ! HAVE_LIBMUNGE
-    msg ("warning: auth started but server was not built with MUNGE support");
+    msg ("startauth: warning: server requires authentication but was built "
+         "without MUNGE support");
 #endif
     aqid->path = 0;
     aqid->type = P9_QTAUTH;
     aqid->version = 0;
     assert (afid->aux == NULL);
-    if (!(afid->aux = _da_create ()))
+    if (!(afid->aux = _da_create ())) {
+        msg ("startauth: auth by %s@%s to %s failed: out of memory",
+             afid->user->uname, np_conn_get_client_id (afid->conn),
+             aname ? aname : "<nil>");
         goto done;
+    }
     ret = 1;
 done:
     return ret;
 }
 
-/* afid will be NULL in attach (and here) if
- * - we fail auth request, indicating auth not required
- * - primary attach of kernel on this conn after user space hand-off
- * - secondary attach on this conn (v9fs access=user)
+/* Called from libnpfs internal attach handler.
+ * Returns 1=success (auth OK, attach should proceed)
+ *         0=failure (auth requirements not met, attach should be denied)
  */
 static int
 _auth_check(Npfid *fid, Npfid *afid, char *aname)
 {
+    int debug = (fid->conn->srv->debuglevel & DEBUG_AUTH);
     da_t da;
     int ret = 0;
 
-    //msg ("_auth_check: fid %d afid %d aname %s",
-    //     fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
+    if (debug)
+        msg ("_auth_check: fid %d afid %d aname %s",
+             fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
 
     assert (fid != NULL);
 
+    /* afid will be NULL in attach (and here) in these cases:
+     * - we fail auth request (possibly indicating auth not required)
+     * - primary attach of kernel on this conn after user space hand-off
+     * - secondary attach on this conn (v9fs access=user)
+     */
     if (!afid) {
         u32 uid;
 
         if (!diod_conf_get_auth_required ()) {
             ret = 1;
-        } else if (diod_trans_get_authuser (fid->conn->trans, &uid) == 0
-                            && (uid == 0 || fid->user->uid == uid)) {
+        } else if (np_conn_get_authuser (fid->conn, &uid) != 0) {
+            msg ("checkauth: attach by %s@%s to %s rejected: %s",
+                 fid->user->uname, np_conn_get_client_id (fid->conn),
+                 aname ? aname : "<nil>",
+                 "no credential and no prior auth state");
+                 np_uerror (EPERM);
+        } else if ((uid != 0 && fid->user->uid != uid)) {
+            msg ("checkauth: attach by %s@%s to %s rejected: %s",
+                 fid->user->uname, np_conn_get_client_id (fid->conn),
+                 aname ? aname : "<nil>",
+                 "no credential and insufficient prior auth state");
+                 np_uerror (EPERM);
+        } else
             ret = 1;
-        } else {
-            msg ("checkauth: unauthenticated attach rejected");
-            np_uerror (EPERM);
-        }
         goto done;
     }
 
     da = afid->aux;
     assert (da->magic == DIOD_AUTH_MAGIC);
     if (da->state != DA_VERIFIED) {
-        msg ("checkauth: failed or incomplete auth handshake");
+        const char *crederr = "credential is unverified";
+#if HAVE_LIBMUNGE
+        if (da->mungerr != EMUNGE_SUCCESS)
+            crederr = munge_strerror (da->mungerr);
+#endif
+        msg ("checkauth: attach by %s@%s to %s rejected: %s",
+             fid->user->uname, np_conn_get_client_id (fid->conn),
+             aname ? aname : "<nil>", crederr);
         np_uerror (EPERM);
         goto done;
     }
     if (afid->user->uid != fid->user->uid) {
-        msg ("checkauth: auth uid=%d != attach uid=%d",
-              afid->user->uid, fid->user->uid);
+        msg ("checkauth: attach by %s@%s to %s rejected: "
+             "auth uid=%d != attach uid=%d",
+             fid->user->uname, np_conn_get_client_id (fid->conn),
+             aname ? aname : "<nil>", afid->user->uid, fid->user->uid);
         np_uerror (EPERM);
         goto done;
     }
-    diod_trans_set_authuser (fid->conn->trans, afid->user->uid);
+    np_conn_set_authuser (fid->conn, afid->user->uid);
     ret = 1;
 done:
     return ret;
@@ -215,7 +245,10 @@ done:
 static int
 _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    //msg ("_auth_read: afid %d", afid ? afid->fid : -1);
+    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
+
+    if (debug)
+        msg ("_auth_read: afid %d", afid ? afid->fid : -1);
  
     return 0;
 }
@@ -223,14 +256,19 @@ _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 static int
 _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
+    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
     da_t da = afid->aux;
     int ret = -1;
 
-    //msg ("_auth_write: afid %d", afid ? afid->fid : -1);
+    if (debug)
+        msg ("_auth_write: afid %d", afid ? afid->fid : -1);
 
     assert (da->magic == DIOD_AUTH_MAGIC);
 
     if (da->state == DA_VERIFIED) {
+        msg ("auth_write: auth by %s@%s: auth protocol error: %s", 
+             afid->user->uname, np_conn_get_client_id (afid->conn),
+             "write after cred verified");
         np_uerror (EIO);
         goto done;
     }
@@ -241,10 +279,15 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
     } else if (da->mungecred && offset == strlen (da->mungecred)) {
         da->mungecred = realloc (da->mungecred, offset + count + 1);
     } else {
+        msg ("auth_write: auth by %s@%s: auth protocol error: %s", 
+             afid->user->uname, np_conn_get_client_id (afid->conn),
+             "write at incorrect offset");
         np_uerror (EIO);
         goto done;
     }
     if (!da->mungecred) {
+        msg ("auth_write: auth by %s@%s: out of memory", 
+             afid->user->uname, np_conn_get_client_id (afid->conn));
         np_uerror (ENOMEM);
         goto done;
     }
@@ -263,17 +306,22 @@ done:
 static int
 _auth_clunk(Npfid *afid)
 {
+    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
     da_t da = afid->aux;
 
-    //msg ("_auth_clunk: afid %d", afid ? afid->fid : -1);
+    if (debug)
+        msg ("_auth_clunk: afid %d", afid ? afid->fid : -1);
 
-    if (da) {
+    if (da)
         _da_destroy (da);
-        afid->aux = NULL;
-    }
+    afid->aux = NULL;
+
     return 1; /* success */
 }
 
+/* This is called from libnpclient user space.
+ * It drives the client end of authentication.
+ */
 int
 diod_auth_client_handshake (Npcfid *afid, u32 uid)
 {

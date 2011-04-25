@@ -43,7 +43,7 @@ struct Fdtrans {
 
 static int np_fdtrans_read(u8 *data, u32 count, void *a);
 static int np_fdtrans_write(u8 *data, u32 count, void *a);
-static void np_fdtrans_destroy(void *);
+static void np_fdtrans_destroy(void *a);
 
 Nptrans *
 np_fdtrans_create(int fdin, int fdout)

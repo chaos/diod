@@ -86,7 +86,6 @@
 
 #include "diod_conf.h"
 #include "diod_log.h"
-#include "diod_trans.h"
 #include "diod_auth.h"
 
 #include "ops.h"
@@ -355,15 +354,18 @@ _match_export_users (Export *x, Npuser *user)
     return 0; /* no match */
 }
 
+
+/* FIXME: client_id could be hostname or IP.
+ * We probably want both to work for an exports match.
+ */
 static int
-_match_export_hosts (Export *x, Nptrans *trans)
+_match_export_hosts (Export *x, Npconn *conn)
 {
-    char *host = diod_trans_get_host (trans);
-    char *ip = diod_trans_get_ip (trans);
+    char *client_id = np_conn_get_client_id (conn);
     hostlist_t hl = NULL;
     int res = 0; /* no match */
 
-    /* no host restrictions */
+    /* no client_id restrictions */
     if (!x->hosts) {
         res = 1;
         goto done;
@@ -372,8 +374,8 @@ _match_export_hosts (Export *x, Nptrans *trans)
         np_uerror (ENOMEM);
         goto done;
     }
-    /* IP or address found in exports */
-    if (hostlist_find (hl, host) != -1 || hostlist_find (hl, ip) != -1) {
+    /* client_id found in exports */
+    if (hostlist_find (hl, client_id) != -1) {
         res = 1;
         goto done;
     }
@@ -409,7 +411,7 @@ _match_export_path (Export *x, char *path)
 }
 
 static int
-_match_exports (char *path, Nptrans *trans, Npuser *user, int *xfp)
+_match_exports (char *path, Npconn *conn, Npuser *user, int *xfp)
 {
     List exports = diod_conf_get_exports ();
     ListIterator itr;
@@ -431,7 +433,7 @@ _match_exports (char *path, Nptrans *trans, Npuser *user, int *xfp)
     while (res == 0 && (x = list_next (itr))) {
         if (!_match_export_path (x, path))
             continue;
-        if (!_match_export_hosts (x, trans))
+        if (!_match_export_hosts (x, conn))
             continue;
         if (!_match_export_users (x, user))
             continue;
@@ -488,7 +490,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         msg ("diod_attach: out of memory");
         goto done;
     }
-    if (!_match_exports (f->path, fid->conn->trans, fid->user, &f->xflags)) {
+    if (!_match_exports (f->path, fid->conn, fid->user, &f->xflags)) {
         msg ("diod_attach: %s not exported", f->path);
         goto done;
     }

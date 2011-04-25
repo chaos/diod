@@ -65,7 +65,6 @@
 
 #include "diod_log.h"
 #include "diod_conf.h"
-#include "diod_trans.h"
 #include "diod_sock.h"
 
 #include "ops.h"
@@ -320,7 +319,7 @@ _service_loop (void *arg)
     sigdelset (&sigs, SIGUSR1);
 
     if (ss.nfds == 0)
-        diod_sock_startfd (ss.srv, 0, "stdin", "0.0.0.0", "0");
+        diod_sock_startfd (ss.srv, 0, "stdin");
     while (!ss.shutdown) {
         if (ss.reload) {
             diod_conf_init_config_file (NULL);

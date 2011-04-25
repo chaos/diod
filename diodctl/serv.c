@@ -52,7 +52,6 @@
 #include "list.h"
 
 #include "diod_log.h"
-#include "diod_trans.h"
 #include "diod_sock.h"
 #include "diod_conf.h"
 

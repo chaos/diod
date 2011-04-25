@@ -9,7 +9,7 @@ void diod_sock_accept_one (Npsrv *srv, int fd);
 int  diod_sock_listen_nfds  (struct pollfd **fdsp, int *nfdsp, int nfds,
                              int starting);
 
-void diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc);
+void diod_sock_startfd (Npsrv *srv, int fd, char *client_id);
 
 int  diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
                                      char *nport, int flags);

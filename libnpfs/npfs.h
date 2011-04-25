@@ -145,6 +145,8 @@ struct Npconn {
 	pthread_cond_t	resetcond;
 	pthread_cond_t	resetdonecond;
 
+	char		client_id[128];
+	u32		authuser;
 	u32		msize;
 	int		shutdown;
 	Npsrv*		srv;
@@ -192,6 +194,8 @@ struct Npauth {
 
 enum {
 	DEBUG_9P_TRACE=1,
+	DEBUG_AUTH=2,
+	DEBUG_CONN=4,
 };
 
 struct Npsrv {
@@ -269,11 +273,14 @@ void np_srv_wait_timeout(Npsrv *srv, int inactivity_secs);
 void np_srv_shutdown (Npsrv *srv);
 
 /* conn.c */
-Npconn *np_conn_create(Npsrv *, Nptrans *);
+Npconn *np_conn_create(Npsrv *, Nptrans *, char *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
 void np_conn_respond(Npreq *req);
 void np_respond(Npreq *, Npfcall *);
+char *np_conn_get_client_id(Npconn *);
+int np_conn_get_authuser(Npconn *, u32 *);
+void np_conn_set_authuser(Npconn *, u32);
 
 /* fidpool.c */
 Npfidpool *np_fidpool_create(void);

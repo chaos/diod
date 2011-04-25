@@ -346,7 +346,6 @@ np_wthread_create(Npsrv *srv)
 static Npfcall*
 np_process_request(Npreq *req)
 {
-	Npconn *conn = req->conn;
 	Npfcall *rc = NULL;
 	Npfcall *tc = req->tcall;
 	int ecode;

@@ -53,7 +53,6 @@
 #include "list.h"
 
 #include "diod_log.h"
-#include "diod_trans.h"
 #include "diod_sock.h"
 
 extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
@@ -207,22 +206,22 @@ done:
 }
 
 void
-diod_sock_startfd (Npsrv *srv, int fd, char *host, char *ip, char *svc)
+diod_sock_startfd (Npsrv *srv, int fd, char *client_id)
 {
     Npconn *conn;
     Nptrans *trans;
 
-    trans = diod_trans_create (fd, host, ip, svc);
+    trans = np_fdtrans_create (fd, fd);
     if (!trans) {
-        msg ("diod_trans_create failure: %s:%s", host, svc);
+        errn (np_rerror (), "error creating transport for %s", client_id);
         close (fd);
         return;
     }
                  
-    conn = np_conn_create (srv, trans);
+    conn = np_conn_create (srv, trans, client_id);
     if (!conn) {
-        err ("np_conn_create (%s%s)", host, svc);
-        diod_trans_destroy (trans);
+        errn (np_rerror (), "error creating connection for %s", client_id);
+        np_trans_destroy (trans);
         return;
     }
 }
@@ -265,7 +264,7 @@ diod_sock_accept_one (Npsrv *srv, int fd)
         return;
     }
 #endif
-    diod_sock_startfd (srv, fd, host, ip, svc);
+    diod_sock_startfd (srv, fd, strlen(host) > 0 ? host : ip);
 }
  
 /* Try to connect to host:port.

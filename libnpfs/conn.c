@@ -55,7 +55,7 @@ static void *np_conn_read_proc(void *);
 static void np_conn_reset(Npconn *conn);
 
 Npconn*
-np_conn_create(Npsrv *srv, Nptrans *trans)
+np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 {
 	Npconn *conn;
 	int err;
@@ -79,6 +79,8 @@ np_conn_create(Npsrv *srv, Nptrans *trans)
 		errno = ENOMEM;
 		return NULL;
 	}
+	snprintf(conn->client_id, sizeof(conn->client_id), "%s", client_id);
+	conn->authuser = P9_NONUNAME;
 
 	conn->trans = trans;
 	conn->aux = NULL;
@@ -177,7 +179,8 @@ again:
 			if (srv->msg) {
 				_debug_trace (srv, fc);
 				srv->msg ("protocol error - "
-					  "dropping connection");
+					  "dropping connection to '%s'",
+					  conn->client_id);
 			}
 			break;
 		}
@@ -191,7 +194,8 @@ again:
 		if (!fc1) {
 			if (srv->msg)
 				srv->msg ("out of memory in receive path - "
-					  "dropping connection");
+					  "dropping connection to '%s'",
+					   conn->client_id);
 			break;
 		}
 		if (n > size)
@@ -204,7 +208,8 @@ again:
 		if (!req) {
 			if (srv->msg)
 				srv->msg ("out of memory in receive path - "
-					  "dropping connection");
+					  "dropping connection to '%s'",
+					  conn->client_id);
 			break;
 		}
 		pthread_mutex_lock(&srv->lock);
@@ -411,4 +416,30 @@ _free_npfcall(Npfcall *rc)
 {
 	if (rc)
 		free (rc);
+}
+
+char *
+np_conn_get_client_id(Npconn *conn)
+{
+	return conn->client_id;
+}
+
+void
+np_conn_set_authuser(Npconn *conn, u32 authuser)
+{
+	conn->authuser = authuser;
+}
+
+int
+np_conn_get_authuser(Npconn *conn, u32 *uidp)
+{
+	int ret = -1;
+
+	if (conn->authuser != P9_NONUNAME) {
+		if (uidp)
+			*uidp = conn->authuser;
+		ret = 0;
+	}
+
+	return ret;
 }
