@@ -137,6 +137,7 @@ Npfcall     *diod_getlock (Npfid *fid, u8 type, u64 start, u64 length,
 Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
 Npuser      *diod_remapuser (Npstr *uname, u32 n_uname, Npstr *aname);
+int         diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
@@ -152,6 +153,7 @@ diod_register_ops (Npsrv *srv)
     srv->msg = msg;
 
     srv->remapuser = diod_remapuser;
+    srv->auth_required = diod_auth_required;
     srv->auth = diod_auth;
     srv->attach = diod_attach;
     srv->clone = diod_clone;
@@ -486,6 +488,12 @@ diod_remapuser (Npstr *uname, u32 n_uname, Npstr *aname)
             msg ("diod_remapuser: could not lookup squash user '%s'", squash);
     }
     return user;
+}
+
+int
+diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname)
+{
+    return diod_conf_get_auth_required ();
 }
 
 /* Tattach - attach a new user (fid->user) to aname.

@@ -184,24 +184,33 @@ error:
 }
 
 Npuser *
-np_attach2user (Npstr *uname, u32 n_uname)
+np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname)
 {
 	Npuser *u = NULL;
 	char *s;
 
 	if (n_uname == P9_NONUNAME && uname->len == 0) {
+		if (srv->msg)
+			srv->msg ("auth/attach: no uname or n_uname");
 		np_uerror (EIO);
 		goto done;
 	}
 	if (uname->len > 0) {
 		if (!(s = np_strdup (uname))) {
 			np_uerror (ENOMEM);
+			if (srv->msg)
+				srv->msg ("auth/attach: out of memory");
 			goto done;
 		}
 		u = np_uname2user (s);
+		if (!u && srv->msg)
+			srv->msg ("auth/attach failed to look up user %s", s);
 		free (s);
-	} else
+	} else {
 		u = np_uid2user (n_uname);
+		if (!u && srv->msg)
+			srv->msg ("auth/attach failed to look up uid %d", n_uname);
+	}
 done:
 	return u;
 }

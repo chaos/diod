@@ -58,6 +58,15 @@ np_auth(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 	Npqid aqid;
 
+	/* auth not required? */
+	if (!srv->auth_required || !srv->auth || !srv->auth->startauth
+ 	 || !srv->auth->checkauth || !srv->auth_required (&tc->u.tauth.uname,
+							   tc->u.tauth.n_uname,
+							  &tc->u.tauth.aname)) {
+		np_uerror(EIO);
+		goto error;
+	}
+
 	if ((np_fid_find(conn, tc->u.tauth.afid))) {
 		if (srv->msg)
 			srv->msg ("auth: afid is in use");
@@ -71,6 +80,10 @@ np_auth(Npreq *req, Npfcall *tc)
 	}
 	np_fid_incref(afid);
 
+	if (!(afid->user = np_attach2user (srv, &tc->u.tauth.uname,
+				     		 tc->u.tauth.n_uname))) {
+		goto error;
+	}
 	if (tc->u.tauth.aname.len > 0) {
 		if (!(aname = np_strdup(&tc->u.tauth.aname))) {
 			if (srv->msg)
@@ -79,29 +92,9 @@ np_auth(Npreq *req, Npfcall *tc)
 			goto error;
 		}
 	}
-	if (!srv->auth || !srv->auth->startauth
-		       || !srv->auth->startauth(afid, aname, &aqid)) {
-		np_uerror (EIO);
-		goto error; /* auth not required */
-	}
-
-	afid->type = P9_QTAUTH;	/* triggers auth->clunk on fid free */
-
-	afid->user = np_attach2user (&tc->u.tauth.uname, tc->u.tauth.n_uname);
-	if (!afid->user) {
-		if (srv->msg) {
-			if (tc->u.tauth.n_uname != P9_NONUNAME)
-				srv->msg ("auth: user lookup (%d) failed",
-					  tc->u.tauth.n_uname);
-			else if (tc->u.tauth.uname.len > 0)
-				srv->msg ("auth: user lookup (%.*s) failed",
-					  tc->u.tauth.uname.len,
-					  tc->u.tauth.uname.str);
-			else
-				srv->msg ("auth: no username specified");
-		}
+	afid->type = P9_QTAUTH;
+	if (!srv->auth->startauth(afid, aname, &aqid))
 		goto error;
-	}
 	assert((aqid.type & P9_QTAUTH));
 	if (!(rc = np_create_rauth(&aqid))) {
 		if (srv->msg)
@@ -112,7 +105,7 @@ np_auth(Npreq *req, Npfcall *tc)
 error:
 	if (aname)
 		free(aname);
-	if (afid)
+	if (afid && !rc)
 		np_fid_decref(afid);
 	return rc;
 }
@@ -125,6 +118,18 @@ np_attach(Npreq *req, Npfcall *tc)
 	Npsrv *srv = conn->srv;
 	Npfid *fid, *afid = NULL;
 	Npfcall *rc = NULL;
+	int auth_required = 1;
+
+	if (!srv->auth_required || !srv->auth || !srv->auth->startauth
+ 	 || !srv->auth->checkauth || !srv->auth_required (&tc->u.tauth.uname,
+							   tc->u.tauth.n_uname,
+							  &tc->u.tauth.aname)) {
+		auth_required = 0;
+	}
+	if (!auth_required && tc->u.tattach.afid != P9_NOFID) {
+		np_uerror (EIO);
+		goto error;
+	}
 
 	if (np_fid_find(conn, tc->u.tattach.fid)) {
 		if (srv->msg)
@@ -138,45 +143,18 @@ np_attach(Npreq *req, Npfcall *tc)
 		goto error;
 	}
 	np_fid_incref(fid);
-
 	req->fid = fid;
-	if (tc->u.tattach.afid != P9_NOFID) {
-		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
-			if (srv->msg)
-				srv->msg ("attach: invalid afid");
-			np_uerror(EPERM);
-			goto error;
-		}
-		if (!(afid->type & P9_QTAUTH)) {
-			if (srv->msg)
-				srv->msg ("attach: invalid afid type");
-			np_uerror(EPERM);
-			goto error;
-		}
-		np_fid_incref(afid);
-	}
 
 	if (srv->remapuser)
 		fid->user = srv->remapuser(&tc->u.tattach.uname,
 				           tc->u.tattach.n_uname,
 				           &tc->u.tattach.aname);
 	if (!fid->user)
-		fid->user = np_attach2user (&tc->u.tauth.uname,
-					    tc->u.tauth.n_uname);
-	if (!fid->user) {
-		if (srv->msg) {
-			if (tc->u.tattach.n_uname != P9_NONUNAME)
-				srv->msg ("attach: user lookup (%d) failed",
-					  tc->u.tattach.n_uname);
-			else if (tc->u.tattach.uname.len > 0)
-			        srv->msg ("attach: user lookup (%.*s) failed",
-					  tc->u.tattach.uname.len,
-					  tc->u.tattach.uname.str);
-			else
-				srv->msg ("attach: no username specified");
-		}
+		fid->user = np_attach2user (srv, &tc->u.tauth.uname,
+					          tc->u.tauth.n_uname);
+	if (!fid->user)
 		goto error;
-	}
+
 	if (tc->u.tattach.aname.len) {
 		if (!(aname = np_strdup(&tc->u.tattach.aname))) {
 			if (srv->msg)
@@ -186,11 +164,27 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (srv->auth && srv->auth->checkauth
-		      && srv->auth->checkauth(fid, afid, aname) == 0) {
-		if (srv->msg)
-			srv->msg ("attach: authentication failed");
-		goto error;
+	if (tc->u.tattach.afid != P9_NOFID) {
+		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
+			if (srv->msg)
+				srv->msg ("attach: invalid afid");
+			np_uerror(EPERM);
+			goto error;
+		}
+		np_fid_incref(afid);
+		if (!(afid->type & P9_QTAUTH)) {
+			if (srv->msg)
+				srv->msg ("attach: invalid afid type");
+			np_uerror(EPERM);
+			goto error;
+		}
+	}
+	if (auth_required) {
+		if (srv->auth->checkauth(fid, afid, aname) == 0) {
+			if (srv->msg)
+				srv->msg ("attach: authentication failed");
+			goto error;
+		}
 	}
 
 	rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);

@@ -139,7 +139,6 @@ _da_destroy (da_t da)
 
 /* returns 1=success (proceed with auth on afid), or
  *         0=fail (auth not required, or other failure).
- * N.B. afid->user is not filled in at this point.
  */
 static int
 _auth_start(Npfid *afid, char *aname, Npqid *aqid)
@@ -150,8 +149,6 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
     if (debug)
         msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
 
-    if (! diod_conf_get_auth_required ())
-        goto done;
 #if ! HAVE_LIBMUNGE
     msg ("startauth: warning: server requires authentication but was built "
          "without MUNGE support");
@@ -161,8 +158,8 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
     aqid->version = 0;
     assert (afid->aux == NULL);
     if (!(afid->aux = _da_create ())) {
-        msg ("startauth: auth by %s to %s failed: out of memory",
-             np_conn_get_client_id (afid->conn),
+        msg ("startauth: auth by %s@%s to %s failed: out of memory",
+             afid->user->uname, np_conn_get_client_id (afid->conn),
              aname ? aname : "<nil>");
         goto done;
     }
@@ -189,16 +186,14 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
     assert (fid != NULL);
 
     /* afid will be NULL in attach (and here) in these cases:
-     * - we fail auth request (possibly indicating auth not required)
+     * - we fail auth request (indicating auth not required)
      * - primary attach of kernel on this conn after user space hand-off
      * - secondary attach on this conn (v9fs access=user)
      */
     if (!afid) {
         u32 uid;
 
-        if (!diod_conf_get_auth_required ()) {
-            ret = 1;
-        } else if (np_conn_get_authuser (fid->conn, &uid) != 0) {
+        if (np_conn_get_authuser (fid->conn, &uid) != 0) {
             msg ("checkauth: attach by %s@%s to %s rejected: %s",
                  fid->user->uname, np_conn_get_client_id (fid->conn),
                  aname ? aname : "<nil>",

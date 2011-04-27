@@ -210,12 +210,13 @@ struct Npsrv {
 	void*		treeaux;
 	int		debuglevel;
 	void		(*msg)(const char *, ...);
+	Npuser*         (*remapuser)(Npstr *, u32, Npstr *);
+	int		(*auth_required)(Npstr *, u32, Npstr *);
 	Npauth*		auth;
 
 	void		(*fiddestroy)(Npfid *);
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);
-	Npuser*         (*remapuser)(Npstr *uname, u32 n_uname, Npstr *aname);
 	Npfcall*	(*attach)(Npfid *fid, Npfid *afid, Npstr *aname);
 	void		(*flush)(Npreq *req);
 	int		(*clone)(Npfid *fid, Npfid *newfid);
@@ -402,7 +403,7 @@ void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
 Npuser *np_uid2user (u32 n_uname);
 Npuser *np_uname2user (char *uname);
-Npuser *np_attach2user (Npstr *uname, u32 n_uname);
+Npuser *np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname);
 int np_setfsid (Npreq *req, Npuser *u, u32 gid_override);
 
 /* fdtrans.c */
