@@ -209,6 +209,7 @@ struct Npsrv {
 	void		(*fiddestroy)(Npfid *);
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);
+	Npuser*         (*remapuser)(Npstr *uname, u32 n_uname, Npstr *aname);
 	Npfcall*	(*attach)(Npfid *fid, Npfid *afid, Npstr *aname);
 	void		(*flush)(Npreq *req);
 	int		(*clone)(Npfid *fid, Npfid *newfid);
@@ -395,7 +396,7 @@ void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
 Npuser *np_uid2user (u32 n_uname);
 Npuser *np_uname2user (char *uname);
-Npuser *np_9name2user (Npstr *uname);
+Npuser *np_attach2user (Npstr *uname, u32 n_uname);
 
 /* fdtrans.c */
 Nptrans *np_fdtrans_create(int, int);

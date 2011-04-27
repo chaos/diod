@@ -73,6 +73,9 @@
 #include <sys/statvfs.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/fsuid.h>
+#include <pwd.h>
+#include <grp.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <utime.h>
@@ -89,7 +92,6 @@
 #include "diod_auth.h"
 
 #include "ops.h"
-#include "user.h"
 
 typedef struct {
     char            *path;
@@ -134,6 +136,7 @@ Npfcall     *diod_getlock (Npfid *fid, u8 type, u64 start, u64 length,
                         u32 proc_id, Npstr *client_id);
 Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
+Npuser      *diod_remapuser (Npstr *uname, u32 n_uname, Npstr *aname);
 
 static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
@@ -148,6 +151,7 @@ diod_register_ops (Npsrv *srv)
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->msg = msg;
 
+    srv->remapuser = diod_remapuser;
     srv->auth = diod_auth;
     srv->attach = diod_attach;
     srv->clone = diod_clone;
@@ -345,6 +349,36 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
+/* Switch fsuid to user/group and load supplemental groups.
+ * N.B. ../tests/misc/t00, ../tests/misc/t01, and ../tests/misc/t02
+ * demonstrate that this works with pthreads work crew.
+ */
+static int
+_switch_user (Npuser *u, gid_t gid_override)
+{
+    int ret = 0;
+    gid_t gid;
+
+    if (diod_conf_opt_runasuid () || diod_conf_get_allsquash ())
+        return 1; /* bail early if running as one user */
+    if (setgroups (u->nsg, u->sg) < 0) {
+        err ("_switch_user(%s): setgroups (%d groups)", u->uname, u->nsg);
+        goto done;
+    }
+    gid = gid_override == -1 ? u->gid : gid_override;
+    if (setfsgid (gid) < 0) {
+        err ("_switch_user(%s): setfsgid (gid %d)", u->uname, gid);
+        goto done;
+    }
+    if (setfsuid (u->uid) < 0) {
+        err ("_switch_user(%s): setfsuid (uid %d)", u->uname, u->uid);
+        goto done;
+    }
+    ret = 1;
+done:
+    return ret;
+}
+
 static int
 _match_export_users (Export *x, Npuser *user)
 {
@@ -470,6 +504,19 @@ done:
     return res;
 }
 
+Npuser *
+diod_remapuser (Npstr *uname, u32 n_uname, Npstr *aname)
+{
+    Npuser *user = NULL;
+
+    if (diod_conf_get_allsquash ()) {
+        char *squash = diod_conf_get_squashuser ();
+
+        if (!(user = np_uname2user (squash)))
+            msg ("diod_remapuser: could not lookup squash user '%s'", squash);
+    }
+    return user;
+}
 
 /* Tattach - attach a new user (fid->user) to aname.
  *   diod_auth.c::diod_checkauth first authenticates/authorizes user
@@ -493,11 +540,6 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
     if (!_match_exports (f->path, fid->conn, fid->user, &f->xflags)) {
         msg ("diod_attach: %s not exported", f->path);
         goto done;
-    }
-    if (diod_conf_get_allsquash ()) {
-        np_user_decref (fid->user);
-        if (!(fid->user = np_uname2user (SQUASH_UNAME)))
-            goto done;
     }
     if (_fidstat (f) < 0) {
         msg ("diod_attach: could not stat mount point");
@@ -562,10 +604,8 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
     char *path = NULL;
     int ret = 0;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_walk: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (_fidstat (f) < 0)
         goto done;
     n = strlen (f->path);
@@ -623,10 +663,8 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
     int n;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_read: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (!(ret = np_alloc_rread (count))) {
         np_uerror (ENOMEM);
         msg ("diod_read: out of memory");
@@ -655,10 +693,8 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_write: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if ((n = _pwrite (fid, data, count, offset)) < 0)
         goto done;
     if (!(ret = np_create_rwrite (n))) {
@@ -697,10 +733,8 @@ diod_remove (Npfid *fid)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_remove: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (remove (f->path) < 0) {
         np_uerror (errno);
         goto done;
@@ -734,10 +768,8 @@ diod_statfs (Npfid *fid)
     struct statvfs svb;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_statfs: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (_fidstat(f) < 0)
         goto done;
     if (statfs (f->path, &sb) < 0) {
@@ -779,10 +811,8 @@ diod_lopen (Npfid *fid, u32 mode)
     if ((mode & O_CREAT))
         mode &= ~O_CREAT;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_lopen: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (_fidstat (f) < 0)
         goto done;
 
@@ -837,10 +867,8 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (fid->user, gid)) {
-        msg ("diod_lcreate: error switching user");
+    if (!_switch_user (fid->user, gid))
         goto done;
-    }
     if (!(npath = _mkpath(f->path, name))) {
         msg ("diod_lcreate: out of memory");
         goto done;
@@ -885,10 +913,8 @@ diod_symlink(Npfid *dfid, Npstr *name, Npstr *symtgt, u32 gid)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (dfid->user, gid)) {
-        msg ("diod_symlink: error switching user");
+    if (!_switch_user (dfid->user, gid))
         goto done;
-    }
     if (!(npath = _mkpath(df->path, name))) {
         msg ("diod_symlink: out of memory");
         goto done;
@@ -936,10 +962,8 @@ diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (dfid->user, gid)) {
-        msg ("diod_mknod: error switching user");
+    if (!_switch_user (dfid->user, gid))
         goto done;
-    }
     if (!(npath = _mkpath(df->path, name))) {
         msg ("diod_mknod: out of memory");
         goto done;
@@ -982,10 +1006,8 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_rename: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (!(ret = np_create_rrename ())) {
         np_uerror (ENOMEM);
         msg ("diod_rename: out of memory");
@@ -1023,10 +1045,8 @@ diod_readlink(Npfid *fid)
     char target[PATH_MAX + 1];
     int n;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_readlink: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if ((n = readlink (f->path, target, sizeof(target))) < 0) {
         np_uerror (errno);
         goto done;
@@ -1050,10 +1070,8 @@ diod_getattr(Npfid *fid, u64 request_mask)
     //u64 result_mask = P9_GETATTR_BASIC;
     u64 valid = request_mask;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_getattr: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (_fidstat (f) < 0)
         goto done;
     _ustat2qid (&f->stat, &qid);
@@ -1092,10 +1110,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_setattr: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
 
     if ((valid & P9_SETATTR_MODE) || (valid & P9_SETATTR_SIZE)) {
         if (_fidstat(f) < 0)
@@ -1280,10 +1296,8 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_readdir: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
         msg ("diod_readdir: out of memory");
@@ -1309,10 +1323,8 @@ diod_fsync (Npfid *fid)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (fid->user, -1)) {
-        msg ("diod_fsync: error switching user");
+    if (!_switch_user (fid->user, -1))
         goto done;
-    }
     if (f->fd == -1) { /* FIXME: should this be silently ignored? */
         np_uerror (EBADF);
         goto done;
@@ -1482,10 +1494,8 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (dfid->user, -1)) {
-        msg ("diod_link: error switching user");
+    if (!_switch_user (dfid->user, -1))
         goto done;
-    }
     if (!(npath = _mkpath(df->path, name))) {
         msg ("diod_mkdir: out of memory");
         goto done;
@@ -1519,10 +1529,8 @@ diod_mkdir (Npfid *dfid, Npstr *name, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto done;
     }
-    if (!diod_switch_user (dfid->user, gid)) {
-        msg ("diod_mkdir: error switching user");
+    if (!_switch_user (dfid->user, gid))
         goto done;
-    }
     if (!(npath = _mkpath(df->path, name))) {
         msg ("diod_mkdir: out of memory");
         goto done;

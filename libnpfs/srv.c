@@ -98,6 +98,7 @@ np_srv_create(int nwthread)
 	srv->fiddestroy = NULL;
 
 	srv->version = np_default_version;
+	srv->remapuser = NULL;
 	srv->attach = np_default_attach;
 	srv->flush = np_default_flush;
 	srv->clone = np_default_clone;

@@ -61,6 +61,7 @@
 
 static Npfile       *_ctl_root_create (void);
 static Npfcall      *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *aname);
+static Npuser       *_ctl_remapuser (Npstr *uname, u32 n_uname, Npstr *aname);
 
 void
 diodctl_register_ops (Npsrv *srv)
@@ -69,7 +70,22 @@ diodctl_register_ops (Npsrv *srv)
     srv->debuglevel = diod_conf_get_debuglevel ();
     srv->msg = msg;
     srv->auth = diod_auth;
+    srv->remapuser = _ctl_remapuser;
     srv->attach = _ctl_attach;
+}
+
+static Npuser*
+_ctl_remapuser (Npstr *uname, u32 n_uname, Npstr *aname)
+{
+    Npuser *user = NULL;
+
+    if (diod_conf_get_allsquash ()) {
+        char *squash = diod_conf_get_squashuser ();
+
+        if (!(user = np_uname2user (squash)))
+            msg ("ctl_remapuser: could not lookup squash user '%s'", squash);
+    }
+    return user;
 }
 
 /* Tattach - announce a new user, and associate her fid with the root dir.

@@ -139,6 +139,7 @@ _da_destroy (da_t da)
 
 /* returns 1=success (proceed with auth on afid), or
  *         0=fail (auth not required, or other failure).
+ * N.B. afid->user is not filled in at this point.
  */
 static int
 _auth_start(Npfid *afid, char *aname, Npqid *aqid)
@@ -160,8 +161,8 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
     aqid->version = 0;
     assert (afid->aux == NULL);
     if (!(afid->aux = _da_create ())) {
-        msg ("startauth: auth by %s@%s to %s failed: out of memory",
-             afid->user->uname, np_conn_get_client_id (afid->conn),
+        msg ("startauth: auth by %s to %s failed: out of memory",
+             np_conn_get_client_id (afid->conn),
              aname ? aname : "<nil>");
         goto done;
     }
@@ -213,7 +214,7 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
             ret = 1;
         goto done;
     }
-
+    assert (afid->aux != NULL);
     da = afid->aux;
     assert (da->magic == DIOD_AUTH_MAGIC);
     if (da->state != DA_VERIFIED) {

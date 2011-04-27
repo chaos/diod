@@ -13,19 +13,12 @@ check_PROGRAMS = \
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
 TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/utils/diodmount"
-TESTS_ENVIRONMENT += "PATH_MNTDIR=$(shell readlink -f mnt.d)"
-TESTS_ENVIRONMENT += "PATH_EXPDIR=$(shell readlink -f exp.d)"
 TESTS_ENVIRONMENT += "./runtest"
 
 TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
-	t23 t24 t25 t26 t27 t28 t29
+	t23 t24 t25 t26 t27 t28 t29 t30
 
 #XFAIL_TESTS =
-
-$(TESTS): mnt.d exp.d
-
-mnt.d exp.d:
-	mkdir -p $@
 
 CLEANFILES = *.out *.diff *.diod
 
@@ -51,9 +44,5 @@ trename_SOURCES = trename.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
-
-clean: clean-am
-	-rm -rf mnt.d
-	-rm -rf exp.d
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest

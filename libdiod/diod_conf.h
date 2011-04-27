@@ -59,6 +59,10 @@ int     diod_conf_get_allsquash (void);
 int     diod_conf_opt_allsquash (void);
 void    diod_conf_set_allsquash (int i);
 
+char   *diod_conf_get_squashuser(void);
+int     diod_conf_opt_squashuser(void);
+void    diod_conf_set_squashuser(char *user);
+
 uid_t   diod_conf_get_runasuid (void);
 int     diod_conf_opt_runasuid (void);
 void    diod_conf_set_runasuid (uid_t uid);

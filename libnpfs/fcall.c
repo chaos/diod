@@ -51,88 +51,68 @@ np_version(Npreq *req, Npfcall *tc)
 Npfcall *
 np_auth(Npreq *req, Npfcall *tc)
 {
-	int n;
 	char *aname = NULL;
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
-	int debug = (srv->debuglevel & DEBUG_AUTH);
 	Npfid *afid = NULL;
 	Npfcall *rc = NULL;
-	Npuser *user;
 	Npqid aqid;
 
-	afid = np_fid_find(conn, tc->u.tauth.afid);
-	if (afid) {
-		afid = NULL;
+	if ((np_fid_find(conn, tc->u.tauth.afid))) {
 		if (srv->msg)
-			srv->msg ("np_auth: protocol error: afid is in use");
+			srv->msg ("auth: afid is in use");
 		np_uerror(EIO);
-		goto done;
+		goto error;
 	}
-	afid = np_fid_create(conn, tc->u.tauth.afid, NULL);
-	if (!afid) {
+	if (!(afid = np_fid_create(conn, tc->u.tauth.afid, NULL))) {
 		if (srv->msg)
-			srv->msg ("np_auth: failed to create afid");
-		goto done;
-	} else
-		np_fid_incref(afid);
-
-	if (tc->u.tauth.uname.len && tc->u.tauth.n_uname == P9_NONUNAME) {
-		user = np_9name2user (&tc->u.tauth.uname);
-		if (!user) {
-			if (srv->msg)
-				srv->msg ("np_auth: user lookup failed");
-			goto done;
-		}
-	} else if (tc->u.tauth.n_uname == P9_NONUNAME) {
-		if (srv->msg)
-			srv->msg ("np_auth: protocol error: no uname/n_uname");
-		np_uerror(EIO);
-		goto done;		
-	} else {
-		user = np_uid2user (tc->u.tauth.n_uname);
-		if (!user) {
-			if (srv->msg)
-				srv->msg ("np_auth: user lookup failed");
-			goto done;
-		}
+			srv->msg ("auth: failed to create afid");
+		goto error;
 	}
+	np_fid_incref(afid);
 
-	if (tc->u.tauth.aname.len) {
-		aname = np_strdup(&tc->u.tauth.aname);
-		if (!aname) {
+	if (tc->u.tauth.aname.len > 0) {
+		if (!(aname = np_strdup(&tc->u.tauth.aname))) {
 			if (srv->msg)
-				srv->msg ("np_auth: out of memory");
+				srv->msg ("auth: out of memory");
 			np_uerror (ENOMEM);
-			goto done;
+			goto error;
 		}
-	} else
-		aname = NULL;
-
-	afid->user = user;
-	afid->type = P9_QTAUTH;
-	if (srv->auth && srv->auth->startauth)
-		n = (*srv->auth->startauth)(afid, aname, &aqid);
-	else
-		n = 0;
-
-	if (n) {
-		assert((aqid.type & P9_QTAUTH) != 0);
-		if (!(rc = np_create_rauth(&aqid))) {
-			np_uerror(ENOMEM);
-			if (srv->msg)
-				srv->msg ("np_auth: out of memory");
-		}
-	} else {
-		if (debug && srv->msg)
-			srv->msg ("np_auth: startauth failed");
-		if (np_rerror () == 0) /* startauth should set error */
-			np_uerror (EIO);
 	}
-done:
+	if (!srv->auth || !srv->auth->startauth
+		       || !srv->auth->startauth(afid, aname, &aqid)) {
+		np_uerror (EIO);
+		goto error; /* auth not required */
+	}
+
+	afid->type = P9_QTAUTH;	/* triggers auth->clunk on fid free */
+
+	afid->user = np_attach2user (&tc->u.tauth.uname, tc->u.tauth.n_uname);
+	if (!afid->user) {
+		if (srv->msg) {
+			if (tc->u.tauth.n_uname != P9_NONUNAME)
+				srv->msg ("auth: user lookup (%d) failed",
+					  tc->u.tauth.n_uname);
+			else if (tc->u.tauth.uname.len > 0)
+				srv->msg ("auth: user lookup (%.*s) failed",
+					  tc->u.tauth.uname.len,
+					  tc->u.tauth.uname.str);
+			else
+				srv->msg ("auth: no username specified");
+		}
+		goto error;
+	}
+	assert((aqid.type & P9_QTAUTH));
+	if (!(rc = np_create_rauth(&aqid))) {
+		if (srv->msg)
+			srv->msg ("auth: out of memory");
+		np_uerror(ENOMEM);
+		goto error;
+	}
+error:
 	if (aname)
 		free(aname);
-	if (!rc && afid)
+	if (afid)
 		np_fid_decref(afid);
 	return rc;
 }
@@ -143,88 +123,79 @@ np_attach(Npreq *req, Npfcall *tc)
 	char *aname = NULL;
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
-	int auth_debug = (srv->debuglevel & DEBUG_AUTH);
 	Npfid *fid, *afid = NULL;
 	Npfcall *rc = NULL;
-	Npuser *user;
 
-	fid = np_fid_find(conn, tc->u.tattach.fid);
-	if (fid) {
+	if (np_fid_find(conn, tc->u.tattach.fid)) {
 		if (srv->msg)
-			srv->msg ("np_attach: protocol error: fid is in use");
+			srv->msg ("attach: fid is in use");
 		np_uerror(EIO);
-		goto done;
+		goto error;
 	}
-	fid = np_fid_create(conn, tc->u.tattach.fid, NULL);
-	if (!fid) {
+	if (!(fid = np_fid_create(conn, tc->u.tattach.fid, NULL))) {
 		if (srv->msg)
-			srv->msg ("np_attach: failed to create fid");
-		goto done;
-	} else 
-		np_fid_incref(fid);
+			srv->msg ("attach: failed to create fid");
+		goto error;
+	}
+	np_fid_incref(fid);
 
 	req->fid = fid;
-	afid = np_fid_find(conn, tc->u.tattach.afid);
-	if (!afid) {
-		if (tc->u.tattach.afid != P9_NOFID) {
+	if (tc->u.tattach.afid != P9_NOFID) {
+		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
 			if (srv->msg)
-				srv->msg ("np_attach: protocol error: invalid afid number");
-			np_uerror(EIO);
-			goto done;
+				srv->msg ("attach: invalid afid");
+			np_uerror(EPERM);
+			goto error;
 		}
-	} else {
-		np_fid_incref(afid);
 		if (!(afid->type & P9_QTAUTH)) {
 			if (srv->msg)
-				srv->msg ("np_attach: protocol error: invalid afid type");
-			np_uerror(EIO);
-			goto done;
+				srv->msg ("attach: invalid afid type");
+			np_uerror(EPERM);
+			goto error;
 		}
+		np_fid_incref(afid);
 	}
 
-	if (tc->u.tattach.uname.len && tc->u.tattach.n_uname == P9_NONUNAME) {
-		user = np_9name2user(&tc->u.tattach.uname);
-		if (!user) {
-			if (srv->msg)
-				srv->msg ("np_attach: user lookup failure");
-			goto done;
+	if (srv->remapuser)
+		fid->user = srv->remapuser(&tc->u.tattach.uname,
+				           tc->u.tattach.n_uname,
+				           &tc->u.tattach.aname);
+	if (!fid->user)
+		fid->user = np_attach2user (&tc->u.tauth.uname,
+					    tc->u.tauth.n_uname);
+	if (!fid->user) {
+		if (srv->msg) {
+			if (tc->u.tattach.n_uname != P9_NONUNAME)
+				srv->msg ("attach: user lookup (%d) failed",
+					  tc->u.tattach.n_uname);
+			else if (tc->u.tattach.uname.len > 0)
+			        srv->msg ("attach: user lookup (%.*s) failed",
+					  tc->u.tattach.uname.len,
+					  tc->u.tattach.uname.str);
+			else
+				srv->msg ("attach: no username specified");
 		}
-	} else if (tc->u.tattach.n_uname == P9_NONUNAME) {
-		if (srv->msg)
-			srv->msg ("np_attach: protocol error: no uname/uid");
-		np_uerror(EIO);
-		goto done;
-	} else {
-		user = np_uid2user(tc->u.tattach.n_uname);
-		if (!user) {
-			if (srv->msg)
-				srv->msg ("np_attach: user lookup failure");
-			goto done;
-		}
+		goto error;
 	}
-
-	fid->user = user;
 	if (tc->u.tattach.aname.len) {
-		aname = np_strdup(&tc->u.tattach.aname);
-		if (!aname) {
+		if (!(aname = np_strdup(&tc->u.tattach.aname))) {
 			if (srv->msg)
-				srv->msg ("np_attach: out of memory");
+				srv->msg ("attach: out of memory");
 			np_uerror (ENOMEM);
-			goto done;
+			goto error;
 		}
-	} else
-		aname = NULL;
+	}
 
 	if (srv->auth && srv->auth->checkauth
-			&& !(*srv->auth->checkauth)(fid, afid, aname)) {
-		if (auth_debug && srv->msg)
-			srv->msg ("np_attach: checkauth failed");
-		goto done;
+		      && srv->auth->checkauth(fid, afid, aname) == 0) {
+		if (srv->msg)
+			srv->msg ("attach: authentication failed");
+		goto error;
 	}
 
 	rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 
-done:
+error:
 	if (aname)
 		free(aname);
 	if (afid)

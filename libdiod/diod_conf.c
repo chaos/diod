@@ -81,6 +81,7 @@
 #define RO_LOGDEST          0x0800
 #define RO_EXPORTALL        0x1000
 #define RO_ALLSQUASH        0x2000
+#define RO_SQUASHUSER       0x4000
 
 typedef struct {
     int          debuglevel;
@@ -88,6 +89,7 @@ typedef struct {
     int          foreground;
     int          auth_required;
     int          allsquash;
+    char        *squashuser;
     uid_t        runasuid;
     char        *diodpath;
     List         diodlisten;
@@ -173,6 +175,7 @@ diod_conf_init (void)
     config.foreground = 0;
     config.auth_required = 1;
     config.allsquash = 0;
+    config.squashuser = _xstrdup ("nobody");
     config.runasuid = 0;
     config.diodpath = _xstrdup (X_SBINDIR "/diod");
     config.diodlisten = _xlist_create ((ListDelF)free);
@@ -205,6 +208,8 @@ diod_conf_fini (void)
         free (config.configpath);
     if (config.logdest)
         free (config.logdest);
+    if (config.squashuser)
+        free (config.squashuser);
 }
 
 /* logdest - logging destination
@@ -265,14 +270,26 @@ void diod_conf_set_auth_required (int i)
     config.ro_mask |= RO_AUTH_REQUIRED;
 }
 
-/* allsquash - run server as nobody:nobody and remap all attaches
+/* allsquash - run server as squash suer and remap all attaches
  */
 int diod_conf_get_allsquash (void) { return config.allsquash; }
 int diod_conf_opt_allsquash (void) { return config.ro_mask & RO_ALLSQUASH; }
 void diod_conf_set_allsquash (int i)
 {
     config.allsquash = i;
-    config.ro_mask |= RO_AUTH_REQUIRED;
+    config.ro_mask |= RO_ALLSQUASH;
+}
+
+/* squashuser - override 'nobody' as the squash user
+ */
+char *diod_conf_get_squashuser(void) { return config.squashuser; }
+int diod_conf_opt_squashuser(void) { return config.ro_mask & RO_SQUASHUSER; }
+void diod_conf_set_squashuser(char *user)
+{
+    if (config.squashuser)
+        free (config.squashuser);
+    config.squashuser = _xstrdup (user);
+    config.ro_mask |= RO_SQUASHUSER;
 }
 
 /* runasuid - set to run server as one user (mount -o access=uid)
@@ -616,6 +633,10 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.ro_mask & RO_ALLSQUASH)) {
             _lua_getglobal_int (path, L, "allsquash",
                                 &config.allsquash);
+        }
+        if (!(config.ro_mask & RO_SQUASHUSER)) {
+            _lua_getglobal_string (path, L, "squashuser",
+                                &config.squashuser);
         }
         if (!(config.ro_mask & RO_DIODCTLLISTEN)) {
             _lua_getglobal_list_of_strings (path, L, "diodctllisten",

@@ -7,14 +7,6 @@ if [ $# -ne 1 ]; then
 fi
 TEST=$1
 
-if [ -z "$PATH_EXPDIR" ]; then
-    echo "PATH_EXPDIR is not set" 2>&1
-    exit 1
-fi
-if [ -z "$PATH_MNTDIR" ]; then
-    echo "PATH_MNTDIR is not set" 2>&1
-    exit 1
-fi
 if [ -z "$PATH_DIODMOUNT" ]; then
     echo "PATH_DIODMOUNT is not set" 2>&1
     exit 1
@@ -32,22 +24,28 @@ if ! modprobe 9p 2>/dev/null; then
     echo "9p not loaded - skipping" >$TEST.out
     exit 77
 fi
-if ! test -d $PATH_EXPDIR; then
-    echo "test directory vanished" >$TEST.out
-    exit 77
-fi
-rm -rf $PATH_EXPDIR/*
 rm -f $TEST.diod $TEST.out
 # Special case for t29 which requires tclsh
 if [ "`basename $TEST`" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
     echo "tclsh is not installed" >$TEST.out
     exit 77
 fi
+# Special diod option for t30 (tests --allsquash)
+if [ "`basename $TEST`" = "t30" ]; then
+    opt="-S" 
+fi
 
 ulimit -c unlimited
 
+umask 022
+PATH_MNTDIR=$(mktemp -d) || exit 1
+PATH_EXPDIR=$(mktemp -d) || exit 1
+chmod 755 $PATH_MNTDIR $PATH_EXPDIR
+export PATH_EXPDIR
+export PATH_MNTDIR
+
 ./kconjoin \
-    "$PATH_DIOD -s -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
+    "$PATH_DIOD $opt -s -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
     "$PATH_DIODMOUNT -n -owfdno=0,rfdno=0 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST" \
     >$TEST.out 2>&1
@@ -56,6 +54,9 @@ if [ $rc != 0 ]; then
     echo "test exited with $rc" >>$TEST.out
     exit $rc
 fi
+
+[ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
+[ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
 
 diff $TEST.exp $TEST.out >$TEST.diff
 exit $?

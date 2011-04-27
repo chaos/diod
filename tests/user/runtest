@@ -7,22 +7,17 @@ if [ $# -ne 1 ]; then
 fi
 TEST=$1
 
-if [ -z "$PATH_EXPDIR" ]; then
-    echo "PATH_EXPDIR is not set" 2>&1
-    exit 1
-fi
 if [ -z "$PATH_DIOD" ]; then
     echo "PATH_DIOD is not set" 2>&1
     exit 1
 fi
 
-if ! test -d $PATH_EXPDIR; then
-    echo "test directory vanished" >$TEST.out
-    exit 77
-fi
-rm -rf $PATH_EXPDIR/*
 rm -f $TEST.diod $TEST.out
 ulimit -c unlimited
+
+umask 022
+PATH_EXPDIR=$(mktemp -d) || exit 1
+export PATH_EXPDIR
 
 ./conjoin \
     "$PATH_DIOD -s -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
@@ -33,6 +28,8 @@ if [ $rc != 0 ]; then
     echo "test exited with $rc" >>$TEST.out
     exit $rc
 fi
+
+[ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 
 diff $TEST.exp $TEST.out >$TEST.diff
 exit $?

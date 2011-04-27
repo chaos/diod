@@ -96,7 +96,7 @@ _alloc_user (struct passwd *pwd)
 	u->uid = pwd->pw_uid;
 	u->nsg = sizeof (u->sg) / sizeof (u->sg[0]);
 	if (getgrouplist(pwd->pw_name, pwd->pw_gid, u->sg, &u->nsg) == -1) {
-		np_uerror (EIO);
+		np_uerror (EPERM); /* user is in too many groups */
 		goto error;		
 	}
 	if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
@@ -120,10 +120,8 @@ np_uid2user (uid_t uid)
 	int len = sysconf(_SC_GETPW_R_SIZE_MAX);
 	char *buf = NULL; 
 
-	if (len == -1) {
-		np_uerror (EIO);
-		goto error;
-	}	
+	if (len == -1)
+		len = 4096;
 	if (!(buf = malloc (len))) {
 		np_uerror (ENOMEM);
 		goto error;
@@ -133,7 +131,7 @@ np_uid2user (uid_t uid)
 		goto error;
 	}
 	if (!pwd) {
-		np_uerror (ESRCH);
+		np_uerror (EPERM);
 		goto error;
 	}
 	if (!(u = _alloc_user (pwd)))
@@ -158,10 +156,8 @@ np_uname2user (char *uname)
 	int len = sysconf(_SC_GETPW_R_SIZE_MAX);
 	char *buf = NULL;
 
-	if (len == -1) {
-		np_uerror (EIO);
-		goto error;
-	}	
+	if (len == -1)
+		len = 4096;
 	if (!(buf = malloc (len))) {
 		np_uerror (ENOMEM);
 		goto error;
@@ -171,7 +167,7 @@ np_uname2user (char *uname)
 		goto error;
 	}
 	if (!pwd) {
-		np_uerror (ESRCH);
+		np_uerror (EPERM);
 		goto error;
 	}
 	if (!(u = _alloc_user (pwd)))
@@ -188,17 +184,24 @@ error:
 }
 
 Npuser *
-np_9name2user (Npstr *uname)
+np_attach2user (Npstr *uname, u32 n_uname)
 {
 	Npuser *u = NULL;
-	char *name;
+	char *s;
 
-	if (!(name = np_strdup (uname))) {
-		np_uerror (ENOMEM);
+	if (n_uname == P9_NONUNAME && uname->len == 0) {
+		np_uerror (EIO);
 		goto done;
 	}
-	u = np_uname2user (name);
-	free (name);
+	if (uname->len > 0) {
+		if (!(s = np_strdup (uname))) {
+			np_uerror (ENOMEM);
+			goto done;
+		}
+		u = np_uname2user (s);
+		free (s);
+	} else
+		u = np_uid2user (n_uname);
 done:
 	return u;
 }

@@ -54,7 +54,11 @@ munge credential.  This applies to both \fBdiodctl\fR and \fBdiod\fR.
 Remap all users to "nobody".
 The attaching user need not be present in the password file.
 .TP
-.I "logdest = DEST"
+\fIsquashuser = "nobody"\fR
+Change the squash user from the default of nobody.
+The squash user must be present in the password file.
+.TP
+\fIlogdest = "DEST"\fR
 Set the destination for logging.
 \fIDEST\fR is in the form of \fIsyslog:facility:level\fR or \fIfilename\fR.
 The default is \fIsyslog:daemon:err\fR.

@@ -35,13 +35,15 @@
 #endif
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
 #endif
 #include <errno.h>
-#include <sys/types.h>
+#include <pwd.h>
+#include <grp.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/resource.h>
@@ -58,12 +60,12 @@
 #include "diod_sock.h"
 
 #include "ops.h"
-#include "user.h"
 
 typedef enum { SRV_STDIN, SRV_DIODCTL, SRV_NORMAL } srvmode_t;
 
 static void          _daemonize (void);
 static void          _setrlimit (void);
+static void          _become_user (char *name, uid_t uid, int realtoo);
 static void          _service_run (srvmode_t mode, int Fopt);
 
 #ifndef NR_OPEN
@@ -220,14 +222,14 @@ main(int argc, char **argv)
      * If not root, arrange to run (only) as current effective uid.
      */
     if (diod_conf_get_allsquash ())
-        diod_become_user (SQUASH_UNAME, -1, 1); /* exits on error */
+        _become_user (diod_conf_get_squashuser (), -1, 1);
     else if (geteuid () != 0)
         diod_conf_set_runasuid (geteuid ());
     else if (diod_conf_opt_runasuid ()) {
         uid_t uid = diod_conf_get_runasuid ();
-
+            _become_user (NULL, uid, 1);
         if (uid != geteuid ())
-            diod_become_user (NULL, uid, 1); /* exits on error */
+            _become_user (NULL, uid, 1);
     }
 
     _service_run (mode, Fopt);
@@ -236,6 +238,52 @@ main(int argc, char **argv)
     diod_log_fini ();
 
     exit (0);
+}
+
+/* Switch to user/group, load the user's supplementary groups.
+ * Print message and exit on failure.
+ */
+static void
+_become_user (char *name, uid_t uid, int realtoo)
+{
+    int err;
+    struct passwd pw, *pwd;
+    int len = sysconf(_SC_GETPW_R_SIZE_MAX);
+    char *buf;
+    int nsg;
+    gid_t sg[64];
+    char *endptr;
+
+    if (len == -1)
+        len = 4096;
+    if (!(buf = malloc(len)))
+        msg_exit ("out of memory");
+    if (name) {
+        errno = 0;
+        uid = strtoul (name, &endptr, 10);
+        if (errno == 0 && *name != '\0' && *endptr == '\0')
+            name = NULL;
+    }
+    if (name) {
+        if ((err = getpwnam_r (name, &pw, buf, len, &pwd)) != 0)
+            errn_exit (err, "error looking up user %s", name);
+        if (!pwd)
+            msg_exit ("error looking up user %s", name);
+    } else {
+        if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0)
+            errn_exit (err, "error looking up uid %d", uid);
+        if (!pwd)
+            msg_exit ("error looking up uid %d", uid);
+    }
+    nsg = sizeof (sg) / sizeof(sg[0]);
+    if (getgrouplist(pwd->pw_name, pwd->pw_gid, sg, &nsg) == -1)
+        err_exit ("user is in too many groups");
+    if (setgroups (nsg, sg) < 0)
+        err_exit ("setgroups");
+    if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
+        err_exit ("setreuid");
+    if (setreuid (realtoo ? pwd->pw_uid : -1, pwd->pw_uid) < 0)
+        err_exit ("setreuid");
 }
 
 /* Remove any resource limits.
@@ -420,7 +468,7 @@ _service_run (srvmode_t mode, int Fopt)
                 msg_exit ("failed to set up listen ports");
             break;
     }
-    if (!diod_conf_get_foreground ()) 
+    if (!diod_conf_get_foreground () && mode != SRV_STDIN) 
         diod_log_set_dest (diod_conf_get_logdest ());
     if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
         _daemonize (); /* implicit fork - no pthreads before this */
