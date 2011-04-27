@@ -39,7 +39,7 @@ main (int argc, char *argv[])
     diod_log_init (argv[0]);
     diod_conf_init ();
 
-    if (!(srv = np_srv_create (16)))
+    if (!(srv = np_srv_create (16, 0)))
         msg_exit ("out of memory");
     srv->debuglevel |= DEBUG_9P_TRACE;
     srv->msg = msg;

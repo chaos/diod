@@ -314,6 +314,8 @@ np_walk(Npreq *req, Npfcall *tc)
 		newfid = fid;
 
 	np_fid_incref(newfid);
+	if (np_setfsid (req, newfid->user, -1) < 0)
+		goto done;
 	for(i = 0; i < tc->u.twalk.nwname;) {
 		if (!(*conn->srv->walk)(newfid, &tc->u.twalk.wnames[i],
 					&wqids[i]))
@@ -383,6 +385,8 @@ np_read(Npreq *req, Npfcall *tc)
 		np_uerror(EIO);
 		goto done;
 	}
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*conn->srv->read)(fid, tc->u.tread.offset, tc->u.tread.count, req);
 
 done:
@@ -430,6 +434,8 @@ np_write(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*conn->srv->write)(fid, tc->u.twrite.offset, tc->u.twrite.count,
 				tc->u.twrite.data, req);
 
@@ -488,6 +494,8 @@ np_remove(Npreq *req, Npfcall *tc)
 		np_fid_incref(fid);
 
 	req->fid = fid;
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*conn->srv->remove)(fid);
 	if (fid) /* spec says clunk the fid even if the remove fails */
 		np_fid_decref(fid);
@@ -519,6 +527,8 @@ np_statfs(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->statfs)(fid);
 done:
 	return rc;
@@ -532,6 +542,8 @@ np_lopen(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
 done:
 	return rc;
@@ -544,6 +556,8 @@ np_lcreate(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, tc->u.tlcreate.gid) < 0)
 		goto done;
 	rc = (*req->conn->srv->lcreate)(fid,
 					&tc->u.tlcreate.name,
@@ -566,6 +580,8 @@ np_symlink(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
+	if (np_setfsid (req, fid->user, tc->u.tsymlink.gid) < 0)
+		goto done;
 	rc = (*req->conn->srv->symlink)(fid,
 					&tc->u.tsymlink.name,
 					&tc->u.tsymlink.symtgt,
@@ -581,6 +597,8 @@ np_mknod(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, tc->u.tmknod.gid) < 0)
 		goto done;
 	rc = (*req->conn->srv->mknod)(fid,
 					&tc->u.tmknod.name,
@@ -606,6 +624,8 @@ np_rename(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	np_fid_incref(dfid);
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->rename)(fid, dfid, &tc->u.trename.name);
 done:
 	np_fid_decref(dfid);
@@ -620,6 +640,8 @@ np_readlink(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->readlink)(fid);
 done:
 	return rc;
@@ -633,6 +655,8 @@ np_getattr(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->getattr)(fid, tc->u.tgetattr.request_mask);
 done:
 	return rc;
@@ -645,6 +669,8 @@ np_setattr(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
 	rc = (*req->conn->srv->setattr)(fid,
 					tc->u.tsetattr.valid,
@@ -674,6 +700,8 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	np_fid_incref(attrfid);
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->xattrwalk)(fid, attrfid, &tc->u.txattrwalk.name);
 done:
 	return rc;
@@ -686,6 +714,8 @@ np_xattrcreate(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
 	rc = (*req->conn->srv->xattrcreate)(fid,
 					    &tc->u.txattrcreate.name,
@@ -707,6 +737,8 @@ np_readdir(Npreq *req, Npfcall *tc)
 		np_uerror(EIO);
 		goto done;
 	}
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->readdir)(fid, tc->u.treaddir.offset,
 					tc->u.treaddir.count,
 					req);
@@ -722,6 +754,8 @@ np_fsync(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->fsync)(fid);
 done:
 	return rc;
@@ -734,6 +768,8 @@ np_lock(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
 	rc = (*req->conn->srv->llock)(fid,
 					tc->u.tlock.type,
@@ -753,6 +789,8 @@ np_getlock(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
 	rc = (*req->conn->srv->getlock)(fid,
 					tc->u.tgetlock.type,
@@ -778,6 +816,8 @@ np_link(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	np_fid_incref(fid);
+	if (np_setfsid (req, fid->user, -1) < 0)
+		goto done;
 	rc = (*req->conn->srv->link)(dfid, fid, &tc->u.tlink.name);
 	np_fid_decref(fid);
 done:
@@ -791,6 +831,8 @@ np_mkdir(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 
 	if (!fid)
+		goto done;
+	if (np_setfsid (req, fid->user, tc->u.tmkdir.gid) < 0)
 		goto done;
 	rc = (*req->conn->srv->mkdir)(fid,
 					&tc->u.tmkdir.name,

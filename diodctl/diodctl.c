@@ -398,7 +398,7 @@ _service_run (srvmode_t mode)
     if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
         _daemonize (); /* implicit fork - no pthreads before this */
 
-    if (!(ss.srv = np_srv_create (nt))) /* starts worker threads */
+    if (!(ss.srv = np_srv_create (nt, 0))) /* starts worker threads */
         err_exit ("np_srv_create");
     diodctl_register_ops (ss.srv);
 

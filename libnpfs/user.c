@@ -205,3 +205,46 @@ np_attach2user (Npstr *uname, u32 n_uname)
 done:
 	return u;
 }
+
+int
+np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
+{
+	Npwthread *wt = req->wthread;
+	Npsrv *srv = req->conn->srv;
+	int ret = -1;
+	u32 gid;
+
+	if ((wt->flags & WT_FLAGS_SETFSID)) {
+		gid = (gid_override == -1 ? u->gid : gid_override);
+		if (wt->fsgid != gid) {
+			if (setfsgid (gid) < 0) {
+				np_uerror (errno);
+				if (srv->msg)
+					srv->msg ("setfsgid(%s) gid=%d failed",
+						  u->uname, gid);
+				goto done;
+			}
+			wt->fsgid = gid;
+		}
+		if (wt->fsuid != u->uid) {
+			if (setgroups (u->nsg, u->sg) < 0) {
+				np_uerror (errno);
+				if (srv->msg)
+					srv->msg ("setgroups(%s) nsg=%d failed",
+						  u->uname, u->nsg);
+				goto done;
+			}
+			if (setfsuid (u->uid) < 0) {
+				np_uerror (errno);
+				if (srv->msg)
+					srv->msg ("setfsuid(%s) uid=%d failed",
+						  u->uname, u->uid);
+				goto done;
+			}
+			wt->fsuid = u->uid;
+		}
+	}
+	ret = 0;
+done:
+	return ret;
+}

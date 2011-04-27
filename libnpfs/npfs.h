@@ -175,12 +175,18 @@ struct Npreq {
 	Npwthread*	wthread;/* for requests that are worked on */
 };
 
+enum {
+	WT_FLAGS_SETFSID=1,
+};
+
 struct Npwthread {
 	Npsrv*		srv;
 	int		shutdown;
 	enum { WT_START, WT_IDLE, WT_WORK, WT_REPLY, WT_SHUT } state;
 	pthread_t	thread;
-
+	int		flags;
+	u32		fsuid;
+	u32		fsgid;
 	Npwthread	*next;
 };
 
@@ -265,7 +271,7 @@ struct Npuser {
 };
 
 /* srv.c */
-Npsrv *np_srv_create(int nwthread);
+Npsrv *np_srv_create(int nwthread, int wtflags);
 void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
 int np_srv_add_conn(Npsrv *, Npconn *);
@@ -397,6 +403,7 @@ void np_user_decref(Npuser *);
 Npuser *np_uid2user (u32 n_uname);
 Npuser *np_uname2user (char *uname);
 Npuser *np_attach2user (Npstr *uname, u32 n_uname);
+int np_setfsid (Npreq *req, Npuser *u, u32 gid_override);
 
 /* fdtrans.c */
 Nptrans *np_fdtrans_create(int, int);
