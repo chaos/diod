@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <assert.h>
 #include <errno.h>
 #include <string.h>

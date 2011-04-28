@@ -8,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>

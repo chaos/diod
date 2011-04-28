@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>

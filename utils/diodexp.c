@@ -33,6 +33,7 @@
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <netdb.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H

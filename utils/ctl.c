@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
 #include <stdint.h>

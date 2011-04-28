@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/stat.h>

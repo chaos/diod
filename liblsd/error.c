@@ -5,6 +5,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 #include "diod_log.h"
 

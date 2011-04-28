@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libgen.h>
+#include <stdarg.h>
 
 #include "diod_log.h"
 

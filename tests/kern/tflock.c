@@ -9,6 +9,7 @@
 #include <sys/wait.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>

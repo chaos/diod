@@ -9,6 +9,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <stdarg.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <assert.h>

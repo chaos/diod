@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <errno.h>
 #include <assert.h>
 #include "9p.h"

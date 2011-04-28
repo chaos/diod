@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>

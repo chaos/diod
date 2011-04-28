@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <string.h>
 #include <pthread.h>
 #include <sys/fsuid.h>

@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>

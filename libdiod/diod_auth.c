@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/fsuid.h>

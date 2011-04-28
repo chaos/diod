@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <time.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>

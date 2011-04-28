@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#include <stdarg.h>
 #include <grp.h>
 
 #include "diod_log.h"

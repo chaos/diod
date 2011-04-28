@@ -5,6 +5,7 @@
 #endif
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
