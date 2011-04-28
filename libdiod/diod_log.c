@@ -223,8 +223,8 @@ _verr (int errnum, const char *fmt, va_list ap)
     }
 }
 
-static void
-_vlog (const char *fmt, va_list ap)
+void
+diod_log_msg (const char *fmt, va_list ap)
 {
     char buf[1024]; /* make it large enough for protocol debug output */
 
@@ -299,7 +299,7 @@ msg_exit (const char *fmt, ...)
     va_list ap;
 
     va_start (ap, fmt);
-    _vlog (fmt, ap);
+    diod_log_msg (fmt, ap);
     va_end (ap);
     exit (1);
 }
@@ -312,7 +312,7 @@ msg (const char *fmt, ...)
     va_list ap;
 
     va_start (ap, fmt);
-    _vlog (fmt, ap);
+    diod_log_msg (fmt, ap);
     va_end (ap);
 }
 

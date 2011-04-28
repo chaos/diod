@@ -189,27 +189,24 @@ np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname)
 	Npuser *u = NULL;
 	char *s;
 
-	if (n_uname == P9_NONUNAME && uname->len == 0) {
-		if (srv->msg)
-			srv->msg ("auth/attach: no uname or n_uname");
-		np_uerror (EIO);
-		goto done;
-	}
-	if (uname->len > 0) {
-		if (!(s = np_strdup (uname))) {
+	if (n_uname != P9_NONUNAME) {
+		u = np_uid2user (n_uname);
+		if (!u)
+			np_logmsg (srv, "uid '%d' not found", n_uname);
+	} else {
+		if (uname->len == 0) {
+			np_uerror (EIO);
+			goto done;
+		}
+		s = np_strdup (uname);
+		if (!s) {
 			np_uerror (ENOMEM);
-			if (srv->msg)
-				srv->msg ("auth/attach: out of memory");
 			goto done;
 		}
 		u = np_uname2user (s);
-		if (!u && srv->msg)
-			srv->msg ("auth/attach failed to look up user %s", s);
+		if (!u)
+			np_logmsg (srv, "user '%s' not found", s);
 		free (s);
-	} else {
-		u = np_uid2user (n_uname);
-		if (!u && srv->msg)
-			srv->msg ("auth/attach failed to look up uid %d", n_uname);
 	}
 done:
 	return u;
@@ -228,9 +225,8 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		if (wt->fsgid != gid) {
 			if (setfsgid (gid) < 0) {
 				np_uerror (errno);
-				if (srv->msg)
-					srv->msg ("setfsgid(%s) gid=%d failed",
-						  u->uname, gid);
+				np_logerr (srv, "setfsgid(%s) gid=%d failed",
+					   u->uname, gid);
 				goto done;
 			}
 			wt->fsgid = gid;
@@ -238,16 +234,14 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		if (wt->fsuid != u->uid) {
 			if (setgroups (u->nsg, u->sg) < 0) {
 				np_uerror (errno);
-				if (srv->msg)
-					srv->msg ("setgroups(%s) nsg=%d failed",
-						  u->uname, u->nsg);
+				np_logerr (srv, "setgroups(%s) nsg=%d failed",
+					   u->uname, u->nsg);
 				goto done;
 			}
 			if (setfsuid (u->uid) < 0) {
 				np_uerror (errno);
-				if (srv->msg)
-					srv->msg ("setfsuid(%s) uid=%d failed",
-						  u->uname, u->uid);
+				np_logerr (srv, "setfsuid(%s) uid=%d failed",
+					   u->uname, u->uid);
 				goto done;
 			}
 			wt->fsuid = u->uid;

@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <pthread.h>
 #include <errno.h>
 #include <sys/time.h>
@@ -133,7 +134,7 @@ np_srv_create(int nwthread, int flags)
 	srv->reqs_last = NULL;
 	srv->workreqs = NULL;
 	srv->wthreads = NULL;
-	srv->msg = NULL;
+	srv->logmsg = NULL;
 	srv->nwthread = nwthread;
 	for(i = 0; i < nwthread; i++) {
 		if (np_wthread_create(srv) < 0) {
@@ -782,3 +783,35 @@ np_req_unref(Npreq *req)
 		free(req);
 }
 
+
+void
+np_logmsg(Npsrv *srv, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start (ap, fmt);
+	if (srv->logmsg)
+		srv->logmsg (fmt, ap);
+	va_end (ap);
+}
+
+void
+np_logerr(Npsrv *srv, const char *fmt, ...)
+{
+	va_list ap;
+
+	if (srv->logmsg) {
+		char buf[128];
+		char ebuf[64];
+		int ecode = np_rerror ();
+
+		va_start (ap, fmt);
+		vsnprintf (buf, sizeof(buf), fmt, ap);
+		va_end (ap);
+
+		if (strerror_r (ecode, ebuf, sizeof (ebuf)) == -1)
+			snprintf (ebuf, sizeof (ebuf), "error %d", ecode);
+
+		np_logmsg (srv, "%s: %s", buf, ebuf);
+	}
+}

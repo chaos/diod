@@ -23,7 +23,6 @@
 #include "list.h"
 #include "diod_log.h"
 #include "diod_conf.h"
-#include "diod_auth.h"
 
 #include "ttrans.h"
 
@@ -42,9 +41,7 @@ main (int argc, char *argv[])
 
     if (!(srv = np_srv_create (16, flags)))
         msg_exit ("out of memory");
-    srv->msg = msg;
-    srv->auth = diod_auth;
-    diod_conf_set_auth_required (0);
+    srv->logmsg = diod_log_msg;
     npfile_init_srv (srv, _file_root_create ());
 
     /* create one connection */

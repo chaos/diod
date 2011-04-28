@@ -206,7 +206,7 @@ struct Npsrv {
 	u32		msize;
 	void*		srvaux;
 	void*		treeaux;
-	void		(*msg)(const char *, ...);
+	void		(*logmsg)(const char *, va_list);
 	int		(*remapuser)(Npuser **, Npstr *, u32, Npstr *);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
 	Npauth*		auth;
@@ -277,6 +277,10 @@ int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
 void np_srv_wait_timeout(Npsrv *srv, int inactivity_secs);
 void np_srv_shutdown (Npsrv *srv);
+void np_logerr(Npsrv *srv, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
+void np_logmsg(Npsrv *srv, const char *fmt, ...)
+	__attribute__ ((format (printf, 2, 3)));
 
 /* conn.c */
 Npconn *np_conn_create(Npsrv *, Nptrans *, char *);

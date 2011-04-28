@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "9p.h"
 #include "npfs.h"

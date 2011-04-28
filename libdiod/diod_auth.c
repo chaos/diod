@@ -150,19 +150,14 @@ _auth_start(Npfid *afid, char *aname, Npqid *aqid)
         msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
 
 #if ! HAVE_LIBMUNGE
-    msg ("startauth: warning: server requires authentication but was built "
-         "without MUNGE support");
+    msg ("startauth: no MUNGE support: auth begun but cannot be completed ");
 #endif
+    assert (afid->aux == NULL);
+    if (!(afid->aux = _da_create ()))
+        goto done;
     aqid->path = 0;
     aqid->type = P9_QTAUTH;
     aqid->version = 0;
-    assert (afid->aux == NULL);
-    if (!(afid->aux = _da_create ())) {
-        msg ("startauth: auth by %s@%s to %s failed: out of memory",
-             afid->user->uname, np_conn_get_client_id (afid->conn),
-             aname ? aname : "<nil>");
-        goto done;
-    }
     ret = 1;
 done:
     return ret;
@@ -237,9 +232,6 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
     assert (da->magic == DIOD_AUTH_MAGIC);
 
     if (da->state == DA_VERIFIED) {
-        msg ("auth_write: auth by %s@%s: auth protocol error: %s", 
-             afid->user->uname, np_conn_get_client_id (afid->conn),
-             "write after cred verified");
         np_uerror (EIO);
         goto done;
     }
@@ -250,15 +242,10 @@ _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
     } else if (da->mungecred && offset == strlen (da->mungecred)) {
         da->mungecred = realloc (da->mungecred, offset + count + 1);
     } else {
-        msg ("auth_write: auth by %s@%s: auth protocol error: %s", 
-             afid->user->uname, np_conn_get_client_id (afid->conn),
-             "write at incorrect offset");
         np_uerror (EIO);
         goto done;
     }
     if (!da->mungecred) {
-        msg ("auth_write: auth by %s@%s: out of memory", 
-             afid->user->uname, np_conn_get_client_id (afid->conn));
         np_uerror (ENOMEM);
         goto done;
     }

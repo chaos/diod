@@ -70,7 +70,7 @@ void
 diodctl_register_ops (Npsrv *srv)
 {
     npfile_init_srv (srv, _ctl_root_create ());
-    srv->msg = msg;
+    srv->logmsg = diod_log_msg;
     srv->remapuser = _ctl_remapuser;
     srv->auth_required = _ctl_auth_required;
     srv->auth = diod_auth;

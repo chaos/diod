@@ -150,7 +150,7 @@ diod_register_ops (Npsrv *srv)
 {
     srv->msize = 65536;
     srv->fiddestroy = diod_fiddestroy;
-    srv->msg = msg;
+    srv->logmsg = diod_log_msg;
 
     srv->remapuser = diod_remapuser;
     srv->auth_required = diod_auth_required;
@@ -480,7 +480,6 @@ int
 diod_remapuser (Npuser **up, Npstr *uname, u32 n_uname, Npstr *aname)
 {
     Npuser *user = NULL;
-    int n;
 
     if (diod_conf_get_allsquash ()) {
         char *squash = diod_conf_get_squashuser ();

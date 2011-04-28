@@ -135,7 +135,7 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 	char s[512];
 
 	np_snprintfcall(s, sizeof (s), fc);
-	srv->msg("%s", s);
+	np_logmsg(srv, "%s", s);
 }
 
 /* Per-connection read thread.
@@ -176,15 +176,13 @@ again:
 		 * may not handle that well, depending on where it happens.
 		 */
 		if (!np_deserialize(fc, fc->pkt)) {
-			if (srv->msg) {
-				_debug_trace (srv, fc);
-				srv->msg ("protocol error - "
-					  "dropping connection to '%s'",
-					  conn->client_id);
-			}
+			_debug_trace (srv, fc);
+			np_logerr (srv, "protocol error - "
+				   "dropping connection to '%s'",
+				   conn->client_id);
 			break;
 		}
-		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE) && srv->msg)
+		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
 			_debug_trace (srv, fc);
 
 		/* Replace fc, and copy any data past the current packet
@@ -192,10 +190,9 @@ again:
 		 */
 		fc1 = _alloc_npfcall(conn->msize);
 		if (!fc1) {
-			if (srv->msg)
-				srv->msg ("out of memory in receive path - "
-					  "dropping connection to '%s'",
-					   conn->client_id);
+			np_logerr (srv, "out of memory in receive path - "
+				   "dropping connection to '%s'",
+				   conn->client_id);
 			break;
 		}
 		if (n > size)
@@ -206,10 +203,9 @@ again:
 		 */
 		req = np_req_alloc(conn, fc);
 		if (!req) {
-			if (srv->msg)
-				srv->msg ("out of memory in receive path - "
-					  "dropping connection to '%s'",
-					  conn->client_id);
+			np_logerr (srv, "out of memory in receive path - "
+				   "dropping connection to '%s'",
+				   conn->client_id);
 			break;
 		}
 		pthread_mutex_lock(&srv->lock);
@@ -371,7 +367,7 @@ np_conn_respond(Npreq *req)
 	pthread_mutex_unlock(&conn->lock);
 
 	if (send) {
-		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE) && srv->msg)
+		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
 			_debug_trace (srv, rc);
 		pthread_mutex_lock(&conn->wlock);
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);
