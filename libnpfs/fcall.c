@@ -354,22 +354,14 @@ Npfcall *
 np_walk(Npreq *req, Npfcall *tc)
 {
 	int i;
-	Npconn *conn;
-	Npfid *fid, *newfid;
-	Npfcall *rc;
+	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_incref (req, tc->u.twalk.fid);
+	Npfid *newfid = NULL;
+	Npfcall *rc = NULL;
 	Npqid wqids[P9_MAXWELEM];
 
-	rc = NULL;
-	conn = req->conn;
-	newfid = NULL;
-	fid = np_fid_find(conn, tc->u.twalk.fid);
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
 #if 0
 	if (!(fid->type & P9_QTDIR)) {
 		np_uerror(ENOTDIR);
@@ -383,7 +375,6 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->u.twalk.fid != tc->u.twalk.newfid) {
-//		printf("newfid conn %p fid %d\n", conn, tc->newfid); 
 		newfid = np_fid_find(conn, tc->u.twalk.newfid);
 		if (newfid) {
 			np_uerror(EIO);
@@ -435,20 +426,12 @@ Npfcall *
 np_read(Npreq *req, Npfcall *tc)
 {
 	int n;
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
+	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_incref(req, tc->u.tread.fid);
+	Npfcall *rc = NULL;
 
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->u.tread.fid);
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
 	if (tc->u.tread.count + P9_IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		goto done;
@@ -488,20 +471,12 @@ Npfcall *
 np_write(Npreq *req, Npfcall *tc)
 {
 	int n;
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
+	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_incref(req, tc->u.twrite.fid);
+	Npfcall *rc = NULL;
 
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->u.twrite.fid);
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
 	if (fid->type & P9_QTAUTH) {
 		if (conn->srv->auth) {
 			n = conn->srv->auth->write(fid, tc->u.twrite.offset,
@@ -528,8 +503,7 @@ np_write(Npreq *req, Npfcall *tc)
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
 	rc = (*conn->srv->write)(fid, tc->u.twrite.offset, tc->u.twrite.count,
-				tc->u.twrite.data, req);
-
+				 tc->u.twrite.data, req);
 done:
 	return rc;
 }
@@ -537,20 +511,13 @@ done:
 Npfcall *
 np_clunk(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn = req->conn;
+	Npfid *fid = _getfid_incref(req, tc->u.tclunk.fid);
 	Npfcall *rc = NULL;
-	Npfid *fid;
 
-	fid = np_fid_find(conn, tc->u.tclunk.fid);
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
 	if (fid->type & P9_QTAUTH) {
-		if (conn->srv->auth) {
+		if (req->conn->srv->auth) {
 			/* N.B. fidpool calls auth->clunk on last decref */
 			if (!(rc = np_create_rclunk()))
 				np_uerror(ENOMEM);
@@ -559,8 +526,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 		goto done;
 	}
-	rc = (*conn->srv->clunk)(fid);
-
+	rc = (*req->conn->srv->clunk)(fid);
 done:
 	if (rc && rc->type == P9_RCLUNK)
 		np_fid_decref(fid);
@@ -571,26 +537,16 @@ done:
 Npfcall *
 np_remove(Npreq *req, Npfcall *tc)
 {
-	Npconn *conn;
-	Npfid *fid;
-	Npfcall *rc;
+	Npfid *fid = _getfid_incref(req, tc->u.tremove.fid);
+	Npfcall *rc = NULL;
 
-	rc = NULL;
-	conn = req->conn;
-	fid = np_fid_find(conn, tc->u.tremove.fid);
-	if (!fid) {
-		np_uerror(EIO);
+	if (!fid)
 		goto done;
-	} else 
-		np_fid_incref(fid);
-
-	req->fid = fid;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
-	rc = (*conn->srv->remove)(fid);
+	rc = (*req->conn->srv->remove)(fid);
 	if (fid) /* spec says clunk the fid even if the remove fails */
 		np_fid_decref(fid);
-
 done:
 	return rc;
 }
