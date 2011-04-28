@@ -41,7 +41,7 @@ struct Reqpool {
 	Npreq*		reqlist;
 } reqpool = { PTHREAD_MUTEX_INITIALIZER, 0, NULL };
 
-static int np_wthread_create(Npsrv *srv, int flags);
+static int np_wthread_create(Npsrv *srv);
 static void *np_wthread_proc(void *a);
 
 static Npfcall* np_default_version(Npconn *, u32, Npstr *);
@@ -73,7 +73,7 @@ static Npfcall* np_default_link(Npfid *, Npfid *, Npstr *);
 static Npfcall* np_default_mkdir(Npfid *, Npstr *, u32, u32);
 
 Npsrv*
-np_srv_create(int nwthread, int wtflags)
+np_srv_create(int nwthread, int flags)
 {
 	int i;
 	Npsrv *srv;
@@ -96,6 +96,7 @@ np_srv_create(int nwthread, int wtflags)
 	srv->remapuser = NULL;
 	srv->auth_required = NULL;
 	srv->auth = NULL;
+	srv->flags = flags;
 
 	srv->fiddestroy = NULL;
 
@@ -132,11 +133,10 @@ np_srv_create(int nwthread, int wtflags)
 	srv->reqs_last = NULL;
 	srv->workreqs = NULL;
 	srv->wthreads = NULL;
-	srv->debuglevel = 0;
 	srv->msg = NULL;
 	srv->nwthread = nwthread;
 	for(i = 0; i < nwthread; i++) {
-		if (np_wthread_create(srv, wtflags) < 0) {
+		if (np_wthread_create(srv) < 0) {
 			free (srv);
 			return NULL;
 		}
@@ -319,7 +319,7 @@ np_srv_remove_workreq(Npsrv *srv, Npreq *req)
 }
 
 static int
-np_wthread_create(Npsrv *srv, int flags)
+np_wthread_create(Npsrv *srv)
 {
 	int err;
 	Npwthread *wt;
@@ -331,7 +331,6 @@ np_wthread_create(Npsrv *srv, int flags)
 	wt->srv = srv;
 	wt->shutdown = 0;
 	wt->state = WT_START;
-	wt->flags = flags;
 	wt->fsuid = P9_NONUNAME;
 	wt->fsgid = P9_NONUNAME;
 	err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt);

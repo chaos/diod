@@ -184,7 +184,7 @@ again:
 			}
 			break;
 		}
-		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->msg)
+		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE) && srv->msg)
 			_debug_trace (srv, fc);
 
 		/* Replace fc, and copy any data past the current packet
@@ -371,7 +371,7 @@ np_conn_respond(Npreq *req)
 	pthread_mutex_unlock(&conn->lock);
 
 	if (send) {
-		if ((srv->debuglevel & DEBUG_9P_TRACE) && srv->msg)
+		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE) && srv->msg)
 			_debug_trace (srv, rc);
 		pthread_mutex_lock(&conn->wlock);
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);

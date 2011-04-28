@@ -48,6 +48,64 @@ np_version(Npreq *req, Npfcall *tc)
 				&tc->u.tversion.version);
 }
 
+static Npfid *
+_getfid_incref(Npreq *req, u32 fid)
+{
+	Npfid *f = NULL;
+
+	if (!(f = np_fid_find(req->conn, fid)))
+		goto done;
+	np_fid_incref(f);
+	req->fid = f;
+done:
+	if (f == NULL)
+		np_uerror(EIO);
+	return f;
+}
+
+static Npfid *
+_makefid_incref(Npreq *req, u32 fid)
+{
+	Npconn *conn = req->conn;
+	Npfid *f = NULL;
+
+	if (np_fid_find(conn, fid))
+		goto done;
+	if (!(f = np_fid_create(conn, fid, NULL)))
+		goto done;
+	np_fid_incref(f);
+done:
+	if (f == NULL)
+		np_uerror(EIO);
+	return f;
+}
+
+static int
+_authrequired (Npsrv *srv, Npstr *uname, u32 n_uname, Npstr *aname)
+{
+	if (!srv->auth_required || !srv->auth
+				|| !srv->auth->startauth
+				|| !srv->auth->checkauth) {
+		return 0;
+	}
+	return srv->auth_required (uname, n_uname, aname);
+}
+
+static int
+_str9dup (Npstr *str, char **sp)
+{
+	char *s = NULL;
+
+	if (str->len > 0) {
+		if (!(s = np_strdup (str))) {
+			np_uerror(ENOMEM);
+			return -1;
+		}
+	}
+	*sp = s;
+	return 0;
+}
+
 Npfcall *
 np_auth(Npreq *req, Npfcall *tc)
 {
@@ -57,48 +115,50 @@ np_auth(Npreq *req, Npfcall *tc)
 	Npfid *afid = NULL;
 	Npfcall *rc = NULL;
 	Npqid aqid;
+	char *client_id = np_conn_get_client_id (conn);
+	int auth_required = _authrequired(srv, &tc->u.tauth.uname,
+					       tc->u.tauth.n_uname,
+					       &tc->u.tauth.aname);
 
-	/* auth not required? */
-	if (!srv->auth_required || !srv->auth || !srv->auth->startauth
- 	 || !srv->auth->checkauth || !srv->auth_required (&tc->u.tauth.uname,
-							   tc->u.tauth.n_uname,
-							  &tc->u.tauth.aname)) {
+	if (!auth_required) {
 		np_uerror(EIO);
 		goto error;
 	}
-
-	if ((np_fid_find(conn, tc->u.tauth.afid))) {
+	if (_str9dup(&tc->u.tauth.aname, &aname) < 0) {
 		if (srv->msg)
-			srv->msg ("auth: afid is in use");
-		np_uerror(EIO);
+			srv->msg ("auth(%s:%.*s): out of memory",
+				  client_id,
+				  tc->u.tauth.aname.len,
+				  tc->u.tauth.aname.str);
 		goto error;
 	}
-	if (!(afid = np_fid_create(conn, tc->u.tauth.afid, NULL))) {
+	if (!(afid = _makefid_incref(req, tc->u.tauth.afid))) {
 		if (srv->msg)
-			srv->msg ("auth: failed to create afid");
+			srv->msg ("auth(%s:%s): invalid afid",
+				  client_id, aname ? aname : "<nil>");
 		goto error;
 	}
-	np_fid_incref(afid);
-
 	if (!(afid->user = np_attach2user (srv, &tc->u.tauth.uname,
 				     		 tc->u.tauth.n_uname))) {
+		if (srv->msg)
+			srv->msg ("auth(%s:%s): error looking up user",
+				  client_id, aname ? aname : "<nil>");
 		goto error;
-	}
-	if (tc->u.tauth.aname.len > 0) {
-		if (!(aname = np_strdup(&tc->u.tauth.aname))) {
-			if (srv->msg)
-				srv->msg ("auth: out of memory");
-			np_uerror (ENOMEM);
-			goto error;
-		}
 	}
 	afid->type = P9_QTAUTH;
-	if (!srv->auth->startauth(afid, aname, &aqid))
+	if (!srv->auth->startauth(afid, aname, &aqid)) {
+		if (srv->msg)
+			srv->msg ("auth(%s@%s:%s): startauth failed",
+				  afid->user->uname,
+				  client_id, aname ? aname : "<nil>");
 		goto error;
+	}
 	assert((aqid.type & P9_QTAUTH));
 	if (!(rc = np_create_rauth(&aqid))) {
 		if (srv->msg)
-			srv->msg ("auth: out of memory");
+			srv->msg ("auth(%s@%s:%s): out of memory",
+				  afid->user->uname,
+				  client_id, aname ? aname : "<nil>");
 		np_uerror(ENOMEM);
 		goto error;
 	}
@@ -118,71 +178,125 @@ np_attach(Npreq *req, Npfcall *tc)
 	Npsrv *srv = conn->srv;
 	Npfid *fid, *afid = NULL;
 	Npfcall *rc = NULL;
-	int auth_required = 1;
+	Npuser *mapuser = NULL;
+	char *client_id = np_conn_get_client_id (conn);
+	int auth_required = _authrequired(srv, &tc->u.tattach.uname,
+					       tc->u.tattach.n_uname,
+					       &tc->u.tattach.aname);
 
-	if (!srv->auth_required || !srv->auth || !srv->auth->startauth
- 	 || !srv->auth->checkauth || !srv->auth_required (&tc->u.tauth.uname,
-							   tc->u.tauth.n_uname,
-							  &tc->u.tauth.aname)) {
-		auth_required = 0;
-	}
-	if (!auth_required && tc->u.tattach.afid != P9_NOFID) {
-		np_uerror (EIO);
-		goto error;
-	}
-
-	if (np_fid_find(conn, tc->u.tattach.fid)) {
+	if (_str9dup(&tc->u.tattach.aname, &aname) < 0) {
 		if (srv->msg)
-			srv->msg ("attach: fid is in use");
-		np_uerror(EIO);
+			srv->msg ("attach(%s:%.*s): out of memory",
+				  client_id,
+				  tc->u.tattach.aname.len,
+				  tc->u.tattach.aname.str);
 		goto error;
 	}
-	if (!(fid = np_fid_create(conn, tc->u.tattach.fid, NULL))) {
+	if (!(fid = _makefid_incref(req, tc->u.tattach.fid))) {
 		if (srv->msg)
-			srv->msg ("attach: failed to create fid");
+			srv->msg ("attach(%s:%s): invalid fid",
+				  client_id, aname ? aname : "<nil>");
 		goto error;
 	}
-	np_fid_incref(fid);
 	req->fid = fid;
-
-	if (srv->remapuser)
-		fid->user = srv->remapuser(&tc->u.tattach.uname,
-				           tc->u.tattach.n_uname,
-				           &tc->u.tattach.aname);
-	if (!fid->user)
-		fid->user = np_attach2user (srv, &tc->u.tauth.uname,
-					          tc->u.tauth.n_uname);
-	if (!fid->user)
-		goto error;
-
-	if (tc->u.tattach.aname.len) {
-		if (!(aname = np_strdup(&tc->u.tattach.aname))) {
-			if (srv->msg)
-				srv->msg ("attach: out of memory");
-			np_uerror (ENOMEM);
-			goto error;
-		}
-	}
-
 	if (tc->u.tattach.afid != P9_NOFID) {
 		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
 			if (srv->msg)
-				srv->msg ("attach: invalid afid");
+				srv->msg ("attach(%s:%s): invalid afid",
+					  client_id, aname ? aname : "<nil>");
 			np_uerror(EPERM);
 			goto error;
 		}
 		np_fid_incref(afid);
 		if (!(afid->type & P9_QTAUTH)) {
 			if (srv->msg)
-				srv->msg ("attach: invalid afid type");
+				srv->msg ("attach(%s:%s): invalid afid type",
+					  client_id, aname ? aname : "<nil>");
 			np_uerror(EPERM);
 			goto error;
 		}
 	}
 	if (auth_required) {
-		if (srv->auth->checkauth(fid, afid, aname) == 0) {
+		fid->user = np_attach2user (srv, &tc->u.tauth.uname,
+					          tc->u.tauth.n_uname);
+		if (!fid->user) {
 			if (srv->msg)
-				srv->msg ("attach: authentication failed");
+				srv->msg ("attach(%s:%s): "
+					  "error looking up user",
+					  client_id,
+					  aname ? aname : "<nil>");
+			goto error;
+		}
+		if (afid) {
+			if (srv->auth->checkauth(fid, afid, aname) == 0) {
+				if (srv->msg)
+					srv->msg ("attach(%s@%s:%s): "
+						  "auth failed",
+						  fid->user->uname, client_id,
+						  aname ? aname : "<nil>");
+				goto error;
+			}
+			np_conn_set_authuser(conn, fid->user->uid);
+		} else {
+			u32 uid;
+
+			if (!(srv->flags & SRV_FLAGS_AUTHCONN)) {
+				if (srv->msg)
+					srv->msg ("attach(%s@%s:%s): auth "
+						  "reqired",
+						  fid->user->uname, client_id,
+						  aname ? aname : "<nil>");
+				np_uerror(EPERM);
+				goto error;
+			}
+			if (np_conn_get_authuser(conn, &uid) < 0) {
+				if (srv->msg)
+					srv->msg ("attach(%s@%s:%s): no auth "
+						  "state on this connection",
+						  fid->user->uname, client_id,
+						  aname ? aname : "<nil>");
+				np_uerror(EPERM);
+				goto error;
+			}
+			if (uid != 0 && uid != fid->user->uid) {
+				if (srv->msg)
+					srv->msg ("attach(%s@%s:%s): "
+						  "insufficient auth "
+						  "state on this connection",
+						  fid->user->uname, client_id,
+						  aname ? aname : "<nil>");
+				np_uerror(EPERM);
+				goto error;
+			}
+		}
+	}
+
+	if (srv->remapuser) {
+		if (srv->remapuser(&mapuser, &tc->u.tattach.uname,
+				              tc->u.tattach.n_uname,
+				             &tc->u.tattach.aname) < 0) {
+			if (srv->msg)
+				srv->msg ("attach(%s:%s): "
+					  "error remapping user",
+					  client_id,
+					  aname ? aname : "<nil>");
+			goto error;
+		}
+		if (mapuser) {
+			if (fid->user)
+				np_user_decref(fid->user);
+			fid->user = mapuser;
+		}
+	}
+	if (!fid->user) {
+		fid->user = np_attach2user (srv, &tc->u.tauth.uname,
+					          tc->u.tauth.n_uname);
+		if (!fid->user) {
+			if (srv->msg)
+				srv->msg ("attach(%s:%s): "
+					  "error looking up user",
+					  client_id,
+					  aname ? aname : "<nil>");
 			goto error;
 		}
 	}
@@ -498,21 +612,6 @@ done:
 	return rc;
 }
 
-static Npfid *
-_getfid_incref(Npreq *req, u32 fid)
-{
-	Npfid *f = NULL;
-
-	if (!(f = np_fid_find(req->conn, fid)))
-		goto done;
-	np_fid_incref(f);
-	req->fid = f;
-done:
-	if (f == NULL)
-		np_uerror(EIO);
-	return f;
-}
-	
 Npfcall *
 np_statfs(Npreq *req, Npfcall *tc)
 {

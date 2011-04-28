@@ -59,17 +59,17 @@
 
 #include "serv.h"
 
-static Npfile       *_ctl_root_create (void);
-static Npfcall      *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *aname);
-static Npuser       *_ctl_remapuser (Npstr *uname, u32 n_uname, Npstr *aname);
-static int         _ctl_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
+static Npfile   *_ctl_root_create (void);
+static Npfcall  *_ctl_attach (Npfid *fid, Npfid *nafid, Npstr *aname);
+static int       _ctl_remapuser (Npuser **up, Npstr *uname, u32 n_uname,
+                                 Npstr *aname);
+static int       _ctl_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 
 
 void
 diodctl_register_ops (Npsrv *srv)
 {
     npfile_init_srv (srv, _ctl_root_create ());
-    srv->debuglevel = diod_conf_get_debuglevel ();
     srv->msg = msg;
     srv->remapuser = _ctl_remapuser;
     srv->auth_required = _ctl_auth_required;
@@ -77,18 +77,21 @@ diodctl_register_ops (Npsrv *srv)
     srv->attach = _ctl_attach;
 }
 
-static Npuser*
-_ctl_remapuser (Npstr *uname, u32 n_uname, Npstr *aname)
+static int
+_ctl_remapuser (Npuser **up, Npstr *uname, u32 n_uname, Npstr *aname)
 {
     Npuser *user = NULL;
 
     if (diod_conf_get_allsquash ()) {
         char *squash = diod_conf_get_squashuser ();
 
-        if (!(user = np_uname2user (squash)))
+        if (!(user = np_uname2user (squash))) {
             msg ("ctl_remapuser: could not lookup squash user '%s'", squash);
+            return -1;
+        }
     }
-    return user;
+    *up = user;
+    return 0;
 }
 
 static int

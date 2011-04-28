@@ -223,7 +223,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	int ret = -1;
 	u32 gid;
 
-	if ((wt->flags & WT_FLAGS_SETFSID)) {
+	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
 			if (setfsgid (gid) < 0) {

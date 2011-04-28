@@ -236,7 +236,7 @@ int diod_conf_get_debuglevel (void) { return config.debuglevel; }
 int diod_conf_opt_debuglevel (void) { return config.ro_mask & RO_DEBUGLEVEL; }
 void diod_conf_set_debuglevel (int i)
 {
-    config.debuglevel = i;
+    config.debuglevel = i & 0xffff;
     config.ro_mask |= RO_DEBUGLEVEL;
 }
 

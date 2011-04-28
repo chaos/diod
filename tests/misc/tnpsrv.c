@@ -39,13 +39,13 @@ main (int argc, char *argv[])
     Npsrv *srv;
     Npconn *conn;
     Nptrans *trans;
+    int flags = SRV_FLAGS_DEBUG_9PTRACE;
 
     diod_log_init (argv[0]);
     diod_conf_init ();
 
-    if (!(srv = np_srv_create (16, 0)))
+    if (!(srv = np_srv_create (16, flags)))
         msg_exit ("out of memory");
-    srv->debuglevel |= DEBUG_9P_TRACE;
     srv->msg = msg;
     srv->auth = diod_auth;
     diod_conf_set_auth_required (0);

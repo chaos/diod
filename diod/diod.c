@@ -448,7 +448,7 @@ _service_run (srvmode_t mode, int Fopt)
 {
     List l = diod_conf_get_diodlisten ();
     int nwthreads = diod_conf_get_nwthreads ();
-    int wtflags = 0;
+    int flags = diod_conf_get_debuglevel ();
     int n;
 
     ss.shutdown = 0;
@@ -475,12 +475,12 @@ _service_run (srvmode_t mode, int Fopt)
         _daemonize (); /* implicit fork - no pthreads before this */
 
     if (!diod_conf_opt_runasuid () && !diod_conf_get_allsquash ())
-        wtflags |= WT_FLAGS_SETFSID;
+        flags |= SRV_FLAGS_SETFSID;
+    flags |= SRV_FLAGS_AUTHCONN;
 
-    if (!(ss.srv = np_srv_create (nwthreads, wtflags))) /* starts threads */
+    if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
         err_exit ("np_srv_create");
     diod_register_ops (ss.srv);
-
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL)))
         errn_exit (n, "pthread_create _service_loop");

@@ -175,16 +175,11 @@ struct Npreq {
 	Npwthread*	wthread;/* for requests that are worked on */
 };
 
-enum {
-	WT_FLAGS_SETFSID=1,
-};
-
 struct Npwthread {
 	Npsrv*		srv;
 	int		shutdown;
 	enum { WT_START, WT_IDLE, WT_WORK, WT_REPLY, WT_SHUT } state;
 	pthread_t	thread;
-	int		flags;
 	u32		fsuid;
 	u32		fsgid;
 	Npwthread	*next;
@@ -199,20 +194,23 @@ struct Npauth {
 };	
 
 enum {
-	DEBUG_9P_TRACE=1,
-	DEBUG_AUTH=2,
-	DEBUG_CONN=4,
+	/* lower u16 reserved for debug levels */
+	SRV_FLAGS_DEBUG_9PTRACE	=0x00000001,
+	SRV_FLAGS_DEBUG_AUTH	=0x00000002,
+	SRV_FLAGS_SETFSID	=0x00010000,
+	SRV_FLAGS_AUTHCONN	=0x00020000,
 };
+
 
 struct Npsrv {
 	u32		msize;
 	void*		srvaux;
 	void*		treeaux;
-	int		debuglevel;
 	void		(*msg)(const char *, ...);
-	Npuser*         (*remapuser)(Npstr *, u32, Npstr *);
+	int		(*remapuser)(Npuser **, Npstr *, u32, Npstr *);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
 	Npauth*		auth;
+	int		flags;
 
 	void		(*fiddestroy)(Npfid *);
 
@@ -272,7 +270,7 @@ struct Npuser {
 };
 
 /* srv.c */
-Npsrv *np_srv_create(int nwthread, int wtflags);
+Npsrv *np_srv_create(int nwthread, int flags);
 void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
 int np_srv_add_conn(Npsrv *, Npconn *);

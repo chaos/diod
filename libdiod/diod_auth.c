@@ -143,7 +143,7 @@ _da_destroy (da_t da)
 static int
 _auth_start(Npfid *afid, char *aname, Npqid *aqid)
 {
-    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
+    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
     int ret = 0;
 
     if (debug)
@@ -175,7 +175,7 @@ done:
 static int
 _auth_check(Npfid *fid, Npfid *afid, char *aname)
 {
-    int debug = (fid->conn->srv->debuglevel & DEBUG_AUTH);
+    int debug = (fid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
     da_t da;
     int ret = 0;
 
@@ -184,31 +184,7 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
              fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
 
     assert (fid != NULL);
-
-    /* afid will be NULL in attach (and here) in these cases:
-     * - we fail auth request (indicating auth not required)
-     * - primary attach of kernel on this conn after user space hand-off
-     * - secondary attach on this conn (v9fs access=user)
-     */
-    if (!afid) {
-        u32 uid;
-
-        if (np_conn_get_authuser (fid->conn, &uid) != 0) {
-            msg ("checkauth: attach by %s@%s to %s rejected: %s",
-                 fid->user->uname, np_conn_get_client_id (fid->conn),
-                 aname ? aname : "<nil>",
-                 "no credential and no prior auth state");
-                 np_uerror (EPERM);
-        } else if ((uid != 0 && fid->user->uid != uid)) {
-            msg ("checkauth: attach by %s@%s to %s rejected: %s",
-                 fid->user->uname, np_conn_get_client_id (fid->conn),
-                 aname ? aname : "<nil>",
-                 "no credential and insufficient prior auth state");
-                 np_uerror (EPERM);
-        } else
-            ret = 1;
-        goto done;
-    }
+    assert (afid != NULL);
     assert (afid->aux != NULL);
     da = afid->aux;
     assert (da->magic == DIOD_AUTH_MAGIC);
@@ -232,7 +208,6 @@ _auth_check(Npfid *fid, Npfid *afid, char *aname)
         np_uerror (EPERM);
         goto done;
     }
-    np_conn_set_authuser (fid->conn, afid->user->uid);
     ret = 1;
 done:
     return ret;
@@ -241,7 +216,7 @@ done:
 static int
 _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
+    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
 
     if (debug)
         msg ("_auth_read: afid %d", afid ? afid->fid : -1);
@@ -252,7 +227,7 @@ _auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
 static int
 _auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
+    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
     da_t da = afid->aux;
     int ret = -1;
 
@@ -302,7 +277,7 @@ done:
 static int
 _auth_clunk(Npfid *afid)
 {
-    int debug = (afid->conn->srv->debuglevel & DEBUG_AUTH);
+    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
     da_t da = afid->aux;
 
     if (debug)
