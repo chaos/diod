@@ -1,3 +1,9 @@
+1.0-pre25:
+	Fix the allsquash option and add 'squashuser' config option.
+	Avoid unneded calls to setgroups/setfsuid/setfsgid.
+	Improved logging for authentication and user handling.
+	Cleanup.
+
 1.0-pre24:
 	Fix fid refcounting bug in remove handler (issue 29)
 	Add more verbose logging in auth path (issue 28)
