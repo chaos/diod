@@ -395,10 +395,10 @@ _service_run (srvmode_t mode)
                 msg_exit ("failed to set up listen ports");
             break;
     }
-    if (!diod_conf_get_foreground () && mode != SRV_NORMAL)
-        diod_log_set_dest (diod_conf_get_logdest ());
-    if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
+    if (!diod_conf_get_foreground () && mode == SRV_NORMAL) {
         _daemonize (); /* implicit fork - no pthreads before this */
+        diod_log_set_dest (diod_conf_get_logdest ());
+    }
 
     flags |= SRV_FLAGS_AUTHCONN;
 
