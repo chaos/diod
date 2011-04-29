@@ -1,3 +1,6 @@
+1.0-pre26:
+	Reopen logs after daemonization.
+
 1.0-pre25:
 	Fix the allsquash option and add 'squashuser' config option.
 	Avoid unneded calls to setgroups/setfsuid/setfsgid.
