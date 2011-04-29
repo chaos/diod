@@ -65,6 +65,8 @@ np_fidpool_destroy(Npfidpool *pool)
 		while (f != NULL) {
 			ff = f->next;
 			srv = f->conn->srv;
+			np_logmsg (srv, "fid %d not clunked (from %s)", f->fid,
+				   np_conn_get_client_id(f->conn));
 			if (f->type & P9_QTAUTH && srv->auth && srv->auth->clunk)
 				(*srv->auth->clunk)(f);
 			else if (!(f->type & P9_QTAUTH) && srv->fiddestroy)
@@ -143,6 +145,8 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 		f->fid = fid;
 		f->conn = conn;
 		f->refcount = 0;
+		if ((conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
+			np_logmsg (conn->srv, "fid_create: fid %d", f->fid);
 		f->type = 0;
 		f->user = NULL;
 		f->aux = aux;
@@ -189,6 +193,8 @@ np_fid_destroy(Npfid *fid)
 
 	pthread_mutex_unlock(&fp->lock);
 
+	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
+		np_logmsg (fid->conn->srv, "fid_destroy: fid %d", fid->fid);
 	if (fid->type & P9_QTAUTH && srv->auth && srv->auth->clunk)
 		(*srv->auth->clunk)(fid);
 	else if (!(fid->type & P9_QTAUTH) && srv->fiddestroy)
@@ -210,6 +216,9 @@ np_fid_incref(Npfid *fid)
 
 	pthread_mutex_lock(&fid->lock);
 	fid->refcount++;
+	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
+		np_logmsg (fid->conn->srv, "fid_incref: fid %d ref=%d",
+			   fid->fid, fid->refcount);
 	pthread_mutex_unlock(&fid->lock);
 }
 
@@ -223,6 +232,9 @@ np_fid_decref(Npfid *fid)
 
 	pthread_mutex_lock(&fid->lock);
 	n = --fid->refcount;
+	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
+		np_logmsg (fid->conn->srv, "fid_decref: fid %d ref=%d",
+			   fid->fid, fid->refcount);
 	pthread_mutex_unlock(&fid->lock);
 
 	if (!n)
