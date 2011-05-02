@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]; then
+    echo "Usage: memcheck prog [args...]" >&2
+    exit 1
+fi
+
+if which valgrind >/dev/null 2>&1; then
+    valgrind --error-exitcode=1 --tool=memcheck --leak-check=yes --quiet $*
+else
+    export MALLOC_CHECK_=3; $*
+fi
+

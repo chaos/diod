@@ -18,13 +18,13 @@ t04	Demonstrate that fcntl advisory locking does not treat threads
 	of multiple remote processes.
 t05	Unit test for diodmount option handling module.
 t06(@)	Unit test for parsing diod.conf.
-t07(+)	Use valgrind to check for leaks in libnpfs serialize/deserialize
-t08(+@)	Use valgrind to check for leaks in libdiod conf/log
-t09(+)	Use valgrind to check for leaks in list package
+t07   	Check for memory problems in libnpfs serialize/deserialize
+t08(@)	Check for memory problems in libdiod conf/log
+t09   	Check for memory problems in list package
 	Actually this was to run down a specific case, now fixed.
-t10(+)	Use valgrind to check for leaks in a skeletal libnpfs server
-t11(+)	Use valgrind to check for leaks in a skeletal libnpclient client
+t10	Check for memory problems in a skeletal libnpfs server
+t11	Check for memory problems in a skeletal libnpclient client
+t12	Check for memory problems in a skeletal libnpfs synthetic file server
 
 (*) NOTRUN if not run as root
-(+) NOTRUN if valgrind is not installed
 (@) NOTRUN if lua is not installed

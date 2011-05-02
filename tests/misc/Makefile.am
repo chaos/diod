@@ -55,4 +55,4 @@ tnpcli_SOURCES = tnpcli.c $(common_sources)
 tnpfile_SOURCES = tnpfile.c $(common_sources)
 tlua_SOURCES = tlua.c $(common_sources) 
 
-EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) t06.conf t08.conf
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf
