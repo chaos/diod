@@ -95,6 +95,7 @@ _alloc_user (struct passwd *pwd)
 		goto error;
 	}
 	u->uid = pwd->pw_uid;
+	u->gid = pwd->pw_gid;
 	u->nsg = sizeof (u->sg) / sizeof (u->sg[0]);
 	if (getgrouplist(pwd->pw_name, pwd->pw_gid, u->sg, &u->nsg) == -1) {
 		np_uerror (EPERM); /* user is in too many groups */
