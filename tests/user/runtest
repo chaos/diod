@@ -19,6 +19,8 @@ umask 022
 PATH_EXPDIR=$(mktemp -d) || exit 1
 export PATH_EXPDIR
 
+export MALLOC_CHECK_=3
+
 ./conjoin \
     "$PATH_DIOD -s -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
     "$TEST $PATH_EXPDIR" \
