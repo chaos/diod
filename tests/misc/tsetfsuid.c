@@ -1,5 +1,12 @@
 /* tsetfsuid.c - check that pthreads can independently setfsuid */
 
+/* N.B. error handling for setfsuid/setfsgid is broken in the kernel.
+ * Two errors can be detected:
+ * - return -1 with errno set (EINVAL)
+ * - return of value != previous fsuid/fsgid
+ * However, they can silently fail, e.g. if process doesn't have CAP_SETUID.
+ */
+
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -44,11 +51,26 @@ check_fsid (char *s, uid_t uid, gid_t gid)
 }
 
 static void
-change_fsid (char *s, uid_t uid, gid_t gid)
+change_fsid (char *s, uid_t fromuid, gid_t fromgid, uid_t uid, gid_t gid)
 {
+    uid_t u;
+    gid_t g;
+
     msg ("%s: changing to %d:%d", s, uid, gid);
-    setfsuid (uid);
-    setfsgid (gid);
+    if (fromuid != uid) {
+        u = setfsuid (uid);
+        if (u == -1)
+            err ("%s: setfsuid", s);
+        else if (u != fromuid)
+            msg ("%s: setfsuid returned %d (wanted %d)", s, u, fromuid);
+    }
+    if (fromgid != gid) {
+        g = setfsgid (gid);
+        if (g == -1)
+            err ("%s: setfsgid", s);
+        if (g != fromgid)
+            msg ("%s: setfsgid returned %d (wanted %d)", s, g, fromgid);
+    }
 }
 
 static void
@@ -75,7 +97,7 @@ static void *proc1 (void *a)
     change_state (S1);
     wait_state (S2);
     assert (check_fsid ("task1", 0, 0));
-    change_fsid ("task1", TEST_UID, TEST_GID);
+    change_fsid ("task1", 0, 0, TEST_UID, TEST_GID);
     assert (check_fsid ("task1", TEST_UID, TEST_GID));
     change_state (S3);
     wait_state (S4);
@@ -87,11 +109,11 @@ static void *proc2 (void *a)
 {
     wait_state (S1);
     assert (check_fsid ("task2", 0, 0));
-    change_fsid ("task2", TEST_UID, TEST_GID);
+    change_fsid ("task2", 0, 0, TEST_UID, TEST_GID);
     assert (check_fsid ("task2", TEST_UID, TEST_GID));
     change_state (S2);
     wait_state (S3);
-    change_fsid ("task2", 0, 0);
+    change_fsid ("task2", TEST_UID, TEST_GID, 0, 0);
     assert (check_fsid ("task2", 0, 0));
     change_state (S4);
     return NULL;

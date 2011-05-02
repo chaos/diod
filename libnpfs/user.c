@@ -214,21 +214,34 @@ done:
 	return u;
 }
 
+/* Note: it is possible for setfsuid/setfsgid to fail silently,
+ * e.g. if user doesn't have CAP_SETUID/CAP_SETGID.
+ */
 int
 np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
 	Npwthread *wt = req->wthread;
 	Npsrv *srv = req->conn->srv;
+	uid_t ret_u, exp_u;
+	gid_t ret_g, exp_g;
 	int ret = -1;
 	u32 gid;
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
-			if (setfsgid (gid) < 0) {
+			exp_g = wt->fsgid == P9_NONUNAME ? 0 : wt->fsgid;
+			if ((ret_g = setfsgid (gid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
 					   u->uname, gid);
+				goto done;
+			}
+			if (ret_g != exp_g) {
+				np_uerror (errno);
+				np_logerr (srv, "setfsgid(%s) gid=%d failed"
+					   "returned %d, expected %d",
+					   u->uname, gid, ret_g, exp_g);
 				goto done;
 			}
 			wt->fsgid = gid;
@@ -240,10 +253,18 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 					   u->uname, u->nsg);
 				goto done;
 			}
-			if (setfsuid (u->uid) < 0) {
+			exp_u = wt->fsuid == P9_NONUNAME ? 0 : wt->fsuid;
+			if ((ret_u = setfsuid (u->uid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
 					   u->uname, u->uid);
+				goto done;
+			}
+			if (ret_u != exp_u) {
+				np_uerror (EPERM);
+				np_logerr (srv, "setfsuid(%s) uid=%d failed: "
+					   "returned %d, expected %d",
+					   u->uname, u->uid, ret_u, exp_u);
 				goto done;
 			}
 			wt->fsuid = u->uid;

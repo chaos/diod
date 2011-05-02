@@ -70,10 +70,25 @@ read_file (char *path)
 }
 
 static void
-change_fsid (uid_t uid, gid_t gid)
+change_fsid (uid_t olduid, gid_t oldgid, uid_t uid, gid_t gid)
 {
-    setfsuid (uid);
-    setfsgid (gid);
+    uid_t u;
+    gid_t g;
+
+    if (uid != olduid) {
+        u = setfsuid (uid);
+        if (u == -1)
+            err ("setfsuid");
+        else if (u != olduid)
+            msg ("setfsuid returned %d (wanted %d)", u, olduid);
+    }
+    if (gid != oldgid) {
+        g = setfsgid (gid);
+        if (g == -1)
+            err ("setfsgid");
+        else if (g != oldgid)
+            msg ("setfsgid returned %d (wanted %d)", g, oldgid);
+    }
     if (!check_fsid (uid, gid))
         msg_exit ("setfsuid/setfsgid failed");
     msg ("fsid changed to %d:%d", uid, gid);
@@ -95,13 +110,13 @@ int main(int argc, char *argv[])
     assert (geteuid () == 0);
     path = create_file (0, TEST_SGID, 0440);
 
-    change_fsid (TEST_UID, TEST_GID);
+    change_fsid (0, 0, TEST_UID, TEST_GID);
     assert (!read_file (path));
 
-    change_fsid (TEST_UID, TEST_SGID);
+    change_fsid (TEST_UID, TEST_GID, TEST_UID, TEST_SGID);
     assert (read_file (path));
 
-    change_fsid (TEST_UID, TEST_GID);
+    change_fsid (TEST_UID, TEST_SGID, TEST_UID, TEST_GID);
     assert (!read_file (path));
 
     /* set TEST_SGID in supplemental groups */
