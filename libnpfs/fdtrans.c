@@ -58,7 +58,6 @@ np_fdtrans_create(int fdin, int fdout)
 		return NULL;
 	}
 
-	//fprintf(stderr, "np_fdtrans_create trans %p fdtrans %p\n", npt, fdt);
 	fdt->fdin = fdin;
 	fdt->fdout = fdout;
 	npt = np_trans_create(fdt, np_fdtrans_read, np_fdtrans_write,
@@ -81,7 +80,7 @@ np_fdtrans_destroy(void *a)
 	if (fdt->fdin >= 0)
 		close(fdt->fdin);
 
-	if (fdt->fdout >= 0)
+	if (fdt->fdout >= 0 && fdt->fdout != fdt->fdin)
 		close(fdt->fdout);
 
 	free(fdt);
@@ -104,6 +103,5 @@ np_fdtrans_write(u8 *data, u32 count, void *a)
 
 	fdt = a;
 	ret = write(fdt->fdout, data, count);
-//	fprintf(stderr, "np_fdtrans_write fd %d datalen %d count %d\n", fdt->fdout, count, ret);
 	return ret;
 }	
