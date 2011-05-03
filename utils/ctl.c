@@ -193,12 +193,12 @@ ctl_query (char *host, char *jobid, char **portp, List *exportsp)
         errn (np_rerror (), "version");
         goto error;
     }
-    if (!(afid = npc_auth (fs, NULL, "/diodctl", geteuid (),
+    if (!(afid = npc_auth (fs, "/diodctl", geteuid (),
                            diod_auth_client_handshake)) && np_rerror () != 0) {
         errn (np_rerror (), "auth");
         goto error;
     }
-    if (!(root = npc_attach (fs, afid, NULL, "/diodctl", geteuid ()))) {
+    if (!(root = npc_attach (fs, afid, "/diodctl", geteuid ()))) {
         errn (np_rerror (), "attach");
         goto error;
     }

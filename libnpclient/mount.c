@@ -81,14 +81,14 @@ done:
 }
 
 Npcfid*
-npc_auth (Npcfsys *fs, char *uname, char *aname, u32 uid, AuthFun auth)
+npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth)
 {
         Npcfid *afid = NULL;
         Npfcall *tc = NULL, *rc = NULL;
 
         if (!(afid = npc_fid_alloc (fs)))
                 goto done;
-        if (!(tc = np_create_tauth (afid->fid, uname, aname, uid))) {
+        if (!(tc = np_create_tauth (afid->fid, NULL, aname, uid))) {
 		np_uerror (ENOMEM);
 		npc_fid_free (afid);
 		afid = NULL;
@@ -115,7 +115,7 @@ done:
 }
 
 Npcfid *
-npc_attach (Npcfsys *fs, Npcfid *afid, char *uname, char *aname, uid_t uid)
+npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid)
 {
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
@@ -123,7 +123,7 @@ npc_attach (Npcfsys *fs, Npcfid *afid, char *uname, char *aname, uid_t uid)
 	if (!(fid = npc_fid_alloc (fs)))
 		goto done;
 	if (!(tc = np_create_tattach (fid->fid, afid ? afid->fid : P9_NOFID,
-				      uname, aname, uid))) {
+				      NULL, aname, uid))) {
 		np_uerror (ENOMEM);
 		goto done;
 	}
@@ -171,12 +171,11 @@ npc_mount (int fd, int msize, char *aname, AuthFun auth)
 
 	if (!(fs = npc_start (fd, msize)))
 		return NULL;
-	if (!(afid = npc_auth (fs, NULL, aname, geteuid (), auth))
-                                                   && np_rerror () != 0) {
+	if (!(afid = npc_auth (fs, aname, geteuid (), auth)) && np_rerror ()) {
 		npc_finish (fs);
 		return NULL;
 	}
-	if (!(fid = npc_attach (fs, afid, NULL, aname, geteuid ()))) {
+	if (!(fid = npc_attach (fs, afid, aname, geteuid ()))) {
 		int saved_err = np_rerror ();
 		if (afid)
 			(void)npc_clunk (afid);

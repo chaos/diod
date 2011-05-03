@@ -74,10 +74,10 @@ main (int argc, char *argv[])
 
     if (!(fs = npc_start (fd, 65536+24)))
         errn_exit (np_rerror (), "npc_start");
-    if (!(afid = npc_auth (fs, NULL, aname, geteuid (),
+    if (!(afid = npc_auth (fs, aname, geteuid (),
                            diod_auth_client_handshake)) && np_rerror () != 0)
         errn_exit (np_rerror (), "npc_auth");
-    if (!(root = npc_attach (fs, afid, NULL, aname, geteuid ())))
+    if (!(root = npc_attach (fs, afid, aname, geteuid ())))
         errn_exit (np_rerror (), "npc_attach");
     if (afid && npc_clunk (afid) < 0)
         errn (np_rerror (), "npc_clunk afid");

@@ -82,7 +82,7 @@ static const struct option longopts[] = {
 #endif
 
 #define DIOD_DEFAULT_MSIZE 65512
-static void _become_user (char *uname);
+static uid_t _uname2uid (char *uname);
 static void _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt,
                          int fopt, int nopt);
 static void _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt);
@@ -167,7 +167,8 @@ main (int argc, char *argv[])
      * The uname user becomes the euid which will be used by munge auth.
      */
     _parse_uname_access (o);
-    _become_user (opt_find (o, "uname"));
+     if (seteuid (_uname2uid (opt_find (o, "uname"))) < 0)
+        err_exit ("seteuid");
 
     /* We require -otrans=fd because auth occurs in user space, then live fd
      * is passed to the kernel via -orfdno,wfdno.
@@ -281,16 +282,14 @@ done:
     exit (0);
 }
 
-/* Running as root.  Need to set effective uid to the named one.
- */
-static void
-_become_user (char *uname)
+static uid_t
+_uname2uid (char *uname)
 {
     struct passwd *pw;
 
     if (!(pw = getpwnam (uname)))
         msg_exit ("could not look up uname='%s'", uname);
-    seteuid (pw->pw_uid);
+    return pw->pw_uid;
 }
 
 static hostlist_t
@@ -488,6 +487,7 @@ static void
 _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
 {
     char *options, *options9p, *aname, *uname;
+    uid_t uid;
     int msize;
     Npcfsys *fs;
     Npcfid *afid, *root;
@@ -499,6 +499,7 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
 
     if (!(uname = opt_find (o, "uname")))
         msg_exit ("uname is not set"); /* can't happen */
+    uid = _uname2uid (uname);
     if (!(aname = opt_find (o, "aname")))
         msg_exit ("aname is not set"); /* can't happen */
     if (!opt_scanf (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
@@ -508,10 +509,10 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
         msg ("pre-authenticating connection to server");
     if (!(fs = npc_start (fd, msize)))
 	errn_exit (np_rerror (), "version");
-    if (!(afid = npc_auth (fs, uname, aname, P9_NONUNAME,
+    if (!(afid = npc_auth (fs, aname, uid,
 			   diod_auth_client_handshake)) && np_rerror () != 0)
         errn_exit (np_rerror (), "auth");
-    if (!(root = npc_attach (fs, afid, uname, aname, P9_NONUNAME)))
+    if (!(root = npc_attach (fs, afid, aname, uid)))
         errn_exit (np_rerror (), "attach");
     if (afid && npc_clunk (afid) < 0)
         errn_exit (np_rerror (), "clunk afid");

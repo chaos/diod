@@ -45,21 +45,18 @@ Npcfsys* npc_start(int fd, int msize);
  */
 void npc_finish (Npcfsys *fs);
 
-/* Obtain an afid from the server using an AUTH request.
- * Call the 'auth' function on the afid to establish it as a credential.
+/* Obtain an afid from the server using an AUTH request, then
+ * call the 'auth' function on the afid to establish it as a credential.
  * Return afid or NULL on error (retrieve with np_rerror ()).
  * Also returns NULL if auth is not required (and np_rerror () == 0).
  */
-Npcfid* npc_auth (Npcfsys *fs, char *uname, char *aname, u32 uid,
-                  AuthFun auth);
+Npcfid* npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth);
 
 /* Obtain a fid from the server for the specified aname with an ATTACH request.
- * Optionally present 'afid' as an authentication credential.  Either uname
- * or uid must be presented.  Set either uname to NULL or uid to P9_NONUNAME.
+ * Optionally present 'afid' as an authentication credential.
  * Returns fid or NULL on error (retrieve with np_rerror ()).
  */
-Npcfid *npc_attach(Npcfsys *fs, Npcfid *afid, char *uname, char *aname,
-                   uid_t uid);
+Npcfid *npc_attach(Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid);
 
 /* Tell the server to forget about 'fid'.
  * Return 0 on success, -1 on error (retrieve with np_rerror ()).
