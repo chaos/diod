@@ -513,7 +513,10 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
         errn_exit (np_rerror (), "auth");
     if (!(root = npc_attach (fs, afid, uname, aname, P9_NONUNAME)))
         errn_exit (np_rerror (), "attach");
-    (void)npc_clunk (root);
+    if (afid && npc_clunk (afid) < 0)
+        errn_exit (np_rerror (), "clunk afid");
+    if (npc_clunk (root) < 0)
+        errn_exit (np_rerror (), "clunk root");
     if (vopt)
         msg ("mount -t 9p %s %s -o%s", spec, dir, options);
     if (!fopt)

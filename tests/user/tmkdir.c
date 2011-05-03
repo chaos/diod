@@ -79,12 +79,14 @@ main (int argc, char *argv[])
         errn_exit (np_rerror (), "npc_auth");
     if (!(root = npc_attach (fs, afid, NULL, aname, geteuid ())))
         errn_exit (np_rerror (), "npc_attach");
+    if (afid && npc_clunk (afid) < 0)
+        errn (np_rerror (), "npc_clunk afid");
 
     if (_mkdir_p (root, path, 0755) < 0)
         errn_exit (np_rerror (), "mkdir");
 
     if (npc_clunk (root) < 0)
-        errn_exit (np_rerror (), "npc_clunk");
+        errn_exit (np_rerror (), "npc_clunk root");
     npc_finish (fs);
 
     exit (0);

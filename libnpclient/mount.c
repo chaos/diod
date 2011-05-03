@@ -184,6 +184,8 @@ npc_mount (int fd, int msize, char *aname, AuthFun auth)
 		np_uerror (saved_err);
 		return NULL;
 	}
+	if (afid)
+		(void)npc_clunk (afid);
 	return fid;
 };
 

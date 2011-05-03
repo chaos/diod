@@ -202,6 +202,8 @@ ctl_query (char *host, char *jobid, char **portp, List *exportsp)
         errn (np_rerror (), "attach");
         goto error;
     }
+    if (afid && npc_clunk (afid) < 0)
+        errn (np_rerror (), "clunk afid");
     if (portp && !(port = _getport (root, jobid)))
         goto error;
     if (exportsp && !(exports = _getexports (root)))
