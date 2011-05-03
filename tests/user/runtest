@@ -18,7 +18,11 @@ if [ "`basename $TEST`" = "t11" ] && [ $(id -u) != 0 ]; then
     echo "t11 requires root" >$TEST.out
     exit 77
 fi
-
+# Special case for t11 which requires non-root
+if [ "`basename $TEST`" = "t12" ] && [ $(id -u) == 0 ]; then
+    echo "t12 requires non-root" >$TEST.out
+    exit 77
+fi
 
 rm -f $TEST.diod $TEST.out
 ulimit -c unlimited

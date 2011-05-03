@@ -24,6 +24,7 @@
 
 const int fd = 0; /* stdin */
 const int numgetattrs = 16;
+const int iterations = 2;
 
 typedef struct {
     Npcfsys *fs;
@@ -48,28 +49,30 @@ client (void *arg)
     thd_t *t = (thd_t *)arg;
     Npcfid *afid = NULL, *root;
     struct stat sb;
-    int i;
+    int i, j;
 
-    if (!(afid = npc_auth (t->fs, t->aname, t->uid,
-                           diod_auth_client_handshake)) && np_rerror () != 0) {
-        errn (np_rerror (), "npc_auth");
-        goto done;
-    }
-    if (!(root = npc_attach (t->fs, afid, t->aname, t->uid))) {
-        errn (np_rerror (), "npc_attach");
-        goto done;
-    }
-    if (afid && npc_clunk (afid) < 0)
-        errn (np_rerror (), "npc_clunk afid");
-    for (i = 0; i < numgetattrs; i++) {
-        if (npc_getattr (root, &sb) < 0) {
-            errn (np_rerror (), "npc_getattr");
+    for (j = 0; j < iterations; j++) {
+        if (!(afid = npc_auth (t->fs, t->aname, t->uid,
+                         diod_auth_client_handshake)) && np_rerror () != 0) {
+            errn (np_rerror (), "npc_auth");
             goto done;
         }
-    }
-    if (npc_clunk (root) < 0) {
-        errn (np_rerror (), "npc_clunk root");
-        goto done;
+        if (!(root = npc_attach (t->fs, afid, t->aname, t->uid))) {
+            errn (np_rerror (), "npc_attach");
+            goto done;
+        }
+        if (afid && npc_clunk (afid) < 0)
+            errn (np_rerror (), "npc_clunk afid");
+        for (i = 0; i < numgetattrs; i++) {
+            if (npc_getattr (root, &sb) < 0) {
+                errn (np_rerror (), "npc_getattr");
+                goto done;
+            }
+        }
+        if (npc_clunk (root) < 0) {
+            errn (np_rerror (), "npc_clunk root");
+            goto done;
+        }
     }
 done:
     return NULL;

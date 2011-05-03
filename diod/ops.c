@@ -518,6 +518,14 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         msg ("diod_attach: out of memory");
         goto done;
     }
+    if (diod_conf_opt_runasuid ()) {
+        uid_t onlyuid = diod_conf_get_runasuid ();
+        if (fid->user->uid != onlyuid) {
+            np_uerror (EPERM);
+            msg ("diod_attach: server runs exclusively for uid=%d", onlyuid);
+            goto done;
+        }
+    }
     if (!_match_exports (f->path, fid->conn, fid->user, &f->xflags)) {
         msg ("diod_attach: %s not exported", f->path);
         goto done;

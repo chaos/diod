@@ -23,7 +23,7 @@
 static void
 usage (void)
 {
-    fprintf (stderr, "Usage: tattach aname\n");
+    fprintf (stderr, "Usage: tattach [uid] aname\n");
     exit (1);
 }
 
@@ -34,19 +34,25 @@ main (int argc, char *argv[])
     Npcfid *afid, *root;
     char *aname;
     int fd = 0; /* stdin */
+    uid_t uid = geteuid ();
 
     diod_log_init (argv[0]);
 
-    if (argc != 2)
+    if (argc != 2 && argc != 3)
         usage ();
-    aname = argv[1];
+    if (argc == 3) {
+        uid = strtoul (argv[1], NULL, 10);
+        aname = argv[2];
+    } else {
+        aname = argv[1];
+    }
 
     if (!(fs = npc_start (fd, 8192+24, 0)))
         errn_exit (np_rerror (), "npc_start");
-    if (!(afid = npc_auth (fs, aname, geteuid (),
+    if (!(afid = npc_auth (fs, aname, uid,
                            diod_auth_client_handshake)) && np_rerror () != 0)
         errn_exit (np_rerror (), "npc_auth");
-    if (!(root = npc_attach (fs, afid, aname, geteuid ())))
+    if (!(root = npc_attach (fs, afid, aname, uid)))
         errn_exit (np_rerror (), "npc_attach");
     if (afid && npc_clunk (afid) < 0)
         errn (np_rerror (), "npc_clunk afid");

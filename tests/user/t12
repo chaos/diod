@@ -1,0 +1,8 @@
+#!/bin/bash
+
+uid=$(id -u daemon) || exit 1
+[ $(id -u) != $uid ] || exit 1
+[ $(id -u) != 0 ] || exit 1
+
+# should fail - diod is running as "me" only and $uid is not me
+./tattach $uid "$@"
