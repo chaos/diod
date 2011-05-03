@@ -1,6 +1,7 @@
 check_PROGRAMS = \
 	conjoin \
 	tattach \
+	tattachmt \
 	tmkdir \
 	tread \
 	tstat \
@@ -11,7 +12,7 @@ TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
 TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
 TESTS_ENVIRONMENT += "./runtest"
 
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
 
 $(TESTS): exp.d
 
@@ -38,7 +39,7 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
 common_sources =
 
 conjoin_SOURCES = conjoin.c $(common_sources)
-tattach_SOURCES = tattach.c $(common_sources)
+tattachmt_SOURCES = tattachmt.c $(common_sources)
 tmkdir_SOURCES = tmkdir.c $(common_sources)
 tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)

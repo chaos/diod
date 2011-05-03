@@ -55,7 +55,7 @@ npc_create (Npcfid *fid, char *name, u32 flags, u32 mode)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	fid->iounit = rc->u.rlcreate.iounit;
 	if (!fid->iounit == 0 || fid->iounit > maxio)
@@ -115,7 +115,7 @@ npc_open (Npcfid *fid, u32 mode)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	fid->iounit = rc->u.rlopen.iounit;
 	if (fid->iounit == 0 || fid->iounit > maxio)

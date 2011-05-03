@@ -45,22 +45,28 @@
 void
 npc_finish (Npcfsys *fs)
 {
-	npc_decref_fsys (fs);
+	if (fs->disconnect)
+		fs->disconnect (fs);
+	fs->decref (fs);
 }
 
 Npcfsys*
-npc_start (int fd, int msize)
+npc_start (int fd, int msize, int flags)
 {
 	Npcfsys *fs;
 	Npfcall *tc = NULL, *rc = NULL;
 
-	if (!(fs = npc_create_fsys (fd, msize)))
+	if ((flags & NPC_MULTI_RPC))
+		fs = npc_create_mtfsys (fd, msize);
+	else 
+		fs = npc_create_fsys (fd, msize);
+	if (!fs)
 		goto done;
 	if (!(tc = np_create_tversion (msize, "9P2000.L"))) {
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc (fs, tc, &rc) < 0)
+	if (fs->rpc (fs, tc, &rc) < 0)
 		goto done;
 	if (rc->u.rversion.msize < msize)
 		fs->msize = rc->u.rversion.msize;
@@ -94,7 +100,7 @@ npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth)
 		afid = NULL;
                 goto done;
 	}
-        if (npc_rpc (afid->fsys, tc, &rc) < 0) {
+        if (afid->fsys->rpc (afid->fsys, tc, &rc) < 0) {
 		npc_fid_free (afid);
 		afid = NULL;
 		goto done;
@@ -127,7 +133,7 @@ npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc (fs, tc, &rc) < 0)
+	if (fs->rpc (fs, tc, &rc) < 0)
 		goto done;
 done:
 	if (tc)
@@ -151,7 +157,7 @@ npc_clunk (Npcfid *fid)
 		np_uerror (ENOMEM);
                 goto done;
 	}
-        if (npc_rpc (fid->fsys, tc, &rc) < 0)
+        if (fid->fsys->rpc (fid->fsys, tc, &rc) < 0)
                 goto done;
         npc_fid_free(fid);
 	ret = 0;
@@ -169,7 +175,7 @@ npc_mount (int fd, int msize, char *aname, AuthFun auth)
 	Npcfsys *fs;
 	Npcfid *afid, *fid;
 
-	if (!(fs = npc_start (fd, msize)))
+	if (!(fs = npc_start (fd, msize, 0)))
 		return NULL;
 	if (!(afid = npc_auth (fs, aname, geteuid (), auth)) && np_rerror ()) {
 		npc_finish (fs);

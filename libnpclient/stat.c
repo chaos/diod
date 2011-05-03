@@ -54,7 +54,7 @@ npc_getattr (Npcfid *fid, struct stat *sb)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	sb->st_dev = 0;
 	sb->st_ino = rc->u.rgetattr.qid.path;

@@ -6,6 +6,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 TEST=$1
+rm -f $TEST.out $TEST.diod
 
 if [ -z "$PATH_DIODMOUNT" ]; then
     echo "PATH_DIODMOUNT is not set" 2>&1

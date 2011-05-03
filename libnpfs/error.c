@@ -33,53 +33,26 @@
 #include "9p.h"
 #include "npfs.h"
 
-typedef struct Nperror Nperror;
-struct Nperror {
-	int	ecode;
-};
-
 static pthread_key_t error_key;
 static pthread_once_t error_once = PTHREAD_ONCE_INIT;
 
 static void
-np_destroy_error(void *a)
-{
-	Nperror *err;
-
-	err = a;
-	free(err);
-}
-
-static void
 np_init_error_key(void)
 {
-	pthread_key_create(&error_key, np_destroy_error);
+	pthread_key_create(&error_key, NULL);
 }
 
 void
 np_uerror(int ecode)
 {
-	struct Nperror *err;
-
 	pthread_once(&error_once, np_init_error_key);
-	err = pthread_getspecific(error_key);
-	if (!err) {
-		err = malloc(sizeof(*err));
-		if (!err)
-			return;
-		pthread_setspecific(error_key, err);
-	}
-	err->ecode = ecode;
+	pthread_setspecific(error_key, (void *)ecode);
 }
 
 int
 np_rerror(void)
 {
-	Nperror *err;
-
 	pthread_once(&error_once, np_init_error_key);
-	err = pthread_getspecific(error_key);
-
-	return err ? err->ecode : ENOMEM;
+	return (int)pthread_getspecific(error_key);
 }
 

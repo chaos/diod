@@ -25,6 +25,7 @@ typedef struct Npcfid Npcfid;
 typedef struct Npcfsys Npcfsys;
 
 struct Npcfsys;
+struct stat;
 
 struct Npcfid {
 	u32		iounit;
@@ -35,11 +36,22 @@ struct Npcfid {
 
 typedef int (*AuthFun)(Npcfid *afid, u32 uid);
 
+enum {
+	NPC_MULTI_RPC=1,
+};
+
+/**
+ ** Basic functions
+ **/
+
 /* Given a server already connected on fd, send a VERSION request
  * to negotiate 9P2000.L and an msize <= the one provided.
+ * Set NPC_MULTI_RPC in 'flags' if you want to be able to have more
+ * than one RPC outstanding at once at the cost of increased complexity
+ * and spawning of a reader and writer thread for the connection.
  * Return fsys structure or NULL on error (retrieve with np_rerror ())
  */
-Npcfsys* npc_start(int fd, int msize);
+Npcfsys* npc_start (int fd, int msize, int flags);
 
 /* Close fd and deallocate file system structure.
  */
@@ -48,22 +60,87 @@ void npc_finish (Npcfsys *fs);
 /* Obtain an afid from the server using an AUTH request, then
  * call the 'auth' function on the afid to establish it as a credential.
  * Return afid or NULL on error (retrieve with np_rerror ()).
- * Also returns NULL if auth is not required (and np_rerror () == 0).
+ * Note: server indicates "auth not required" with NULL and np_rerror () == 0.
  */
 Npcfid* npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth);
 
 /* Obtain a fid from the server for the specified aname with an ATTACH request.
- * Optionally present 'afid' as an authentication credential.
+ * Optionally present 'afid' as an authentication credential or NULL.
  * Returns fid or NULL on error (retrieve with np_rerror ()).
  */
-Npcfid *npc_attach(Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid);
+Npcfid *npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid);
 
-/* Tell the server to forget about 'fid'.
+/* Tell the server to forget about 'fid' with a CLUNK request.
  * Return 0 on success, -1 on error (retrieve with np_rerror ()).
  */
-int npc_clunk(Npcfid *fid);
+int npc_clunk (Npcfid *fid);
+
+/* Send LOPEN request to prepare 'fid' for I/O.
+ * 'mode' uses the same bits as open (2).
+ * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
+ */
+int npc_open (Npcfid *fid, u32 mode);
+
+/* Send LCREATE request to create a file in directory 'fid'
+ * with specified 'name', 'perm', and 'mode'.
+ * Afterward, 'fid' will represent the new file, which can be used for I/O.
+ * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
+ */ 
+int npc_create (Npcfid *fid, char *name, u32 perm, u32 mode);
+
+/* Read 'count' bytes to 'buf' at 'offset' using READ requests.
+ * Less than 'count' may be read if it exceeds the maximum request size
+ * or the next call will return EOF.
+ * Returns bytes read, 0 on EOF, or -1 on error (retrieve with np_rerror ()).
+ */
+int npc_pread (Npcfid *fid, void *buf, u32 count, u64 offset);
+
+/* Write 'count' bytes from 'buf' at 'offset' using WRITE request.
+ * Less than 'count' may be written if it exceeds the maximum request size.
+ * Returns bytes written or -1 on error (retrieve with np_rerror ()).
+ */
+int npc_pwrite (Npcfid *fid, void *buf, u32 count, u64 offset);
+
+/* Descend a directory represnted by 'fid' by walking successive path
+ * elements in 'path'.  Multiple WALK requests will be sent depending on
+ * the number of path elements.  Returns a new fid representing path,
+ * or NULL on error (retrieve with np_rerror ()).
+ */
+Npcfid *npc_walk (Npcfid *fid, char *path);
+
+/* Send a MKDIR request to create 'name' in parent directory 'fid',
+ * with 'mode' bits as in open (2).
+ * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
+ */
+int npc_mkdir (Npcfid *fid, char *name, u32 mode);
+
+/* Send a GETATTR request to get stat(2) information on 'fid'.
+ * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
+ */
+int npc_getattr (Npcfid *fid, struct stat *sb);
+
+/* TODO:
+ * npc_remove ()
+ * npc_statfs ()
+ * npc_symlink ()
+ * npc_rename ()
+ * npc_readlink ()
+ * npc_setattr ()
+ * npc_xattrwalk ()
+ * npc_xattrcreate ()
+ * npc_readdir ()
+ * npc_fsync ()
+ * npc_lock ()
+ * npc_getlock ()
+ * npc_link ()
+ */
+
+/**
+ ** Convenience wrappers.
+ **/
 
 /* Shorthand for start/auth/attach using the caller's effective uid.
+ * Employs simple fsys implementation that only allows one outstanding RPC.
  * Returns a fid for the attach or NULL on error (retrieve with np_rerror ()).
  */
 Npcfid *npc_mount (int fd, int msize, char *aname, AuthFun auth);
@@ -71,22 +148,6 @@ Npcfid *npc_mount (int fd, int msize, char *aname, AuthFun auth);
 /* Shorthand for clunk/finish.  Always succeeds.
  */
 void npc_umount (Npcfid *fid);
-
-/* Prepare 'fid' for I/O.  'mode' uses the same bits as open (2).
- * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
- */
-int npc_open (Npcfid *fid, u32 mode);
-
-/* Create a file in directory 'fid' with specified 'name', 'perm', and 'mode'.
- * Afterward, 'fid' will represent the new file, which can be used for I/O.
- * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
- */ 
-int npc_create(Npcfid *fid, char *name, u32 perm, u32 mode);
-
-/* Change the file offset associated with 'fid'.  This is like lseek (2).
- * The state is local, kept within the fid.  N.B. SEEK_END doesn't work yet.
- */
-u64 npc_lseek(Npcfid *fid, u64 offset, int whence);
 
 /* Shorthand for walk/open.
  * Returns fid for file, or -1 on error (retrieve with np_rerror ()).
@@ -97,13 +158,6 @@ Npcfid* npc_open_bypath (Npcfid *root, char *path, u32 mode);
  * Returns fid for new file, or -1 on error (retrieve with np_rerror ()).
  */
 Npcfid *npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode);
-
-/* Read 'count' bytes to 'buf' at 'offset' using READ requests.
- * Less than 'count' may be read if it exceeds the maximum request size
- * or the next call will return EOF.
- * Returns bytes read, 0 on EOF, or -1 on error (retrieve with np_rerror ()).
- */
-int npc_pread(Npcfid *fid, void *buf, u32 count, u64 offset);
 
 /* Like npc_pread (), except issue multiple READ requests until EOF or
  * buffer is exhausted.
@@ -128,12 +182,6 @@ int npc_read_all(Npcfid *fid, void *buf, u32 count);
  */
 char *npc_gets(Npcfid *fid, char *buf, u32 count);
 
-/* Write 'count' bytes from 'buf' at 'offset' using WRITE request.
- * Less than 'count' may be written if it exceeds the maximum request size.
- * Returns bytes written or -1 on error (retrieve with np_rerror ()).
- */
-int npc_pwrite(Npcfid *fid, void *buf, u32 count, u64 offset);
-
 /* Like npc_pwrite (), except issue multiple WRITE requests until
  * buffer is exhausted.
  * Returns bytes written or -1 on error (retrieve with np_rerror ()).
@@ -154,33 +202,19 @@ int npc_write_all(Npcfid *fid, void *buf, u32 count);
  */
 int npc_puts(Npcfid *fid, char *buf);
 
-/* Descend a directory represnted by 'fid' by walking successive path
- * elements in 'path'.  Multiple WALK requests will be sent depending on
- * the number of path elements.  Returns a new fid representing path,
- * or NULL on error (retrieve with np_rerror ()).
+/* Change the file offset associated with 'fid'.  This is like lseek (2).
+ * The state is local, kept within the fid.  N.B. SEEK_END doesn't work yet.
  */
-Npcfid *npc_walk(Npcfid *fid, char *path);
-
-/* Send a MKDIR request to create 'name' in parent directory 'fid',
- * with 'mode' bits as in open (2).
- * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
- */
-int npc_mkdir (Npcfid *fid, char *name, u32 mode);
+u64 npc_lseek(Npcfid *fid, u64 offset, int whence);
 
 /* Like mkdir (2).  Shorthand for walk/mkdir/clunk.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
 int npc_mkdir_bypath (Npcfid *root, char *path, u32 mode);
 
-struct stat;
-
-/* Send a GETATTR request to get stat(2) information on 'fid'.
- * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
- */
-int npc_getattr (Npcfid *fid, struct stat *sb);
-
 /* Like stat (2).  Shorthand for walk/getattr/clunk.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
 int npc_getattr_bypath (Npcfid *root, char *path, struct stat *sb);
+
 

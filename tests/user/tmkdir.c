@@ -72,7 +72,7 @@ main (int argc, char *argv[])
     aname = argv[1];
     path = argv[2];
 
-    if (!(fs = npc_start (fd, 65536+24)))
+    if (!(fs = npc_start (fd, 65536+24, 0)))
         errn_exit (np_rerror (), "npc_start");
     if (!(afid = npc_auth (fs, aname, geteuid (),
                            diod_auth_client_handshake)) && np_rerror () != 0)

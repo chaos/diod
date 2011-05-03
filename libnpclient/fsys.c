@@ -21,6 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+/* fsys.c - simpler, single-threaded version of Lucho's original */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -43,6 +45,9 @@
 
 static Npfcall *npc_fcall_alloc(u32 msize);
 static void npc_fcall_free(Npfcall *fc);
+static int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp);
+static void npc_incref_fsys(Npcfsys *fs);
+static void npc_decref_fsys(Npcfsys *fs);
 
 Npcfsys *
 npc_create_fsys(int fd, int msize)
@@ -55,13 +60,16 @@ npc_create_fsys(int fd, int msize)
 		return NULL;
 	}
 
-	np_uerror (0);
 	pthread_mutex_init(&fs->lock, NULL);
 	fs->msize = msize;
 	fs->trans = NULL;
 	fs->tagpool = NULL;
 	fs->fidpool = NULL;
 	fs->refcount = 1;
+	fs->rpc = npc_rpc;
+	fs->incref = npc_incref_fsys;
+	fs->decref = npc_decref_fsys;
+	fs->disconnect = NULL;
 
 	fs->trans = np_fdtrans_create(fd, fd);
 	if (!fs->trans)
@@ -81,7 +89,7 @@ error:
 	return NULL;
 }
 
-void
+static void
 npc_incref_fsys(Npcfsys *fs)
 {
 	pthread_mutex_lock(&fs->lock);
@@ -89,7 +97,7 @@ npc_incref_fsys(Npcfsys *fs)
 	pthread_mutex_unlock(&fs->lock);
 }
 
-void
+static void
 npc_decref_fsys(Npcfsys *fs)
 {
 	pthread_mutex_lock(&fs->lock);
@@ -166,12 +174,11 @@ done:
 	return ret;
 }
 
-int
+static int
 npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 {
 	Npfcall *rc = NULL;
 	u16 tag = P9_NOTAG;
-	int saved_error = 0;
 	int ret = -1;
 
 	if (!fs->trans) {
@@ -182,15 +189,21 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 		tag = npc_get_id(fs->tagpool);
 	np_set_tag(tc, tag);
 
-	if (_write_request (fs, tc) < 0)
+	pthread_mutex_lock(&fs->lock);
+	if (_write_request (fs, tc) < 0) {
+		pthread_mutex_unlock(&fs->lock);
 		goto done;
-
+	}
 	if (!(rc = npc_fcall_alloc(fs->msize))) {
+		pthread_mutex_unlock(&fs->lock);
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (_read_response (fs, rc) < 0)
+	if (_read_response (fs, rc) < 0) {
+		pthread_mutex_unlock(&fs->lock);
 		goto done;
+	}
+	pthread_mutex_unlock(&fs->lock);
 
 	if (tc->tag != rc->tag) {
 		np_uerror (EIO); /* unmatched response */
@@ -203,12 +216,10 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 	*rcp = rc;
 	ret = 0;
 done:
-	saved_error = np_rerror ();
 	if (tag != P9_NOTAG)
 		npc_put_id(fs->tagpool, tag);
 	if (ret < 0 && rc != NULL)
 		npc_fcall_free (rc);
-	np_uerror (saved_error);
 	return ret;
 }
 

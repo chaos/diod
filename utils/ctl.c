@@ -189,7 +189,7 @@ ctl_query (char *host, char *jobid, char **portp, List *exportsp)
 
     if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
         goto error;
-    if (!(fs = npc_start (fd, 8192))) {
+    if (!(fs = npc_start (fd, 8192, 0))) {
         errn (np_rerror (), "version");
         goto error;
     }

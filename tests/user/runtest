@@ -6,11 +6,19 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 TEST=$1
+rm -f $TEST.out $TEST.diod
 
 if [ -z "$PATH_DIOD" ]; then
     echo "PATH_DIOD is not set" 2>&1
     exit 1
 fi
+
+# Special case for t11 which requires root
+if [ "`basename $TEST`" = "t11" ] && [ $(id -u) != 0 ]; then
+    echo "t11 requires root" >$TEST.out
+    exit 77
+fi
+
 
 rm -f $TEST.diod $TEST.out
 ulimit -c unlimited

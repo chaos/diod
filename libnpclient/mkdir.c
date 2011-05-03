@@ -52,7 +52,7 @@ npc_mkdir (Npcfid *fid, char *name, u32 mode)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	ret = 0;
 done:

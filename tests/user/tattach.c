@@ -41,7 +41,7 @@ main (int argc, char *argv[])
         usage ();
     aname = argv[1];
 
-    if (!(fs = npc_start (fd, 8192+24)))
+    if (!(fs = npc_start (fd, 8192+24, 0)))
         errn_exit (np_rerror (), "npc_start");
     if (!(afid = npc_auth (fs, aname, geteuid (),
                            diod_auth_client_handshake)) && np_rerror () != 0)

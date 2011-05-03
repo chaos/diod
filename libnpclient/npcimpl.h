@@ -21,7 +21,29 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+typedef int (*RpcFun)(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
+typedef void (*RefFun)(Npcfsys *fs);
+typedef void (*DiscFun)(Npcfsys *fs);
+
+typedef struct Npcreq Npcreq;
 typedef struct Npcpool Npcpool;
+
+struct Npcreq {
+        Npcfsys*        fsys;
+
+        u16             tag;
+        Npfcall*        tc;
+        Npfcall*        rc;
+
+        int             ecode;
+
+        void            (*cb)(Npcreq *, void *);
+        void*           cba;
+
+        int             flushed;
+        Npcreq*         next;
+        Npcreq*         prev;
+};
 
 struct Npcpool {
 	pthread_mutex_t	lock;
@@ -32,19 +54,35 @@ struct Npcpool {
 };
 
 struct Npcfsys {
-	pthread_mutex_t	lock;
+        pthread_mutex_t lock;
+
 	u32		msize;
 	Nptrans*	trans;
 
 	int		refcount;
 	Npcpool*	tagpool;
 	Npcpool*	fidpool;
+
+	RpcFun		rpc;
+	RefFun		incref;
+	RefFun		decref;
+	DiscFun		disconnect;
+
+	/* mtfsys only */
+        pthread_cond_t  cond;
+
+        Npcreq*         unsent_first;
+        Npcreq*         unsent_last;
+        Npcreq*         pend_first;
+
+        pthread_t       readproc;
+        pthread_t       writeproc;
+
+	int		fd;
 };
 
 Npcfsys *npc_create_fsys(int fd, int msize);
-void npc_disconnect_fsys(Npcfsys *fs);
-void npc_incref_fsys(Npcfsys *fs);
-void npc_decref_fsys(Npcfsys *fs);
+Npcfsys *npc_create_mtfsys(int fd, int msize);
 
 Npcpool *npc_create_pool(u32 maxid);
 void npc_destroy_pool(Npcpool *p);
@@ -53,5 +91,3 @@ void npc_put_id(Npcpool *p, u32 id);
 
 Npcfid *npc_fid_alloc(Npcfsys *fs);
 void npc_fid_free(Npcfid *fid);
-
-int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc);

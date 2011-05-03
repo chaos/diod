@@ -81,7 +81,7 @@ npc_walk(Npcfid *nfid, char *path)
 			np_uerror(ENOMEM);
 			goto error;
 		}
-		if (npc_rpc(nfid->fsys, tc, &rc) < 0)
+		if (nfid->fsys->rpc(nfid->fsys, tc, &rc) < 0)
 			goto error;
 
 		nfid = fid;

@@ -16,3 +16,8 @@ t06	Try to write file in non-existent directory.
 t07	Simple mkdir
 t08	Compare p9 stat with regular stat
 t09	Create directory >P9_MAXWELEM directories deep.
+t10	Attach to server with 256 threads, then getattr*16
+t11(*)	Attach to server with 256 threads 4 different users, then getattr*16
+
+(*) NOTRUN if not run as root
+

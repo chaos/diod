@@ -52,7 +52,7 @@ npc_pwrite(Npcfid *fid, void *buf, u32 count, u64 offset)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	if (npc_rpc(fid->fsys, tc, &rc) < 0)
+	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	ret = rc->u.rwrite.count;
 done:
