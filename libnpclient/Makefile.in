@@ -56,8 +56,9 @@ ARFLAGS = cru
 libnpclient_a_AR = $(AR) $(ARFLAGS)
 libnpclient_a_LIBADD =
 am_libnpclient_a_OBJECTS = fid.$(OBJEXT) fsys.$(OBJEXT) \
-	mount.$(OBJEXT) open.$(OBJEXT) pool.$(OBJEXT) read.$(OBJEXT) \
-	walk.$(OBJEXT) write.$(OBJEXT) mkdir.$(OBJEXT) stat.$(OBJEXT)
+	mtfsys.$(OBJEXT) mount.$(OBJEXT) open.$(OBJEXT) pool.$(OBJEXT) \
+	read.$(OBJEXT) walk.$(OBJEXT) write.$(OBJEXT) mkdir.$(OBJEXT) \
+	stat.$(OBJEXT)
 libnpclient_a_OBJECTS = $(am_libnpclient_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -207,6 +208,7 @@ noinst_LIBRARIES = libnpclient.a
 libnpclient_a_SOURCES = \
 	fid.c \
 	fsys.c \
+	mtfsys.c \
 	mount.c \
 	npcimpl.h \
 	npclient.h \
@@ -270,6 +272,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fsys.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mkdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mount.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mtfsys.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/open.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pool.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/read.Po@am__quote@

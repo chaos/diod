@@ -287,7 +287,6 @@ diod_auth_client_handshake (Npcfid *afid, u32 uid)
     int ret = -1; 
 #if HAVE_LIBMUNGE
     char *cred = NULL;
-    int saved_errno = 0;
     munge_ctx_t ctx = NULL;
 
     if (!(ctx = munge_ctx_create ())) {

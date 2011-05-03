@@ -43,16 +43,16 @@ np_init_error_key(void)
 }
 
 void
-np_uerror(int ecode)
+np_uerror(unsigned long ecode)
 {
 	pthread_once(&error_once, np_init_error_key);
 	pthread_setspecific(error_key, (void *)ecode);
 }
 
-int
+unsigned long
 np_rerror(void)
 {
 	pthread_once(&error_once, np_init_error_key);
-	return (int)pthread_getspecific(error_key);
+	return (unsigned long)pthread_getspecific(error_key);
 }
 

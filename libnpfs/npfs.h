@@ -413,6 +413,6 @@ int np_setfsid (Npreq *req, Npuser *u, u32 gid_override);
 Nptrans *np_fdtrans_create(int, int);
 
 /* error.c */
-int np_rerror(void);
-void np_uerror(int ecode);
+unsigned long np_rerror(void);
+void np_uerror(unsigned long ecode);
 
