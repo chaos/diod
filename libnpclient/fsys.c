@@ -57,54 +57,28 @@ npc_create_fsys(int fd, int msize)
 
 	np_uerror (0);
 	pthread_mutex_init(&fs->lock, NULL);
-	fs->fd = fd;
 	fs->msize = msize;
 	fs->trans = NULL;
-	fs->root = NULL;
 	fs->tagpool = NULL;
 	fs->fidpool = NULL;
 	fs->refcount = 1;
 
 	fs->trans = np_fdtrans_create(fd, fd);
-	if (!fs->trans) {
-		np_uerror(EIO);
+	if (!fs->trans)
 		goto error;
-	}
-
 	fs->tagpool = npc_create_pool(P9_NOTAG);
-	if (!fs->tagpool) {
-		np_uerror(EIO);
+	if (!fs->tagpool)
 		goto error;
-	}
-		
 	fs->fidpool = npc_create_pool(P9_NOFID);
-	if (!fs->fidpool) {
-		np_uerror(EIO);
+	if (!fs->fidpool)
 		goto error;
-	}
 
 	return fs;
 
 error:
-	npc_disconnect_fsys(fs);
-	npc_decref_fsys(fs);
+	npc_decref_fsys(fs); /* will close fd if trans successfully created */
+        (void)close (fd);    /* close it here anyway for consistency */
 	return NULL;
-}
-
-void
-npc_disconnect_fsys(Npcfsys *fs)
-{
-	pthread_mutex_lock(&fs->lock);
-	if (fs->fd >= 0) {
-		//shutdown(fs->fd, 2);
-		close(fs->fd);
-		fs->fd = -1;
-	}
-	if (fs->trans) {
-		np_trans_destroy(fs->trans);
-		fs->trans = NULL;
-	}
-	pthread_mutex_unlock(&fs->lock);
 }
 
 void
@@ -124,9 +98,10 @@ npc_decref_fsys(Npcfsys *fs)
 		pthread_mutex_unlock(&fs->lock);
 		return;
 	}
-
-	//assert(fs->fd<0 && fs->trans==NULL);
-	assert(fs->trans==NULL);
+	if (fs->trans) {
+		np_trans_destroy(fs->trans); /* closes fd */
+		fs->trans = NULL;
+	}
 	if (fs->tagpool) {
 		npc_destroy_pool(fs->tagpool);
 		fs->tagpool = NULL;
@@ -137,9 +112,7 @@ npc_decref_fsys(Npcfsys *fs)
 		fs->fidpool = NULL;
 	}
 	pthread_mutex_unlock(&fs->lock);
-
 	pthread_mutex_destroy(&fs->lock);
-
 	free(fs);
 }
 

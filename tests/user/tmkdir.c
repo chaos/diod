@@ -32,27 +32,27 @@ usage (void)
 }
 
 static int
-_mkdir_p (Npcfsys *fs, char *path, mode_t mode)
+_mkdir_p (Npcfid *root, char *path, mode_t mode)
 {
     struct stat sb;
     char *cpy;
     int res = 0;
 
-    if (npc_stat (fs, path, &sb) == 0) {
+    if (npc_getattr_bypath (root, path, &sb) == 0) {
         if (!S_ISDIR (sb.st_mode)) {
-            errno = ENOTDIR;
+            np_uerror (ENOTDIR);
             return -1;
         }
         return 0;
     }
     if (!(cpy = strdup (path))) {
-        errno = ENOMEM;
+        np_uerror (ENOMEM);
         return -1;
     }
-    res = _mkdir_p (fs, dirname (cpy), mode);
+    res = _mkdir_p (root, dirname (cpy), mode);
     free (cpy);
     if (res == 0)
-        res = npc_mkdir (fs, path, mode);
+        res = npc_mkdir_bypath (root, path, mode);
 
     return res;
 }
@@ -61,7 +61,9 @@ int
 main (int argc, char *argv[])
 {
     Npcfsys *fs;
+    Npcfid *afid, *root;
     char *aname, *path;
+    int fd = 0; /* stdin */
 
     diod_log_init (argv[0]);
 
@@ -70,14 +72,20 @@ main (int argc, char *argv[])
     aname = argv[1];
     path = argv[2];
 
-    if (!(fs = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
-        err_exit ("npc_mount");
+    if (!(fs = npc_start (fd, 65536+24)))
+        errn_exit (np_rerror (), "npc_start");
+    if (!(afid = npc_auth (fs, NULL, aname, geteuid (),
+                           diod_auth_client_handshake)) && np_rerror () != 0)
+        errn_exit (np_rerror (), "npc_auth");
+    if (!(root = npc_attach (fs, afid, NULL, aname, geteuid ())))
+        errn_exit (np_rerror (), "npc_attach");
 
-    if (_mkdir_p (fs, path, 0755) < 0)
-        err_exit ("npc_mkdir");
+    if (_mkdir_p (root, path, 0755) < 0)
+        errn_exit (np_rerror (), "mkdir");
 
-    if (npc_umount (fs) < 0)
-        err_exit ("npc_umount");
+    if (npc_clunk (root) < 0)
+        errn_exit (np_rerror (), "npc_clunk");
+    npc_finish (fs);
 
     exit (0);
 }

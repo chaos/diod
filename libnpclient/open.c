@@ -44,22 +44,17 @@
 
 /* fid: parent directory on entry, new file on exit.
  */
-static int
-_fidcreate (Npcfid *fid, char *path, u32 flags, u32 mode)
+int
+npc_create (Npcfid *fid, char *name, u32 flags, u32 mode)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
-	char *cpy, *fname;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	if (!(cpy = strdup (path))) {
-		errno = ENOMEM;
-		return -1;
-	}
-	fname = basename (cpy);
-	errno = 0;
-	if (!(tc = np_create_tlcreate(fid->fid, fname, flags, mode, getegid())))
+	if (!(tc = np_create_tlcreate(fid->fid, name, flags, mode, getegid()))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	fid->iounit = rc->u.rlcreate.iounit;
@@ -67,8 +62,6 @@ _fidcreate (Npcfid *fid, char *path, u32 flags, u32 mode)
 		fid->iounit = maxio;
 	ret = 0;
 done:
-	free (cpy);
-	errno = np_rerror ();
 	if (tc)
 		free(tc);
 	if (rc)
@@ -76,52 +69,52 @@ done:
 	return ret;
 }
 
-/* walk to parent
- */
-static Npcfid*
-_walkparent (Npcfsys *fs, char *path)
+Npcfid *
+npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode)
 {
-	char *cpy, *dname; 
-	Npcfid *fid;
+        Npcfid *fid;
+        char *cpy, *dname, *fname;
 
-	if (!(cpy = strdup (path))) {
-		errno = ENOMEM;
-		return NULL;
-	}
-	dname = dirname (cpy);
-	fid = npc_walk (fs, dname);
-	free (cpy);
+        /* walk to the parent */
+        if (!(cpy = strdup (path))) {
+                np_uerror (ENOMEM);
+                return NULL;
+        }
+        dname = dirname (cpy);
+        fid = npc_walk (root, dname);
+        free (cpy);
+        if (!fid)
+                return NULL;
 
-	return fid;
-}
-
-Npcfid*
-npc_create (Npcfsys *fs, char *path, u32 flags, u32 mode)
-{
-	Npcfid *fid;
-	int saved_errno;
-
-	if (!(fid = _walkparent (fs, path)))
-		return NULL;
-	if (_fidcreate (fid, path, flags, mode) < 0) {
-		saved_errno = errno;
-		(void)npc_clunk (fid);
-		errno = saved_errno;
-		fid = NULL;
-	}
-	return fid;
+        /* create the child */
+        if (!(cpy = strdup (path))) {
+                (void)npc_clunk (fid);
+                np_uerror (ENOMEM);
+                return NULL;
+        }
+        fname = basename (cpy);
+        if (npc_create (fid, fname, flags, mode) < 0) {
+                int saved_err = np_rerror ();
+                (void)npc_clunk (fid);
+                free (cpy);
+                np_uerror (saved_err);
+                return NULL;
+        }
+        free (cpy);
+        return fid;
 }
 
 int
-npc_open_fid (Npcfid *fid, u32 mode)
+npc_open (Npcfid *fid, u32 mode)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	errno = 0;
-	if (!(tc = np_create_tlopen(fid->fid, mode)))
+	if (!(tc = np_create_tlopen(fid->fid, mode))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	fid->iounit = rc->u.rlopen.iounit;
@@ -130,7 +123,6 @@ npc_open_fid (Npcfid *fid, u32 mode)
 	fid->offset = 0;
 	ret = 0;
 done:
-	errno = np_rerror ();
 	if (tc)
 		free(tc);
 	if (rc)
@@ -138,27 +130,20 @@ done:
 	return ret;
 }
 
-Npcfid*
-npc_open (Npcfsys *fs, char *path, u32 mode)
+Npcfid *
+npc_open_bypath (Npcfid *root, char *path, u32 mode)
 {
-	int saved_errno;
 	Npcfid *fid;
 
-	if (!(fid = npc_walk (fs, path)))
+	if (!(fid = npc_walk (root, path)))
 		return NULL;
-	if (npc_open_fid (fid, mode) < 0) {
-		saved_errno = errno;
+	if (npc_open (fid, mode) < 0) {
+		int saved_err = np_rerror ();
 		(void)npc_clunk (fid);
-		errno = saved_errno;
+		np_uerror (saved_err);
 		return NULL;
 	}
 	return fid;
-}
-
-int
-npc_close(Npcfid *fid)
-{
-	return npc_clunk(fid);
 }
 
 u64

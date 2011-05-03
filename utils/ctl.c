@@ -85,7 +85,7 @@ _strdup_trim (char *s)
 /* Write jobid into ctl file, then read port number back.
  */
 static char *
-_getport (Npcfsys *fs, char *jobid)
+_getport (Npcfid *root, char *jobid)
 {
     Npcfid *fid = NULL;
     char *port = NULL;
@@ -93,20 +93,24 @@ _getport (Npcfsys *fs, char *jobid)
 
     if (!jobid)
         jobid = "nojob";
-    if (!(fid = npc_open (fs, "ctl", O_RDWR))) {
-        err ("ctl: open");
+    if (!(fid = npc_walk (root, "ctl"))) {
+        errn (np_rerror (), "ctl: walk");
+        goto error;
+    }
+    if (npc_open (fid, O_RDWR) < 0) {
+        errn (np_rerror (), "ctl: open");
         goto error;
     }
     if (npc_puts (fid, jobid) < 0) {
-        err ("ctl: write");
+        errn (np_rerror (), "ctl: write");
         goto error;
     }
     if (npc_lseek (fid, 0, SEEK_SET) < 0) {
-        err ("ctl: seek");
+        errn (np_rerror (), "ctl: seek");
         goto error;
     }
     if (!npc_gets (fid, buf, sizeof (buf))) {
-        err ("ctl: read");
+        errn (np_rerror (), "ctl: read");
         goto error;
     }
     port = _strdup_trim (buf);
@@ -114,14 +118,14 @@ _getport (Npcfsys *fs, char *jobid)
         msg ("ctl: error reading port");
         goto error;
     }
-    if (npc_close (fid) < 0) {
-        err ("ctl: close");
+    if (npc_clunk (fid) < 0) {
+        err ("ctl: clunk");
         goto error;
     }
     return port;
 error:
     if (fid)
-        (void)npc_close (fid);
+        (void)npc_clunk (fid);
     if (port)
         free (port);
     return NULL;
@@ -130,14 +134,18 @@ error:
 /* Read export list from exports file.
  */
 static List
-_getexports (Npcfsys *fs)
+_getexports (Npcfid *root)
 {
     Npcfid *fid = NULL;
     List l = NULL;
     char buf[PATH_MAX];
 
-    if (!(fid = npc_open (fs, "exports", O_RDONLY))) {
-        err ("exports: open");
+    if (!(fid = npc_walk (root, "exports"))) {
+        errn (np_rerror (), "exports: walk");
+        goto error;
+    }
+    if (npc_open (fid, O_RDONLY) < 0) {
+        errn (np_rerror (), "exports: open");
         goto error;
     }
     if (!(l = list_create((ListDelF)free)))
@@ -149,22 +157,22 @@ _getexports (Npcfsys *fs)
         if (line && !list_append (l, line))
             msg_exit ("out of memory");
     }
-    if (errno) {
-        err ("exports: read");
+    if (np_rerror ()) {
+        errn (np_rerror (), "exports: read");
         goto error;
     }
     if (list_count (l) == 0) {
         msg ("exports: empty");
         goto error;
     }
-    if (npc_close (fid) < 0) {
-        err ("exports: close");
+    if (npc_clunk (fid) < 0) {
+        err ("exports: clunk");
         goto error;
     }
     return l;
 error:
     if (fid)
-        (void)npc_close (fid);
+        (void)npc_clunk (fid);
     if (l)
         list_destroy (l);
     return NULL;
@@ -175,32 +183,42 @@ ctl_query (char *host, char *jobid, char **portp, List *exportsp)
 {
     int fd;
     Npcfsys *fs = NULL;
+    Npcfid *afid, *root = NULL;
     char *port = NULL;
     List exports = NULL;
 
     if ((fd = diod_sock_connect (host, "10005", 1, 0)) < 0)
         goto error;
-    if (!(fs = npc_mount (fd, 8192, "/diodctl", diod_auth_client_handshake))) {
-        err ("npc_mount");
-        close (fd);
+    if (!(fs = npc_start (fd, 8192))) {
+        errn (np_rerror (), "version");
         goto error;
     }
-    if (portp && !(port = _getport (fs, jobid)))
-        goto error;
-    if (exportsp && !(exports = _getexports (fs)))
-        goto error;
-    if (npc_umount (fs) < 0) {
-        err ("umount");
+    if (!(afid = npc_auth (fs, NULL, "/diodctl", geteuid (),
+                           diod_auth_client_handshake)) && np_rerror () != 0) {
+        errn (np_rerror (), "auth");
         goto error;
     }
+    if (!(root = npc_attach (fs, afid, NULL, "/diodctl", geteuid ()))) {
+        errn (np_rerror (), "attach");
+        goto error;
+    }
+    if (portp && !(port = _getport (root, jobid)))
+        goto error;
+    if (exportsp && !(exports = _getexports (root)))
+        goto error;
+    if (npc_clunk (root) < 0)
+        errn (np_rerror (), "clunk root");
+    npc_finish (fs);
     if (portp)
         *portp = port;
     if (exportsp)
         *exportsp = exports;
     return 0;
 error:
+    if (root)
+        npc_clunk (root);
     if (fs)
-        (void)npc_umount (fs);
+        npc_finish (fs);
     if (port)
         free (port);
     if (exports)

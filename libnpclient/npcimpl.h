@@ -33,11 +33,8 @@ struct Npcpool {
 
 struct Npcfsys {
 	pthread_mutex_t	lock;
-	int		fd;
 	u32		msize;
 	Nptrans*	trans;
-	Npcfid*		root;
-	//Npcfid*	afid;
 
 	int		refcount;
 	Npcpool*	tagpool;

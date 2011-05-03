@@ -31,7 +31,9 @@ int
 main (int argc, char *argv[])
 {
     Npcfsys *fs;
+    Npcfid *afid, *root;
     char *aname;
+    int fd = 0; /* stdin */
 
     diod_log_init (argv[0]);
 
@@ -39,10 +41,16 @@ main (int argc, char *argv[])
         usage ();
     aname = argv[1];
 
-    if (!(fs = npc_mount (0, 8192+24, aname, diod_auth_client_handshake)))
-        err_exit ("npc_mount");
-    if (npc_umount (fs) < 0)
-        err_exit ("npc_umount");
+    if (!(fs = npc_start (fd, 8192+24)))
+        errn_exit (np_rerror (), "npc_start");
+    if (!(afid = npc_auth (fs, NULL, aname, geteuid (),
+                           diod_auth_client_handshake)) && np_rerror () != 0)
+        errn_exit (np_rerror (), "npc_auth");
+    if (!(root = npc_attach (fs, afid, NULL, aname, geteuid ())))
+        errn_exit (np_rerror (), "npc_attach");
+    if (npc_clunk (root) < 0)
+        errn_exit (np_rerror (), "npc_clunk");
+    npc_finish (fs);
 
     diod_log_fini ();
 

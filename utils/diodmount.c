@@ -271,11 +271,8 @@ main (int argc, char *argv[])
     assert (!opt_find (o, "port"));
     assert (!opt_find (o, "jobid"));
 
-    /* Perform the mount here.
-     * After sfd is passed to the kernel, we close it here.
-     */
     _diod_mount (o, sfd, spec, dir, vopt, fopt, nopt);
-    (void)close (sfd);
+    //(void)close (sfd);
 
 done:
     if (hl)
@@ -490,15 +487,18 @@ done:
 static void
 _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
 {
-    char *options, *options9p, *aname;
+    char *options, *options9p, *aname, *uname;
     int msize;
     Npcfsys *fs;
+    Npcfid *afid, *root;
     unsigned long mountflags = 0;
 
     options = opt_csv (o);
     _getflags (o, &mountflags);
     options9p = opt_csv (o); /* after mountflags removed from opt list */
 
+    if (!(uname = opt_find (o, "uname")))
+        msg_exit ("uname is not set"); /* can't happen */
     if (!(aname = opt_find (o, "aname")))
         msg_exit ("aname is not set"); /* can't happen */
     if (!opt_scanf (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
@@ -506,14 +506,20 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
 
     if (vopt)
         msg ("pre-authenticating connection to server");
-    if (!(fs = npc_mount (fd, msize, aname, diod_auth_client_handshake)))
-        err_exit ("npc_mount");
-    npc_umount2 (fs);
+    if (!(fs = npc_start (fd, msize)))
+	errn_exit (np_rerror (), "version");
+    if (!(afid = npc_auth (fs, uname, aname, P9_NONUNAME,
+			   diod_auth_client_handshake)) && np_rerror () != 0)
+        errn_exit (np_rerror (), "auth");
+    if (!(root = npc_attach (fs, afid, uname, aname, P9_NONUNAME)))
+        errn_exit (np_rerror (), "attach");
+    (void)npc_clunk (root);
     if (vopt)
         msg ("mount -t 9p %s %s -o%s", spec, dir, options);
     if (!fopt)
         _mount (spec, dir, mountflags, options9p);
-    npc_finish (fs);
+    npc_finish (fs); /* closes fd */
+
     if (!nopt) {
         if (!_update_mtab (options, spec, dir))
             msg_exit ("failed to update /etc/mtab");
@@ -521,7 +527,6 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
     free (options);
     free (options9p);
 }
-
 
 /* Mount 9p file system [source] on [target] with options [data].
  * Swap effective (user) and real (root) uid's for the duration of mount call.

@@ -40,16 +40,14 @@
 #include "npcimpl.h"
 
 Npcfid *
-npc_walk(Npcfsys *fs, char *path)
+npc_walk(Npcfid *nfid, char *path)
 {
 	int n;
-	u32 nfid = P9_NOFID;
 	char *fname, *s, *t = NULL;
 	char *wnames[P9_MAXWELEM];
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
 
-	errno = 0;
 	while (*path == '/')
 		path++;
 
@@ -58,11 +56,10 @@ npc_walk(Npcfsys *fs, char *path)
 		np_uerror(ENOMEM);
 		goto error;
 	}
-	fid = npc_fid_alloc(fs);
+	fid = npc_fid_alloc(nfid->fsys);
 	if (!fid)
 		goto error;
 	s = fname;
-	nfid = fs->root->fid;
 	while (1) {
 		n = 0;
 		while (n<P9_MAXWELEM && *s!='\0') {
@@ -80,12 +77,14 @@ npc_walk(Npcfsys *fs, char *path)
 			s = t + 1;
 		}
 
-		if (!(tc = np_create_twalk(nfid, fid->fid, n, wnames)))
+		if (!(tc = np_create_twalk(nfid->fid, fid->fid, n, wnames))) {
+			np_uerror(ENOMEM);
 			goto error;
-		if (npc_rpc(fs, tc, &rc) < 0)
+		}
+		if (npc_rpc(nfid->fsys, tc, &rc) < 0)
 			goto error;
 
-		nfid = fid->fid;
+		nfid = fid;
 		if (rc->u.rwalk.nwqid != n) {
 			np_uerror(ENOENT);
 			goto error;
@@ -96,22 +95,20 @@ npc_walk(Npcfsys *fs, char *path)
 			free(rc);
 		if (!t || *s=='\0')
 			break;
-
 	}
 
 	free(fname);
 	return fid;
 
 error:
-	errno = np_rerror ();
 	if (rc)
 		free(rc);
 	if (tc)
 		free(tc);
-	if (nfid == fid->fid) {
-		int saved_errno = errno;
+	if (nfid->fid == fid->fid) {
+		int saved_err = np_rerror ();
 		(void)npc_clunk (fid);
-		errno = saved_errno;
+		np_uerror (saved_err);
 	}
 	if (fname)
 		free(fname);

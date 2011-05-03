@@ -43,16 +43,17 @@
 #include "npclient.h"
 #include "npcimpl.h"
 
-static int
-_fidstat (Npcfid *fid, struct stat *sb)
+int
+npc_getattr (Npcfid *fid, struct stat *sb)
 {
 	u64 request_mask = P9_GETATTR_BASIC;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	errno = 0;
-	if (!(tc = np_create_tgetattr (fid->fid, request_mask)))
+	if (!(tc = np_create_tgetattr (fid->fid, request_mask))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	sb->st_dev = 0;
@@ -73,7 +74,6 @@ _fidstat (Npcfid *fid, struct stat *sb)
 	sb->st_ctim.tv_nsec = rc->u.rgetattr.ctime_nsec;
 	ret = 0;
 done:
-	errno = np_rerror ();
 	if (tc)
 		free(tc);
 	if (rc)
@@ -82,18 +82,18 @@ done:
 }
 
 int
-npc_stat (Npcfsys *fs, char *path, struct stat *sb)
+npc_getattr_bypath (Npcfid *root, char *path, struct stat *sb)
 {
 	Npcfid *fid;
-	int saved_errno;
-	int ret = -1;
 
-	if (!(fid = npc_walk (fs, path)))
+	if (!(fid = npc_walk (root, path)))
 		return -1;
-	ret = _fidstat (fid, sb);
-	saved_errno = errno;
+	if (npc_getattr (fid, sb) < 0) {
+		int saved_err = np_rerror ();
+		(void)npc_clunk (fid);
+		np_uerror (saved_err);
+		return -1;
+	}
 	(void)npc_clunk (fid);
-	errno = saved_errno;
-
-	return ret;
+	return 0;
 }

@@ -52,8 +52,7 @@ _copy_from9 (Npcfid *fid, int fd)
 int
 main (int argc, char *argv[])
 {
-    Npcfsys *fs;
-    Npcfid *fid;
+    Npcfid *root, *fid;
     char *aname, *infile, *outfile;
     int fd;
 
@@ -68,17 +67,16 @@ main (int argc, char *argv[])
     if ((fd = open (outfile, O_WRONLY | O_CREAT, 0644)) < 0)
         err_exit ("open");
 
-    if (!(fs = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
-        err_exit ("npc_mount");
-    if (!(fid = npc_open (fs, infile, O_RDONLY)))
-        err_exit ("npc_open");
+    if (!(root = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
+        errn_exit (np_rerror (), "npc_mount");
+    if (!(fid = npc_open_bypath (root, infile, O_RDONLY)))
+        errn_exit (np_rerror (), "npc_open_bypath");
 
     _copy_from9 (fid, fd);
 
-    if (npc_close (fid) < 0)
-        err_exit ("npc_close");
-    if (npc_umount (fs) < 0)
-        err_exit ("npc_umount");
+    if (npc_clunk (fid) < 0)
+        errn_exit (np_rerror (), "npc_clunk");
+    npc_umount (root);
 
     if (close (fd) < 0)
         err_exit ("close");

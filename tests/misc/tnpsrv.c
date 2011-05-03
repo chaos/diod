@@ -71,12 +71,6 @@ main (int argc, char *argv[])
     exit (0);
 }
 
-static int
-authreq (Npstr *uname, u32 n_uname, Npstr *aname)
-{
-    return 0;
-}
-
 static Npfcall *
 myattach (Npfid *fid, Npfid *afid, Npstr *aname)
 {

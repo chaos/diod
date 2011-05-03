@@ -291,22 +291,20 @@ diod_auth_client_handshake (Npcfid *afid, u32 uid)
     munge_ctx_t ctx = NULL;
 
     if (!(ctx = munge_ctx_create ())) {
-        saved_errno = ENOMEM;
+        np_uerror (ENOMEM);
         goto done;
     }
     if (munge_encode (&cred, ctx, NULL, 0) != EMUNGE_SUCCESS) {
-        saved_errno = EPERM;
+        np_uerror (EPERM);
         goto done;
     }
     if (npc_puts (afid, cred) < 0) {
-        saved_errno = errno;
         goto done;
     }
     ret = 0;
 done:
     if (ctx)
         munge_ctx_destroy (ctx);
-    errno = saved_errno;
 #endif
     return ret;
 }

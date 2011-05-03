@@ -34,7 +34,7 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    Npcfsys *fs;
+    Npcfid *root;
     char *aname, *path1, *path2;
     struct stat sb1, sb2;
 
@@ -46,12 +46,11 @@ main (int argc, char *argv[])
     path1 = argv[2];
     path2 = argv[3];
 
-    if (!(fs = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
-        err_exit ("npc_mount");
-    if (npc_stat (fs, path1, &sb1) < 0)
-        err_exit ("npc_stat");
-    if (npc_umount (fs) < 0)
-        err_exit ("npc_umount");
+    if (!(root = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
+        errn_exit (np_rerror (), "npc_mount");
+    if (npc_getattr_bypath (root, path1, &sb1) < 0)
+        errn_exit (np_rerror (), "npc_getattr_bypath");
+    npc_umount (root);
 
     if (stat (path2, &sb2) < 0)
         err_exit ("stat");

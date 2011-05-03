@@ -42,27 +42,20 @@
 #include "npclient.h"
 #include "npcimpl.h"
 
-static int
-_fidmkdir(Npcfid *fid, char *path, u32 mode)
+int
+npc_mkdir (Npcfid *fid, char *name, u32 mode)
 {
-	char *cpy, *fname;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	if (!(cpy = strdup (path))) {
-		errno = ENOMEM;
-		return -1;
-	}
-	fname = basename (cpy);
-	errno = 0;
-	if (!(tc = np_create_tmkdir(fid->fid, fname, mode, getegid())))
+	if (!(tc = np_create_tmkdir(fid->fid, name, mode, getegid()))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	ret = 0;
 done:
-	free (cpy);
-	errno = np_rerror ();
 	if (tc)
 		free(tc);
 	if (rc)
@@ -70,36 +63,39 @@ done:
 	return ret;
 }
 
-static Npcfid*
-_walkparent (Npcfsys *fs, char *path)
+int
+npc_mkdir_bypath (Npcfid *root, char *path, u32 mode)
 {
-	char *cpy, *dname; 
-	Npcfid *fid;
+        Npcfid *fid;
+	char *cpy, *dname, *fname;
 
+	/* walk to the parent */
 	if (!(cpy = strdup (path))) {
-		errno = ENOMEM;
-		return NULL;
+		np_uerror (ENOMEM);
+		return -1;
 	}
 	dname = dirname (cpy);
-	fid = npc_walk (fs, dname);
+        fid = npc_walk (root, dname);
 	free (cpy);
-
-	return fid;
-}
-
-int
-npc_mkdir (Npcfsys *fs, char *path, u32 mode)
-{
-	Npcfid *fid;
-	int saved_errno;
-	int ret = -1;
-
-	if (!(fid = _walkparent (fs, path)))
+	if (!fid)
 		return -1;
-	ret = _fidmkdir(fid, path, mode);
-	saved_errno = errno;
-	(void)npc_clunk (fid);
-	errno = saved_errno;
 
-	return ret;
+	/* create the child */
+	if (!(cpy = strdup (path))) {
+		(void)npc_clunk (fid);
+		np_uerror (ENOMEM);
+		return -1;
+	}
+	fname = basename (cpy);
+	if (npc_mkdir (fid, fname, mode) < 0) {
+		int saved_err = np_rerror ();
+		(void)npc_clunk (fid);
+		free (cpy);		
+		np_uerror (saved_err);
+		return -1;
+	}
+        (void)npc_clunk (fid);
+	free (cpy);
+        return 0;
 }
+

@@ -46,16 +46,16 @@ npc_pwrite(Npcfid *fid, void *buf, u32 count, u64 offset)
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	errno = 0;
 	if (count > maxio)
 		count = maxio;	
-	if (!(tc = np_create_twrite(fid->fid, offset, count, buf)))
+	if (!(tc = np_create_twrite(fid->fid, offset, count, buf))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	ret = rc->u.rwrite.count;
 done:
-	errno = np_rerror ();
 	if (tc)
 		free(tc);
 	if (rc)

@@ -45,7 +45,6 @@
 void
 npc_finish (Npcfsys *fs)
 {
-	npc_disconnect_fsys (fs);
 	npc_decref_fsys (fs);
 }
 
@@ -55,11 +54,12 @@ npc_start (int fd, int msize)
 	Npcfsys *fs;
 	Npfcall *tc = NULL, *rc = NULL;
 
-	errno = 0;
 	if (!(fs = npc_create_fsys (fd, msize)))
 		goto done;
-	if (!(tc = np_create_tversion (msize, "9P2000.L")))
+	if (!(tc = np_create_tversion (msize, "9P2000.L"))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc (fs, tc, &rc) < 0)
 		goto done;
 	if (rc->u.rversion.msize < msize)
@@ -73,8 +73,7 @@ done:
 		free (tc);
 	if (rc)
 		free (rc);
-	errno = np_rerror ();
-	if (errno && fs) {
+	if (np_rerror () && fs) {
 		npc_finish (fs);
 		fs = NULL;
 	}			
@@ -82,17 +81,15 @@ done:
 }
 
 Npcfid*
-npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth)
+npc_auth (Npcfsys *fs, char *uname, char *aname, u32 uid, AuthFun auth)
 {
         Npcfid *afid = NULL;
         Npfcall *tc = NULL, *rc = NULL;
-	int saved_errno = 0;
 
-        errno = 0;
         if (!(afid = npc_fid_alloc (fs)))
                 goto done;
-        if (!(tc = np_create_tauth (afid->fid, NULL, aname, uid))) {
-		saved_errno = ENOMEM;
+        if (!(tc = np_create_tauth (afid->fid, uname, aname, uid))) {
+		np_uerror (ENOMEM);
 		npc_fid_free (afid);
 		afid = NULL;
                 goto done;
@@ -100,17 +97,16 @@ npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth)
         if (npc_rpc (afid->fsys, tc, &rc) < 0) {
 		npc_fid_free (afid);
 		afid = NULL;
-                np_uerror (0); /* not an error - means auth not required */
 		goto done;
 	}
 	if (auth && auth (afid, uid) < 0) {
-		saved_errno = errno;
+		int saved_err = np_rerror ();
 		(void)npc_clunk (afid);
 		afid = NULL;
+		np_uerror (saved_err);
 		goto done;
 	}
 done:
-        errno = saved_errno ? saved_errno : np_rerror ();
         if (tc)
                 free(tc);
         if (rc)
@@ -118,33 +114,31 @@ done:
         return afid;
 }
 
-int
-npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid)
+Npcfid *
+npc_attach (Npcfsys *fs, Npcfid *afid, char *uname, char *aname, uid_t uid)
 {
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
-	int ret = -1;
 
-	errno = 0;
 	if (!(fid = npc_fid_alloc (fs)))
 		goto done;
 	if (!(tc = np_create_tattach (fid->fid, afid ? afid->fid : P9_NOFID,
-				      NULL, aname, uid)))
+				      uname, aname, uid))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc (fs, tc, &rc) < 0)
 		goto done;
-	fs->root = fid;
-	ret = 0;
 done:
 	if (tc)
 		free (tc);
 	if (rc)
 		free (rc);
-	errno = np_rerror ();
-	if (errno && fid)
+	if (np_rerror () && fid) {
 		npc_fid_free (fid);
-
-	return ret;	
+		fid = NULL;
+	}
+	return fid;	
 }
 
 int
@@ -153,9 +147,10 @@ npc_clunk (Npcfid *fid)
         Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	errno = 0;
-        if (!(tc = np_create_tclunk (fid->fid)))
+        if (!(tc = np_create_tclunk (fid->fid))) {
+		np_uerror (ENOMEM);
                 goto done;
+	}
         if (npc_rpc (fid->fsys, tc, &rc) < 0)
                 goto done;
         npc_fid_free(fid);
@@ -165,63 +160,38 @@ done:
         	free (tc);
 	if (rc)
         	free (rc);
-	errno = np_rerror ();
-
         return ret;
 }
 
-Npcfsys*
+Npcfid *
 npc_mount (int fd, int msize, char *aname, AuthFun auth)
 {
 	Npcfsys *fs;
-	u32 uid = geteuid();
-	Npcfid *afid = NULL;
-	int n;
-	int saved_errno = 0;
+	Npcfid *afid, *fid;
 
 	if (!(fs = npc_start (fd, msize)))
-		goto done;
-	if (auth)
-		afid = npc_auth (fs, aname, uid, auth);
-	n = npc_attach (fs, afid, aname, uid);
-	saved_errno = errno;
-	if (afid)
-		npc_clunk (afid);
-	if (n < 0) {
+		return NULL;
+	if (!(afid = npc_auth (fs, NULL, aname, geteuid (), auth))
+                                                   && np_rerror () != 0) {
 		npc_finish (fs);
-		errno = saved_errno;
-		fs = NULL;
+		return NULL;
 	}
-done:
-	return fs;
-}
+	if (!(fid = npc_attach (fs, afid, NULL, aname, geteuid ()))) {
+		int saved_err = np_rerror ();
+		if (afid)
+			(void)npc_clunk (afid);
+		npc_finish (fs);
+		np_uerror (saved_err);
+		return NULL;
+	}
+	return fid;
+};
 
-int
-npc_umount2 (Npcfsys *fs)
+void
+npc_umount (Npcfid *fid)
 {
-	int ret = 0;
+	Npcfsys *fs = fid->fsys;
 
-	if (fs->root) {
-		if (npc_clunk (fs->root) < 0)
-			ret = -1;
-		fs->root = NULL;
-	}
-
-	return ret;
-}
-
-int
-npc_umount (Npcfsys *fs)
-{
-	int ret = 0;
-
-	if (fs->root) {
-		if (npc_clunk (fs->root) < 0)
-			ret = -1;
-		fs->root = NULL;
-	}
+	(void)npc_clunk (fid);
 	npc_finish (fs);
-
-	return ret;
 }
-

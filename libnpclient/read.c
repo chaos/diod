@@ -48,8 +48,10 @@ npc_pread(Npcfid *fid, void *buf, u32 count, u64 offset)
 
 	if (count > maxio)
 		count = maxio;
-	if (!(tc = np_create_tread(fid->fid, offset, count)))
+	if (!(tc = np_create_tread(fid->fid, offset, count))) {
+		np_uerror (ENOMEM);
 		goto done;
+	}
 	if (npc_rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	memmove(buf, rc->u.rread.data, rc->u.rread.count);
@@ -59,7 +61,6 @@ done:
 		free(rc);
 	if (tc)
 		free(tc);
-	errno = np_rerror ();
 
 	return ret;
 }
