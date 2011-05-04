@@ -77,7 +77,6 @@ AC_CONFIG_FILES( \
   diod/diod.8 \
   diodctl/diodctl.8 \
   utils/diodmount.8 \
-  utils/diodexp.8 \
   utils/diodcat.8 \
   etc/diod.conf.5 \
   scripts/Makefile \

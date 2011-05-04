@@ -31,11 +31,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <sys/socket.h>
-#include <sys/wait.h>
+//#include <sys/socket.h>
+//#include <sys/wait.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <netdb.h>
+//#include <netdb.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
@@ -43,9 +43,9 @@
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
-#include <pwd.h>
 #include <libgen.h>
 #include <assert.h>
+#include <signal.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -131,6 +131,9 @@ main (int argc, char *argv[])
     if (optind == argc || !aname)
         usage ();
 
+    if (signal (SIGPIPE, SIG_IGN) == SIG_ERR)
+        err_exit ("signal");
+
     if (sopt) {
         if (hostname)
             usage ();
@@ -146,6 +149,8 @@ main (int argc, char *argv[])
         exit (1);
 
     close (fd);
+
+    diod_log_fini ();
 
     exit (0);
 }
@@ -171,7 +176,8 @@ cat9 (Npcfid *root, char *path)
         done = 0;
         do {
             if ((m = write (1, buf + done, n - done)) < 0) {
-                err ("stdout");
+                if (errno != EPIPE)
+                    err ("stdout");
                 goto done;
             }
             done += m;

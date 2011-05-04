@@ -1,10 +1,11 @@
-#!/bin/bash
+#!/bin/bash -e
 
 key="$1"
+[ -n "$key" ] || exit 0
 
 DIOD_MAP=/d
 DIOD_SYSCONF=@X_SYSCONFDIR@/sysconfig/auto.diod
-DIOD_DIODEXP=@X_SBINDIR@/diodexp
+DIOD_DIODCAT=@X_SBINDIR@/diodcat
 DIOD_SERVERS=""
 
 if [ -r $DIOD_SYSCONF ]; then
@@ -14,10 +15,16 @@ if [ -z "$DIOD_SERVERS" ]; then
     echo "auto.diod: DIOD_SERVERS is not set" >&2
     exit 1
 fi
-if ! [ -x $DIOD_DIODEXP ]; then
-    echo "auto.diod: could not execute $DIOD_DIODEXP" >&2
+if ! [ -x $DIOD_DIODCAT ]; then
+    echo "auto.diod: could not execute $DIOD_DIODCAT" >&2
     exit 1
 fi
-if [ -n "$key" ]; then
-    $DIOD_DIODEXP -a $key $DIOD_SERVERS
-fi
+
+$DIOD_DIODCAT -h $DIOD_SERVERS -a /proc mounts | awk '{print $2}' |\
+while read path; do
+    if [ "$key" == "ROOT" -a "$path" == "/" ] \
+         || [ "$key" == "$(echo $path|sed -e's/^\///' -e 's/\//./g')" ] \
+         || [ "$key" == "$(echo $path|sed -e's/^\///' -e 's/\//_/g')" ]; then
+        echo "-fstype=diod $DIOD_SERVERS:$path"
+    fi
+done
