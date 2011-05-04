@@ -49,12 +49,16 @@ Unit tests (make check):
 
     ./tests/user
 	User space client and server running across a socketpair.
-	All tests can run as non-root, no kernel support needed.
+	Some tests will be skipped if not root.
+	Others will be skipped if you ARE root.
+	None require kernel 9p support.
 
     ./tests/kern:
-        Kernel client and server running across a socketpair,
+        Kernel client and user server running across a socketpair,
 	in private namespace.
 	All tests require root and 9p.ko with 9P2000.L e.g. from 2.6.38+.
+        Tests will be skipped if 9p cannot be modprobed.
+        Tests may fail if 9p can be modprobed but is older than 2.6.38.
 
 Running by hand for debugging:
 
@@ -65,31 +69,36 @@ Running by hand for debugging:
         sudo mount -t 9p -n 127.0.0.1 /mnt \
             -oaname=/tmp/9,version=9p2000.L,uname=root,access=user
 
-    Alternatively, mount with diodmount:
-	sudo ./diodmount -oport=564 -n localhost:/tmp/9 /mnt
+    Or mount with diodmount:
+	sudo ./diodmount -n localhost:/tmp/9 /mnt
+
+    Or if diodmount is installed as /sbin/mount.diod:
+        sudo mount -t diod -n localhost:/tmp/9 /mnt
 
 Running diod for I/O forwarding on clusters:
 
     On I/O node, set up /etc/diod.conf containing exports - see diod.conf(5),
-       chkconfig diodctl on
-       service diodctl start
+       chkconfig diod on
+       service diod start
 
     On compute node, if I/O node is fritz42, add entries like this to fstab:
        fritz42:/g/g0  /g/g0         diod  default 0 0
        ...
 
-    Alternatively, use "zero-config" automounter method:
+    Alternatively, use "zero-config" automounter method(*):
        set DIOD_SERVERS="fritz42" in /etc/sysconfig/auto.diod
        add to /etc/auto.master "/d /etc/auto.diod"
        mkdir /d
        chkconfig autofs on
        service autofs start
-       ln -s /g/g0 /d/g0
+       ln -s /d/g.g0 /g/g0
        ...
 
-    Note that at this point it's only being tested with NFS file systems.
+    Note that at this point diod is only being tested with NFS file systems.
     Use it with Lustre or GPFS at your own peril - but if you do, please
     report issues!
+
+(*)only works on exports that are themselves mount points, see /etc/auto.diod
 
 +---------+
 | Support |
