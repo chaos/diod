@@ -211,20 +211,6 @@ main(int argc, char **argv)
     if (geteuid () == 0)
         _setrlimit ();
 
-    /* Drop root permission if running as one user.
-     * If not root, arrange to run (only) as current effective uid.
-     */
-    if (diod_conf_get_allsquash ())
-        _become_user (diod_conf_get_squashuser (), -1, 1);
-    else if (geteuid () != 0)
-        diod_conf_set_runasuid (geteuid ());
-    else if (diod_conf_opt_runasuid ()) {
-        uid_t uid = diod_conf_get_runasuid ();
-            _become_user (NULL, uid, 1);
-        if (uid != geteuid ())
-            _become_user (NULL, uid, 1);
-    }
-
     _service_run (mode);
 
     diod_conf_fini ();
@@ -462,10 +448,23 @@ _service_run (srvmode_t mode)
     if (!diod_conf_get_foreground () && mode != SRV_STDIN) 
         diod_log_set_dest (diod_conf_get_logdest ());
 
-    if (!diod_conf_opt_runasuid () && !diod_conf_get_allsquash ())
-        flags |= SRV_FLAGS_SETFSID;
-    flags |= SRV_FLAGS_AUTHCONN;
+    /* Drop root permission if running as one user.
+     * If not root, arrange to run (only) as current effective uid.
+     */
+    if (diod_conf_get_allsquash ())
+        _become_user (diod_conf_get_squashuser (), -1, 1);
+    else if (geteuid () != 0)
+        diod_conf_set_runasuid (geteuid ());
+    else if (diod_conf_opt_runasuid ()) {
+        uid_t uid = diod_conf_get_runasuid ();
+    
+        if (uid != geteuid ())
+            _become_user (NULL, uid, 1);
+    }
 
+    flags |= SRV_FLAGS_AUTHCONN;
+    if (geteuid () == 0)
+        flags |= SRV_FLAGS_SETFSID;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
         err_exit ("np_srv_create");
     diod_register_ops (ss.srv);
