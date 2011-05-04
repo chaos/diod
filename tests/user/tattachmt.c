@@ -23,20 +23,20 @@
 #include "diod_auth.h"
 
 const int fd = 0; /* stdin */
-const int numgetattrs = 16;
-const int iterations = 8;
 
 typedef struct {
     Npcfsys *fs;
     uid_t uid;
     char *aname;
+    int numgetattrs;
+    int iterations;
     pthread_t t;
 } thd_t;
 
 static void
 usage (void)
 {
-    fprintf (stderr, "Usage: tattachmt numusers numthreads aname\n");
+    fprintf (stderr, "Usage: tattachmt numusers numthreads numgetattrs iterations aname\n");
     exit (1);
 }
 
@@ -51,7 +51,7 @@ client (void *arg)
     struct stat sb;
     int i, j;
 
-    for (j = 0; j < iterations; j++) {
+    for (j = 0; j < t->iterations; j++) {
         if (!(afid = npc_auth (t->fs, t->aname, t->uid,
                          diod_auth_client_handshake)) && np_rerror () != 0) {
             errn_exit (np_rerror (), "npc_auth");
@@ -61,7 +61,7 @@ client (void *arg)
         }
         if (afid && npc_clunk (afid) < 0)
             errn_exit (np_rerror (), "npc_clunk afid");
-        for (i = 0; i < numgetattrs; i++) {
+        for (i = 0; i < t->numgetattrs; i++) {
             if (npc_getattr (root, &sb) < 0) {
                 errn_exit (np_rerror (), "npc_getattr");
             }
@@ -81,17 +81,19 @@ main (int argc, char *argv[])
     Npcfsys *fs;
     char *aname;
     thd_t *t;
-    int i, err, numthreads, numusers;
+    int i, err, numthreads, numusers, numgetattrs, iterations;
     uid_t *uids;
     struct passwd *pw;
 
     diod_log_init (argv[0]);
 
-    if (argc != 4)
+    if (argc != 6)
         usage ();
     numusers = strtoul (argv[1], NULL, 10); 
     numthreads = strtoul (argv[2], NULL, 10); 
-    aname = argv[3];
+    numgetattrs = strtoul (argv[3], NULL, 10); 
+    iterations = strtoul (argv[4], NULL, 10); 
+    aname = argv[5];
 
     if (!(t = malloc (sizeof(*t) * numthreads)))
         msg_exit ("out of memory");
@@ -119,6 +121,8 @@ main (int argc, char *argv[])
 	t[i].fs = fs;
 	t[i].uid = uids[i % numusers];
 	t[i].aname = aname;
+        t[i].numgetattrs = numgetattrs;
+        t[i].iterations = iterations;
 	err = pthread_create (&t[i].t, NULL, client, &t[i]);
         if (err)
             errn_exit (err, "pthread_create");

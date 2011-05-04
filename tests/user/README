@@ -16,11 +16,11 @@ t06	Try to write file in non-existent directory.
 t07	Simple mkdir
 t08	Compare p9 stat with regular stat
 t09	Create directory >P9_MAXWELEM directories deep.
-t10	Attach to server with multiple threads, one user
-t11(*)	Attach to server with multiple thread, multiple users
-t12(+)  Attach to server running as user with a different uesr
-
-(*) NOTRUN if not run as root
-(+) NOTRUN if run as root
+t10	Attach to server with N threads, 1 user
+t11(*)	Attach to server with N threads, M users (N > M)
+t12(+)  Attach to user A's private server with user B
+t13(*)	Attach to server with N threads, M users (N < M)
 
 
+(*) requires root (else NOTRUN)
+(+) requires non-root (else NOTRUN)

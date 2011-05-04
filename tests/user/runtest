@@ -13,16 +13,21 @@ if [ -z "$PATH_DIOD" ]; then
     exit 1
 fi
 
-# Special case for t11 which requires root
-if [ "`basename $TEST`" = "t11" ] && [ $(id -u) != 0 ]; then
-    echo "t11 requires root" >$TEST.out
-    exit 77
-fi
-# Special case for t11 which requires non-root
-if [ "`basename $TEST`" = "t12" ] && [ $(id -u) == 0 ]; then
-    echo "t12 requires non-root" >$TEST.out
-    exit 77
-fi
+# some tests require root, some require non-root
+case $(basename $TEST) in
+    t12)
+        if [ $(id -u) == 0 ]; then
+            echo "requires non-root" >$TEST.out
+            exit 77
+        fi
+        ;;
+    t11|t13)
+        if [ $(id -u) != 0 ]; then
+            echo "requires root" >$TEST.out
+            exit 77
+        fi
+        ;;
+esac
 
 rm -f $TEST.diod $TEST.out
 ulimit -c unlimited
