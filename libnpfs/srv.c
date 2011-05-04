@@ -89,7 +89,6 @@ np_srv_create(int nwthread, int flags)
 	pthread_cond_init(&srv->conncountcond, NULL);
 	srv->conncount = 0;
 	srv->connhistory = 0;
-	srv->shutdown = 0;
 
 	srv->msize = 8216;
 	srv->srvaux = NULL;
@@ -219,52 +218,8 @@ np_srv_wait_conncount(Npsrv *srv, int count)
 {
 	pthread_mutex_lock(&srv->lock);
 	while (srv->conncount > 0 || srv->connhistory < count) {
-		if (srv->shutdown)
-			break;
 		pthread_cond_wait(&srv->conncountcond, &srv->lock);
 	}
-	pthread_mutex_unlock(&srv->lock);
-}
-
-/* Block the caller until the server has no active connections for
- * 'inactivity_secs'.
- */
-void
-np_srv_wait_timeout(Npsrv *srv, int inactivity_secs)
-{
-	struct timeval tv;
-	struct timespec ts;
-	int rc = 0;
-
-	do {
-		pthread_mutex_lock(&srv->lock);
-		while (srv->conncount == 0 && rc != ETIMEDOUT) {
-			if (srv->shutdown)
-				break;
-			gettimeofday (&tv, NULL);
-			ts.tv_sec = tv.tv_sec + inactivity_secs;
-			ts.tv_nsec = tv.tv_usec * 1000;
-			rc = pthread_cond_timedwait(&srv->conncountcond,
-						    &srv->lock, &ts);
-		}
-		while (srv->conncount > 0) {
-			if (srv->shutdown)
-				break;
-			pthread_cond_wait(&srv->conncountcond, &srv->lock);
-		}
-		pthread_mutex_unlock(&srv->lock);
-	} while (rc != ETIMEDOUT && !srv->shutdown);
-}
-
-/* Unblock np_srv_wait_timeout () and np_srv_wait_conncount () prematurely.
- * To tear down the server in an orderly fashion call np_srv_destroy ().
- */
-void
-np_srv_shutdown(Npsrv *srv)
-{
-	pthread_mutex_lock(&srv->lock);
-	srv->shutdown = 1;
-	pthread_cond_signal(&srv->conncountcond);
 	pthread_mutex_unlock(&srv->lock);
 }
 

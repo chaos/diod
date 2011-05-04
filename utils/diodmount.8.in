@@ -9,22 +9,13 @@ is the mount utility for the distributed I/O daemon, which is an I/O
 forwarding service for Linux clusters built upon the Linux \fB9p\fR
 file system.
 .LP
-\fBmount.diod\fR performs three main tasks: 1) contact the \fBdiodctl\fR
-superserver on \fIhost\fR to obtain a \fBdiod\fR server port number,
-2) authenticate to the \fBdiod\fR server, and
-3) issue the \fImount(2)\fR system call with appropriate mount options.
-.LP
-The act of requesting a port number may spawn a new \fIdiod\fR server
-instance, or return the port of an existing server, depending on the options.
-If a shared mount is requested (default), the port of a shared
-server is returned.  If a private mount is requested with \fI-oaccess=UID\fR,
-then a port number for a \fIdiod\fR server running exclusively for that user
-is returned.  If a jobid is provided with \fI-ojobid=JOBID\fR, the port number
-for a \fIdiod\fR server running exclusively for that job will be returned.
+\fBmount.diod\fR performs two main tasks:
+1) connect and authenticate to the \fBdiod\fR server, and
+2) issue the \fImount(2)\fR system call with appropriate mount options.
 .LP
 Authentication with the \fBdiod\fR server takes place in user space.
 The connected (and authenticated) file descriptor is passed as a mount
-option to the \fB9p\fR file system
+option to the kernel \fB9p\fR file system
 .LP
 This command requires root to execute the \fImount(2)\fR system call.
 .LP
@@ -65,7 +56,7 @@ specified user.
 .TP
 .I "port=n"
 Connect to the \fIdiod\fR server on the specified port.
-The default is to obtain a port dynamically from \fBdiodctl\fR.
+The default the IANA-assigned 9pfs port 564.
 .TP
 .I "trans=name"
 Select a transport.
@@ -79,16 +70,12 @@ connected to a \fBdiod\fR server and ignores \fIhost\fR in the
 device specification, and the \fIport=n\fR option.
 .TP
 .I "msize=n"
-The msize is the max 9p packet payload size.
+The msize is the max 9P packet payload size.
 The default is 65512 (65536-24)
 .TP
 .I "version=name"
 Select 9P protocol version.
 \fBdiod\fR only supports \fI9p2000.L\fR.
-.TP
-.I "jobid=name"
-Ask the \fBdiodctl\fR superserver for a \fIdiod\fR server running
-exclusively for \fIjobid=name\fR.
 .TP
 .I "cache=mode"
 Specify a caching policy.  By default, no caches are used.
@@ -134,8 +121,8 @@ Specifies debug level for the kernel 9p module.  The debug level is a bitmask.
 .br
 0x800 = display fscache tracing debug
 .br
-The debug level is global.  The default is \fIdebug=0\fR.
+The debug level is global, i.e. it applies to all 9P file systems and
+it remains set after the file system is unmounted.
+The default is \fIdebug=0\fR.
 .SH "SEE ALSO"
-diod (8),
-diodctl (8),
-diodctl.conf (5)
+diod (8)

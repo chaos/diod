@@ -21,13 +21,6 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-enum {
-    //DEBUG_9P_TRACE  = 0x01,
-    //DEBUG_9P_ERRORS = 0x02,
-    DEBUG_ATOMIC    = 0x04,
-    DEBUG_ADVLOCK   = 0x08,
-};
-
 void	diod_conf_init (void);
 void	diod_conf_fini (void);
 void    diod_conf_init_config_file (char *path);
@@ -67,19 +60,10 @@ uid_t   diod_conf_get_runasuid (void);
 int     diod_conf_opt_runasuid (void);
 void    diod_conf_set_runasuid (uid_t uid);
 
-char   *diod_conf_get_diodpath (void);
-int     diod_conf_opt_diodpath (void);
-void    diod_conf_set_diodpath (char *s);
-
-List    diod_conf_get_diodlisten (void);
-int     diod_conf_opt_diodlisten (void);
-void    diod_conf_clr_diodlisten (void);
-void    diod_conf_add_diodlisten (char *s);
-
-List    diod_conf_get_diodctllisten (void);
-int     diod_conf_opt_diodctllisten (void);
-void    diod_conf_clr_diodctllisten (void);
-void    diod_conf_add_diodctllisten (char *s);
+List    diod_conf_get_listen (void);
+int     diod_conf_opt_listen (void);
+void    diod_conf_clr_listen (void);
+void    diod_conf_add_listen (char *s);
 
 #define XFLAGS_RO           0x01
 

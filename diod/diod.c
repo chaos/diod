@@ -1,5 +1,5 @@
 /*****************************************************************************
- *  Copyright (C) 2010 Lawrence Livermore National Security, LLC.
+ *  Copyright (C) 2010-11 Lawrence Livermore National Security, LLC.
  *  Written by Jim Garlick <garlick@llnl.gov> LLNL-CODE-423279
  *  All Rights Reserved.
  *
@@ -61,18 +61,18 @@
 
 #include "ops.h"
 
-typedef enum { SRV_STDIN, SRV_DIODCTL, SRV_NORMAL } srvmode_t;
+typedef enum { SRV_STDIN, SRV_NORMAL } srvmode_t;
 
 static void          _daemonize (void);
 static void          _setrlimit (void);
 static void          _become_user (char *name, uid_t uid, int realtoo);
-static void          _service_run (srvmode_t mode, int Fopt);
+static void          _service_run (srvmode_t mode);
 
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fsd:l:w:e:EF:u:SL:nc:"
+#define OPTIONS "fsd:l:w:e:Eu:SL:nc:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -85,7 +85,6 @@ static const struct option longopts[] = {
     {"export",          required_argument,  0, 'e'},
     {"export-all",      no_argument,        0, 'E'},
     {"no-auth",         no_argument,        0, 'n'},
-    {"diodctl",         required_argument,  0, 'F'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"allsquash",       no_argument,        0, 'S'},
     {"logdest",         required_argument,  0, 'L'},
@@ -104,7 +103,6 @@ usage()
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -s,--stdin             service connected client on stdin\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
-"   -F,--diodctl N         listen for connections on the first N fds\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -E,--export-all        export all mounted file systems\n"
@@ -122,7 +120,6 @@ int
 main(int argc, char **argv)
 {
     int c;
-    int Fopt = 0;
     char *copt = NULL;
     srvmode_t mode = SRV_NORMAL;
    
@@ -158,11 +155,11 @@ main(int argc, char **argv)
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
             case 'l':   /* --listen HOST:PORT */
-                if (!diod_conf_opt_diodlisten ())
-                    diod_conf_clr_diodlisten ();
+                if (!diod_conf_opt_listen ())
+                    diod_conf_clr_listen ();
                 if (!strchr (optarg, ':'))
                     usage ();
-                diod_conf_add_diodlisten (optarg);
+                diod_conf_add_listen (optarg);
                 break;
             case 'w':   /* --nwthreads INT */
                 diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
@@ -182,10 +179,6 @@ main(int argc, char **argv)
                 break;
             case 'S':   /* --allsquash */
                 diod_conf_set_allsquash (1);
-                break;
-            case 'F':   /* --diodctl N */
-                Fopt = strtoul (optarg, NULL, 10);
-                mode = SRV_DIODCTL;
                 break;
             case 'u':   /* --runas-uid UID */
                 if (geteuid () == 0) {
@@ -232,7 +225,7 @@ main(int argc, char **argv)
             _become_user (NULL, uid, 1);
     }
 
-    _service_run (mode, Fopt);
+    _service_run (mode);
 
     diod_conf_fini ();
     diod_log_fini ();
@@ -412,7 +405,6 @@ _service_loop (void *arg)
             }
         }
     }
-    np_srv_shutdown (ss.srv);
     return NULL;
 }
 
@@ -444,9 +436,9 @@ _service_sigsetup (void)
 }
 
 static void
-_service_run (srvmode_t mode, int Fopt)
+_service_run (srvmode_t mode)
 {
-    List l = diod_conf_get_diodlisten ();
+    List l = diod_conf_get_listen ();
     int nwthreads = diod_conf_get_nwthreads ();
     int flags = diod_conf_get_debuglevel ();
     int n;
@@ -460,12 +452,8 @@ _service_run (srvmode_t mode, int Fopt)
     switch (mode) {
         case SRV_STDIN:
             break;
-        case SRV_DIODCTL:
-            if (!diod_sock_listen_nfds (&ss.fds, &ss.nfds, Fopt, 3))
-                msg_exit ("failed to set up listen ports");
-            break;
         case SRV_NORMAL:
-            if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL, 0))
+            if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL))
                 msg_exit ("failed to set up listen ports");
             break;
     }
@@ -488,10 +476,6 @@ _service_run (srvmode_t mode, int Fopt)
     switch (mode) {
         case SRV_STDIN:
             np_srv_wait_conncount (ss.srv, 1);
-            pthread_kill (ss.t, SIGUSR1);
-            break;
-        case SRV_DIODCTL:
-            np_srv_wait_timeout (ss.srv, 30);
             pthread_kill (ss.t, SIGUSR1);
             break;
         case SRV_NORMAL:

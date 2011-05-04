@@ -24,7 +24,6 @@ t09   	Check for memory problems in list package
 	Actually this was to run down a specific case, now fixed.
 t10	Check for memory problems in a skeletal libnpfs server
 t11	Check for memory problems in a skeletal libnpclient client
-t12	Check for memory problems in a skeletal libnpfs synthetic file server
 
 (*) NOTRUN if not run as root
 (@) NOTRUN if lua is not installed

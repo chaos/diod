@@ -65,7 +65,6 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "opt.h"
-#include "ctl.h"
 
 #define OPTIONS "fnvo:"
 #if HAVE_GETOPT_LONG
@@ -109,7 +108,6 @@ int
 main (int argc, char *argv[])
 {
     char *dir = NULL;
-    char *port = NULL;
     char *spec;
     int c, i;
     int nopt = 0;
@@ -205,20 +203,18 @@ main (int argc, char *argv[])
             msg_exit ("-orfdno,wfdno must be used together");
         if (rfd != wfd)    
             msg_exit ("-orfdno,wfdno must have same value");
-        if (opt_find (o, "jobid"))
-            msg_exit ("jobid cannot be used with -orfdno,wfdno");
         sfd = rfd;
         nopt = 1; /* force no mtab */
 
-    /* Server port was specified.
-     * Presume there is no need to contact diodctl for port.
+    /* Connect to server on IANA port (or user-spacfied) and host.
      */
-    } else if ((port = opt_find (o, "port"))) {
+    } else {
         hostlist_iterator_t hi;
+        char *port = opt_find (o, "port");
         char *host;
 
-        if (opt_find (o, "jobid"))
-            msg_exit ("-ojobid cannot be used with -oport");
+        if (!port)
+            port = "564";
         if (!(hi = hostlist_iterator_create (hl)))
             msg_exit ("out of memory");
         while ((host = hostlist_next (hi)) && sfd < 0) {
@@ -232,32 +228,6 @@ main (int argc, char *argv[])
         opt_delete (o, "port");
         opt_addf (o, "rfdno=%d", sfd);
         opt_addf (o, "wfdno=%d", sfd);
-
-    /* Try diodctl server on each host until one responds.
-     * Negotiate a port to connect to based on user and jobid.
-     */
-    } else {
-        hostlist_iterator_t hi;
-        char *jobid, *host; 
-
-        jobid = opt_find (o, "jobid");
-        if (!(hi = hostlist_iterator_create (hl)))
-            msg_exit ("out of memory");
-        while ((host = hostlist_next (hi)) && sfd < 0) {
-            if (vopt)
-                msg ("requesting diod port from %s", host);
-            if (ctl_query (host, jobid, &port, NULL) == 0) {
-                sfd = diod_sock_connect (host, port, 1, 0);
-                free (port);
-            }
-        }
-        hostlist_iterator_destroy (hi);
-        if (sfd < 0)
-            msg_exit ("failed to establish connection with server");
-        opt_addf (o, "rfdno=%d", sfd);
-        opt_addf (o, "wfdno=%d", sfd);
-        if (jobid)
-            opt_delete (o, "jobid");
     }
 
     assert (opt_find (o, "trans=fd"));
@@ -270,7 +240,6 @@ main (int argc, char *argv[])
          || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
 
     assert (!opt_find (o, "port"));
-    assert (!opt_find (o, "jobid"));
 
     _diod_mount (o, sfd, spec, dir, vopt, fopt, nopt);
     //(void)close (sfd);

@@ -72,9 +72,7 @@
 #define RO_FOREGROUND       0x0004
 #define RO_AUTH_REQUIRED    0x0008
 #define RO_RUNASUID         0x0010
-#define RO_DIODPATH         0x0020
-#define RO_DIODLISTEN       0x0040
-#define RO_DIODCTLLISTEN    0x0080
+#define RO_LISTEN           0x0040
 #define RO_EXPORTS          0x0100
 #define RO_STATSLOG         0x0200
 #define RO_CONFIGPATH       0x0400
@@ -91,14 +89,12 @@ typedef struct {
     int          allsquash;
     char        *squashuser;
     uid_t        runasuid;
-    char        *diodpath;
-    List         diodlisten;
-    List         diodctllisten;
+    List         listen;
     int          exportall;
     List         exports;
     char        *configpath;
     char        *logdest;
-    int         ro_mask; 
+    int          ro_mask; 
 } Conf;
 
 static Conf config;
@@ -177,11 +173,8 @@ diod_conf_init (void)
     config.allsquash = 0;
     config.squashuser = _xstrdup ("nobody");
     config.runasuid = 0;
-    config.diodpath = _xstrdup (X_SBINDIR "/diod");
-    config.diodlisten = _xlist_create ((ListDelF)free);
-    _xlist_append (config.diodlisten, _xstrdup ("0.0.0.0:564"));
-    config.diodctllisten = _xlist_create ((ListDelF)free);
-    _xlist_append (config.diodctllisten, _xstrdup ("0.0.0.0:10005"));
+    config.listen = _xlist_create ((ListDelF)free);
+    _xlist_append (config.listen, _xstrdup ("0.0.0.0:564"));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.exportall = 0;
 #if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
@@ -196,12 +189,8 @@ diod_conf_init (void)
 void
 diod_conf_fini (void)
 {
-    if (config.diodpath)
-        free (config.diodpath);
-    if (config.diodlisten)
-        list_destroy (config.diodlisten);
-    if (config.diodctllisten)
-        list_destroy (config.diodctllisten);
+    if (config.listen)
+        list_destroy (config.listen);
     if (config.exports)
         list_destroy (config.exports);
     if (config.configpath)
@@ -302,50 +291,20 @@ void diod_conf_set_runasuid (uid_t uid)
     config.ro_mask |= RO_RUNASUID;
 }
 
-/* diodpath - path to diod executable for diodctl
+/* listen - list of host:port strings for diod to listen on.
  */
-char *diod_conf_get_diodpath (void) { return config.diodpath; }
-int diod_conf_opt_diodpath (void) { return config.ro_mask & RO_DIODPATH; }
-void diod_conf_set_diodpath (char *s)
+List diod_conf_get_listen (void) { return config.listen; }
+int diod_conf_opt_listen (void) { return config.ro_mask & RO_LISTEN; }
+void diod_conf_clr_listen (void)
 {
-    free (config.diodpath);
-    config.diodpath = _xstrdup (s);
-    config.ro_mask |= RO_DIODPATH;
+    list_destroy (config.listen);
+    config.listen = _xlist_create ((ListDelF)free);
+    config.ro_mask |= RO_LISTEN;
 }
-
-/* diodlisten - list of host:port strings for diod to listen on.
- */
-List diod_conf_get_diodlisten (void) { return config.diodlisten; }
-int diod_conf_opt_diodlisten (void) { return config.ro_mask & RO_DIODLISTEN; }
-void diod_conf_clr_diodlisten (void)
+void diod_conf_add_listen (char *s)
 {
-    list_destroy (config.diodlisten);
-    config.diodlisten = _xlist_create ((ListDelF)free);
-    config.ro_mask |= RO_DIODLISTEN;
-}
-
-/* diodctllisten - list of host:port strings for diodctl to listen on.
- */
-List diod_conf_get_diodctllisten (void) { return config.diodctllisten; }
-int diod_conf_opt_diodctllisten (void)
-{
-    return config.ro_mask & RO_DIODCTLLISTEN;
-}
-void diod_conf_add_diodlisten (char *s)
-{
-    _xlist_append (config.diodlisten, _xstrdup (s));
-    config.ro_mask |= RO_DIODLISTEN;
-}
-void diod_conf_clr_diodctllisten (void)
-{
-    list_destroy (config.diodctllisten);
-    config.diodctllisten = _xlist_create ((ListDelF)free);
-    config.ro_mask |= RO_DIODCTLLISTEN;
-}
-void diod_conf_add_diodctllisten (char *s)
-{
-    _xlist_append (config.diodctllisten, _xstrdup (s));
-    config.ro_mask |= RO_DIODCTLLISTEN;
+    _xlist_append (config.listen, _xstrdup (s));
+    config.ro_mask |= RO_LISTEN;
 }
 
 /* exportall - export everything in /proc/mounts
@@ -638,13 +597,9 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             _lua_getglobal_string (path, L, "squashuser",
                                 &config.squashuser);
         }
-        if (!(config.ro_mask & RO_DIODCTLLISTEN)) {
-            _lua_getglobal_list_of_strings (path, L, "diodctllisten",
-                                &config.diodctllisten);
-        }
-        if (!(config.ro_mask & RO_DIODLISTEN)) {
-            _lua_getglobal_list_of_strings (path, L, "diodlisten",
-                                &config.diodlisten);
+        if (!(config.ro_mask & RO_LISTEN)) {
+            _lua_getglobal_list_of_strings (path, L, "listen",
+                                &config.listen);
         }
         if (!(config.ro_mask & RO_LOGDEST)) {
             _lua_getglobal_string (path, L, "logdest",

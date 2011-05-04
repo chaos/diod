@@ -28,12 +28,7 @@ This option is mainly used in testing.
 .I "-l, --listen IP:PORT"
 Set the listen address (default 0.0.0.0:564).
 This option may be specified more than once.
-It overrides the \fIdiodlisten\fR config file setting.
-.TP
-.I "-F, --diodctl N"
-Listen for connection on file descriptors 3 through N+3.
-This is the mechanism that \fBdiodctl\fR uses to pass dynamically
-allocated sockets, possibly on multiple interfaces, to \fBdiod\fR.
+It overrides the \fIlisten\fR config file setting.
 .TP
 .I "-w, --nwthreads INT"
 Set the number of worker threads to spawn to handle 9P operations.
@@ -85,4 +80,4 @@ Set config file path.
 .br
 @X_SYSCONFDIR@/diod.conf
 .SH "SEE ALSO"
-diodctl (8), diod.conf (5), mount.diod (8), hosts_access (5)
+diod.conf (5), mount.diod (8), hosts_access (5)

@@ -75,15 +75,13 @@ AC_CONFIG_FILES( \
   libnpfs/Makefile \
   libnpclient/Makefile \
   diod/diod.8 \
-  diodctl/diodctl.8 \
   utils/diodmount.8 \
   utils/diodcat.8 \
   etc/diod.conf.5 \
   scripts/Makefile \
-  scripts/diodctl.init \
+  scripts/diod.init \
   scripts/auto.diod \
   diod/Makefile \
-  diodctl/Makefile \
   utils/Makefile \
   tests/Makefile \
   tests/misc/Makefile \

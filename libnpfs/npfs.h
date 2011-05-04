@@ -246,7 +246,6 @@ struct Npsrv {
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
 
 	/* implementation specific */
-	int		shutdown;
 	pthread_mutex_t	lock;
 	pthread_cond_t	reqcond;
 	pthread_cond_t	conncountcond;
@@ -276,8 +275,6 @@ void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
 int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
-void np_srv_wait_timeout(Npsrv *srv, int inactivity_secs);
-void np_srv_shutdown (Npsrv *srv);
 void np_logerr(Npsrv *srv, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 void np_logmsg(Npsrv *srv, const char *fmt, ...)

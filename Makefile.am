@@ -6,7 +6,6 @@ SUBDIRS = \
 	diod \
 	utils \
 	scripts \
-	diodctl \
 	etc \
 	tests
 
