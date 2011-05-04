@@ -35,10 +35,10 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-sbin_PROGRAMS = diodmount$(EXEEXT) diodexp$(EXEEXT)
+sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diodexp.8.in $(srcdir)/diodmount.8.in
+	$(srcdir)/diodcat.8.in $(srcdir)/diodmount.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/x_ac_check_cond_lib.m4 \
@@ -50,13 +50,13 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodmount.8 diodexp.8
+CONFIG_CLEAN_FILES = diodmount.8 diodcat.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
-am__objects_1 = ctl.$(OBJEXT) opt.$(OBJEXT)
-am_diodexp_OBJECTS = diodexp.$(OBJEXT) $(am__objects_1)
-diodexp_OBJECTS = $(am_diodexp_OBJECTS)
+am__objects_1 = opt.$(OBJEXT)
+am_diodcat_OBJECTS = diodcat.$(OBJEXT) $(am__objects_1)
+diodcat_OBJECTS = $(am_diodcat_OBJECTS)
 am__DEPENDENCIES_1 =
 am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
@@ -64,7 +64,7 @@ am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-diodexp_DEPENDENCIES = $(am__DEPENDENCIES_2)
+diodcat_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodmount_OBJECTS = diodmount.$(OBJEXT) $(am__objects_1)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
 diodmount_DEPENDENCIES = $(am__DEPENDENCIES_2)
@@ -76,8 +76,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diodexp_SOURCES) $(diodmount_SOURCES)
-DIST_SOURCES = $(diodexp_SOURCES) $(diodmount_SOURCES)
+SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES)
+DIST_SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -244,18 +244,16 @@ common_ldadd = \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
 
 common_sources = \
-	ctl.c \
-	ctl.h \
 	opt.c \
 	opt.h
 
 diodmount_LDADD = $(common_ldadd)
 diodmount_SOURCES = diodmount.c $(common_sources)
-diodexp_LDADD = $(common_ldadd)
-diodexp_SOURCES = diodexp.c $(common_sources)
+diodcat_LDADD = $(common_ldadd)
+diodcat_SOURCES = diodcat.c $(common_sources)
 man8_MANS = \
         diodmount.8 \
-        diodexp.8
+        diodcat.8
 
 all: all-am
 
@@ -293,7 +291,7 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 $(am__aclocal_m4_deps):
 diodmount.8: $(top_builddir)/config.status $(srcdir)/diodmount.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
-diodexp.8: $(top_builddir)/config.status $(srcdir)/diodexp.8.in
+diodcat.8: $(top_builddir)/config.status $(srcdir)/diodcat.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-sbinPROGRAMS: $(sbin_PROGRAMS)
 	@$(NORMAL_INSTALL)
@@ -332,9 +330,9 @@ uninstall-sbinPROGRAMS:
 
 clean-sbinPROGRAMS:
 	-test -z "$(sbin_PROGRAMS)" || rm -f $(sbin_PROGRAMS)
-diodexp$(EXEEXT): $(diodexp_OBJECTS) $(diodexp_DEPENDENCIES) 
-	@rm -f diodexp$(EXEEXT)
-	$(LINK) $(diodexp_OBJECTS) $(diodexp_LDADD) $(LIBS)
+diodcat$(EXEEXT): $(diodcat_OBJECTS) $(diodcat_DEPENDENCIES) 
+	@rm -f diodcat$(EXEEXT)
+	$(LINK) $(diodcat_OBJECTS) $(diodcat_LDADD) $(LIBS)
 diodmount$(EXEEXT): $(diodmount_OBJECTS) $(diodmount_DEPENDENCIES) 
 	@rm -f diodmount$(EXEEXT)
 	$(LINK) $(diodmount_OBJECTS) $(diodmount_LDADD) $(LIBS)
@@ -345,8 +343,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ctl.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodexp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodcat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
 

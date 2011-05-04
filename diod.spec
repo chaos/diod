@@ -45,12 +45,12 @@ mv $RPM_BUILD_ROOT%{_mandir}/man8/diodmount.8 \
 rm -rf ${RPM_BUILD_ROOT}
 
 %post
-if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add diodctl; fi
+if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add diod; fi
 
 %preun
 if [ "$1" = 0 ]; then
-  %{_sysconfdir}/init.d/diodctl stop >/dev/null 2>&1 || :
-  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del diodctl; fi
+  %{_sysconfdir}/init.d/diod stop >/dev/null 2>&1 || :
+  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del diod; fi
 fi
 
 %files
@@ -60,6 +60,6 @@ fi
 /sbin/*
 %{_mandir}/man8/*
 %{_mandir}/man5/*
-%attr(0755,root,root) %{_sysconfdir}/init.d/diodctl
+%attr(0755,root,root) %{_sysconfdir}/init.d/diod
 %config(noreplace) %attr(0755,root,root) %{_sysconfdir}/auto.diod
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/diod.conf

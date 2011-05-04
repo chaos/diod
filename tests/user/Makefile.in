@@ -264,7 +264,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODCONF=$(top_builddir)/etc/diod.conf" "./runtest"
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13
 CLEANFILES = *.out *.diff *.diod
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \

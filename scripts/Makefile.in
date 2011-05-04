@@ -36,7 +36,7 @@ host_triplet = @host@
 target_triplet = @target@
 subdir = scripts
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/auto.diod.in $(srcdir)/diodctl.init.in
+	$(srcdir)/auto.diod.in $(srcdir)/diod.init.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/x_ac_check_cond_lib.m4 \
@@ -48,7 +48,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodctl.init auto.diod
+CONFIG_CLEAN_FILES = diod.init auto.diod
 CONFIG_CLEAN_VPATH_FILES =
 SOURCES =
 DIST_SOURCES =
@@ -180,7 +180,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-EXTRA_DIST = diodctl.init auto.diod
+EXTRA_DIST = diod.init auto.diod
 all: all-am
 
 .SUFFIXES:
@@ -214,7 +214,7 @@ $(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
-diodctl.init: $(top_builddir)/config.status $(srcdir)/diodctl.init.in
+diod.init: $(top_builddir)/config.status $(srcdir)/diod.init.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 auto.diod: $(top_builddir)/config.status $(srcdir)/auto.diod.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
@@ -364,13 +364,13 @@ uninstall-am: uninstall-local
 	pdf-am ps ps-am uninstall uninstall-am uninstall-local
 
 install-data-local:
-	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/diodctl.init \
-		$(DESTDIR)$(sysconfdir)/init.d/diodctl
+	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/diod.init \
+		$(DESTDIR)$(sysconfdir)/init.d/diod
 	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/auto.diod \
 		$(DESTDIR)$(sysconfdir)/auto.diod
 
 uninstall-local:
-	$(RM) $(DESTDIR)$(sysconfdir)/init.d/diodctl
+	$(RM) $(DESTDIR)$(sysconfdir)/init.d/diod
 	$(RM) $(DESTDIR)$(sysconfdir)/auto.diod
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
