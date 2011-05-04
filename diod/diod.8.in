@@ -9,9 +9,6 @@ diod \- distributed I/O daemon
 is the distributed I/O daemon server, which
 implements I/O forwarding on Linux clusters.
 .LP
-Usually diod is spawned by the \fBdiodctl\fR superserver.
-It can also run standalone.
-.LP
 Configuration is read from the diod.conf (5) config file.
 Some configuration can be overridden on the command line, as described below.
 .SH OPTIONS

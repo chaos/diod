@@ -3,7 +3,6 @@
 diod.conf \- distributed I/O daemon configuration file
 .SH DESCRIPTION
 The diod.conf file is actually a LUA script.
-\fBdiod\fR and \fBdiodctl\fR read this file on startup.
 Internal config defaults are overridden by settings in the file,
 and some of those values can in turn be overridden on the command line.
 .LP
@@ -13,16 +12,9 @@ can either be statically assigned or computed.
 The variables are described below.
 .SH "CONFIG VARIABLES"
 .TP
-.I "diodctllisten = { ""IP:PORT"" [,""IP:PORT"",...] }"
-List the interfaces and ports that \fBdiodctl\fR should listen on.
-The default is "0.0.0.0:10005".
-Note: when \fBdiod\fR is spawned by \fBdiodctl\fR,
-listen addresses are dynamically assigned and limited by the value
-of the host portion of \fIdiodctllisten\fR values.
-.TP
-.I "diodlisten = { ""IP:PORT"" [,""IP:PORT"",...] }"
-List the interfaces and ports that \fBdiod\fR should listen on, if
-not spawned by \fBdiodctl\fR.
+.I "listen = { ""IP:PORT"" [,""IP:PORT"",...] }"
+List the interfaces and ports that \fBdiod\fR should listen on.
+The default is "0.0.0.0:564".
 .TP
 .I "exports = { ""/path"" [, ""/path"", ...] }"
 List the file systems that clients will be allowed to mount.
@@ -39,16 +31,16 @@ exported paths can be mounted.
 .TP
 .I "exportall = 1"
 Export all file systems listed in /proc/mounts.
-If new file systems are mounted after \fBdiod\fR or \fBdiodctl\fR daemons
-have started, they will become immediately mountable.
+If new file systems are mounted after \fBdiod\fR
+has started, they will become immediately mountable.
 .TP
 .I "nwthreads = INTEGER"
-Sets the number of worker threads created to handle 9P requests per \fBdiod\fR
-and \fBdiodctl\fR instance.  The default is 16.
+Sets the (fixed) number of worker threads created to handle 9P requests.
+The default is 16.
 .TP
 .I "auth_required = 0"
 Allow clients to connect without authentication, i.e. without a valid
-munge credential.  This applies to both \fBdiodctl\fR and \fBdiod\fR.
+munge credential.
 .TP
 .I "allsquash = 1"
 Remap all users to "nobody".
@@ -67,7 +59,7 @@ The default is \fIsyslog:daemon:err\fR.
 --
 -- example diod.conf
 --
-diodctllisten = { "0.0.0.0:2000" }
+listen = { "0.0.0.0:10002" }
 exports = {
 	"/home",
 	"/usr/global",
@@ -78,6 +70,6 @@ nwthreads = 8
 .SH "FILES"
 @X_SYSCONFDIR@/diod.conf
 .SH "SEE ALSO"
-lua (1), diod (8), diodctl (8), openlog (3)
+lua (1), diod (8), openlog (3)
 .LP
 http://www.lua.org/
