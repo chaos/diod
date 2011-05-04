@@ -811,7 +811,7 @@ diod_lopen (Npfid *fid, u32 mode)
         goto done;
     }
     _ustat2qid (&f->stat, &qid);
-    if (!(res = np_create_rlopen (&qid, 0))) {
+    if (!(res = np_create_rlopen (&qid, f->stat.st_blksize))) {
         np_uerror (ENOMEM);
         msg ("diod_lopen: out of memory");
         goto done;
