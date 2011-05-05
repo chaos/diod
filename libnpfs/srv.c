@@ -32,6 +32,9 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <assert.h>
+#include <unistd.h>
+#include <sys/types.h>
+
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -288,8 +291,9 @@ np_wthread_create(Npsrv *srv)
 	wt->srv = srv;
 	wt->shutdown = 0;
 	wt->state = WT_START;
-	wt->fsuid = P9_NONUNAME;
-	wt->fsgid = P9_NONUNAME;
+	wt->fsuid = geteuid ();
+	wt->sguid = P9_NONUNAME;
+	wt->fsgid = getegid ();
 	err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt);
 	if (err) {
 		errno = err;

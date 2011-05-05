@@ -405,49 +405,54 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
 	Npwthread *wt = req->wthread;
 	Npsrv *srv = req->conn->srv;
-	uid_t ret_u, exp_u;
-	gid_t ret_g, exp_g;
 	int ret = -1;
 	u32 gid;
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
-			exp_g = wt->fsgid == P9_NONUNAME ? 0 : wt->fsgid;
-			if ((ret_g = setfsgid (gid)) < 0) {
+			gid_t ret;
+
+			if ((ret = setfsgid (gid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
 					   u->uname, gid);
 				goto done;
 			}
-			if (ret_g != exp_g) {
+			if (ret != wt->fsgid) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed"
 					   "returned %d, expected %d",
-					   u->uname, gid, ret_g, exp_g);
+					   u->uname, gid, ret, wt->fsgid);
 				goto done;
 			}
 			wt->fsgid = gid;
 		}
-		if (wt->fsuid != u->uid) {
+		/* Supplemental groups shouldn't matter for root.
+		 */
+		if (u->uid != 0 && wt->sguid != u->uid) {
 			if (setgroups (u->nsg, u->sg) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setgroups(%s) nsg=%d failed",
 					   u->uname, u->nsg);
 				goto done;
 			}
-			exp_u = wt->fsuid == P9_NONUNAME ? 0 : wt->fsuid;
-			if ((ret_u = setfsuid (u->uid)) < 0) {
+			wt->sguid = u->uid;
+		}
+		if (wt->fsuid != u->uid) {
+			uid_t ret;
+
+			if ((ret = setfsuid (u->uid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
 					   u->uname, u->uid);
 				goto done;
 			}
-			if (ret_u != exp_u) {
+			if (ret != wt->fsuid) {
 				np_uerror (EPERM);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed: "
 					   "returned %d, expected %d",
-					   u->uname, u->uid, ret_u, exp_u);
+					   u->uname, u->uid, ret, wt->fsuid);
 				goto done;
 			}
 			wt->fsuid = u->uid;

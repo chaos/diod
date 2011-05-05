@@ -181,6 +181,7 @@ struct Npwthread {
 	enum { WT_START, WT_IDLE, WT_WORK, WT_REPLY, WT_SHUT } state;
 	pthread_t	thread;
 	u32		fsuid;
+	u32		sguid;
 	u32		fsgid;
 	Npwthread	*next;
 };
