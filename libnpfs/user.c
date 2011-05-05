@@ -260,13 +260,14 @@ _usercache_lookup (Npsrv *srv, char *uname, uid_t uid)
 	Npuser *prev = NULL;
 
 	while (u) {
-		if (now - u->t >= usercache_ttl) {
+		/* expire entries after 60s (except root) */
+		if (u->uid != 0 && now - u->t >= usercache_ttl) {
 			u = _usercache_del (srv, prev, u);
 			continue;
 		}
-		if (uname && !strcmp (uname, u->uname)) 
-			break;
 		if (!uname && uid == u->uid)
+			break;
+		if (uname && !strcmp (uname, u->uname)) 
 			break;
 		prev = u;
 		u = u->next;
