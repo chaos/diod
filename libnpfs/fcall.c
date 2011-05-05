@@ -178,7 +178,6 @@ np_attach(Npreq *req, Npfcall *tc)
 	Npsrv *srv = conn->srv;
 	Npfid *fid, *afid = NULL;
 	Npfcall *rc = NULL;
-	Npuser *mapuser = NULL;
 	char a[128];
 	int auth_required = _authrequired(srv, &tc->u.tattach.uname,
 					       tc->u.tattach.n_uname,
@@ -220,9 +219,8 @@ np_attach(Npreq *req, Npfcall *tc)
 	}
 	if (auth_required) {
 		if (afid) {
-			fid->user = np_afid2user (srv, afid,
-						  &tc->u.tattach.uname,
-						   tc->u.tattach.n_uname);
+			fid->user = np_afid2user (afid, &tc->u.tattach.uname,
+						  tc->u.tattach.n_uname);
 			if (!fid->user) {
 				np_logerr (srv, "%s: invalid afid user", a);
 				goto error;
@@ -236,7 +234,7 @@ np_attach(Npreq *req, Npfcall *tc)
 			u32 uid;
 
 			fid->user = np_attach2user (srv, &tc->u.tattach.uname,
-						     tc->u.tattach.n_uname);
+						    tc->u.tattach.n_uname);
 			if (!fid->user) {
 				np_logerr (srv, "%s: user lookup", a);
 				goto error;
@@ -260,16 +258,11 @@ np_attach(Npreq *req, Npfcall *tc)
 	}
 
 	if (srv->remapuser) { /* squash user handling */
-		if (srv->remapuser(&mapuser, &tc->u.tattach.uname,
-				              tc->u.tattach.n_uname,
-				             &tc->u.tattach.aname) < 0) {
+		if (srv->remapuser(fid, &tc->u.tattach.uname,
+				        tc->u.tattach.n_uname,
+				        &tc->u.tattach.aname) < 0) {
 			np_logerr (srv, "%s: error remapping user", a);
 			goto error;
-		}
-		if (mapuser) {
-			if (fid->user)
-				np_user_decref(fid->user);
-			fid->user = mapuser;
 		}
 	}
 	if (!fid->user) {

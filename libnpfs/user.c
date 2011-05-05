@@ -44,11 +44,15 @@
 #include "npfs.h"
 #include "npfsimpl.h"
 
+static pthread_mutex_t user_lock = PTHREAD_MUTEX_INITIALIZER;
+
 static void
 _free_user (Npuser *u)
 {
 	if (u->uname)
 		free (u->uname);
+	if (u->sg)
+		free (u->sg);
 	free (u);
 }
 
@@ -80,31 +84,61 @@ np_user_decref(Npuser *u)
 	_free_user (u);
 }
 
+static int
+_getgrouplist (Npsrv *srv, Npuser *u)
+{
+	int i, ret = -1;
+	gid_t *sgcpy;
+	
+	u->nsg = sysconf(_SC_NGROUPS_MAX);
+	if (u->nsg < 65536)
+		u->nsg = 65536;
+	if (!(u->sg = malloc (u->nsg * sizeof (gid_t)))) {
+		np_uerror (ENOMEM);
+		np_logerr (srv, "_alloc_user: %s", u->uname);
+		goto done;
+	}
+	pthread_mutex_lock (&user_lock);
+	/* I don't think getgrouplist is thread safe -jg */
+	if (getgrouplist(u->uname, u->gid, u->sg, &u->nsg) == -1) {
+		pthread_mutex_unlock (&user_lock);
+		np_logerr (srv, "_alloc_user: %s: getgrouplist", u->uname);
+		if (np_rerror () == 0)
+			np_uerror (EPERM);
+		goto done;
+	}
+	pthread_mutex_unlock (&user_lock);
+	if ((sgcpy = malloc (u->nsg * sizeof (gid_t)))) {
+		for (i = 0; i < u->nsg; i++)
+			sgcpy[i] = u->sg[i];
+		free (u->sg);
+		u->sg = sgcpy;
+	}
+	ret = 0;
+done:
+	return ret;
+}
+
 static Npuser *
-_alloc_user (struct passwd *pwd)
+_alloc_user (Npsrv *srv, struct passwd *pwd)
 {
 	Npuser *u;
-	int err;
 
 	if (!(u = malloc (sizeof (*u)))) {
 		np_uerror (ENOMEM);
+		np_logerr (srv, "_alloc_user: %s", pwd->pw_name);
 		goto error;
 	}
 	if (!(u->uname = strdup (pwd->pw_name))) {
 		np_uerror (ENOMEM);
+		np_logerr (srv, "_alloc_user: %s", pwd->pw_name);
 		goto error;
 	}
 	u->uid = pwd->pw_uid;
 	u->gid = pwd->pw_gid;
-	u->nsg = sizeof (u->sg) / sizeof (u->sg[0]);
-	if (getgrouplist(pwd->pw_name, pwd->pw_gid, u->sg, &u->nsg) == -1) {
-		np_uerror (EPERM); /* user is in too many groups */
-		goto error;		
-	}
-	if ((err = pthread_mutex_init (&u->lock, NULL)) != 0) {
-		np_uerror (err);
+	if (_getgrouplist(srv, u) < 0)
 		goto error;
-	}
+	pthread_mutex_init (&u->lock, NULL);
 	u->refcount = 0;
 	return u;
 error:
@@ -114,7 +148,7 @@ error:
 }
 
 Npuser *
-np_uid2user (uid_t uid)
+np_uid2user (Npsrv *srv, uid_t uid)
 {
 	Npuser *u = NULL; 
 	int err;
@@ -126,17 +160,20 @@ np_uid2user (uid_t uid)
 		len = 4096;
 	if (!(buf = malloc (len))) {
 		np_uerror (ENOMEM);
+		np_logerr (srv, "uid2user: %d", uid);
 		goto error;
 	}
 	if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0) {
 		np_uerror (err);
+		np_logerr (srv, "uid2user: %d: getpwuid_r", uid);
 		goto error;
 	}
 	if (!pwd) {
+		np_logmsg (srv, "uid2user: %d: lookup failure", uid);
 		np_uerror (EPERM);
 		goto error;
 	}
-	if (!(u = _alloc_user (pwd)))
+	if (!(u = _alloc_user (srv, pwd)))
 		goto error;
 	free (buf);
 	np_user_incref (u);
@@ -150,7 +187,7 @@ error:
 }
 
 Npuser *
-np_uname2user (char *uname)
+np_uname2user (Npsrv *srv, char *uname)
 {
 	Npuser *u = NULL; 
 	int err;
@@ -162,17 +199,20 @@ np_uname2user (char *uname)
 		len = 4096;
 	if (!(buf = malloc (len))) {
 		np_uerror (ENOMEM);
+		np_logerr (srv, "uname2user: %s", uname);
 		goto error;
 	}
 	if ((err = getpwnam_r (uname, &pw, buf, len, &pwd)) != 0) {
 		np_uerror (err);
+		np_logerr (srv, "uname2user: %s: getpwnam_r", uname);
 		goto error;
 	}
 	if (!pwd) {
+		np_logmsg (srv, "uname2user: %s lookup failure", uname);
 		np_uerror (EPERM);
 		goto error;
 	}
-	if (!(u = _alloc_user (pwd)))
+	if (!(u = _alloc_user (srv, pwd)))
 		goto error;
 	free (buf);
 	np_user_incref (u);
@@ -192,9 +232,7 @@ np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname)
 	char *s;
 
 	if (n_uname != P9_NONUNAME) {
-		u = np_uid2user (n_uname);
-		if (!u)
-			np_logmsg (srv, "uid '%d' not found", n_uname);
+		u = np_uid2user (srv, n_uname);
 	} else {
 		if (uname->len == 0) {
 			np_uerror (EIO);
@@ -205,9 +243,7 @@ np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname)
 			np_uerror (ENOMEM);
 			goto done;
 		}
-		u = np_uname2user (s);
-		if (!u)
-			np_logmsg (srv, "user '%s' not found", s);
+		u = np_uname2user (srv, s);
 		free (s);
 	}
 done:
@@ -218,7 +254,7 @@ done:
  * If afid was for a different user return NULL.
  */
 Npuser *
-np_afid2user (Npsrv *srv, Npfid *afid, Npstr *uname, u32 n_uname)
+np_afid2user (Npfid *afid, Npstr *uname, u32 n_uname)
 {
 	Npuser *u = NULL;
 

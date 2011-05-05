@@ -136,7 +136,7 @@ Npfcall     *diod_getlock (Npfid *fid, u8 type, u64 start, u64 length,
                         u32 proc_id, Npstr *client_id);
 Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
-int          diod_remapuser (Npuser **up, Npstr *uname, u32 n_uname,
+int          diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname,
                              Npstr *aname);
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 
@@ -477,20 +477,24 @@ done:
 }
 
 int
-diod_remapuser (Npuser **up, Npstr *uname, u32 n_uname, Npstr *aname)
+diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname, Npstr *aname)
 {
-    Npuser *user = NULL;
+    int ret = 0;
 
     if (diod_conf_get_allsquash ()) {
         char *squash = diod_conf_get_squashuser ();
+        Npuser *user = NULL;
 
-        if (!(user = np_uname2user (squash))) {
-            msg ("diod_remapuser: could not lookup squash user '%s'", squash);
-            return -1;
+        if (!(user = np_uname2user (fid->conn->srv, squash))) {
+            ret = -1;
+            goto done;
         }
+        if (fid->user)
+            np_user_decref (fid->user);
+        fid->user = user; 
     }
-    *up = user;
-    return 0;
+done:
+    return ret;
 }
 
 int
