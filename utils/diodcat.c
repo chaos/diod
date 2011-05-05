@@ -31,11 +31,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
-//#include <sys/socket.h>
-//#include <sys/wait.h>
 #include <stdint.h>
 #include <stdarg.h>
-//#include <netdb.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
@@ -207,8 +204,7 @@ catfiles (int fd, uid_t uid, int msize, char *aname, char **av, int ac)
         errn (np_rerror (), "error negotiating protocol with server");
         goto done;
     }
-    if (!(afid = npc_auth (fs, aname, uid,
-                           diod_auth_client_handshake)) && np_rerror () != 0) {
+    if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0) {
         errn (np_rerror (), "error authenticating to server");
         goto done;
     }

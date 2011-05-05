@@ -62,6 +62,7 @@ main (int argc, char *argv[])
 {
     Npcfsys *fs;
     Npcfid *afid, *root;
+    uid_t uid = geteuid ();
     char *aname, *path;
     int fd = 0; /* stdin */
 
@@ -74,10 +75,9 @@ main (int argc, char *argv[])
 
     if (!(fs = npc_start (fd, 65536+24, 0)))
         errn_exit (np_rerror (), "npc_start");
-    if (!(afid = npc_auth (fs, aname, geteuid (),
-                           diod_auth_client_handshake)) && np_rerror () != 0)
+    if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0)
         errn_exit (np_rerror (), "npc_auth");
-    if (!(root = npc_attach (fs, afid, aname, geteuid ())))
+    if (!(root = npc_attach (fs, afid, aname, uid)))
         errn_exit (np_rerror (), "npc_attach");
     if (afid && npc_clunk (afid) < 0)
         errn (np_rerror (), "npc_clunk afid");

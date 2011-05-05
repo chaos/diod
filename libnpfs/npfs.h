@@ -196,7 +196,6 @@ struct Npauth {
 enum {
 	/* lower u16 reserved for debug levels */
 	SRV_FLAGS_DEBUG_9PTRACE	=0x00000001,
-	SRV_FLAGS_DEBUG_AUTH	=0x00000002,
 	SRV_FLAGS_DEBUG_FIDPOOL =0x00000004,
 	SRV_FLAGS_SETFSID	=0x00010000,
 	SRV_FLAGS_AUTHCONN	=0x00020000,
@@ -404,6 +403,7 @@ void np_user_decref(Npuser *);
 Npuser *np_uid2user (u32 n_uname);
 Npuser *np_uname2user (char *uname);
 Npuser *np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname);
+Npuser *np_afid2user (Npsrv *srv, Npfid *afid, Npstr *uname, u32 n_uname);
 int np_setfsid (Npreq *req, Npuser *u, u32 gid_override);
 
 /* fdtrans.c */

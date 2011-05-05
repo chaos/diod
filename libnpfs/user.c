@@ -214,6 +214,31 @@ done:
 	return u;
 }
 
+/* Take another reference on afid->user and return it.
+ * If afid was for a different user return NULL.
+ */
+Npuser *
+np_afid2user (Npsrv *srv, Npfid *afid, Npstr *uname, u32 n_uname)
+{
+	Npuser *u = NULL;
+
+	if (n_uname != P9_NONUNAME) {
+		if (n_uname != afid->user->uid) {
+			np_uerror (EPERM);
+			goto done;
+		}
+	} else {
+		if (np_strcmp (uname, afid->user->uname) != 0) {
+			np_uerror (EPERM);
+			goto done;
+		}
+	}
+	u = afid->user;
+	np_user_incref (u);
+done:
+	return u;
+}
+
 /* Note: it is possible for setfsuid/setfsgid to fail silently,
  * e.g. if user doesn't have CAP_SETUID/CAP_SETGID.
  */

@@ -21,8 +21,8 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-extern Npauth *diod_auth;
+extern Npauth *diod_auth_functions;
 
 struct Npcfid;
 
-int diod_auth_client_handshake (struct Npcfid *afid, u32 uid);
+int diod_auth (struct Npcfid *afid, u32 uid);

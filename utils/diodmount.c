@@ -478,8 +478,7 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
         msg ("pre-authenticating connection to server");
     if (!(fs = npc_start (fd, msize, 0)))
 	errn_exit (np_rerror (), "version");
-    if (!(afid = npc_auth (fs, aname, uid,
-			   diod_auth_client_handshake)) && np_rerror () != 0)
+    if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0)
         errn_exit (np_rerror (), "auth");
     if (!(root = npc_attach (fs, afid, aname, uid)))
         errn_exit (np_rerror (), "attach");

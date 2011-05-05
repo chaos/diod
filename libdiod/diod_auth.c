@@ -68,30 +68,28 @@
 #include "diod_log.h"
 #include "diod_auth.h"
 
-static int _auth_start(Npfid *afid, char *aname, Npqid *aqid);
-static int _auth_check(Npfid *fid, Npfid *afid, char *aname);
-static int _auth_read(Npfid *fid, u64 offset, u32 count, u8 *data);
-static int _auth_write(Npfid *fid, u64 offset, u32 count, u8 *data);
-static int _auth_clunk(Npfid *fid);
+static int startauth(Npfid *afid, char *aname, Npqid *aqid);
+static int checkauth(Npfid *fid, Npfid *afid, char *aname);
+static int readafid(Npfid *fid, u64 offset, u32 count, u8 *data);
+static int writeafid(Npfid *fid, u64 offset, u32 count, u8 *data);
+static int clunkafid(Npfid *fid);
 
 static Npauth _auth = {
-    .startauth      = _auth_start,
-    .checkauth      = _auth_check,
-    .read           = _auth_read,
-    .write          = _auth_write,
-    .clunk          = _auth_clunk,
+    .startauth      = startauth,
+    .checkauth      = checkauth,
+    .read           = readafid,
+    .write          = writeafid,
+    .clunk          = clunkafid,
 };
-
-Npauth *diod_auth = &_auth;
+Npauth *diod_auth_functions = &_auth;
 
 /* Auth state associated with afid->aux.
  */
 #define DIOD_AUTH_MAGIC 0x54346666
 struct diod_auth_struct {
     int magic;
-    enum { DA_UNVERIFIED, DA_VERIFIED } state;
+    char *datastr;
 #if HAVE_LIBMUNGE
-    char *mungecred;
     munge_ctx_t mungectx;
     munge_err_t mungerr;
     uid_t mungeuid;
@@ -99,6 +97,8 @@ struct diod_auth_struct {
 };
 typedef struct diod_auth_struct *da_t;
 
+/* Create implementation-specific auth state.
+ */
 static da_t
 _da_create (void)
 {
@@ -109,10 +109,8 @@ _da_create (void)
         goto done;
     }
     da->magic = DIOD_AUTH_MAGIC;
-    da->state = DA_UNVERIFIED;
+    da->datastr = NULL;
 #if HAVE_LIBMUNGE
-    da->mungecred = NULL;
-    da->mungerr = EMUNGE_SUCCESS;
     if (!(da->mungectx = munge_ctx_create ())) {
         np_uerror (ENOMEM);
         free (da);
@@ -124,36 +122,37 @@ done:
     return da;
 }
 
+/* Destroy implementation-specific auth state.
+ */
 static void
 _da_destroy (da_t da)
 {
     assert (da->magic == DIOD_AUTH_MAGIC);
     da->magic = 0;
+    if (da->datastr)
+        free (da->datastr);
 #if HAVE_LIBMUNGE
-    if (da->mungecred)
-        free (da->mungecred);
     if (da->mungectx)
         munge_ctx_destroy (da->mungectx);
 #endif
     free (da);
 }
 
-/* returns 1=success (proceed with auth on afid), or
- *         0=fail (auth not required, or other failure).
+/* Startauth is called in the handling of a TAUTH request.
+ * Perform implementation-specific auth initialization and fill in qid.
+ * Returns 1=success (send RAUTH with qid)
+ *         0=fail (send RLERROR with np_rerror ())
  */
 static int
-_auth_start(Npfid *afid, char *aname, Npqid *aqid)
+startauth(Npfid *afid, char *aname, Npqid *aqid)
 {
-    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
     int ret = 0;
 
-    if (debug)
-        msg ("_auth_start: afid %d aname %s", afid ? afid->fid : -1, aname);
-
-#if ! HAVE_LIBMUNGE
-    msg ("startauth: no MUNGE support: auth begun but cannot be completed ");
-#endif
-    assert (afid->aux == NULL);
+    if (!afid || afid->aux != NULL || !aqid) {
+        np_uerror (EIO);
+        err ("startauth: invalid arguments");
+        goto done;
+    }
     if (!(afid->aux = _da_create ()))
         goto done;
     aqid->path = 0;
@@ -164,117 +163,111 @@ done:
     return ret;
 }
 
-/* Called from libnpfs internal attach handler.
- * Returns 1=success (auth OK, attach should proceed)
- *         0=failure (auth requirements not met, attach should be denied)
+/* Checkauth is called in the handling of a TATTACH request with valid afid.
+ * Validate the credential that should now be dangling off afid.
+ * Returns 1=success (auth is good, send RATTACH)
+ *         0=failure (send RLERROR with np_rerror ())
  */
 static int
-_auth_check(Npfid *fid, Npfid *afid, char *aname)
+checkauth(Npfid *fid, Npfid *afid, char *aname)
 {
-    int debug = (fid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
     da_t da;
     int ret = 0;
+    char a[128];
 
-    if (debug)
-        msg ("_auth_check: fid %d afid %d aname %s",
-             fid ? fid->fid : -1, afid ? afid->fid : -1, aname);
-
-    assert (fid != NULL);
-    assert (afid != NULL);
-    assert (afid->aux != NULL);
-    da = afid->aux;
-    assert (da->magic == DIOD_AUTH_MAGIC);
-    if (da->state != DA_VERIFIED) {
-        const char *crederr = "credential is unverified";
-#if HAVE_LIBMUNGE
-        if (da->mungerr != EMUNGE_SUCCESS)
-            crederr = munge_strerror (da->mungerr);
-#endif
-        msg ("checkauth: attach by %s@%s to %s rejected: %s",
-             fid->user->uname, np_conn_get_client_id (fid->conn),
-             aname ? aname : "<nil>", crederr);
-        np_uerror (EPERM);
+    if (!fid || !afid || !afid->aux) {
+        np_uerror (EIO);
+        err ("checkauth: invalid arguments");
         goto done;
     }
-    if (afid->user->uid != fid->user->uid) {
-        msg ("checkauth: attach by %s@%s to %s rejected: "
-             "auth uid=%d != attach uid=%d",
-             fid->user->uname, np_conn_get_client_id (fid->conn),
-             aname ? aname : "<nil>", afid->user->uid, fid->user->uid);
+    da = afid->aux;
+    assert (da->magic == DIOD_AUTH_MAGIC);
+
+    snprintf (a, sizeof(a), "checkauth(%s@%s:%s)", fid->user->uname,
+              np_conn_get_client_id (fid->conn), aname ? aname : "<NULL>");
+#if HAVE_LIBMUNGE
+    if (!da->datastr) {
+        msg ("%s: munge cred missing", a);
+        goto done;
+    }
+    da->mungerr = munge_decode (da->datastr, da->mungectx, NULL, 0,
+                                &da->mungeuid, NULL);
+    if (da->mungerr != EMUNGE_SUCCESS) {
         np_uerror (EPERM);
+        err ("%s: munge cred decode: %s", a, munge_strerror (da->mungerr));
+        goto done;
+    }
+    assert (afid->user->uid == fid->user->uid); /* enforced in np_attach */
+    if (afid->user->uid != da->mungeuid) {
+        np_uerror (EPERM);
+        err ("%s: munge cred uid mismatch: %d", a, da->mungeuid);
         goto done;
     }
     ret = 1;
+#else
+    np_uerror (EPERM);
+    err ("%s: diod was not built with support for auth services", a);
+#endif
 done:
     return ret;
 }
 
 static int
-_auth_read(Npfid *afid, u64 offset, u32 count, u8 *data)
+readafid(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
-
-    if (debug)
-        msg ("_auth_read: afid %d", afid ? afid->fid : -1);
- 
-    return 0;
+    np_uerror (EIO);
+    err ("readafid: called unexpectedly");
+    return -1; /* error */
 }
 
 static int
-_auth_write(Npfid *afid, u64 offset, u32 count, u8 *data)
+writeafid(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
-    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
-    da_t da = afid->aux;
+    da_t da;
     int ret = -1;
 
-    if (debug)
-        msg ("_auth_write: afid %d", afid ? afid->fid : -1);
-
+    if (!afid || !afid->aux || (!data && count > 0)) {
+        np_uerror (EIO);
+        err ("writeafid: invalid arguments");
+        goto done;
+    }
+    da = afid->aux;
     assert (da->magic == DIOD_AUTH_MAGIC);
 
-    if (da->state == DA_VERIFIED) {
-        np_uerror (EIO);
-        goto done;
-    }
-
-#if HAVE_LIBMUNGE
-    if (offset == 0 && !da->mungecred) {
-        da->mungecred = malloc (count + 1); 
-    } else if (da->mungecred && offset == strlen (da->mungecred)) {
-        da->mungecred = realloc (da->mungecred, offset + count + 1);
+    if (offset == 0 && !da->datastr) {
+        da->datastr = malloc (count + 1); 
+    } else if (da->datastr && offset == strlen (da->datastr)) {
+        da->datastr = realloc (da->datastr, offset + count + 1);
     } else {
         np_uerror (EIO);
+        err ("writeafid: write at unexpected offset");
         goto done;
     }
-    if (!da->mungecred) {
+    if (!da->datastr) {
         np_uerror (ENOMEM);
+        err ("writeafid");
         goto done;
     }
-    memcpy (da->mungecred + offset, data, count);
-    da->mungecred[offset + count] = '\0';
-    da->mungerr = munge_decode (da->mungecred, da->mungectx, NULL, 0,
-                                &da->mungeuid, NULL);
-    if (da->mungerr == EMUNGE_SUCCESS && afid->user->uid == da->mungeuid)
-        da->state = DA_VERIFIED;
-#endif
+    memcpy (da->datastr + offset, data, count);
+    da->datastr[offset + count] = '\0';
+
     ret = count;
 done:
     return ret;
 }
 
+/* clunkafid is called when the afid is being freed.
+ * Free implementation specific storage associated with afid.
+ */
 static int
-_auth_clunk(Npfid *afid)
+clunkafid(Npfid *afid)
 {
-    int debug = (afid->conn->srv->flags & SRV_FLAGS_DEBUG_AUTH);
-    da_t da = afid->aux;
+    if (afid && afid->aux) {
+        da_t da = afid->aux;
 
-    if (debug)
-        msg ("_auth_clunk: afid %d", afid ? afid->fid : -1);
-
-    if (da)
         _da_destroy (da);
-    afid->aux = NULL;
-
+         afid->aux = NULL;
+    }
     return 1; /* success */
 }
 
@@ -282,7 +275,7 @@ _auth_clunk(Npfid *afid)
  * It drives the client end of authentication.
  */
 int
-diod_auth_client_handshake (Npcfid *afid, u32 uid)
+diod_auth (Npcfid *afid, u32 uid)
 {
     int ret = -1; 
 #if HAVE_LIBMUNGE

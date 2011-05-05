@@ -115,50 +115,51 @@ np_auth(Npreq *req, Npfcall *tc)
 	Npfid *afid = NULL;
 	Npfcall *rc = NULL;
 	Npqid aqid;
-	char *client_id = np_conn_get_client_id (conn);
+	char a[128];
 	int auth_required = _authrequired(srv, &tc->u.tauth.uname,
 					       tc->u.tauth.n_uname,
 					       &tc->u.tauth.aname);
 
+	if (tc->u.tauth.n_uname != P9_NONUNAME) {
+		snprintf (a, sizeof(a), "auth(%d@%s:%.*s)",
+			  tc->u.tauth.n_uname,
+			  np_conn_get_client_id (conn), 
+			  tc->u.tauth.aname.len, tc->u.tauth.aname.str);
+	} else {
+		snprintf (a, sizeof(a), "auth(%.*s@%s:%.*s)",
+			  tc->u.tauth.uname.len, tc->u.tauth.uname.str,
+			  np_conn_get_client_id (conn),
+			  tc->u.tauth.aname.len, tc->u.tauth.aname.str);
+	}
 	if (!auth_required) {
 		if (!(rc = np_create_rlerror(0))) {
 			np_uerror(ENOMEM);
-			np_logerr (srv, "auth(%s:%.*s): creating response",
-				   client_id,
-				   tc->u.tauth.aname.len,
-				   tc->u.tauth.aname.str);
+			np_logerr (srv, "%s: creating response", a);
 		}
 		goto error;
 	}
 	if (_str9dup(&tc->u.tauth.aname, &aname) < 0) {
-		np_logerr (srv, "auth(%s:%.*s): strdup", client_id,
-			   tc->u.tauth.aname.len, tc->u.tauth.aname.str);
+		np_logerr (srv, "%s: strdup", a);
 		goto error;
 	}
 	if (!(afid = _makefid_incref(req, tc->u.tauth.afid))) {
-		np_logerr (srv, "auth(%s:%s): invalid afid", client_id,
-			   aname ? aname : "<nil>");
+		np_logerr (srv, "%s: invalid afid (%d)", a, tc->u.tauth.afid);
 		goto error;
 	}
 	if (!(afid->user = np_attach2user (srv, &tc->u.tauth.uname,
 				     		 tc->u.tauth.n_uname))) {
-		np_logerr (srv, "auth(%s:%s): error looking up user",
-			   client_id, aname ? aname : "<nil>");
+		np_logerr (srv, "%s: user lookup", a);
 		goto error;
 	}
 	afid->type = P9_QTAUTH;
 	if (!srv->auth->startauth(afid, aname, &aqid)) {
-		np_logerr (srv, "auth(%s@%s:%s): startauth failed",
-			   afid->user->uname, client_id,
-			   aname ? aname : "<nil>");
+		np_logerr (srv, "%s: startauth", a);
 		goto error;
 	}
 	assert((aqid.type & P9_QTAUTH));
 	if (!(rc = np_create_rauth(&aqid))) {
 		np_uerror(ENOMEM);
-		np_logerr (srv, "auth(%s@%s:%s): creating response",
-			   afid->user->uname,
-			   client_id, aname ? aname : "<nil>");
+		np_logerr (srv, "%s: creating response", a);
 		goto error;
 	}
 error:
@@ -178,94 +179,91 @@ np_attach(Npreq *req, Npfcall *tc)
 	Npfid *fid, *afid = NULL;
 	Npfcall *rc = NULL;
 	Npuser *mapuser = NULL;
-	char *client_id = np_conn_get_client_id (conn);
+	char a[128];
 	int auth_required = _authrequired(srv, &tc->u.tattach.uname,
 					       tc->u.tattach.n_uname,
 					       &tc->u.tattach.aname);
 
+	if (tc->u.tattach.n_uname != P9_NONUNAME) {
+		snprintf (a, sizeof(a), "attach(%d@%s:%.*s)",
+			  tc->u.tattach.n_uname,
+			  np_conn_get_client_id (conn), 
+			  tc->u.tattach.aname.len, tc->u.tattach.aname.str);
+	} else {
+		snprintf (a, sizeof(a), "attach(%.*s@%s:%.*s)",
+			  tc->u.tattach.uname.len, tc->u.tattach.uname.str,
+			  np_conn_get_client_id (conn),
+			  tc->u.tattach.aname.len, tc->u.tattach.aname.str);
+	}
 	if (_str9dup(&tc->u.tattach.aname, &aname) < 0) {
-		np_logerr (srv, "attach(%s:%.*s): strdup", client_id,
-			   tc->u.tattach.aname.len,
-			   tc->u.tattach.aname.str);
+		np_logerr (srv, "%s: strdup", a);
 		goto error;
 	}
 	if (!(fid = _makefid_incref(req, tc->u.tattach.fid))) {
-		np_logerr (srv, "attach(%s:%s): invalid fid (%d)",
-			   client_id, aname ? aname : "<nil>",
-			   tc->u.tattach.fid);
+		np_logerr (srv, "%s: invalid fid (%d)", a, tc->u.tattach.fid);
 		goto error;
 	}
 	req->fid = fid;
 	if (tc->u.tattach.afid != P9_NOFID) {
 		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
 			np_uerror(EPERM);
-			np_logerr (srv, "attach(%s:%s): invalid afid (%d)",
-				   client_id, aname ? aname : "<nil>",
+			np_logerr (srv, "%s: invalid afid (%d)", a,
 				   tc->u.tattach.afid);
 			goto error;
 		}
 		np_fid_incref(afid);
 		if (!(afid->type & P9_QTAUTH)) {
 			np_uerror(EPERM);
-			np_logerr (srv, "attach(%s:%s): invalid afid type",
-				   client_id, aname ? aname : "<nil>");
+			np_logerr (srv, "%s: invalid afid type", a);
 			goto error;
 		}
 	}
 	if (auth_required) {
-		fid->user = np_attach2user (srv, &tc->u.tauth.uname,
-					          tc->u.tauth.n_uname);
-		if (!fid->user) {
-			np_logerr (srv, "attach(%s:%s): error looking up user",
-				   client_id, aname ? aname : "<nil>");
-			goto error;
-		}
 		if (afid) {
+			fid->user = np_afid2user (srv, afid,
+						  &tc->u.tattach.uname,
+						   tc->u.tattach.n_uname);
+			if (!fid->user) {
+				np_logerr (srv, "%s: invalid afid user", a);
+				goto error;
+			}
 			if (srv->auth->checkauth(fid, afid, aname) == 0) {
-				np_logerr (srv, "attach(%s@%s:%s): "
-					   "auth failed",
-					   fid->user->uname, client_id,
-					   aname ? aname : "<nil>");
+				np_logerr (srv, "%s: checkauth", a);
 				goto error;
 			}
 			np_conn_set_authuser(conn, fid->user->uid);
 		} else {
 			u32 uid;
 
+			fid->user = np_attach2user (srv, &tc->u.tattach.uname,
+						     tc->u.tattach.n_uname);
+			if (!fid->user) {
+				np_logerr (srv, "%s: user lookup", a);
+				goto error;
+			}
 			if (!(srv->flags & SRV_FLAGS_AUTHCONN)) {
 				np_uerror(EPERM);
-				np_logerr (srv, "attach(%s@%s:%s): auth "
-					   "reqired",
-					   fid->user->uname, client_id,
-					   aname ? aname : "<nil>");
+				np_logerr (srv, "%s: auth required", a);
 				goto error;
 			}
 			if (np_conn_get_authuser(conn, &uid) < 0) {
 				np_uerror(EPERM);
-				np_logerr (srv, "attach(%s@%s:%s): no auth "
-					   "state on this connection",
-					   fid->user->uname, client_id,
-					   aname ? aname : "<nil>");
+				np_logerr (srv, "%s: prior auth required", a);
 				goto error;
 			}
 			if (uid != 0 && uid != fid->user->uid) {
 				np_uerror(EPERM);
-				np_logerr (srv, "attach(%s@%s:%s): "
-					   "insufficient auth "
-					   "state on this connection",
-					   fid->user->uname, client_id,
-					   aname ? aname : "<nil>");
+				np_logerr (srv, "%s: insufficient auth", a);
 				goto error;
 			}
 		}
 	}
 
-	if (srv->remapuser) {
+	if (srv->remapuser) { /* squash user handling */
 		if (srv->remapuser(&mapuser, &tc->u.tattach.uname,
 				              tc->u.tattach.n_uname,
 				             &tc->u.tattach.aname) < 0) {
-			np_logerr (srv, "attach(%s:%s): error remapping user",
-				   client_id, aname ? aname : "<nil>");
+			np_logerr (srv, "%s: error remapping user", a);
 			goto error;
 		}
 		if (mapuser) {
@@ -278,8 +276,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		fid->user = np_attach2user (srv, &tc->u.tattach.uname,
 					          tc->u.tattach.n_uname);
 		if (!fid->user) {
-			np_logerr (srv, "attach(%s:%s): error looking up user",
-				   client_id, aname ? aname : "<nil>");
+			np_logerr (srv, "%s: user lookup", a);
 			goto error;
 		}
 	}

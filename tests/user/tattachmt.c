@@ -52,8 +52,8 @@ client (void *arg)
     int i, j;
 
     for (j = 0; j < t->iterations; j++) {
-        if (!(afid = npc_auth (t->fs, t->aname, t->uid,
-                         diod_auth_client_handshake)) && np_rerror () != 0) {
+        if (!(afid = npc_auth (t->fs, t->aname, t->uid, diod_auth))
+						&& np_rerror () != 0) {
             errn_exit (np_rerror (), "npc_auth");
         }
         if (!(root = npc_attach (t->fs, afid, t->aname, t->uid))) {

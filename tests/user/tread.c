@@ -67,7 +67,7 @@ main (int argc, char *argv[])
     if ((fd = open (outfile, O_WRONLY | O_CREAT, 0644)) < 0)
         err_exit ("open");
 
-    if (!(root = npc_mount (0, 65536+24, aname, diod_auth_client_handshake)))
+    if (!(root = npc_mount (0, 65536+24, aname, diod_auth)))
         errn_exit (np_rerror (), "npc_mount");
     if (!(fid = npc_open_bypath (root, infile, O_RDONLY)))
         errn_exit (np_rerror (), "npc_open_bypath");
