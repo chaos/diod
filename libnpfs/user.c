@@ -44,7 +44,14 @@
 #include "npfs.h"
 #include "npfsimpl.h"
 
-static pthread_mutex_t user_lock = PTHREAD_MUTEX_INITIALIZER;
+/* N.B. the usercache lock also protects getgrouplist (), libc calls into
+ * nss code, etc. that may or may not be thread safe.
+ */
+static struct Npusercache {
+        pthread_mutex_t lock;
+        Npuser* users;
+} usercache = { PTHREAD_MUTEX_INITIALIZER, NULL };
+static const int usercache_ttl = 60;
 
 static void
 _free_user (Npuser *u)
@@ -98,16 +105,12 @@ _getgrouplist (Npsrv *srv, Npuser *u)
 		np_logerr (srv, "_alloc_user: %s", u->uname);
 		goto done;
 	}
-	pthread_mutex_lock (&user_lock);
-	/* I don't think getgrouplist is thread safe -jg */
 	if (getgrouplist(u->uname, u->gid, u->sg, &u->nsg) == -1) {
-		pthread_mutex_unlock (&user_lock);
 		np_logerr (srv, "_alloc_user: %s: getgrouplist", u->uname);
 		if (np_rerror () == 0)
 			np_uerror (EPERM);
 		goto done;
 	}
-	pthread_mutex_unlock (&user_lock);
 	if ((sgcpy = malloc (u->nsg * sizeof (gid_t)))) {
 		for (i = 0; i < u->nsg; i++)
 			sgcpy[i] = u->sg[i];
@@ -140,6 +143,10 @@ _alloc_user (Npsrv *srv, struct passwd *pwd)
 		goto error;
 	pthread_mutex_init (&u->lock, NULL);
 	u->refcount = 0;
+	u->t = time (NULL);
+	u->next = NULL;
+	if (srv->flags & SRV_FLAGS_DEBUG_USER)
+		np_logmsg (srv, "user lookup: %d", u->uid);
 	return u;
 error:
 	if (u)
@@ -147,36 +154,35 @@ error:
 	return NULL; 
 }
 
-Npuser *
-np_uid2user (Npsrv *srv, uid_t uid)
+static Npuser *
+_real_lookup_byuid (Npsrv *srv, uid_t uid)
 {
-	Npuser *u = NULL; 
-	int err;
+	Npuser *u = NULL;
+	int err, len;
 	struct passwd pw, *pwd;
-	int len = sysconf(_SC_GETPW_R_SIZE_MAX);
 	char *buf = NULL; 
 
-	if (len == -1)
+	len = sysconf(_SC_GETPW_R_SIZE_MAX);
+	if (len < 4096)
 		len = 4096;
 	if (!(buf = malloc (len))) {
 		np_uerror (ENOMEM);
-		np_logerr (srv, "uid2user: %d", uid);
+		np_logerr (srv, "uid2user");
 		goto error;
 	}
 	if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0) {
 		np_uerror (err);
-		np_logerr (srv, "uid2user: %d: getpwuid_r", uid);
+		np_logerr (srv, "uid2user: unable to lookup %d", uid);
 		goto error;
 	}
 	if (!pwd) {
-		np_logmsg (srv, "uid2user: %d: lookup failure", uid);
+		np_logmsg (srv, "uid2user: unable to lookup %d", uid);
 		np_uerror (EPERM);
 		goto error;
 	}
 	if (!(u = _alloc_user (srv, pwd)))
 		goto error;
 	free (buf);
-	np_user_incref (u);
 	return u;
 error:
 	if (u)
@@ -186,16 +192,16 @@ error:
 	return NULL;
 }
 
-Npuser *
-np_uname2user (Npsrv *srv, char *uname)
+static Npuser *
+_real_lookup_byname (Npsrv *srv, char *uname)
 {
 	Npuser *u = NULL; 
-	int err;
+	int err, len;
 	struct passwd pw, *pwd = NULL;
-	int len = sysconf(_SC_GETPW_R_SIZE_MAX);
 	char *buf = NULL;
 
-	if (len == -1)
+	len= sysconf(_SC_GETPW_R_SIZE_MAX);
+	if (len < 4096)
 		len = 4096;
 	if (!(buf = malloc (len))) {
 		np_uerror (ENOMEM);
@@ -215,7 +221,6 @@ np_uname2user (Npsrv *srv, char *uname)
 	if (!(u = _alloc_user (srv, pwd)))
 		goto error;
 	free (buf);
-	np_user_incref (u);
 	return u;
 error:
 	if (u)
@@ -223,6 +228,123 @@ error:
 	if (buf)
 		free (buf);
 	return NULL;
+}
+
+static void
+_usercache_add (Npsrv *srv, Npuser *u)
+{
+	u->next = usercache.users;
+	usercache.users = u;
+	np_user_incref (u);
+}
+
+static Npuser *
+_usercache_del (Npsrv *srv, Npuser *prev, Npuser *u)
+{
+	Npuser *tmp = u->next;
+
+	if (prev)
+		prev->next = tmp;
+	else
+		usercache.users = tmp;
+	np_user_decref (u);
+
+	return tmp;
+}
+
+static Npuser *
+_usercache_lookup (Npsrv *srv, char *uname, uid_t uid)
+{
+	time_t now = time (NULL);
+	Npuser *u = usercache.users;
+	Npuser *prev = NULL;
+
+	while (u) {
+		if (now - u->t >= usercache_ttl) {
+			u = _usercache_del (srv, prev, u);
+			continue;
+		}
+		if (uname && !strcmp (uname, u->uname)) 
+			break;
+		if (!uname && uid == u->uid)
+			break;
+		prev = u;
+		u = u->next;
+	}
+	return u;
+}
+
+Npuser *
+np_uname2user (Npsrv *srv, char *uname)
+{
+	Npuser *u = NULL;
+	int err;
+
+	if ((err = pthread_mutex_lock (&usercache.lock))) {
+		np_uerror (err);
+		np_logerr (srv, "uname2user: unable to lock usercache");
+		goto error;
+	}
+	if (!(u = _usercache_lookup (srv, uname, P9_NONUNAME)))
+		if ((u = _real_lookup_byname (srv, uname)))
+			_usercache_add (srv, u);
+	if ((err = pthread_mutex_unlock (&usercache.lock))) {
+		np_uerror (err);
+		np_logerr (srv, "uname2user: unable to unlock usercache");
+		goto error;
+	}
+	if (u)
+		np_user_incref (u);
+	return u;
+error:
+	return NULL;
+}
+
+Npuser *
+np_uid2user (Npsrv *srv, uid_t uid)
+{
+	Npuser *u = NULL;
+	int err;
+
+	if ((err = pthread_mutex_lock (&usercache.lock))) {
+		np_uerror (err);
+		np_logerr (srv, "uid2user: unable to lock usercache");
+		goto error;
+	}
+	if (!(u = _usercache_lookup (srv, NULL, uid)))
+		if ((u = _real_lookup_byuid (srv, uid)))
+			_usercache_add (srv, u);
+	if ((err = pthread_mutex_unlock (&usercache.lock))) {
+		np_uerror (err);
+		np_logerr (srv, "uid2user: unable to unlock usercache");
+		goto error;
+	}
+	if (u)
+		np_user_incref (u);
+	return u;
+error:
+	return NULL;
+}
+
+void
+np_usercache_flush (Npsrv *srv)
+{
+	Npuser *u;
+	int err;
+
+	if ((err = pthread_mutex_lock (&usercache.lock))) {
+		np_uerror (err);
+		np_logerr (srv, "usercache_flush: unable to lock usercache");
+		return;
+	}
+	u = usercache.users;
+	while (u)
+		u = _usercache_del (srv, NULL, u);
+	if ((err = pthread_mutex_unlock (&usercache.lock))) {
+		np_uerror (err);
+		np_logerr (srv, "usercache_flush: unable to unlock usercache");
+		return;
+	}
 }
 
 Npuser *

@@ -162,6 +162,7 @@ np_srv_destroy(Npsrv *srv)
 		pthread_join (wt->thread, NULL);
 		free (wt);
 	}
+	np_usercache_flush (srv);
 	free (srv);
 }
 

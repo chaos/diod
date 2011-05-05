@@ -29,8 +29,8 @@ static Npfcall *myclunk (Npfid *fid);
 
 static void _send_tversion (Nptrans *t);
 static void _send_tauth (Nptrans *t);
-static void _send_tattach (Nptrans *t);
-static void _send_tclunk (Nptrans *t);
+static void _send_tattach (Nptrans *t, uid_t uid, int fid);
+static void _send_tclunk (Nptrans *t, int fid);
 
 int
 main (int argc, char *argv[])
@@ -38,7 +38,7 @@ main (int argc, char *argv[])
     Npsrv *srv;
     Npconn *conn;
     Nptrans *trans;
-    int flags = SRV_FLAGS_DEBUG_9PTRACE;
+    int flags = SRV_FLAGS_DEBUG_9PTRACE | SRV_FLAGS_DEBUG_USER;
 
     diod_log_init (argv[0]);
     diod_conf_init ();
@@ -58,8 +58,16 @@ main (int argc, char *argv[])
 
     _send_tversion (trans);
     _send_tauth (trans);
-    _send_tattach (trans);
-    _send_tclunk (trans);
+    _send_tattach (trans, 0, 0);
+    _send_tattach (trans, 0, 1);
+    _send_tattach (trans, 1, 2);
+    _send_tattach (trans, 1, 3);
+    _send_tattach (trans, 0, 4);
+    _send_tclunk (trans, 4);
+    _send_tclunk (trans, 3);
+    _send_tclunk (trans, 2);
+    _send_tclunk (trans, 1);
+    _send_tclunk (trans, 0);
     ttrans_rpc (trans, NULL, NULL); /* signifies EOF to reader */
 
     /* wait for exactly one connect/disconnect */
@@ -110,11 +118,11 @@ _alloc_rc (void)
 }
 
 static void
-_send_tclunk (Nptrans *t)
+_send_tclunk (Nptrans *t, int fid)
 {
     Npfcall *tc, *rc = _alloc_rc ();
 
-    tc = np_create_tclunk (0);
+    tc = np_create_tclunk (fid);
     if (!tc)
         msg_exit ("oom");
     ttrans_rpc (t, tc, rc);
@@ -123,11 +131,11 @@ _send_tclunk (Nptrans *t)
 }
 
 static void
-_send_tattach (Nptrans *t)
+_send_tattach (Nptrans *t, uid_t uid, int fid)
 {
     Npfcall *tc, *rc = _alloc_rc ();
 
-    tc = np_create_tattach (0, P9_NOFID, NULL, "/foo", 0);
+    tc = np_create_tattach (fid, P9_NOFID, NULL, "/foo", uid);
     if (!tc)
         msg_exit ("oom");
     ttrans_rpc (t, tc, rc);
