@@ -418,6 +418,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
 					   u->uname, gid);
+				wt->fsgid = P9_NONUNAME;
 				goto done;
 			}
 			if (ret != wt->fsgid) {
@@ -425,6 +426,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_logerr (srv, "setfsgid(%s) gid=%d failed"
 					   "returned %d, expected %d",
 					   u->uname, gid, ret, wt->fsgid);
+				wt->fsgid = P9_NONUNAME;
 				goto done;
 			}
 			wt->fsgid = gid;
@@ -436,6 +438,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_uerror (errno);
 				np_logerr (srv, "setgroups(%s) nsg=%d failed",
 					   u->uname, u->nsg);
+				wt->sguid = P9_NONUNAME;
 				goto done;
 			}
 			wt->sguid = u->uid;
@@ -447,6 +450,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
 					   u->uname, u->uid);
+				wt->fsuid = P9_NONUNAME;
 				goto done;
 			}
 			if (ret != wt->fsuid) {
@@ -454,6 +458,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_logerr (srv, "setfsuid(%s) uid=%d failed: "
 					   "returned %d, expected %d",
 					   u->uname, u->uid, ret, wt->fsuid);
+				wt->fsuid = P9_NONUNAME;
 				goto done;
 			}
 			wt->fsuid = u->uid;
