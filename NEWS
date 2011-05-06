@@ -1,3 +1,17 @@
+1.0-pre27:
+        Updating from pre26:
+        - Chkconfig diod on.  Service is now called 'diod' not 'diodctl'.
+        - In diod.conf, rename 'diodctllisten' to 'listen' and use port 564.
+
+	Now the changes:
+	Serialize password/group lookups, log all errors, and use big buffers.
+	Minimize password/group lookups by  briefly caching lookup results.
+	Perform a late term abortion on diodctl.  Now we just start diod.
+	Added diodcat utility and updated auto.diod to use it not diodctl
+	Reworked the libnpclient library and used it to improve test coverage.
+	Add better error handling for setfsuid/getfsuid.
+	Fix a regression in 1.0-pre25 in the gid was never being reset.
+
 1.0-pre26:
 	Reopen logs after daemonization.
 
