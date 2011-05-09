@@ -1,22 +1,3 @@
-+---------------------+
-| Client Requirements | 
-+---------------------+
-
-Diod is a user space server for the kernel v9fs client (9p.ko, 9pnet.ko).
-Although the kernel client supports several 9P variants, diod only supports
-9P2000.L, and only in its feature-complete form, as it appeared in 2.6.38.
-
-Earlier versions of the kernel that do not support 9P2000.L will fail
-at mount time when version negotiation fails.  Some pre-2.6.38 versions
-of the kernel that have 9P2000.L but still send some 9P2000.u ops will
-fail in various ways, typically with the diod server detecting a protocol
-error and dropping the connection.
-
-Use a 2.6.38 or later kernel.  Alternatively, use a backport of v9fs
-to an earlier kernel.  A 2.6.38-rc2 v9fs backported to RHEL 6.x is
-what is currently being used at LLNL.  See svn repo here:
-   http://diod.googlecode.com/svn/branches/v9fs-2.6.38.rc2-rhel6
-
 +----------+
 | Building | 
 +----------+
@@ -36,6 +17,22 @@ Note: on Debian/Ubuntu, LUA requires the following configure flags:
 
     ./configure CPPFLAGS="-I/usr/include/lua5.1" --with-lua-suffix=5.1
 
++---------------------+
+| Client Requirements | 
++---------------------+
+
+Diod is a user space server for the kernel v9fs client (9p.ko, 9pnet.ko).
+Although the kernel client supports several 9P variants, diod only supports
+9P2000.L, and only in its feature-complete form, as it appeared in 2.6.38.
+
+Earlier versions of the kernel that do not support 9P2000.L will fail
+at mount time when version negotiation fails.  Some pre-2.6.38 versions
+of the kernel that have 9P2000.L but still send some 9P2000.u ops may
+fail in less obvious ways.  Use a 2.6.38 or later kernel, or a v9fs
+backport such as this one of 2.6.38.5's v9fs to RHEL6.1's 2.6.32 kernel.
+
+    git://github.com/garlick/9p-sac.git
+
 +---------+
 | Testing |
 +---------+
@@ -48,17 +45,14 @@ Unit tests (make check):
 	Others will be skipped if valgrind is not installed.
 
     ./tests/user
-	User space client and server running across a socketpair.
+	User space client and user space server running across a socketpair.
 	Some tests will be skipped if not root.
 	Others will be skipped if you ARE root.
 	None require kernel 9p support.
 
     ./tests/kern:
-        Kernel client and user server running across a socketpair,
-	in private namespace.
-	All tests require root and 9p.ko with 9P2000.L e.g. from 2.6.38+.
+        Kernel space client and user space server running across a socketpair.
         Tests will be skipped if 9p cannot be modprobed.
-        Tests may fail if 9p can be modprobed but is older than 2.6.38.
 
 Running by hand for debugging:
 
@@ -77,11 +71,12 @@ Running by hand for debugging:
 
 Running diod for I/O forwarding on clusters:
 
-    On I/O node, set up /etc/diod.conf containing exports - see diod.conf(5),
+    On I/O node, set up /etc/diod.conf accordign to diod.conf(5), then:
        chkconfig diod on
        service diod start
 
-    On compute node, if I/O node is fritz42, add entries like this to fstab:
+    On compute node, if I/O node is fritz42, add entries like this to fstab
+    (assumes diodmount is installed as /sbin/mount.diod):
        fritz42:/g/g0  /g/g0         diod  default 0 0
        ...
 
@@ -104,19 +99,14 @@ Running diod for I/O forwarding on clusters:
 | Support |
 +---------+
 
-    Use the issue tracker, see the wiki, download releases at:
+    Source access is on the github site:
 
-        http://diod.googlecode.com/
+        https://github.com/chaos/diod
 
-    Until we get a real mailing list, you may email the author directly at:
+    Wiki and issue tracker are on the google code site:
 
-        garlick dot jim at gmail dot com
-        garlick at llnl dot gov
+        http://code.google.com/p/diod/
 
-    For general v9fs/9p discussion, use the v9fs-developer mailing list:
+    Diod can be discussed on the v9fs-users mailing list:
 
-        https://lists.sourceforge.net/lists/listinfo/v9fs-developer
-
-    The source resides at github.  Patches welcome!
-   
-        https://github.com/chaos/diod 
+        https://lists.sourceforge.net/lists/listinfo/v9fs-users

@@ -25,7 +25,7 @@ static int
 check_fsid (uid_t uid, gid_t gid)
 {
     int fd;
-    char path[] = "/tmp/testfsuid.XXXXXX";
+    char path[] = "/tmp/testfsuidsupp.XXXXXX";
     struct stat sb;
 
     fd = _mkstemp (path);
@@ -41,7 +41,7 @@ static char *
 create_file (uid_t uid, gid_t gid, mode_t mode)
 {
     int fd;
-    static char path[] = "/tmp/testfsuid.XXXXXX";
+    static char path[] = "/tmp/testfsuidsupp.XXXXXX";
 
     fd = _mkstemp (path);
     _fchown (fd, 0, TEST_SGID);
@@ -129,8 +129,11 @@ int main(int argc, char *argv[])
     msg ("supplemental groups cleared");
     assert (!read_file (path));
 
+    /* clean up */
+    change_fsid (TEST_UID, TEST_GID, 0, 0);
+    _unlink (path);
+
     msg ("test complete");
-    unlink (path);
     exit (0);
 }
 

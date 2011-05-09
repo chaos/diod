@@ -10,4 +10,5 @@ tsetfsuidsupp: 101 added to supplemental groups
 tsetfsuidsupp: file is readable
 tsetfsuidsupp: supplemental groups cleared
 tsetfsuidsupp: file is NOT readable
+tsetfsuidsupp: fsid changed to 0:0
 tsetfsuidsupp: test complete
