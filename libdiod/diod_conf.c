@@ -72,6 +72,7 @@
 #define RO_FOREGROUND       0x0004
 #define RO_AUTH_REQUIRED    0x0008
 #define RO_RUNASUID         0x0010
+#define RO_USERDB           0x0020
 #define RO_LISTEN           0x0040
 #define RO_EXPORTS          0x0100
 #define RO_STATSLOG         0x0200
@@ -86,6 +87,7 @@ typedef struct {
     int          nwthreads;
     int          foreground;
     int          auth_required;
+    int          userdb;
     int          allsquash;
     char        *squashuser;
     uid_t        runasuid;
@@ -170,6 +172,7 @@ diod_conf_init (void)
     config.nwthreads = 16;
     config.foreground = 0;
     config.auth_required = 1;
+    config.userdb = 1;
     config.allsquash = 0;
     config.squashuser = _xstrdup ("nobody");
     config.runasuid = 0;
@@ -258,6 +261,17 @@ void diod_conf_set_auth_required (int i)
     config.auth_required = i;
     config.ro_mask |= RO_AUTH_REQUIRED;
 }
+
+/* userdb - whether to do passwd/group lookup
+ */
+int diod_conf_get_userdb (void) { return config.userdb; }
+int diod_conf_opt_userdb (void) { return config.ro_mask & RO_USERDB; }
+void diod_conf_set_userdb (int i)
+{
+    config.userdb = i;
+    config.ro_mask |= RO_USERDB;
+}
+
 
 /* allsquash - run server as squash suer and remap all attaches
  */
@@ -588,6 +602,10 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.ro_mask & RO_AUTH_REQUIRED)) {
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
+        }
+        if (!(config.ro_mask & RO_USERDB)) {
+            _lua_getglobal_int (path, L, "userdb",
+                                &config.userdb);
         }
         if (!(config.ro_mask & RO_ALLSQUASH)) {
             _lua_getglobal_int (path, L, "allsquash",

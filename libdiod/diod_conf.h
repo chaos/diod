@@ -48,6 +48,10 @@ int     diod_conf_get_auth_required (void);
 int     diod_conf_opt_auth_required (void);
 void    diod_conf_set_auth_required (int i);
 
+int     diod_conf_get_userdb (void);
+int     diod_conf_opt_userdb (void);
+void    diod_conf_set_userdb (int i);
+
 int     diod_conf_get_allsquash (void);
 int     diod_conf_opt_allsquash (void);
 void    diod_conf_set_allsquash (int i);

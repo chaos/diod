@@ -132,6 +132,7 @@ _alloc_user (Npsrv *srv, struct passwd *pwd)
 		np_logerr (srv, "_alloc_user: %s", pwd->pw_name);
 		goto error;
 	}
+	u->sg = NULL;
 	if (!(u->uname = strdup (pwd->pw_name))) {
 		np_uerror (ENOMEM);
 		np_logerr (srv, "_alloc_user: %s", pwd->pw_name);
@@ -154,6 +155,58 @@ error:
 	return NULL; 
 }
 
+/* Create an Npuser struct for a user, without requiring
+ * that user to be in the password/group file.
+ * N.B. gid is assumed to be same as uid.
+ */
+static Npuser *
+_alloc_nouserdb (Npsrv *srv, uid_t uid, char *name)
+{
+	Npuser *u = NULL;
+	char ustr[32] = "root";
+
+	if (name) {
+		if (strcmp (name, "root") != 0) {
+			np_uerror (EPERM);
+			goto error;
+		}
+		uid = 0;
+	}
+	if (uid != 0)
+		snprintf (ustr, sizeof (ustr), "%d", uid);
+	if (!(u = malloc (sizeof (*u)))) {
+		np_uerror (ENOMEM);
+		np_logerr (srv, "_alloc_nouserdb: %s", ustr);
+		goto error;
+	}
+	u->sg = NULL;
+	if (!(u->uname = strdup (ustr))) {
+		np_uerror (ENOMEM);
+		np_logerr (srv, "_alloc_nouserdb: %s", ustr);
+		goto error;
+	}
+	u->uid = uid;
+	u->gid = (gid_t)uid;
+	u->nsg = 1;
+	if (!(u->sg = malloc (sizeof (gid_t) * u->nsg))) {
+		np_uerror (ENOMEM);
+		np_logerr (srv, "_alloc_nouserdb: %s", ustr);
+		goto error;
+	}
+	u->sg[0] = u->gid;
+	pthread_mutex_init (&u->lock, NULL);
+	if (srv->flags & SRV_FLAGS_DEBUG_USER)
+		np_logmsg (srv, "user lookup: %d", u->uid);
+	u->refcount = 0;
+	u->t = time (NULL);
+	u->next = NULL;
+	return u;
+error:
+	if (u)
+		_free_user (u);
+	return NULL;
+}
+
 static Npuser *
 _real_lookup_byuid (Npsrv *srv, uid_t uid)
 {
@@ -162,27 +215,32 @@ _real_lookup_byuid (Npsrv *srv, uid_t uid)
 	struct passwd pw, *pwd;
 	char *buf = NULL; 
 
-	len = sysconf(_SC_GETPW_R_SIZE_MAX);
-	if (len < 4096)
-		len = 4096;
-	if (!(buf = malloc (len))) {
-		np_uerror (ENOMEM);
-		np_logerr (srv, "uid2user");
-		goto error;
+	if (srv->flags & SRV_FLAGS_NOUSERDB) {
+		if (!(u = _alloc_nouserdb (srv, uid, NULL)))
+			goto error;
+	} else {
+		len = sysconf(_SC_GETPW_R_SIZE_MAX);
+		if (len < 4096)
+			len = 4096;
+		if (!(buf = malloc (len))) {
+			np_uerror (ENOMEM);
+			np_logerr (srv, "uid2user");
+			goto error;
+		}
+		if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0) {
+			np_uerror (err);
+			np_logerr (srv, "uid2user: unable to lookup %d", uid);
+			goto error;
+		}
+		if (!pwd) {
+			np_logmsg (srv, "uid2user: unable to lookup %d", uid);
+			np_uerror (EPERM);
+			goto error;
+		}
+		if (!(u = _alloc_user (srv, pwd)))
+			goto error;
+		free (buf);
 	}
-	if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0) {
-		np_uerror (err);
-		np_logerr (srv, "uid2user: unable to lookup %d", uid);
-		goto error;
-	}
-	if (!pwd) {
-		np_logmsg (srv, "uid2user: unable to lookup %d", uid);
-		np_uerror (EPERM);
-		goto error;
-	}
-	if (!(u = _alloc_user (srv, pwd)))
-		goto error;
-	free (buf);
 	return u;
 error:
 	if (u)
@@ -200,27 +258,32 @@ _real_lookup_byname (Npsrv *srv, char *uname)
 	struct passwd pw, *pwd = NULL;
 	char *buf = NULL;
 
-	len= sysconf(_SC_GETPW_R_SIZE_MAX);
-	if (len < 4096)
-		len = 4096;
-	if (!(buf = malloc (len))) {
-		np_uerror (ENOMEM);
-		np_logerr (srv, "uname2user: %s", uname);
-		goto error;
+	if (srv->flags & SRV_FLAGS_NOUSERDB) {
+		if (!(u = _alloc_nouserdb (srv, P9_NONUNAME, uname)))
+			goto error;
+	} else {
+		len= sysconf(_SC_GETPW_R_SIZE_MAX);
+		if (len < 4096)
+			len = 4096;
+		if (!(buf = malloc (len))) {
+			np_uerror (ENOMEM);
+			np_logerr (srv, "uname2user: %s", uname);
+			goto error;
+		}
+		if ((err = getpwnam_r (uname, &pw, buf, len, &pwd)) != 0) {
+			np_uerror (err);
+			np_logerr (srv, "uname2user: %s: getpwnam_r", uname);
+			goto error;
+		}
+		if (!pwd) {
+			np_logmsg (srv, "uname2user: %s lookup failure", uname);
+			np_uerror (EPERM);
+			goto error;
+		}
+		if (!(u = _alloc_user (srv, pwd)))
+			goto error;
+		free (buf);
 	}
-	if ((err = getpwnam_r (uname, &pw, buf, len, &pwd)) != 0) {
-		np_uerror (err);
-		np_logerr (srv, "uname2user: %s: getpwnam_r", uname);
-		goto error;
-	}
-	if (!pwd) {
-		np_logmsg (srv, "uname2user: %s lookup failure", uname);
-		np_uerror (EPERM);
-		goto error;
-	}
-	if (!(u = _alloc_user (srv, pwd)))
-		goto error;
-	free (buf);
 	return u;
 error:
 	if (u)
