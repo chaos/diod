@@ -261,7 +261,7 @@ struct p9_qid {
 #define P9_GETATTR_BASIC	0x000007ffULL /* Mask for fields up to BLOCKS */
 #define P9_GETATTR_ALL		0x00003fffULL /* Mask for All fields above */
 
-/* Bit values for setattr valid field.
+/* Bit values for setattr valid field from <linux/fs.h>.
  */
 #define P9_SETATTR_MODE		0x00000001UL
 #define P9_SETATTR_UID		0x00000002UL

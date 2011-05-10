@@ -1074,6 +1074,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 {
     Npfcall *ret = NULL;
     Fid *f = fid->aux;
+    int fidstat_updated = 0;
+    int ctime_updated = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1083,6 +1085,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     if ((valid & P9_SETATTR_MODE) || (valid & P9_SETATTR_SIZE)) {
         if (_fidstat(f) < 0)
             goto done;
+        fidstat_updated = 1;
         if (S_ISLNK(f->stat.st_mode)) {
             msg ("diod_setattr: unhandled mode/size update on symlink");
             np_uerror(EINVAL);
@@ -1091,9 +1094,12 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     }
 
     /* chmod (N.B. dereferences symlinks) */
-    if ((valid & P9_SETATTR_MODE) && chmod (f->path, mode) < 0) {
-        np_uerror(errno);
-        goto done;
+    if ((valid & P9_SETATTR_MODE)) {
+        if (chmod (f->path, mode) < 0) {
+            np_uerror(errno);
+            goto done;
+        }
+        ctime_updated = 1;
     }
 
     /* chown */
@@ -1103,12 +1109,16 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             np_uerror(errno);
             goto done;
         }
+        ctime_updated = 1;
     }
 
     /* truncate (N.B. dereferences symlinks */
-    if ((valid & P9_SETATTR_SIZE) && truncate (f->path, size) < 0) {
-        np_uerror(errno);
-        goto done;
+    if ((valid & P9_SETATTR_SIZE)) {
+        if (truncate (f->path, size) < 0) {
+            np_uerror(errno);
+            goto done;
+        }
+        ctime_updated = 1;
     }
 
     /* utimes */
@@ -1142,6 +1152,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             np_uerror(errno);
             goto done;
         }
+        ctime_updated = 1;
 #else /* HAVE_UTIMENSAT */
         struct timeval tv[2], now, *tvp;
         /* N.B. this utimes () implementation loses atomicity and precision.
@@ -1150,8 +1161,9 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
          && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
             tvp = NULL; /* set both to now */
         } else {
-            if (_fidstat(f) < 0)
+            if (!fidstat_updated && _fidstat(f) < 0)
                 goto done;
+            fidstat_updated = 1;
             if (gettimeofday (&now, NULL) < 0) {
                 np_uerror (errno);
                 goto done;
@@ -1183,18 +1195,15 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             np_uerror(errno);
             goto done;
         }
+        ctime_updated = 1;
 #endif
     }
-
-    /* ctime - updated as a side effect of above changes.
-     * Tricky if stand-alone update is required.
-     */
-    if (valid == P9_SETATTR_CTIME) {
-        msg ("diod_setattr: FIXME: unhandled stand-alone ctime update request");
-        np_uerror(EINVAL);
-        goto done;
+    if ((valid & P9_SETATTR_CTIME) && !ctime_updated) {
+        if (lchown (f->path, -1, -1) < 0) {
+            np_uerror (errno);
+            goto done;
+        }
     }
-
     if (!(ret = np_create_rsetattr())) {
         np_uerror (ENOMEM);
         msg ("diod_setattr: out of memory");
@@ -1458,7 +1467,7 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
         goto done;
     }
     if (!(npath = _mkpath(df->path, name))) {
-        msg ("diod_mkdir: out of memory");
+        msg ("diod_link: out of memory");
         goto done;
     }
     if (link (f->path, npath) < 0) {
@@ -1467,7 +1476,7 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
     }
     if (!((ret = np_create_rlink ()))) {
         np_uerror (ENOMEM);
-        msg ("diod_mkdir: out of memory");
+        msg ("diod_link: out of memory");
         goto done;
     }
 done:
