@@ -374,6 +374,7 @@ _service_loop (void *arg)
     while (!ss.shutdown) {
         if (ss.reload) {
             diod_conf_init_config_file (NULL);
+            np_usercache_flush (ss.srv);
             ss.reload = 0;
         }
         for (i = 0; i < ss.nfds; i++) {
