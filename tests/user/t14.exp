@@ -1,0 +1,4 @@
+tcreate: create foo with good gid succeeded
+tcreate: create foo2 with bad gid failed
+conjoin: t14 exited with rc=0
+conjoin: diod exited with rc=0

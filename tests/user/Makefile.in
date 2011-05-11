@@ -35,7 +35,8 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = conjoin$(EXEEXT) tattach$(EXEEXT) tattachmt$(EXEEXT) \
-	tmkdir$(EXEEXT) tread$(EXEEXT) tstat$(EXEEXT) twrite$(EXEEXT)
+	tmkdir$(EXEEXT) tread$(EXEEXT) tstat$(EXEEXT) twrite$(EXEEXT) \
+	tcreate$(EXEEXT)
 subdir = tests/user
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -75,6 +76,15 @@ am_tattachmt_OBJECTS = tattachmt.$(OBJEXT) $(am__objects_1)
 tattachmt_OBJECTS = $(am_tattachmt_OBJECTS)
 tattachmt_LDADD = $(LDADD)
 tattachmt_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_tcreate_OBJECTS = tcreate.$(OBJEXT) $(am__objects_1)
+tcreate_OBJECTS = $(am_tcreate_OBJECTS)
+tcreate_LDADD = $(LDADD)
+tcreate_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -125,11 +135,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
-	$(tmkdir_SOURCES) $(tread_SOURCES) $(tstat_SOURCES) \
-	$(twrite_SOURCES)
+	$(tcreate_SOURCES) $(tmkdir_SOURCES) $(tread_SOURCES) \
+	$(tstat_SOURCES) $(twrite_SOURCES)
 DIST_SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
-	$(tmkdir_SOURCES) $(tread_SOURCES) $(tstat_SOURCES) \
-	$(twrite_SOURCES)
+	$(tcreate_SOURCES) $(tmkdir_SOURCES) $(tread_SOURCES) \
+	$(tstat_SOURCES) $(twrite_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -264,7 +274,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODCONF=$(top_builddir)/etc/diod.conf" "./runtest"
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14
 CLEANFILES = *.out *.diff *.diod
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
@@ -286,6 +296,7 @@ tmkdir_SOURCES = tmkdir.c $(common_sources)
 tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
+tcreate_SOURCES = tcreate.c $(common_sources)
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
 all: all-am
 
@@ -333,6 +344,9 @@ tattach$(EXEEXT): $(tattach_OBJECTS) $(tattach_DEPENDENCIES)
 tattachmt$(EXEEXT): $(tattachmt_OBJECTS) $(tattachmt_DEPENDENCIES) 
 	@rm -f tattachmt$(EXEEXT)
 	$(LINK) $(tattachmt_OBJECTS) $(tattachmt_LDADD) $(LIBS)
+tcreate$(EXEEXT): $(tcreate_OBJECTS) $(tcreate_DEPENDENCIES) 
+	@rm -f tcreate$(EXEEXT)
+	$(LINK) $(tcreate_OBJECTS) $(tcreate_LDADD) $(LIBS)
 tmkdir$(EXEEXT): $(tmkdir_OBJECTS) $(tmkdir_DEPENDENCIES) 
 	@rm -f tmkdir$(EXEEXT)
 	$(LINK) $(tmkdir_OBJECTS) $(tmkdir_LDADD) $(LIBS)
@@ -355,6 +369,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/conjoin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tattach.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tattachmt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcreate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tmkdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstat.Po@am__quote@

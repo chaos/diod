@@ -21,7 +21,7 @@ case $(basename $TEST) in
             exit 77
         fi
         ;;
-    t11|t13)
+    t11|t13|t14)
         if [ $(id -u) != 0 ]; then
             echo "requires root" >$TEST.out
             exit 77
@@ -34,6 +34,7 @@ ulimit -c unlimited
 
 umask 022
 PATH_EXPDIR=$(mktemp -d) || exit 1
+chmod 777 $PATH_EXPDIR
 export PATH_EXPDIR
 
 export MALLOC_CHECK_=3

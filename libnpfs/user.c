@@ -469,10 +469,24 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
 	Npwthread *wt = req->wthread;
 	Npsrv *srv = req->conn->srv;
-	int ret = -1;
+	int i, ret = -1;
 	u32 gid;
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
+		if (gid_override != -1 && u->uid != 0
+					&& !(srv->flags & SRV_FLAGS_NOUSERDB)) {
+			for (i = 0; i < u->nsg; i++) {
+				if (u->sg[i] == gid_override)
+					break;
+			}
+			if (i == u->nsg) {
+				np_uerror (EPERM);
+				np_logerr (srv, "np_setfsid(%s): gid_override "
+					   "%d not in user's sg list",
+					   u->uname, gid_override);
+				goto done;
+			}
+		}
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
 			gid_t ret;

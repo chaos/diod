@@ -64,7 +64,7 @@ main (int argc, char *argv[])
 
     if (!(root = npc_mount (0, 65536+24, aname, diod_auth)))
         errn_exit (np_rerror (), "npc_mount");
-    if (!(fid = npc_create_bypath (root, outfile, O_WRONLY, 0644)))
+    if (!(fid = npc_create_bypath (root, outfile, O_WRONLY, 0644, getegid())))
         errn_exit (np_rerror (), "npc_create_bypath");
 
     _copy_to9 (fd, fid);

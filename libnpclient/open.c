@@ -45,13 +45,13 @@
 /* fid: parent directory on entry, new file on exit.
  */
 int
-npc_create (Npcfid *fid, char *name, u32 flags, u32 mode)
+npc_create (Npcfid *fid, char *name, u32 flags, u32 mode, gid_t gid)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	if (!(tc = np_create_tlcreate(fid->fid, name, flags, mode, getegid()))) {
+	if (!(tc = np_create_tlcreate(fid->fid, name, flags, mode, gid))) {
 		np_uerror (ENOMEM);
 		goto done;
 	}
@@ -70,7 +70,7 @@ done:
 }
 
 Npcfid *
-npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode)
+npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode, gid_t gid)
 {
         Npcfid *fid;
         char *cpy, *dname, *fname;
@@ -93,7 +93,7 @@ npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode)
                 return NULL;
         }
         fname = basename (cpy);
-        if (npc_create (fid, fname, flags, mode) < 0) {
+        if (npc_create (fid, fname, flags, mode, gid) < 0) {
                 int saved_err = np_rerror ();
                 (void)npc_clunk (fid);
                 free (cpy);
