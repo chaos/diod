@@ -48,34 +48,6 @@ struct Reqpool {
 static int np_wthread_create(Npsrv *srv);
 static void *np_wthread_proc(void *a);
 
-static Npfcall* np_default_version(Npconn *, u32, Npstr *);
-static Npfcall* np_default_attach(Npfid *, Npfid *, Npstr *);
-static void np_default_flush(Npreq *);
-static int np_default_clone(Npfid *, Npfid *);
-static int np_default_walk(Npfid *, Npstr*, Npqid *);
-static Npfcall* np_default_read(Npfid *, u64, u32, Npreq *);
-static Npfcall* np_default_write(Npfid *, u64, u32, u8*, Npreq *);
-static Npfcall* np_default_clunk(Npfid *);
-static Npfcall* np_default_remove(Npfid *);
-static Npfcall* np_default_statfs(Npfid *);
-static Npfcall* np_default_lopen(Npfid *, u32);
-static Npfcall* np_default_lcreate(Npfid *, Npstr *, u32, u32, u32);
-static Npfcall* np_default_symlink(Npfid *, Npstr *, Npstr *, u32);
-static Npfcall* np_default_mknod(Npfid *, Npstr *, u32, u32, u32, u32);
-static Npfcall* np_default_rename(Npfid *, Npfid *, Npstr *);
-static Npfcall* np_default_readlink(Npfid *);
-static Npfcall* np_default_getattr(Npfid *, u64);
-static Npfcall* np_default_setattr(Npfid *, u32, u32, u32, u32, u64,
-                                   u64, u64, u64, u64);
-static Npfcall* np_default_xattrwalk(Npfid *, Npfid *, Npstr *);
-static Npfcall* np_default_xattrcreate(Npfid *, Npstr *, u64, u32);
-static Npfcall* np_default_readdir(Npfid *, u64, u32, Npreq *);
-static Npfcall* np_default_fsync(Npfid *);
-static Npfcall* np_default_lock(Npfid *, u8, u32, u64, u64, u32, Npstr *);
-static Npfcall* np_default_getlock(Npfid *, u8, u64, u64, u32, Npstr *);
-static Npfcall* np_default_link(Npfid *, Npfid *, Npstr *);
-static Npfcall* np_default_mkdir(Npfid *, Npstr *, u32, u32);
-
 Npsrv*
 np_srv_create(int nwthread, int flags)
 {
@@ -87,56 +59,14 @@ np_srv_create(int nwthread, int flags)
 		errno = ENOMEM;
 		return NULL;
 	}
+	memset (srv, 0, sizeof (*srv));
 	pthread_mutex_init(&srv->lock, NULL);
 	pthread_cond_init(&srv->reqcond, NULL);
 	pthread_cond_init(&srv->conncountcond, NULL);
-	srv->conncount = 0;
-	srv->connhistory = 0;
 
 	srv->msize = 8216;
-	srv->srvaux = NULL;
-	srv->treeaux = NULL;
-	srv->remapuser = NULL;
-	srv->auth_required = NULL;
-	srv->auth = NULL;
 	srv->flags = flags;
 
-	srv->fiddestroy = NULL;
-
-	srv->version = np_default_version;
-	srv->attach = np_default_attach;
-	srv->flush = np_default_flush;
-	srv->clone = np_default_clone;
-	srv->walk = np_default_walk;
-	srv->read = np_default_read;
-	srv->write = np_default_write;
-	srv->clunk = np_default_clunk;
-	srv->remove = np_default_remove;
-
-	srv->statfs = np_default_statfs;
-	srv->lopen = np_default_lopen;
-	srv->lcreate = np_default_lcreate;
-	srv->symlink = np_default_symlink;
-	srv->mknod = np_default_mknod;
-	srv->rename = np_default_rename;
-	srv->readlink= np_default_readlink;
-	srv->getattr = np_default_getattr;
-	srv->setattr = np_default_setattr;
-	srv->xattrwalk = np_default_xattrwalk;
-	srv->xattrcreate = np_default_xattrcreate;
-	srv->readdir = np_default_readdir;
-	srv->fsync = np_default_fsync;
-	srv->llock = np_default_lock;
-	srv->getlock = np_default_getlock;
-	srv->link = np_default_link;
-	srv->mkdir = np_default_mkdir;
-
-	srv->conns = NULL;
-	srv->reqs_first = NULL;
-	srv->reqs_last = NULL;
-	srv->workreqs = NULL;
-	srv->wthreads = NULL;
-	srv->logmsg = NULL;
 	srv->nwthread = nwthread;
 	for(i = 0; i < nwthread; i++) {
 		if (np_wthread_create(srv) < 0) {
@@ -491,184 +421,6 @@ np_respond(Npreq *req, Npfcall *rc)
 	}
 	pthread_mutex_unlock(&req->lock);
 	np_req_unref(req);
-}
-
-static Npfcall*
-np_default_version(Npconn *conn, u32 msize, Npstr *version) 
-{
-	Npfcall *rc = NULL;
-
-	/* msize already checked for > P9_IOHDRSZ */
-	if (msize > conn->msize)
-		msize = conn->msize;
-	if (msize < conn->msize)
-		conn->msize = msize; /* conn->msize can only be reduced */
-	if (np_strcmp(version, "9P2000.L") == 0) {
-		if (!(rc = np_create_rversion(msize, "9P2000.L")))
-			np_uerror(ENOMEM);
-	} else
-		np_uerror(EIO);
-	return rc;
-}
-
-static Npfcall*
-np_default_attach(Npfid *fid, Npfid *afid, Npstr *aname)
-{
-	np_uerror(EIO);
-	return NULL;
-}
-
-static void
-np_default_flush(Npreq *req)
-{
-}
-
-static int
-np_default_clone(Npfid *fid, Npfid *newfid)
-{
-	return 0;
-}
-
-static int
-np_default_walk(Npfid *fid, Npstr* wname, Npqid *wqid)
-{
-	np_uerror(ENOSYS);
-	return 0;
-}
-
-static Npfcall*
-np_default_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_clunk(Npfid *fid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_remove(Npfid *fid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-
-static Npfcall*
-np_default_statfs(Npfid *fid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_lopen(Npfid *fid, u32 mode)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor,
-		 u32 gid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_rename(Npfid *fid, Npfid *dfid, Npstr *name)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_readlink(Npfid *fid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_getattr(Npfid *fid, u64 request_mask)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_setattr(Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
-                   u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_xattrwalk(Npfid *fid, Npfid *attrfid, Npstr *name) 
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_xattrcreate(Npfid *fid, Npstr *name, u64 size, u32 flag) 
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_fsync(Npfid *fid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_lock(Npfid *fid, u8 type, u32 flags, u64 start, u64 length,
-		u32 proc_id, Npstr *client_id)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_getlock(Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
-		   Npstr *client_id)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_link(Npfid *dfid, Npfid *oldfid, Npstr *newpath)
-{
-	np_uerror(ENOSYS);
-	return NULL;
-}
-static Npfcall*
-np_default_mkdir(Npfid *fid, Npstr *name, u32 mode, u32 gid)
-{
-	np_uerror(ENOSYS);
-	return NULL;
 }
 
 Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {

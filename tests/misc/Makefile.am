@@ -10,7 +10,6 @@ check_PROGRAMS = \
 	tlist \
 	tnpsrv \
 	tnpcli \
-	tnpfile \
 	tlua
 
 TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
@@ -52,7 +51,6 @@ tserialize_SOURCES = tserialize.c $(common_sources)
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources)
 tnpcli_SOURCES = tnpcli.c $(common_sources) 
-tnpfile_SOURCES = tnpfile.c $(common_sources)
 tlua_SOURCES = tlua.c $(common_sources) 
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf

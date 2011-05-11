@@ -10,13 +10,11 @@ libnpfs_a_SOURCES = \
 	fcall.c \
 	fdtrans.c \
 	fidpool.c \
-	npfile.h \
 	fmt.c \
 	np.c \
 	srv.c \
 	trans.c \
 	user.c \
-	file.c \
 	npstring.c \
 	npfs.h \
 	npfsimpl.h \

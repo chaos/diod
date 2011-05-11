@@ -39,14 +39,23 @@
 Npfcall *
 np_version(Npreq *req, Npfcall *tc)
 {
-	if (tc->u.tversion.msize < P9_IOHDRSZ + 1) {
+	Npfcall *rc = NULL;
+	int msize = tc->u.tversion.msize;
+
+	if (msize < P9_IOHDRSZ + 1) {
 		np_uerror(EIO);
 		return NULL;
 	}
-
-	return (*req->conn->srv->version)(req->conn,
-				tc->u.tversion.msize,
-				&tc->u.tversion.version);
+	if (msize > req->conn->msize)
+		msize = req->conn->msize;
+	if (msize < req->conn->msize)
+		req->conn->msize = msize; /* conn->msize can only be reduced */
+	if (np_strcmp(&tc->u.tversion.version, "9P2000.L") == 0) {
+		if (!(rc = np_create_rversion(msize, "9P2000.L")))
+			np_uerror(ENOMEM);
+	} else
+		np_uerror(EIO);
+	return rc;
 }
 
 static Npfid *
@@ -274,8 +283,11 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 	}
 
+	if (!srv->attach) {
+		np_uerror (EIO);
+		goto error;
+	}
 	rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
-
 error:
 	if (aname)
 		free(aname);
@@ -376,7 +388,7 @@ np_walk(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 
-		if (!(*conn->srv->clone)(fid, newfid))
+		if (!conn->srv->clone || !(*conn->srv->clone)(fid, newfid))
 			goto done;
 
 		np_user_incref(fid->user);
@@ -389,6 +401,10 @@ np_walk(Npreq *req, Npfcall *tc)
 	if (np_setfsid (req, newfid->user, -1) < 0)
 		goto done;
 	for(i = 0; i < tc->u.twalk.nwname;) {
+		if (!conn->srv->walk) {
+			np_uerror (ENOSYS);
+			break;
+		}	
 		if (!(*conn->srv->walk)(newfid, &tc->u.twalk.wnames[i],
 					&wqids[i]))
 			break;
@@ -451,6 +467,10 @@ np_read(Npreq *req, Npfcall *tc)
 	}
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!conn->srv->read) {
+		np_uerror(ENOSYS);
+		goto done;
+	}
 	rc = (*conn->srv->read)(fid, tc->u.tread.offset, tc->u.tread.count, req);
 
 done:
@@ -492,6 +512,10 @@ np_write(Npreq *req, Npfcall *tc)
 
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!conn->srv->write) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*conn->srv->write)(fid, tc->u.twrite.offset, tc->u.twrite.count,
 				 tc->u.twrite.data, req);
 done:
@@ -516,6 +540,10 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 		goto done;
 	}
+	if (!req->conn->srv->clunk) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->clunk)(fid);
 done:
 	if (rc && rc->type == P9_RCLUNK)
@@ -534,6 +562,10 @@ np_remove(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->remove) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->remove)(fid);
 	if (fid) /* spec says clunk the fid even if the remove fails */
 		np_fid_decref(fid);
@@ -551,6 +583,10 @@ np_statfs(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->statfs) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->statfs)(fid);
 done:
 	return rc;
@@ -566,6 +602,10 @@ np_lopen(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->lopen) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
 done:
 	return rc;
@@ -581,6 +621,10 @@ np_lcreate(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, tc->u.tlcreate.gid) < 0)
 		goto done;
+	if (!req->conn->srv->lcreate) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->lcreate)(fid,
 					&tc->u.tlcreate.name,
 					tc->u.tlcreate.flags,
@@ -604,6 +648,10 @@ np_symlink(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, tc->u.tsymlink.gid) < 0)
 		goto done;
+	if (!req->conn->srv->symlink) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->symlink)(fid,
 					&tc->u.tsymlink.name,
 					&tc->u.tsymlink.symtgt,
@@ -622,6 +670,10 @@ np_mknod(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, tc->u.tmknod.gid) < 0)
 		goto done;
+	if (!req->conn->srv->mknod) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->mknod)(fid,
 					&tc->u.tmknod.name,
 					tc->u.tmknod.mode,
@@ -648,6 +700,10 @@ np_rename(Npreq *req, Npfcall *tc)
 	np_fid_incref(dfid);
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->rename) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->rename)(fid, dfid, &tc->u.trename.name);
 done:
 	np_fid_decref(dfid);
@@ -664,6 +720,10 @@ np_readlink(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->readlink) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->readlink)(fid);
 done:
 	return rc;
@@ -679,6 +739,10 @@ np_getattr(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->getattr) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->getattr)(fid, tc->u.tgetattr.request_mask);
 done:
 	return rc;
@@ -694,6 +758,10 @@ np_setattr(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->setattr) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->setattr)(fid,
 					tc->u.tsetattr.valid,
 					tc->u.tsetattr.mode,
@@ -724,6 +792,10 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 	np_fid_incref(attrfid);
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->xattrwalk) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->xattrwalk)(fid, attrfid, &tc->u.txattrwalk.name);
 done:
 	return rc;
@@ -739,6 +811,10 @@ np_xattrcreate(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->xattrcreate) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->xattrcreate)(fid,
 					    &tc->u.txattrcreate.name,
 					    tc->u.txattrcreate.size,
@@ -761,6 +837,10 @@ np_readdir(Npreq *req, Npfcall *tc)
 	}
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->readdir) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->readdir)(fid, tc->u.treaddir.offset,
 					tc->u.treaddir.count,
 					req);
@@ -778,6 +858,10 @@ np_fsync(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->fsync) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->fsync)(fid);
 done:
 	return rc;
@@ -793,6 +877,10 @@ np_lock(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->llock) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->llock)(fid,
 					tc->u.tlock.type,
 					tc->u.tlock.flags,
@@ -814,6 +902,10 @@ np_getlock(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->getlock) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->getlock)(fid,
 					tc->u.tgetlock.type,
 					tc->u.tgetlock.start,
@@ -828,7 +920,7 @@ Npfcall *
 np_link(Npreq *req, Npfcall *tc)
 {
 	Npfid *dfid = _getfid_incref(req, tc->u.tlink.dfid);
-	Npfid *fid;
+	Npfid *fid = NULL;
 	Npfcall *rc = NULL;
 
 	if (!dfid)
@@ -840,9 +932,13 @@ np_link(Npreq *req, Npfcall *tc)
 	np_fid_incref(fid);
 	if (np_setfsid (req, fid->user, -1) < 0)
 		goto done;
+	if (!req->conn->srv->link) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->link)(dfid, fid, &tc->u.tlink.name);
-	np_fid_decref(fid);
 done:
+	np_fid_decref(fid);
 	return rc;
 }
 
@@ -856,6 +952,10 @@ np_mkdir(Npreq *req, Npfcall *tc)
 		goto done;
 	if (np_setfsid (req, fid->user, tc->u.tmkdir.gid) < 0)
 		goto done;
+	if (!req->conn->srv->mkdir) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
 	rc = (*req->conn->srv->mkdir)(fid,
 					&tc->u.tmkdir.name,
 					tc->u.tmkdir.mode,

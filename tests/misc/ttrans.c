@@ -18,7 +18,6 @@
 
 #include "9p.h"
 #include "npfs.h"
-#include "npfile.h"
 
 #include "list.h"
 #include "diod_log.h"
