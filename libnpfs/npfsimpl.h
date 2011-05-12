@@ -53,12 +53,6 @@ Npfcall *np_mkdir(Npreq *req, Npfcall *tc);
 /* srv.c */
 void np_srv_add_req(Npsrv *srv, Npreq *req);
 void np_srv_remove_req(Npsrv *srv, Npreq *req);
-void np_srv_add_workreq(Npsrv *srv, Npreq *req);
-void np_srv_remove_workreq(Npsrv *srv, Npreq *req);
 Npreq *np_req_alloc(Npconn *conn, Npfcall *tc);
 Npreq *np_req_ref(Npreq*);
 void np_req_unref(Npreq*);
-void np_req_free(Npreq *req);
-void np_srv_process_fcall(Npconn *conn, Npfcall *tc);
-int sreuid(int a, int b);
-int sregid(int a, int b);

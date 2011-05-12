@@ -419,3 +419,13 @@ Nptrans *np_fdtrans_create(int, int);
 unsigned long np_rerror(void);
 void np_uerror(unsigned long ecode);
 
+/* syn.c */
+Npfcall *np_syn_attach(Npfid *fid, Npfid *afid, char *aname);
+int np_syn_clone(Npfid *fid, Npfid *newfid);
+int np_syn_walk(Npfid *newfid, Npstr *wname, Npqid *wqid);
+Npfcall *np_syn_read(Npfid *fid, u64 offset, u32 count, Npreq *req);
+Npfcall* np_syn_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req);
+void np_syn_clunk(Npfid *fid);
+Npfcall* np_syn_lopen(Npfid *fid, u32 mode);
+Npfcall* np_syn_getattr(Npfid *fid, u64 request_mask);
+Npfcall* np_syn_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);

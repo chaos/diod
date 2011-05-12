@@ -283,11 +283,15 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (!srv->attach) {
-		np_uerror (EIO);
-		goto error;
+	if (aname && *aname != '/')
+		rc = np_syn_attach (fid, afid, aname);
+	if (!rc) {
+		if (!srv->attach) {
+			np_uerror (EIO);
+			goto error;
+		}
+		rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 	}
-	rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 error:
 	if (aname)
 		free(aname);
@@ -387,10 +391,15 @@ np_walk(Npreq *req, Npfcall *tc)
 			np_uerror(ENOMEM);
 			goto done;
 		}
-
-		if (!conn->srv->clone || !(*conn->srv->clone)(fid, newfid))
-			goto done;
-
+		if (fid->type & P9_QTTMP) {
+			if (!np_syn_clone (fid, newfid))
+				goto done;
+		} else {
+			if (!conn->srv->clone)
+				goto done;
+			if (!(*conn->srv->clone)(fid, newfid))
+				goto done;
+		}
 		np_user_incref(fid->user);
 		newfid->user = fid->user;
 		newfid->type = fid->type;
@@ -398,17 +407,24 @@ np_walk(Npreq *req, Npfcall *tc)
 		newfid = fid;
 
 	np_fid_incref(newfid);
-	if (np_setfsid (req, newfid->user, -1) < 0)
-		goto done;
+	if (!(newfid->type & P9_QTTMP)) {
+		if (np_setfsid (req, newfid->user, -1) < 0)
+			goto done;
+	}
 	for(i = 0; i < tc->u.twalk.nwname;) {
-		if (!conn->srv->walk) {
-			np_uerror (ENOSYS);
-			break;
-		}	
-		if (!(*conn->srv->walk)(newfid, &tc->u.twalk.wnames[i],
-					&wqids[i]))
-			break;
-
+		if (newfid->type & P9_QTTMP) {
+			if (!np_syn_walk (newfid, &tc->u.twalk.wnames[i],
+					  &wqids[i]))
+				break;
+		} else {
+			if (!conn->srv->walk) {
+				np_uerror (ENOSYS);
+				break;
+			}
+			if (!(*conn->srv->walk)(newfid, &tc->u.twalk.wnames[i],
+						&wqids[i]))
+				break;
+		}
 		newfid->type = wqids[i].type;
 		i++;
 		if (i<(tc->u.twalk.nwname) && !(newfid->type & P9_QTDIR))
@@ -465,13 +481,19 @@ np_read(Npreq *req, Npfcall *tc)
 		np_uerror(EIO);
 		goto done;
 	}
-	if (np_setfsid (req, fid->user, -1) < 0)
-		goto done;
-	if (!conn->srv->read) {
-		np_uerror(ENOSYS);
-		goto done;
+	if (fid->type & P9_QTTMP) {
+		rc = np_syn_read(fid, tc->u.tread.offset,
+				 tc->u.tread.count, req);
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!conn->srv->read) {
+			np_uerror(ENOSYS);
+			goto done;
+		}
+		rc = (*conn->srv->read)(fid, tc->u.tread.offset,
+					tc->u.tread.count, req);
 	}
-	rc = (*conn->srv->read)(fid, tc->u.tread.offset, tc->u.tread.count, req);
 
 done:
 	return rc;
@@ -510,14 +532,21 @@ np_write(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	if (np_setfsid (req, fid->user, -1) < 0)
-		goto done;
-	if (!conn->srv->write) {
-		np_uerror (ENOSYS);
-		goto done;
+	if (fid->type & P9_QTTMP) {
+		rc = np_syn_write(fid, tc->u.twrite.offset,
+				  tc->u.twrite.count,
+				  tc->u.twrite.data, req);
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!conn->srv->write) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*conn->srv->write)(fid, tc->u.twrite.offset,
+					 tc->u.twrite.count,
+					 tc->u.twrite.data, req);
 	}
-	rc = (*conn->srv->write)(fid, tc->u.twrite.offset, tc->u.twrite.count,
-				 tc->u.twrite.data, req);
 done:
 	return rc;
 }
@@ -540,11 +569,15 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 		goto done;
 	}
-	if (!req->conn->srv->clunk) {
-		np_uerror (ENOSYS);
-		goto done;
+	if (fid->type & P9_QTTMP) {
+		np_syn_clunk (fid);
+	} else {
+		if (!req->conn->srv->clunk) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->clunk)(fid);
 	}
-	rc = (*req->conn->srv->clunk)(fid);
 done:
 	if (rc && rc->type == P9_RCLUNK)
 		np_fid_decref(fid);
@@ -560,16 +593,21 @@ np_remove(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->remove) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->remove) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->remove)(fid);
 	}
-	rc = (*req->conn->srv->remove)(fid);
-	if (fid) /* spec says clunk the fid even if the remove fails */
-		np_fid_decref(fid);
 done:
+	/* spec says clunk the fid even if the remove fails */
+	np_fid_decref(fid);
 	return rc;
 }
 
@@ -581,13 +619,17 @@ np_statfs(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
-		goto done;
-	if (!req->conn->srv->statfs) {
+	if (fid->type & P9_QTTMP) {
 		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->statfs) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->statfs)(fid);
 	}
-	rc = (*req->conn->srv->statfs)(fid);
 done:
 	return rc;
 }
@@ -600,13 +642,17 @@ np_lopen(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
-		goto done;
-	if (!req->conn->srv->lopen) {
-		np_uerror (ENOSYS);
-		goto done;
+	if (fid->type & P9_QTTMP) {
+		rc = np_syn_lopen (fid, tc->u.tlopen.mode);
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->lopen) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
 	}
-	rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
 done:
 	return rc;
 }
@@ -619,17 +665,22 @@ np_lcreate(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, tc->u.tlcreate.gid) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->lcreate) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, tc->u.tlcreate.gid) < 0)
+			goto done;
+		if (!req->conn->srv->lcreate) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->lcreate)(fid,
+						&tc->u.tlcreate.name,
+						tc->u.tlcreate.flags,
+						tc->u.tlcreate.mode,
+						tc->u.tlcreate.gid);
 	}
-	rc = (*req->conn->srv->lcreate)(fid,
-					&tc->u.tlcreate.name,
-					tc->u.tlcreate.flags,
-					tc->u.tlcreate.mode,
-					tc->u.tlcreate.gid);
 	if (rc) {
 		//np_fid_omode_set(fid, O_CREAT|O_WRONLY|O_TRUNC);
 		fid->type = rc->u.rlcreate.qid.type;
@@ -646,16 +697,21 @@ np_symlink(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, tc->u.tsymlink.gid) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->symlink) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, tc->u.tsymlink.gid) < 0)
+			goto done;
+		if (!req->conn->srv->symlink) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->symlink)(fid,
+						&tc->u.tsymlink.name,
+						&tc->u.tsymlink.symtgt,
+						tc->u.tsymlink.gid);
 	}
-	rc = (*req->conn->srv->symlink)(fid,
-					&tc->u.tsymlink.name,
-					&tc->u.tsymlink.symtgt,
-					tc->u.tsymlink.gid);
 done:
 	return rc;
 }
@@ -668,18 +724,23 @@ np_mknod(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, tc->u.tmknod.gid) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->mknod) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, tc->u.tmknod.gid) < 0)
+			goto done;
+		if (!req->conn->srv->mknod) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->mknod)(fid,
+						&tc->u.tmknod.name,
+						tc->u.tmknod.mode,
+						tc->u.tmknod.major,
+						tc->u.tmknod.minor,
+						tc->u.tmknod.gid);
 	}
-	rc = (*req->conn->srv->mknod)(fid,
-					&tc->u.tmknod.name,
-					tc->u.tmknod.mode,
-					tc->u.tmknod.major,
-					tc->u.tmknod.minor,
-					tc->u.tmknod.gid);
 done:
 	return rc;
 }
@@ -698,13 +759,18 @@ np_rename(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	np_fid_incref(dfid);
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->rename) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->rename) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->rename)(fid, dfid, &tc->u.trename.name);
 	}
-	rc = (*req->conn->srv->rename)(fid, dfid, &tc->u.trename.name);
 done:
 	np_fid_decref(dfid);
 	return rc;
@@ -718,13 +784,18 @@ np_readlink(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->readlink) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->readlink) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->readlink)(fid);
 	}
-	rc = (*req->conn->srv->readlink)(fid);
 done:
 	return rc;
 }
@@ -737,13 +808,18 @@ np_getattr(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
-		goto done;
-	if (!req->conn->srv->getattr) {
-		np_uerror (ENOSYS);
-		goto done;
+	if (fid->type & P9_QTTMP) {
+		rc = np_syn_getattr(fid, tc->u.tgetattr.request_mask);
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->getattr) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->getattr)(fid,
+						tc->u.tgetattr.request_mask);
 	}
-	rc = (*req->conn->srv->getattr)(fid, tc->u.tgetattr.request_mask);
 done:
 	return rc;
 }
@@ -756,22 +832,27 @@ np_setattr(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->setattr) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->setattr) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->setattr)(fid,
+						tc->u.tsetattr.valid,
+						tc->u.tsetattr.mode,
+						tc->u.tsetattr.uid,
+						tc->u.tsetattr.gid,
+						tc->u.tsetattr.size,
+						tc->u.tsetattr.atime_sec,
+						tc->u.tsetattr.atime_nsec,
+						tc->u.tsetattr.mtime_sec,
+						tc->u.tsetattr.mtime_nsec);
 	}
-	rc = (*req->conn->srv->setattr)(fid,
-					tc->u.tsetattr.valid,
-					tc->u.tsetattr.mode,
-					tc->u.tsetattr.uid,
-					tc->u.tsetattr.gid,
-					tc->u.tsetattr.size,
-					tc->u.tsetattr.atime_sec,
-					tc->u.tsetattr.atime_nsec,
-					tc->u.tsetattr.mtime_sec,
-					tc->u.tsetattr.mtime_nsec);
 done:
 	return rc;
 }
@@ -789,14 +870,20 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 		np_uerror(EIO);
 		goto done;
 	}
-	np_fid_incref(attrfid);
-	if (np_setfsid (req, fid->user, -1) < 0)
+	np_fid_incref(attrfid); /* XXX decref needed? */
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->xattrwalk) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->xattrwalk) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->xattrwalk)(fid, attrfid,
+						  &tc->u.txattrwalk.name);
 	}
-	rc = (*req->conn->srv->xattrwalk)(fid, attrfid, &tc->u.txattrwalk.name);
 done:
 	return rc;
 }
@@ -809,16 +896,21 @@ np_xattrcreate(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->xattrcreate) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->xattrcreate) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->xattrcreate)(fid,
+						    &tc->u.txattrcreate.name,
+						    tc->u.txattrcreate.size,
+						    tc->u.txattrcreate.flag);
 	}
-	rc = (*req->conn->srv->xattrcreate)(fid,
-					    &tc->u.txattrcreate.name,
-					    tc->u.txattrcreate.size,
-					    tc->u.txattrcreate.flag);
 done:
 	return rc;
 }
@@ -835,15 +927,20 @@ np_readdir(Npreq *req, Npfcall *tc)
 		np_uerror(EIO);
 		goto done;
 	}
-	if (np_setfsid (req, fid->user, -1) < 0)
-		goto done;
-	if (!req->conn->srv->readdir) {
-		np_uerror (ENOSYS);
-		goto done;
+	if (fid->type & P9_QTTMP) {
+		rc = np_syn_readdir(fid, tc->u.treaddir.offset,
+				    tc->u.treaddir.count, req);
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->readdir) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->readdir)(fid, tc->u.treaddir.offset,
+						tc->u.treaddir.count,
+						req);
 	}
-	rc = (*req->conn->srv->readdir)(fid, tc->u.treaddir.offset,
-					tc->u.treaddir.count,
-					req);
 done:
 	return rc;
 }
@@ -856,13 +953,18 @@ np_fsync(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->fsync) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->fsync) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->fsync)(fid);
 	}
-	rc = (*req->conn->srv->fsync)(fid);
 done:
 	return rc;
 }
@@ -875,19 +977,24 @@ np_lock(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->llock) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->llock) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->llock)(fid,
+						tc->u.tlock.type,
+						tc->u.tlock.flags,
+						tc->u.tlock.start,
+						tc->u.tlock.length,
+						tc->u.tlock.proc_id,
+						&tc->u.tlock.client_id);
 	}
-	rc = (*req->conn->srv->llock)(fid,
-					tc->u.tlock.type,
-					tc->u.tlock.flags,
-					tc->u.tlock.start,
-					tc->u.tlock.length,
-					tc->u.tlock.proc_id,
-					&tc->u.tlock.client_id);
 done:
 	return rc;
 }
@@ -900,18 +1007,23 @@ np_getlock(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->getlock) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->getlock) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->getlock)(fid,
+						tc->u.tgetlock.type,
+						tc->u.tgetlock.start,
+						tc->u.tgetlock.length,
+						tc->u.tgetlock.proc_id,
+						&tc->u.tgetlock.client_id);
 	}
-	rc = (*req->conn->srv->getlock)(fid,
-					tc->u.tgetlock.type,
-					tc->u.tgetlock.start,
-					tc->u.tgetlock.length,
-					tc->u.tgetlock.proc_id,
-					&tc->u.tgetlock.client_id);
 done:
 	return rc;
 }
@@ -930,13 +1042,18 @@ np_link(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	np_fid_incref(fid);
-	if (np_setfsid (req, fid->user, -1) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->link) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, -1) < 0)
+			goto done;
+		if (!req->conn->srv->link) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->link)(dfid, fid, &tc->u.tlink.name);
 	}
-	rc = (*req->conn->srv->link)(dfid, fid, &tc->u.tlink.name);
 done:
 	np_fid_decref(fid);
 	return rc;
@@ -950,16 +1067,21 @@ np_mkdir(Npreq *req, Npfcall *tc)
 
 	if (!fid)
 		goto done;
-	if (np_setfsid (req, fid->user, tc->u.tmkdir.gid) < 0)
+	if (fid->type & P9_QTTMP) {
+		np_uerror (EPERM);
 		goto done;
-	if (!req->conn->srv->mkdir) {
-		np_uerror (ENOSYS);
-		goto done;
+	} else {
+		if (np_setfsid (req, fid->user, tc->u.tmkdir.gid) < 0)
+			goto done;
+		if (!req->conn->srv->mkdir) {
+			np_uerror (ENOSYS);
+			goto done;
+		}
+		rc = (*req->conn->srv->mkdir)(fid,
+						&tc->u.tmkdir.name,
+						tc->u.tmkdir.mode,
+						tc->u.tmkdir.gid);
 	}
-	rc = (*req->conn->srv->mkdir)(fid,
-					&tc->u.tmkdir.name,
-					tc->u.tmkdir.mode,
-				 	tc->u.tmkdir.gid);
 done:
 	return rc;
 }
