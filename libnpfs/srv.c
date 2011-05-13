@@ -48,8 +48,8 @@ struct Reqpool {
 static int np_wthread_create(Npsrv *srv);
 static void *np_wthread_proc(void *a);
 
-static char *_syn_version_get (void *a);
-static char *_syn_connections_get (void *a);
+static char *_get_version (void *a);
+static char *_get_connections (void *a);
 
 Npsrv*
 np_srv_create(int nwthread, int flags)
@@ -73,10 +73,10 @@ np_srv_create(int nwthread, int flags)
 	if (np_syn_initialize (srv) < 0)
 		goto error;
 	if (np_syn_addfile (srv->synroot, "version", P9_QTFILE,
-				_syn_version_get, NULL) < 0)
+				_get_version, NULL) < 0)
 		goto error;
 	if (np_syn_addfile (srv->synroot, "connections", P9_QTFILE,
-				_syn_connections_get, srv) < 0)
+				_get_connections, srv) < 0)
 		goto error;
 
 	srv->nwthread = nwthread;
@@ -545,44 +545,39 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 }
 
 static char *
-_syn_version_get (void *a)
+_get_version (void *a)
 {
-	char *s = strdup (META_ALIAS "\n");
-        if (!s)
+	char *s = NULL;
+	int len = 0;
+
+	if (aspf (&s, &len, "%s\n", META_ALIAS) < 0)
                 np_uerror (ENOMEM);
         return s;
 }
 
 static char *
-_syn_connections_get (void *a)
+_get_connections (void *a)
 {
 	Npsrv *srv = (Npsrv *)a;
 	Npconn *cc;
-	int err, len, n;
+	int err;
 	char *s = NULL;
+	int len = 0;
 
 	if ((err = pthread_mutex_lock(&srv->lock))) {
 		np_uerror (err);
-		goto done;
+		return NULL;
 	}
-	len = srv->conncount * (sizeof (cc->client_id) + 1) + 1;
-	if (!(s = malloc (len))) {
-		np_uerror (ENOMEM);
-		goto done_unlock;
-	}
-	s[0] = '\0';
 	for (cc = srv->conns; cc != NULL; cc = cc->next) {
-		n = strlen (s);
-		(void)snprintf (s + n, len - n, "%s\n",
-				np_conn_get_client_id (cc));
+		if (aspf (&s, &len, "%s\n", np_conn_get_client_id(cc)) < 0) {
+			np_uerror (ENOMEM);
+			break;
+		}
 	}
-done_unlock:
 	if ((err = pthread_mutex_unlock(&srv->lock))) {
 		np_uerror (err);
 		free (s);
 		s = NULL;
-		goto done;
 	}
-done:
 	return s;
 }

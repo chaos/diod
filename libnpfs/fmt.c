@@ -40,21 +40,6 @@
 #include "npfsimpl.h"
 
 static void
-spf (char *s, int len, const char *fmt, ...)
-{
-	va_list ap;
-	int n = strlen (s);
-
-	len -= n;
-	s += n;
-	assert (len > 0);
-
-	va_start (ap, fmt);
-	vsnprintf (s, len, fmt, ap); /* ignore overflow */
-	va_end (ap);
-}
-
-static void
 np_printqid(char *s, int len, Npqid *q)
 {
 	int n = 0;

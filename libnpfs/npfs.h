@@ -326,6 +326,8 @@ char *np_strdup(Npstr *str);
 int np_strcmp(Npstr *str, char *cs);
 int np_strncmp(Npstr *str, char *cs, int len);
 int np_str9cmp(Npstr *s1, Npstr *s2);
+void spf (char *s, int len, const char *fmt, ...);
+int aspf (char **sp, int *lp, const char *fmt, ...);
 
 /* np.c */
 int np_peek_size(u8 *buf, int len);

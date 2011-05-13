@@ -25,9 +25,11 @@
 #include "config.h"
 #endif
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdarg.h>
+#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -85,3 +87,65 @@ np_str9cmp (Npstr *s1, Npstr *s2)
 		return 1;
 	return strncmp (s1->str, s2->str, s1->len);
 }
+
+#define CHUNKSIZE 80
+static int
+vaspf (char **sp, int *lp, const char *fmt, va_list ap)
+{
+	char *s = *sp;
+	int len = *lp;
+	int n, ret = -1;
+	int slen = s ? strlen (s) : 0;
+
+	if (!s) {
+		len = CHUNKSIZE;
+		if (!(s = malloc(len))) 
+			goto done;
+	}
+	for (;;) {
+		va_list vacpy;
+
+		va_copy(vacpy, ap);
+		n = vsnprintf(s + slen, len - slen, fmt, vacpy);
+		va_end(vacpy);
+		if (n != -1 && n < len - slen)
+			break;
+		len += CHUNKSIZE;
+		if (!(s = realloc (s, len)))
+			goto done;
+	}
+	*lp = len;
+	*sp = s;
+	ret = 0;
+done:
+	return ret;
+}
+
+int
+aspf (char **sp, int *lp, const char *fmt, ...)
+{
+        va_list ap;
+        int n;
+
+        va_start (ap, fmt);
+        n = vaspf (sp, lp, fmt, ap);
+        va_end (ap);
+
+	return n;
+}
+
+void
+spf (char *s, int len, const char *fmt, ...)
+{
+        va_list ap;
+        int n = strlen (s);
+
+        len -= n;
+        s += n;
+        assert (len > 0);
+
+        va_start (ap, fmt);
+        vsnprintf (s, len, fmt, ap); /* ignore overflow */
+        va_end (ap);
+}
+
