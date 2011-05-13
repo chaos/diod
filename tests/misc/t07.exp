@@ -5,7 +5,7 @@ P9_TSTATFS tag 42 fid 42
 test_rstatfs(9): 67
 P9_RSTATFS tag 42 type 1 bsize 2 blocks 3 bfree 4 bavail 5 files 6 ffree 7 fsid 8 namelen 9
 test_tlopen(12): 15
-P9_TLOPEN tag 42 fid 1 mode 02
+P9_TLOPEN tag 42 fid 1 flags 02
 test_rlopen(13): 24
 P9_RLOPEN tag 42 qid (0000000000000003 2 '') iounit 2
 test_tlcreate(14): 28
@@ -89,7 +89,7 @@ P9_RATTACH tag 42 qid (0000000000000003 2 '')
 test_twalk(110): 97
 P9_TWALK tag 42 fid 1 newfid 2 nwname 16 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl' 'abc' 'def' 'ghi' 'jkl'
 test_rwalk(111): 217
-P9_RWALK tag 42 nwqid 16(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000000
+P9_RWALK tag 42 nwqid 16 (0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(0000000000000006 5 't')(0000000000000009 8 'tL')(000000000000000c b 'AL')(0000000000000003 2 '')(000000000000
 test_tread(116): 23
 P9_TREAD tag 42 fid 1 offset 2 count 3
 test_rread(117): 139

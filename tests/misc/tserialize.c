@@ -199,7 +199,7 @@ test_tlopen (void)
     fc2 = _rcv_buf (fc, P9_TLOPEN,  __FUNCTION__);
 
     assert (fc->u.tlopen.fid == fc2->u.tlopen.fid);
-    assert (fc->u.tlopen.mode == fc2->u.tlopen.mode);
+    assert (fc->u.tlopen.flags == fc2->u.tlopen.flags);
 
     free (fc);
     free (fc2);
