@@ -75,6 +75,8 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	conn->srv = srv;
 	conn->msize = srv->msize;
 	conn->shutdown = 0;
+	conn->reqs_in = 0;
+	conn->reqs_out = 0;
 	if (!(conn->fidpool = np_fidpool_create())) {
 		free (conn);
 		errno = ENOMEM;
@@ -82,6 +84,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	}
 	snprintf(conn->client_id, sizeof(conn->client_id), "%s", client_id);
 	conn->authuser = P9_NONUNAME;
+	conn->aname[0] = '\0';
 
 	conn->trans = trans;
 	conn->aux = NULL;
@@ -210,9 +213,10 @@ again:
 			break;
 		}
 		pthread_mutex_lock(&srv->lock);
-		if (!conn->resetting)
+		if (!conn->resetting) {
+			conn->reqs_in++;
 			np_srv_add_req(srv, req);
-		else 
+		} else 
 			np_req_unref(req);
 		pthread_mutex_unlock(&srv->lock);
 		fc = fc1;
@@ -365,6 +369,8 @@ np_conn_respond(Npreq *req)
 
 	pthread_mutex_lock(&conn->lock);
 	send = conn->trans && !conn->resetting;
+	if (send)
+		conn->reqs_out++;
 	pthread_mutex_unlock(&conn->lock);
 
 	if (send) {
@@ -439,4 +445,16 @@ np_conn_get_authuser(Npconn *conn, u32 *uidp)
 	}
 
 	return ret;
+}
+
+void
+np_conn_set_aname(Npconn *conn, char *aname)
+{
+	snprintf (conn->aname, sizeof (conn->aname), "%s", aname ? aname : "");
+}
+
+char *
+np_conn_get_aname(Npconn *conn)
+{
+	return conn->aname;
 }

@@ -50,6 +50,7 @@ static void *np_wthread_proc(void *a);
 
 static char *_get_version (void *a);
 static char *_get_connections (void *a);
+static char *_get_wthreads (void *a);
 
 Npsrv*
 np_srv_create(int nwthread, int flags)
@@ -72,11 +73,13 @@ np_srv_create(int nwthread, int flags)
 
 	if (np_syn_initialize (srv) < 0)
 		goto error;
-	if (np_syn_addfile (srv->synroot, "version", P9_QTFILE,
-				_get_version, NULL) < 0)
+	if (!np_syn_addfile (srv->synroot, "version", _get_version, NULL))
 		goto error;
-	if (np_syn_addfile (srv->synroot, "connections", P9_QTFILE,
-				_get_connections, srv) < 0)
+	if (!np_syn_addfile (srv->synroot, "connections",_get_connections, srv))
+		goto error;
+	if (!np_syn_addfile (srv->synroot, "wthreads", _get_wthreads, srv))
+		goto error;
+	if (np_usercache_create (srv) < 0)
 		goto error;
 
 	srv->nwthread = nwthread;
@@ -110,7 +113,7 @@ np_srv_destroy(Npsrv *srv)
 		pthread_join (wt->thread, NULL);
 		free (wt);
 	}
-	np_usercache_flush (srv);
+	np_usercache_destroy (srv);
 	np_syn_finalize (srv);
 	free (srv);
 }
@@ -240,6 +243,7 @@ np_wthread_create(Npsrv *srv)
 	wt->fsuid = geteuid ();
 	wt->sguid = P9_NONUNAME;
 	wt->fsgid = getegid ();
+	wt->reqs_total = 0;
 	err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt);
 	if (err) {
 		errno = err;
@@ -366,9 +370,9 @@ np_wthread_proc(void *a)
 
 	pthread_mutex_lock(&srv->lock);
 	while (!wt->shutdown) {
+		wt->state = WT_IDLE;
 		req = srv->reqs_first;
 		if (!req) {
-			wt->state = WT_IDLE;
 			pthread_cond_wait(&srv->reqcond, &srv->lock);
 			continue;
 		}
@@ -384,7 +388,7 @@ np_wthread_proc(void *a)
 			wt->state = WT_REPLY;
 			np_respond(req, rc);
 		}
-
+		wt->reqs_total++;
 		pthread_mutex_lock(&srv->lock);
 	}
 	pthread_mutex_unlock (&srv->lock);
@@ -566,18 +570,87 @@ _get_connections (void *a)
 
 	if ((err = pthread_mutex_lock(&srv->lock))) {
 		np_uerror (err);
-		return NULL;
+		goto error;
 	}
 	for (cc = srv->conns; cc != NULL; cc = cc->next) {
-		if (aspf (&s, &len, "%s\n", np_conn_get_client_id(cc)) < 0) {
+		
+		if (aspf (&s, &len, "%s:%s %d %d/%d\n",
+				np_conn_get_client_id(cc),
+				np_conn_get_aname(cc),
+				np_fidpool_count (cc->fidpool),
+				cc->reqs_in, cc->reqs_out) < 0) {
 			np_uerror (ENOMEM);
-			break;
+			goto error_unlock;
 		}
 	}
 	if ((err = pthread_mutex_unlock(&srv->lock))) {
 		np_uerror (err);
-		free (s);
-		s = NULL;
+		goto error;
 	}
 	return s;
+error_unlock:
+	(void)pthread_mutex_unlock(&srv->lock);
+error:
+	if (s)
+		free(s);
+	return NULL;
+}
+
+static const char *
+_wtstatestr (Npwthread *wt)
+{
+	char *res = NULL;
+
+	switch (wt->state) {
+		case WT_START:
+			res = "START";
+			break;
+		case WT_IDLE:
+			res = "IDLE";
+			break;
+		case WT_WORK:
+			res = "WORK";
+			break;
+		case WT_REPLY:
+			res = "REPLY";
+			break;
+		case WT_SHUT:
+			res = "SHUT";
+			break;
+	}
+	return res;
+}
+
+static char *
+_get_wthreads (void *a)
+{
+	Npsrv *srv = (Npsrv *)a;
+	Npwthread *wt;
+	int err;
+	char *s = NULL;
+	int i = 0, len = 0;
+
+	if ((err = pthread_mutex_lock(&srv->lock))) {
+		np_uerror (err);
+		goto error;
+	}
+	for (wt = srv->wthreads; wt != NULL; wt = wt->next) {
+		if (aspf (&s, &len, "%d: %s (%d:%d) %d\n",
+				i++, _wtstatestr (wt),
+				wt->fsuid, wt->fsgid, wt->reqs_total) < 0) {
+			np_uerror (ENOMEM);
+			goto error_unlock;
+		}
+	}
+	if ((err = pthread_mutex_unlock(&srv->lock))) {
+		np_uerror (err);
+		goto error;
+	}
+	return s;
+error_unlock:
+	(void)pthread_mutex_unlock(&srv->lock);
+error:
+	if (s)
+		free(s);
+	return NULL;
 }

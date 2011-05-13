@@ -1,27 +1,25 @@
-/*
- * Copyright (C) 2005 by Latchesar Ionkov <lucho@ionkov.net>
+/*****************************************************************************
+ *  Copyright (C) 2011 Lawrence Livermore National Security, LLC.
+ *  Written by Jim Garlick <garlick@llnl.gov> LLNL-CODE-423279
+ *  All Rights Reserved.
  *
- * Permission is hereby granted, free of charge, to any person obtaining a
- * copy of this software and associated documentation files (the "Software"),
- * to deal in the Software without restriction, including without limitation
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
- * and/or sell copies of the Software, and to permit persons to whom the
- * Software is furnished to do so, subject to the following conditions:
+ *  This file is part of the Distributed I/O Daemon (diod).
+ *  For details, see <http://code.google.com/p/diod/>.
  *
- * The above copyright notice and this permission notice (including the next
- * paragraph) shall be included in all copies or substantial portions of the
- * Software.
+ *  This program is free software; you can redistribute it and/or modify it
+ *  under the terms of the GNU General Public License (as published by the
+ *  Free Software Foundation) version 2, dated June 1991.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
- * LATCHESAR IONKOV AND/OR ITS SUPPLIERS BE LIABLE FOR ANY CLAIM, DAMAGES OR
- * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
- * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- * DEALINGS IN THE SOFTWARE.
- */
-
-/* hardwired to UNIX scheme -jg */
+ *  This program is distributed in the hope that it will be useful, but
+ *  WITHOUT ANY WARRANTY; without even the IMPLIED WARRANTY OF MERCHANTABILITY
+ *  or FITNESS FOR A PARTICULAR PURPOSE. See the terms and conditions of the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software Foundation,
+ *  Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA or see
+ *  <http://www.gnu.org/licenses/>.
+ *****************************************************************************/
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -44,14 +42,148 @@
 #include "npfs.h"
 #include "npfsimpl.h"
 
-/* N.B. the usercache lock also protects getgrouplist (), libc calls into
- * nss code, etc. that may or may not be thread safe.
- */
-static struct Npusercache {
+typedef struct {
         pthread_mutex_t lock;
         Npuser* users;
-} usercache = { PTHREAD_MUTEX_INITIALIZER, NULL };
-static const int usercache_ttl = 60;
+	int ttl;
+} Npusercache;
+
+static void
+_usercache_add (Npsrv *srv, Npuser *u)
+{
+	Npusercache *uc = srv->usercache;
+
+	u->next = uc->users;
+	uc->users = u;
+	np_user_incref (u);
+}
+
+static Npuser *
+_usercache_del (Npsrv *srv, Npuser *prev, Npuser *u)
+{
+	Npusercache *uc = srv->usercache;
+	Npuser *tmp = u->next;
+
+	if (prev)
+		prev->next = tmp;
+	else
+		uc->users = tmp;
+	np_user_decref (u);
+
+	return tmp;
+}
+
+/* expire entries after 60s (except root) */
+static void
+_usercache_expire (Npsrv *srv)
+{
+	Npusercache *uc = srv->usercache;
+	time_t now = time (NULL);
+	Npuser *u = uc->users;
+	Npuser *prev = NULL;
+
+	while (u) {
+		if (u->uid != 0 && now - u->t >= uc->ttl) {
+			u = _usercache_del (srv, prev, u);
+			continue;
+		}
+		prev = u;
+		u = u->next;
+	}
+}
+
+static Npuser *
+_usercache_lookup (Npsrv *srv, char *uname, uid_t uid)
+{
+	Npusercache *uc = srv->usercache;
+	Npuser *u;
+
+	_usercache_expire (srv);
+	for (u = uc->users; u != NULL; u = u->next) {
+		if (!uname && uid == u->uid)
+			break;
+		if (uname && !strcmp (uname, u->uname)) 
+			break;
+	}
+	return u;
+}
+
+static char *
+_get_usercache (void *a)
+{
+	Npsrv *srv = (Npsrv *)a;
+	Npusercache *uc = srv->usercache;
+	Npuser *u;
+	time_t now = time (NULL);
+	char *s = NULL;
+	int len = 0;
+	int err;
+
+	if ((err = pthread_mutex_lock (&uc->lock))) {
+		np_uerror (err);
+		goto error;
+	}
+	_usercache_expire (srv);
+	for (u = uc->users; u != NULL; u = u->next) {
+		int ttl = uc->ttl - (now - u->t);
+
+		if (aspf (&s, &len, "%s(%d,%d+%d) %d\n", u->uname,
+			  u->uid, u->gid, u->nsg, u->uid ? ttl : 0) < 0) {
+			np_uerror (ENOMEM);
+			goto error_unlock;
+		}
+	}
+	if ((err = pthread_mutex_unlock (&uc->lock))) {
+		np_uerror (err);
+		goto error;
+	}
+	return s;
+error_unlock:
+	if (s)
+		free (s);
+	(void)pthread_mutex_unlock (&uc->lock);
+error:
+	return NULL;
+}
+
+int
+np_usercache_create (Npsrv *srv)
+{
+	Npusercache *uc;
+
+	assert (srv->usercache == NULL);
+	if (!(uc = malloc (sizeof (*uc)))) {
+		np_uerror (ENOMEM);
+		return -1;
+	}
+	uc->users = NULL;
+	pthread_mutex_init (&uc->lock, NULL);
+	uc->ttl	= 60;
+	srv->usercache = uc;
+
+	if (!np_syn_addfile (srv->synroot, "usercache", _get_usercache, srv)) {
+		free (srv->usercache);
+		return -1;
+	}
+
+	return 0;
+}
+
+void
+np_usercache_destroy (Npsrv *srv)
+{
+	Npusercache *uc;
+	Npuser *u;
+
+	assert (srv->usercache != NULL);
+	uc = srv->usercache;
+
+	u = uc->users;
+	while (u)
+		u = _usercache_del (srv, NULL, u);
+	free (uc);
+	srv->usercache = NULL;
+}
 
 static void
 _free_user (Npuser *u)
@@ -91,12 +223,15 @@ np_user_decref(Npuser *u)
 	_free_user (u);
 }
 
+/* This needs to be called with the usercache lock held.
+ * I don't think it's thread safe. -jg
+ */
 static int
 _getgrouplist (Npsrv *srv, Npuser *u)
 {
 	int i, ret = -1;
 	gid_t *sgcpy;
-	
+
 	u->nsg = sysconf(_SC_NGROUPS_MAX);
 	if (u->nsg < 65536)
 		u->nsg = 65536;
@@ -133,6 +268,7 @@ _alloc_user (Npsrv *srv, struct passwd *pwd)
 		goto error;
 	}
 	u->sg = NULL;
+	u->nsg = 0;
 	if (!(u->uname = strdup (pwd->pw_name))) {
 		np_uerror (ENOMEM);
 		np_logerr (srv, "_alloc_user: %s", pwd->pw_name);
@@ -140,7 +276,7 @@ _alloc_user (Npsrv *srv, struct passwd *pwd)
 	}
 	u->uid = pwd->pw_uid;
 	u->gid = pwd->pw_gid;
-	if (_getgrouplist(srv, u) < 0)
+	if (u->uid != 0 && _getgrouplist(srv, u) < 0)
 		goto error;
 	pthread_mutex_init (&u->lock, NULL);
 	u->refcount = 0;
@@ -293,58 +429,15 @@ error:
 	return NULL;
 }
 
-static void
-_usercache_add (Npsrv *srv, Npuser *u)
-{
-	u->next = usercache.users;
-	usercache.users = u;
-	np_user_incref (u);
-}
-
-static Npuser *
-_usercache_del (Npsrv *srv, Npuser *prev, Npuser *u)
-{
-	Npuser *tmp = u->next;
-
-	if (prev)
-		prev->next = tmp;
-	else
-		usercache.users = tmp;
-	np_user_decref (u);
-
-	return tmp;
-}
-
-static Npuser *
-_usercache_lookup (Npsrv *srv, char *uname, uid_t uid)
-{
-	time_t now = time (NULL);
-	Npuser *u = usercache.users;
-	Npuser *prev = NULL;
-
-	while (u) {
-		/* expire entries after 60s (except root) */
-		if (u->uid != 0 && now - u->t >= usercache_ttl) {
-			u = _usercache_del (srv, prev, u);
-			continue;
-		}
-		if (!uname && uid == u->uid)
-			break;
-		if (uname && !strcmp (uname, u->uname)) 
-			break;
-		prev = u;
-		u = u->next;
-	}
-	return u;
-}
 
 Npuser *
 np_uname2user (Npsrv *srv, char *uname)
 {
+	Npusercache *uc = srv->usercache;
 	Npuser *u = NULL;
 	int err;
 
-	if ((err = pthread_mutex_lock (&usercache.lock))) {
+	if ((err = pthread_mutex_lock (&uc->lock))) {
 		np_uerror (err);
 		np_logerr (srv, "uname2user: unable to lock usercache");
 		goto error;
@@ -352,7 +445,7 @@ np_uname2user (Npsrv *srv, char *uname)
 	if (!(u = _usercache_lookup (srv, uname, P9_NONUNAME)))
 		if ((u = _real_lookup_byname (srv, uname)))
 			_usercache_add (srv, u);
-	if ((err = pthread_mutex_unlock (&usercache.lock))) {
+	if ((err = pthread_mutex_unlock (&uc->lock))) {
 		np_uerror (err);
 		np_logerr (srv, "uname2user: unable to unlock usercache");
 		goto error;
@@ -367,10 +460,11 @@ error:
 Npuser *
 np_uid2user (Npsrv *srv, uid_t uid)
 {
+	Npusercache *uc = srv->usercache;
 	Npuser *u = NULL;
 	int err;
 
-	if ((err = pthread_mutex_lock (&usercache.lock))) {
+	if ((err = pthread_mutex_lock (&uc->lock))) {
 		np_uerror (err);
 		np_logerr (srv, "uid2user: unable to lock usercache");
 		goto error;
@@ -378,7 +472,7 @@ np_uid2user (Npsrv *srv, uid_t uid)
 	if (!(u = _usercache_lookup (srv, NULL, uid)))
 		if ((u = _real_lookup_byuid (srv, uid)))
 			_usercache_add (srv, u);
-	if ((err = pthread_mutex_unlock (&usercache.lock))) {
+	if ((err = pthread_mutex_unlock (&uc->lock))) {
 		np_uerror (err);
 		np_logerr (srv, "uid2user: unable to unlock usercache");
 		goto error;
@@ -393,18 +487,19 @@ error:
 void
 np_usercache_flush (Npsrv *srv)
 {
+	Npusercache *uc = srv->usercache;
 	Npuser *u;
 	int err;
 
-	if ((err = pthread_mutex_lock (&usercache.lock))) {
+	if ((err = pthread_mutex_lock (&uc->lock))) {
 		np_uerror (err);
 		np_logerr (srv, "usercache_flush: unable to lock usercache");
 		return;
 	}
-	u = usercache.users;
+	u = uc->users;
 	while (u)
 		u = _usercache_del (srv, NULL, u);
-	if ((err = pthread_mutex_unlock (&usercache.lock))) {
+	if ((err = pthread_mutex_unlock (&uc->lock))) {
 		np_uerror (err);
 		np_logerr (srv, "usercache_flush: unable to unlock usercache");
 		return;

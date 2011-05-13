@@ -95,7 +95,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: mount.diod [OPTIONS] host[,host,...]:aname [directory]\n"
+"Usage: mount.diod [OPTIONS] host[:aname] [directory]\n"
 "   -f,--fake-mount               do everything but the actual diod mount\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -v,--verbose                  verbose mode\n"
@@ -235,7 +235,6 @@ main (int argc, char *argv[])
     assert (opt_find (o, "version=9p2000.L"));
     assert (opt_scanf (o, "debug=%d", &i));
     assert (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
-    assert (opt_find (o, "aname"));
     assert ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
          || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
 
@@ -277,8 +276,6 @@ _parse_spec (char *spec, Opt o)
         aname = opt_find (o, "aname");
     else if (!opt_addf (o, "aname=%s", aname))
         msg_exit ("you cannot have both -oaname and spec=host:aname");
-    if (!aname || strlen (aname) == 0)
-        msg_exit ("no aname specified");
     if (!(hl = hostlist_create (host)))
         msg_exit ("failed to parse hostlist");
     free (host);
@@ -469,8 +466,6 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
     if (!(uname = opt_find (o, "uname")))
         msg_exit ("uname is not set"); /* can't happen */
     uid = _uname2uid (uname);
-    if (!(aname = opt_find (o, "aname")))
-        msg_exit ("aname is not set"); /* can't happen */
     if (!opt_scanf (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
         msg_exit ("msize must be set to integer >= %d", P9_IOHDRSZ);
 

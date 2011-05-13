@@ -23,6 +23,7 @@
 
 typedef struct p9_str Npstr;
 typedef struct p9_qid Npqid;
+typedef struct Npfile Npfile;
 typedef struct Npfcall Npfcall;
 typedef struct Npfid Npfid;
 typedef struct Npfidpool Npfidpool;
@@ -145,6 +146,9 @@ struct Npconn {
 	pthread_cond_t	resetcond;
 	pthread_cond_t	resetdonecond;
 
+	u64		reqs_in;
+	u64		reqs_out;
+	char		aname[128]; /* last in wins */
 	char		client_id[128];
 	u32		authuser;
 	u32		msize;
@@ -183,6 +187,7 @@ struct Npwthread {
 	u32		fsuid;
 	u32		sguid;
 	u32		fsgid;
+	u64		reqs_total;
 	Npwthread	*next;
 };
 
@@ -206,19 +211,26 @@ enum {
 
 typedef char * (*SynGetF)(void *);
 
-typedef struct file_struct {
+struct Npfile {
         char                    *name;
         Npqid                    qid;
         SynGetF                  getf;
         void                    *getf_arg;
-        struct file_struct      *next;
-        struct file_struct      *child;
-} File;
+	uid_t			uid;
+	gid_t			gid;
+	mode_t			mode;
+	struct timeval		atime;
+	struct timeval		mtime;
+	struct timeval		ctime;
+        struct Npfile		*next;
+        struct Npfile		*child;
+};
 
 struct Npsrv {
 	u32		msize;
 	void*		srvaux;
-	File*		synroot;
+	Npfile*		synroot;
+	void*		usercache;
 	void		(*logmsg)(const char *, va_list);
 	int		(*remapuser)(Npfid *fid, Npstr *, u32, Npstr *);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
@@ -303,10 +315,13 @@ void np_respond(Npreq *, Npfcall *);
 char *np_conn_get_client_id(Npconn *);
 int np_conn_get_authuser(Npconn *, u32 *);
 void np_conn_set_authuser(Npconn *, u32);
+void np_conn_set_aname(Npconn *, char *);
+char *np_conn_get_aname(Npconn *);
 
 /* fidpool.c */
 Npfidpool *np_fidpool_create(void);
 void np_fidpool_destroy(Npfidpool *);
+int np_fidpool_count(Npfidpool *pool);
 Npfid *np_fid_find(Npconn *, u32);
 Npfid *np_fid_create(Npconn *, u32, void *);
 void np_fid_destroy(Npfid *);
@@ -419,10 +434,12 @@ void np_user_incref(Npuser *);
 void np_user_decref(Npuser *);
 Npuser *np_uid2user (Npsrv *srv, u32 n_uname);
 Npuser *np_uname2user (Npsrv *srv, char *uname);
-void np_usercache_flush (Npsrv *srv);
 Npuser *np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname);
 Npuser *np_afid2user (Npfid *afid, Npstr *uname, u32 n_uname);
 int np_setfsid (Npreq *req, Npuser *u, u32 gid_override);
+void np_usercache_flush (Npsrv *srv);
+int np_usercache_create (Npsrv *srv);
+void np_usercache_destroy (Npsrv *srv);
 
 /* fdtrans.c */
 Nptrans *np_fdtrans_create(int, int);
@@ -444,5 +461,6 @@ Npfcall* np_syn_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 void np_syn_fiddestroy (Npfid *fid);
 int np_syn_initialize (Npsrv *srv);
 void np_syn_finalize (Npsrv *srv);
-int np_syn_addfile (File *parent, char *name, u8 type, SynGetF getf, void *arg);
-void np_syn_delfile (File *file);
+Npfile *np_syn_addfile (Npfile *parent, char *name, SynGetF getf, void *arg);
+Npfile *np_syn_mkdir (Npfile *parent, char *name);
+void np_syn_delfile (Npfile *file);

@@ -283,15 +283,17 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (!aname || *aname != '/')
+	if (!aname) {
 		rc = np_syn_attach (fid, afid, aname);
-	if (!rc) {
+	} else {
 		if (!srv->attach) {
 			np_uerror (EIO);
 			goto error;
 		}
 		rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 	}
+	if (rc)
+		np_conn_set_aname (conn, aname);
 error:
 	if (aname)
 		free(aname);

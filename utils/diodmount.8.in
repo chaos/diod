@@ -2,7 +2,7 @@
 .SH NAME
 mount.diod \- mount diod file systems
 .SH SYNOPSIS
-\fBmount.diod\fR \fI[OPTIONS] host:aname dir [-o options]\fR
+\fBmount.diod\fR \fI[OPTIONS] host[:aname] dir [-o options]\fR
 .SH DESCRIPTION
 .B mount.diod
 is the mount utility for the distributed I/O daemon, which is an I/O
@@ -42,6 +42,8 @@ The following file system specific mount options are handled by
 The aname is the path of the exported file system on the server.
 It can be specified in the mount spec in \fIhost:aname\fR format
 like NFS, or it can be specified with this option.
+It is also valid to mount with no aname set, which selects
+diod's internal synthentic file system.
 .TP
 .I "uname=name"
 The user name to authenticate to the \fBdiod\fR server.

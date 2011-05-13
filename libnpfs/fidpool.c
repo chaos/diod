@@ -84,6 +84,23 @@ np_fidpool_destroy(Npfidpool *pool)
 	free(pool);
 }
 
+int
+np_fidpool_count(Npfidpool *pool)
+{
+	int i;
+	Npfid *f;
+	int count = 0;
+
+	pthread_mutex_lock(&pool->lock);
+	for(i = 0; i < pool->size; i++) {
+		for (f = pool->htable[i]; f != NULL; f = f->next)
+			count++;
+	}
+	pthread_mutex_unlock(&pool->lock);
+
+	return count;
+}
+
 Npfid *
 np_fid_lookup(Npfidpool *fp, u32 fid, int hash)
 {
