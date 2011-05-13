@@ -44,7 +44,7 @@ main (int argc, char *argv[])
     diod_conf_init ();
 
     if (!(srv = np_srv_create (16, flags)))
-        msg_exit ("out of memory");
+        errn_exit (np_rerror (), "out of memory");
     srv->logmsg = diod_log_msg;
 
     srv->attach = myattach;

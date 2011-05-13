@@ -76,10 +76,10 @@ Npcfid *npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid);
 int npc_clunk (Npcfid *fid);
 
 /* Send LOPEN request to prepare 'fid' for I/O.
- * 'mode' uses the same bits as open (2).
+ * 'flags' uses the same bits as open (2), e.g. O_RDONLY, O_WRONLY, O_RDWR.
  * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
  */
-int npc_open (Npcfid *fid, u32 mode);
+int npc_open (Npcfid *fid, u32 flags);
 
 /* Send LCREATE request to create a file in directory 'fid'
  * with specified 'name', 'perm', and 'mode'.

@@ -204,11 +204,21 @@ enum {
 	SRV_FLAGS_NOUSERDB	=0x00040000,
 };
 
+typedef char * (*SynGetF)(void *);
+
+typedef struct file_struct {
+        char                    *name;
+        Npqid                    qid;
+        SynGetF                  getf;
+        void                    *getf_arg;
+        struct file_struct      *next;
+        struct file_struct      *child;
+} File;
 
 struct Npsrv {
 	u32		msize;
 	void*		srvaux;
-	void*		treeaux;
+	File*		synroot;
 	void		(*logmsg)(const char *, va_list);
 	int		(*remapuser)(Npfid *fid, Npstr *, u32, Npstr *);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
@@ -352,7 +362,7 @@ Npfcall *np_create_tstatfs(u32 fid);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,
 		u64 files, u64 ffree, u64 fsid, u32 namelen);
-Npfcall *np_create_tlopen(u32 fid, u32 mode);
+Npfcall *np_create_tlopen(u32 fid, u32 flags);
 Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
 Npfcall *np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid);
 Npfcall *np_create_rlcreate(struct p9_qid *qid, u32 iounit);
@@ -425,7 +435,12 @@ int np_syn_clone(Npfid *fid, Npfid *newfid);
 int np_syn_walk(Npfid *newfid, Npstr *wname, Npqid *wqid);
 Npfcall *np_syn_read(Npfid *fid, u64 offset, u32 count, Npreq *req);
 Npfcall* np_syn_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req);
-void np_syn_clunk(Npfid *fid);
+Npfcall* np_syn_clunk(Npfid *fid);
 Npfcall* np_syn_lopen(Npfid *fid, u32 mode);
 Npfcall* np_syn_getattr(Npfid *fid, u64 request_mask);
 Npfcall* np_syn_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
+void np_syn_fiddestroy (Npfid *fid);
+int np_syn_initialize (Npsrv *srv);
+void np_syn_finalize (Npsrv *srv);
+int np_syn_addfile (File *parent, char *name, u8 type, SynGetF getf, void *arg);
+void np_syn_delfile (File *file);

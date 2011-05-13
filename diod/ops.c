@@ -777,13 +777,13 @@ done:
 }
 
 Npfcall*
-diod_lopen (Npfid *fid, u32 mode)
+diod_lopen (Npfid *fid, u32 flags)
 {
     Fid *f = fid->aux;
     Npfcall *res = NULL;
     Npqid qid;
 
-    if ((f->xflags & XFLAGS_RO) && ((mode & O_WRONLY) || (mode & O_RDWR))) {
+    if ((f->xflags & XFLAGS_RO) && ((flags & O_WRONLY) || (flags & O_RDWR))) {
         np_uerror (EROFS);
         goto done;
     }
@@ -791,8 +791,8 @@ diod_lopen (Npfid *fid, u32 mode)
      * information to construct the file mode (need client umask and gid).
      * Clear the flag and allow open to fail with ENOENT.
      */
-    if ((mode & O_CREAT))
-        mode &= ~O_CREAT;
+    if ((flags & O_CREAT))
+        flags &= ~O_CREAT;
 
     if (_fidstat (f) < 0)
         goto done;
@@ -804,7 +804,7 @@ diod_lopen (Npfid *fid, u32 mode)
             goto done;
         }
     } else {
-        f->fd = open (f->path, mode);
+        f->fd = open (f->path, flags);
         if (f->fd < 0) {
             np_uerror (errno);
             goto done;

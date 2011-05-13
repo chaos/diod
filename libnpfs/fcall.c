@@ -283,7 +283,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (aname && *aname != '/')
+	if (!aname || *aname != '/')
 		rc = np_syn_attach (fid, afid, aname);
 	if (!rc) {
 		if (!srv->attach) {
@@ -570,7 +570,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
-		np_syn_clunk (fid);
+		rc = np_syn_clunk (fid);
 	} else {
 		if (!req->conn->srv->clunk) {
 			np_uerror (ENOSYS);
@@ -643,7 +643,7 @@ np_lopen(Npreq *req, Npfcall *tc)
 	if (!fid)
 		goto done;
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_lopen (fid, tc->u.tlopen.mode);
+		rc = np_syn_lopen (fid, tc->u.tlopen.flags);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
 			goto done;
@@ -651,7 +651,7 @@ np_lopen(Npreq *req, Npfcall *tc)
 			np_uerror (ENOSYS);
 			goto done;
 		}
-		rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.mode);
+		rc = (*req->conn->srv->lopen)(fid, tc->u.tlopen.flags);
 	}
 done:
 	return rc;

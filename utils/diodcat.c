@@ -125,7 +125,7 @@ main (int argc, char *argv[])
                 usage ();
         }
     }
-    if (optind == argc || !aname)
+    if (optind == argc)
         usage ();
 
     if (signal (SIGPIPE, SIG_IGN) == SIG_ERR)

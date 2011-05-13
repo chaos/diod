@@ -207,7 +207,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TLOPEN:
 		spf (s, len, "P9_TLOPEN tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.tlopen.fid);
-		spf (s, len, " mode 0%"PRIo32, fc->u.tlopen.mode);
+		spf (s, len, " flags 0%"PRIo32, fc->u.tlopen.flags);
 		break;
 	case P9_RLOPEN:
 		spf (s, len, "P9_RLOPEN tag %u qid ", fc->tag);
@@ -545,7 +545,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 						fc->u.twalk.wnames[i].str);
 		break;
 	case P9_RWALK:
-		spf (s, len, "P9_RWALK tag %u nwqid %d", fc->tag, fc->u.rwalk.nwqid);
+		spf (s, len, "P9_RWALK tag %u nwqid %d ",
+			fc->tag, fc->u.rwalk.nwqid);
 		for(i = 0; i < fc->u.rwalk.nwqid; i++)
 			np_printqid(s, len, &fc->u.rwalk.wqids[i]);
 		break;

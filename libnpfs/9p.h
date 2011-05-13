@@ -305,7 +305,7 @@ struct p9_rstatfs {
 };
 struct p9_tlopen {
 	u32 fid;
-	u32 mode;
+	u32 flags;
 };
 struct p9_rlopen {
 	struct p9_qid qid;

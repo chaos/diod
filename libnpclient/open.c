@@ -105,13 +105,13 @@ npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode, gid_t gid)
 }
 
 int
-npc_open (Npcfid *fid, u32 mode)
+npc_open (Npcfid *fid, u32 flags)
 {
 	int maxio = fid->fsys->msize - P9_IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
-	if (!(tc = np_create_tlopen(fid->fid, mode))) {
+	if (!(tc = np_create_tlopen(fid->fid, flags))) {
 		np_uerror (ENOMEM);
 		goto done;
 	}
@@ -131,13 +131,13 @@ done:
 }
 
 Npcfid *
-npc_open_bypath (Npcfid *root, char *path, u32 mode)
+npc_open_bypath (Npcfid *root, char *path, u32 flags)
 {
 	Npcfid *fid;
 
 	if (!(fid = npc_walk (root, path)))
 		return NULL;
-	if (npc_open (fid, mode) < 0) {
+	if (npc_open (fid, flags) < 0) {
 		int saved_err = np_rerror ();
 		(void)npc_clunk (fid);
 		np_uerror (saved_err);

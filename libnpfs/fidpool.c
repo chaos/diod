@@ -67,10 +67,15 @@ np_fidpool_destroy(Npfidpool *pool)
 			srv = f->conn->srv;
 			np_logmsg (srv, "fid %d not clunked (from %s)", f->fid,
 				   np_conn_get_client_id(f->conn));
-			if (f->type & P9_QTAUTH && srv->auth && srv->auth->clunk)
-				(*srv->auth->clunk)(f);
-			else if (!(f->type & P9_QTAUTH) && srv->fiddestroy)
-				(*srv->fiddestroy)(f);
+			if ((f->type & P9_QTAUTH)) {
+				if (srv->auth && srv->auth->clunk)
+					(*srv->auth->clunk)(f);
+			} else if ((f->type & P9_QTTMP)) {
+				np_syn_fiddestroy (f);
+			} else {
+				if (srv->fiddestroy)
+					(*srv->fiddestroy)(f);
+			}	
 			free(f);
 			f = ff;
 		}
@@ -195,10 +200,16 @@ np_fid_destroy(Npfid *fid)
 
 	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
 		np_logmsg (fid->conn->srv, "fid_destroy: fid %d", fid->fid);
-	if (fid->type & P9_QTAUTH && srv->auth && srv->auth->clunk)
-		(*srv->auth->clunk)(fid);
-	else if (!(fid->type & P9_QTAUTH) && srv->fiddestroy)
-		(*srv->fiddestroy)(fid);
+	
+	if ((fid->type & P9_QTAUTH)) {
+		if (srv->auth && srv->auth->clunk)
+			(*srv->auth->clunk)(fid);
+	} else if ((fid->type & P9_QTTMP)) {
+		np_syn_fiddestroy (fid);
+	} else {
+		if (srv->fiddestroy)
+			(*srv->fiddestroy)(fid);
+	}	
 
 	if (fid->user)
 		np_user_decref(fid->user);

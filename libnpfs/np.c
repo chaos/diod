@@ -660,7 +660,7 @@ np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 fi
 }
 
 Npfcall *
-np_create_tlopen(u32 fid, u32 mode)
+np_create_tlopen(u32 fid, u32 flags)
 {
         int size = sizeof(u32) + sizeof(u32);
         struct cbuf buffer;
@@ -670,7 +670,7 @@ np_create_tlopen(u32 fid, u32 mode)
         if (!(fc = np_create_common(bufp, size, P9_TLOPEN)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tlopen.fid);
-        buf_put_int32(bufp, mode, &fc->u.tlopen.mode);
+        buf_put_int32(bufp, flags, &fc->u.tlopen.flags);
 
         return np_post_check(fc, bufp);
 }
@@ -1365,7 +1365,7 @@ np_deserialize(Npfcall *fc, u8 *data)
                 break;
 	case P9_TLOPEN:
 		fc->u.tlopen.fid = buf_get_int32(bufp);
-		fc->u.tlopen.mode = buf_get_int32(bufp);
+		fc->u.tlopen.flags = buf_get_int32(bufp);
 		break;
 	case P9_RLOPEN:
 		buf_get_qid(bufp, &fc->u.rlopen.qid);
