@@ -1,7 +1,10 @@
-//1.0-pre28:
+1.0-pre28:
+	Rewrite npfile code and added some synthetic files for monitoring.
+	Don't setfsgid to gid outside of user's sg set.
 	Allow stand-alone ctime update in setattr, found by fstest (issue 37)
 	Add --no-userdb option to allow fstest to use random uids (issue 37)
 	Drop usercache on receipt of SIGHUP.
+	Cleanup.
 
 1.0-pre27:
         Updating from pre26:
