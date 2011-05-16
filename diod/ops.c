@@ -92,6 +92,7 @@
 #include "diod_auth.h"
 
 #include "ops.h"
+#include "exp.h"
 
 typedef struct {
     char            *path;
@@ -144,8 +145,7 @@ static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
 static void      _fidfree       (Fid *f);
 
-
-void
+int
 diod_register_ops (Npsrv *srv)
 {
     srv->msize = 65536;
@@ -180,6 +180,11 @@ diod_register_ops (Npsrv *srv)
     srv->getlock = diod_getlock;
     srv->link = diod_link;
     srv->mkdir = diod_mkdir;
+
+    if (!np_ctl_addfile (srv->ctlroot, "exports", diod_get_exports, srv))
+        return -1;
+
+    return 0;
 }
 
 /* Update stat info contained in fid.
@@ -351,131 +356,6 @@ _dirent2qid (struct dirent *d, Npqid *qid)
         qid->type |= P9_QTSYMLINK;
 }
 
-static int
-_match_export_users (Export *x, Npuser *user)
-{
-    if (!x->users)
-        return 1;
-    /* FIXME */
-    return 0; /* no match */
-}
-
-
-/* FIXME: client_id could be hostname or IP.
- * We probably want both to work for an exports match.
- */
-static int
-_match_export_hosts (Export *x, Npconn *conn)
-{
-    char *client_id = np_conn_get_client_id (conn);
-    hostlist_t hl = NULL;
-    int res = 0; /* no match */
-
-    /* no client_id restrictions */
-    if (!x->hosts) {
-        res = 1;
-        goto done;
-    }
-    if (!(hl = hostlist_create (x->hosts))) {
-        np_uerror (ENOMEM);
-        goto done;
-    }
-    /* client_id found in exports */
-    if (hostlist_find (hl, client_id) != -1) {
-        res = 1;
-        goto done;
-    }
-done:
-    if (hl)
-        hostlist_destroy (hl);
-    return res;
-}
-
-/* N.B. in diod_conf_validate_exports () we already have ensured
- * that export begins with / and contains no /.. elements.
- */
-static int
-_match_export_path (Export *x, char *path)
-{
-    int xlen = strlen (x->path);
-    int plen = strlen (path);
-
-    /* an export of / matches all */
-    if (strcmp (x->path, "/") == 0)
-        return 1;
-    /* drop trailing slashes from export */
-    while (xlen > 0 && x->path[xlen - 1] == '/')
-        xlen--;
-    /* export is identical to path */
-    if (plen == xlen && strncmp (x->path, path, plen) == 0)
-        return 1;
-    /* export is parent of path */
-    if (plen > xlen && path[xlen] == '/')
-        return 1;
-
-    return 0; /* no match */
-}
-
-static int
-_match_exports (char *path, Npconn *conn, Npuser *user, int *xfp)
-{
-    List exports = diod_conf_get_exports ();
-    ListIterator itr;
-    Export *x;
-    int res = 0; /* DENIED */
-
-    if (!exports) {
-        np_uerror (EPERM);
-        goto done;
-    }
-    if (strstr (path, "/..") != NULL) {
-        np_uerror (EPERM);
-        goto done;
-    }
-    if (!(itr = list_iterator_create (exports))) {
-        np_uerror (ENOMEM);
-        goto done;
-    }
-    while (res == 0 && (x = list_next (itr))) {
-        if (!_match_export_path (x, path))
-            continue;
-        if (!_match_export_hosts (x, conn))
-            continue;
-        if (!_match_export_users (x, user))
-            continue;
-        if (xfp)
-            *xfp = x->oflags;
-        res = 1;
-    }
-    list_iterator_destroy (itr);
-   
-    /* If 'exportall' option, check against /proc/mounts
-     */
-    if (res == 0 && diod_conf_get_exportall ()) {
-        if (!(exports = diod_conf_get_mounts ())) {
-            np_uerror (ENOMEM);
-            goto done;
-        }
-        if (!(itr = list_iterator_create (exports))) {
-            list_destroy (exports);
-            np_uerror (ENOMEM);
-            goto done;
-        }
-        while (res == 0 && (x = list_next (itr))) {
-            if (_match_export_path (x, path)) {
-                res = 1;
-                break;
-            }
-        }
-        list_iterator_destroy (itr);
-        list_destroy (exports);
-    }
-    if (res == 0)
-        np_uerror (EPERM);
-done:
-    return res;
-}
-
 int
 diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname, Npstr *aname)
 {
@@ -530,7 +410,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
             goto done;
         }
     }
-    if (!_match_exports (f->path, fid->conn, fid->user, &f->xflags)) {
+    if (!diod_match_exports (f->path, fid->conn, fid->user, &f->xflags)) {
         msg ("diod_attach: %s not exported", f->path);
         goto done;
     }

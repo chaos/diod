@@ -283,8 +283,8 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 	}
 
-	if (!aname) {
-		rc = np_syn_attach (fid, afid, aname);
+	if (aname && !strcmp (aname, "ctl")) {
+		rc = np_ctl_attach (fid, afid, aname);
 	} else {
 		if (!srv->attach) {
 			np_uerror (EIO);
@@ -394,7 +394,7 @@ np_walk(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 		if (fid->type & P9_QTTMP) {
-			if (!np_syn_clone (fid, newfid))
+			if (!np_ctl_clone (fid, newfid))
 				goto done;
 		} else {
 			if (!conn->srv->clone)
@@ -415,7 +415,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 	for(i = 0; i < tc->u.twalk.nwname;) {
 		if (newfid->type & P9_QTTMP) {
-			if (!np_syn_walk (newfid, &tc->u.twalk.wnames[i],
+			if (!np_ctl_walk (newfid, &tc->u.twalk.wnames[i],
 					  &wqids[i]))
 				break;
 		} else {
@@ -484,7 +484,7 @@ np_read(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_read(fid, tc->u.tread.offset,
+		rc = np_ctl_read(fid, tc->u.tread.offset,
 				 tc->u.tread.count, req);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
@@ -535,7 +535,7 @@ np_write(Npreq *req, Npfcall *tc)
 	}
 
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_write(fid, tc->u.twrite.offset,
+		rc = np_ctl_write(fid, tc->u.twrite.offset,
 				  tc->u.twrite.count,
 				  tc->u.twrite.data, req);
 	} else {
@@ -572,7 +572,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_clunk (fid);
+		rc = np_ctl_clunk (fid);
 	} else {
 		if (!req->conn->srv->clunk) {
 			np_uerror (ENOSYS);
@@ -645,7 +645,7 @@ np_lopen(Npreq *req, Npfcall *tc)
 	if (!fid)
 		goto done;
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_lopen (fid, tc->u.tlopen.flags);
+		rc = np_ctl_lopen (fid, tc->u.tlopen.flags);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
 			goto done;
@@ -811,7 +811,7 @@ np_getattr(Npreq *req, Npfcall *tc)
 	if (!fid)
 		goto done;
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_getattr(fid, tc->u.tgetattr.request_mask);
+		rc = np_ctl_getattr(fid, tc->u.tgetattr.request_mask);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
 			goto done;
@@ -930,7 +930,7 @@ np_readdir(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
-		rc = np_syn_readdir(fid, tc->u.treaddir.offset,
+		rc = np_ctl_readdir(fid, tc->u.treaddir.offset,
 				    tc->u.treaddir.count, req);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)

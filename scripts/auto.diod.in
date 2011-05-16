@@ -20,7 +20,7 @@ if ! [ -x $DIOD_DIODCAT ]; then
     exit 1
 fi
 
-$DIOD_DIODCAT -h $DIOD_SERVERS -a /proc mounts | awk '{print $2}' |\
+$DIOD_DIODCAT -h $DIOD_SERVERS -a ctl exports | awk '{print $1}' |\
 while read path; do
     if [ "$path" == "/" ]; then
         if [ "$key" == "ROOT" ]; then

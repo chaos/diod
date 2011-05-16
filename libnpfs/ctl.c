@@ -21,7 +21,7 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-/* syn.c - handle simple synthetic files for stats tools, etc */
+/* ctl.c - handle simple synthetic files for stats tools, etc */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -93,38 +93,20 @@ _alloc_fid (Npfile *file)
 }
 
 void
-np_syn_delfile (Npfile *file)
+np_ctl_delfile (Npfile *file)
 {
 	Npfile *ff, *tmp;
 
 	if (file) {
 		for (ff = file->child; ff != NULL; ) {
 			tmp = ff->next; 
-			np_syn_delfile (ff);
+			np_ctl_delfile (ff);
 			ff = tmp;
 		}
 		if (file->name)
 			free (file->name);
 		free (file);
 	}	
-}
-
-/* this is not that critical so we ignore errors */
-typedef enum {ATIME, CTIME, MTIME} whichtime_t;
-static void
-_update_time (Npfile *file, whichtime_t wt)
-{
-	switch (wt) {
-	case ATIME:
-		(void)gettimeofday (&file->atime, NULL);
-		break;
-	case MTIME:
-		(void)gettimeofday (&file->mtime, NULL);
-		break;
-	case CTIME:
-		(void)gettimeofday (&file->ctime, NULL);
-		break;
-	}
 }
 
 typedef enum {DIRMODE, FILEMODE} whichmode_t;
@@ -170,18 +152,18 @@ _alloc_file (char *name, u8 type)
 		_update_mode (file, FILEMODE);
 	file->uid = 0;
 	file->gid = 0;
-	_update_time (file, ATIME);
-	_update_time (file, MTIME);
-	_update_time (file, CTIME);
+	(void)gettimeofday (&file->atime, NULL);
+	(void)gettimeofday (&file->mtime, NULL);
+	(void)gettimeofday (&file->ctime, NULL);
 
 	return file;	
 error:
-	np_syn_delfile (file);
+	np_ctl_delfile (file);
 	return NULL;
 }
 
 Npfile *
-np_syn_addfile (Npfile *parent, char *name, SynGetF getf, void *arg)
+np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg)
 {
 	Npfile *file;
 
@@ -195,13 +177,13 @@ np_syn_addfile (Npfile *parent, char *name, SynGetF getf, void *arg)
 	file->getf_arg = arg;
 	file->next = parent->child;
 	parent->child = file;
-	_update_time (parent, MTIME);
+	(void)gettimeofday(&parent->mtime, NULL);
 
 	return file;
 }
 
 Npfile *
-np_syn_mkdir (Npfile *parent, char *name)
+np_ctl_adddir (Npfile *parent, char *name)
 {
 	Npfile *file;
 
@@ -215,29 +197,29 @@ np_syn_mkdir (Npfile *parent, char *name)
 	file->getf_arg = NULL;
 	file->next = parent->child;
 	parent->child = file;
-	_update_time (parent, MTIME);
+	(void)gettimeofday (&parent->mtime, NULL);
 
 	return file;
 }
 
 void
-np_syn_finalize (Npsrv *srv)
+np_ctl_finalize (Npsrv *srv)
 {
-	Npfile *root = srv->synroot;
+	Npfile *root = srv->ctlroot;
 
 	if (root)
-		np_syn_delfile (root);
-	srv->synroot = NULL;		
+		np_ctl_delfile (root);
+	srv->ctlroot = NULL;		
 }
 
 int
-np_syn_initialize (Npsrv *srv)
+np_ctl_initialize (Npsrv *srv)
 {
 	Npfile *root = NULL;
 
 	if (!(root = _alloc_file ("root", P9_QTDIR)))
 		return -1;
-	srv->synroot = root;
+	srv->ctlroot = root;
 	return 0;
 }
 
@@ -246,14 +228,14 @@ np_syn_initialize (Npsrv *srv)
  **/
 
 Npfcall *
-np_syn_attach(Npfid *fid, Npfid *afid, char *aname)
+np_ctl_attach(Npfid *fid, Npfid *afid, char *aname)
 {
 	Npfcall *rc = NULL;
 	Fid *f = NULL;
 	Npsrv *srv = fid->conn->srv;
-	Npfile *root = srv->synroot;
+	Npfile *root = srv->ctlroot;
 
-	assert (aname == NULL);
+	assert (aname && !strcmp (aname, "ctl"));
 	if (!root)
 		goto error;
 	if (!(fid->aux = _alloc_fid (root)))
@@ -274,7 +256,7 @@ error:
 }
 
 int
-np_syn_clone(Npfid *fid, Npfid *newfid)
+np_ctl_clone(Npfid *fid, Npfid *newfid)
 {
 	Fid *f = fid->aux;
 	Fid *nf;
@@ -291,7 +273,7 @@ np_syn_clone(Npfid *fid, Npfid *newfid)
 }
 
 int
-np_syn_walk(Npfid *fid, Npstr *wname, Npqid *wqid)
+np_ctl_walk(Npfid *fid, Npstr *wname, Npqid *wqid)
 {
 	Fid *f = fid->aux;
 	int ret = 0;
@@ -315,7 +297,7 @@ done:
 }
 
 void
-np_syn_fiddestroy (Npfid *fid)
+np_ctl_fiddestroy (Npfid *fid)
 {
 	Fid *f = fid->aux;
 
@@ -323,7 +305,7 @@ np_syn_fiddestroy (Npfid *fid)
 }
 
 Npfcall *
-np_syn_clunk(Npfid *fid)
+np_ctl_clunk(Npfid *fid)
 {
 	Npfcall *rc;
 
@@ -334,7 +316,7 @@ np_syn_clunk(Npfid *fid)
 }
 
 Npfcall *
-np_syn_lopen(Npfid *fid, u32 mode)
+np_ctl_lopen(Npfid *fid, u32 mode)
 {
 	Fid *f = fid->aux;
 	Npfcall *rc = NULL;
@@ -358,7 +340,7 @@ done:
 }
 
 Npfcall *
-np_syn_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
+np_ctl_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
 	Fid *f = fid->aux;
 	Npfcall *rc = NULL;
@@ -379,13 +361,13 @@ np_syn_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		np_uerror (ENOMEM);
 		goto done;
 	}
-	_update_time (f->file, ATIME);
+	(void)gettimeofday (&f->file->atime, NULL);
 done:
 	return rc;
 }
 
 Npfcall *
-np_syn_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
+np_ctl_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
 	Fid *f = fid->aux;
 	Npfcall *rc = NULL;
@@ -409,13 +391,13 @@ np_syn_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		off++;
 	}
 	np_finalize_rreaddir (rc, n);
-	_update_time (f->file, ATIME);
+	(void)gettimeofday (&f->file->atime, NULL);
 done:
 	return rc;
 }
 
 Npfcall *
-np_syn_getattr(Npfid *fid, u64 request_mask)
+np_ctl_getattr(Npfid *fid, u64 request_mask)
 {
 	Fid *f = fid->aux;
 	Npfcall *rc = NULL;
@@ -432,7 +414,7 @@ np_syn_getattr(Npfid *fid, u64 request_mask)
 }
 
 Npfcall *
-np_syn_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
+np_ctl_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
 	Npfcall *rc = NULL;
 

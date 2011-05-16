@@ -71,13 +71,13 @@ np_srv_create(int nwthread, int flags)
 	srv->msize = 8216;
 	srv->flags = flags;
 
-	if (np_syn_initialize (srv) < 0)
+	if (np_ctl_initialize (srv) < 0)
 		goto error;
-	if (!np_syn_addfile (srv->synroot, "version", _get_version, NULL))
+	if (!np_ctl_addfile (srv->ctlroot, "version", _get_version, NULL))
 		goto error;
-	if (!np_syn_addfile (srv->synroot, "connections",_get_connections, srv))
+	if (!np_ctl_addfile (srv->ctlroot, "connections",_get_connections, srv))
 		goto error;
-	if (!np_syn_addfile (srv->synroot, "wthreads", _get_wthreads, srv))
+	if (!np_ctl_addfile (srv->ctlroot, "wthreads", _get_wthreads, srv))
 		goto error;
 	if (np_usercache_create (srv) < 0)
 		goto error;
@@ -114,7 +114,7 @@ np_srv_destroy(Npsrv *srv)
 		free (wt);
 	}
 	np_usercache_destroy (srv);
-	np_syn_finalize (srv);
+	np_ctl_finalize (srv);
 	free (srv);
 }
 

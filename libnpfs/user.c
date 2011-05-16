@@ -73,7 +73,7 @@ _usercache_del (Npsrv *srv, Npuser *prev, Npuser *u)
 	return tmp;
 }
 
-/* expire entries after 60s (except root) */
+/* expire entries after 60s */
 static void
 _usercache_expire (Npsrv *srv)
 {
@@ -83,7 +83,7 @@ _usercache_expire (Npsrv *srv)
 	Npuser *prev = NULL;
 
 	while (u) {
-		if (u->uid != 0 && now - u->t >= uc->ttl) {
+		if (now - u->t >= uc->ttl) {
 			u = _usercache_del (srv, prev, u);
 			continue;
 		}
@@ -161,7 +161,7 @@ np_usercache_create (Npsrv *srv)
 	uc->ttl	= 60;
 	srv->usercache = uc;
 
-	if (!np_syn_addfile (srv->synroot, "usercache", _get_usercache, srv)) {
+	if (!np_ctl_addfile (srv->ctlroot, "usercache", _get_usercache, srv)) {
 		free (srv->usercache);
 		return -1;
 	}

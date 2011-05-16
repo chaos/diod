@@ -42,8 +42,9 @@ The following file system specific mount options are handled by
 The aname is the path of the exported file system on the server.
 It can be specified in the mount spec in \fIhost:aname\fR format
 like NFS, or it can be specified with this option.
-It is also valid to mount with no aname set, which selects
-diod's internal synthentic file system.
+\fBdiod\fR will not allow an attach to an empty aname.
+\fBdiod\fR has a built-in synthetic control file system that can be
+mounted with aname of \fIctl\fR.
 .TP
 .I "uname=name"
 The user name to authenticate to the \fBdiod\fR server.

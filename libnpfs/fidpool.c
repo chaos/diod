@@ -71,7 +71,7 @@ np_fidpool_destroy(Npfidpool *pool)
 				if (srv->auth && srv->auth->clunk)
 					(*srv->auth->clunk)(f);
 			} else if ((f->type & P9_QTTMP)) {
-				np_syn_fiddestroy (f);
+				np_ctl_fiddestroy (f);
 			} else {
 				if (srv->fiddestroy)
 					(*srv->fiddestroy)(f);
@@ -222,7 +222,7 @@ np_fid_destroy(Npfid *fid)
 		if (srv->auth && srv->auth->clunk)
 			(*srv->auth->clunk)(fid);
 	} else if ((fid->type & P9_QTTMP)) {
-		np_syn_fiddestroy (fid);
+		np_ctl_fiddestroy (fid);
 	} else {
 		if (srv->fiddestroy)
 			(*srv->fiddestroy)(fid);

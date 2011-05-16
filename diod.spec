@@ -1,6 +1,6 @@
 Name: diod
 Version: 1.0
-Release: pre27
+Release: pre28
 
 Summary:  I/O forwarding server for 9P.
 License: GPL
@@ -24,10 +24,10 @@ system for I/O forwarding on Linux clusters.
 
 %build
 %configure
-make
+make CFLAGS=-Werror
 
 %check
-make check
+make check CFLAGS=-Werror
 
 %install
 rm -rf $RPM_BUILD_ROOT

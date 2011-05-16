@@ -82,6 +82,21 @@
 #define RO_ALLSQUASH        0x2000
 #define RO_SQUASHUSER       0x4000
 
+#define DFLT_DEBUGLEVEL     0
+#define DFLT_NWTHREADS      16
+#define DFLT_FOREGROUND     0
+#define DFLT_AUTH_REQUIRED  1
+#define DFLT_USERDB         1
+#define DFLT_ALLSQUASH      0
+#define DFLT_SQUASHUSER     "nobody"
+#define DFLT_RUNASUID       0
+#define DFLT_LISTEN         "0.0.0.0:564"
+#define DFLT_EXPORTALL      0
+#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
+#endif
+#define DFLT_LOGDEST        "syslog:daemon:err"
+
 typedef struct {
     int          debuglevel;
     int          nwthreads;
@@ -168,24 +183,24 @@ _destroy_export (Export *x)
 void
 diod_conf_init (void)
 {
-    config.debuglevel = 0;
-    config.nwthreads = 16;
-    config.foreground = 0;
-    config.auth_required = 1;
-    config.userdb = 1;
-    config.allsquash = 0;
-    config.squashuser = _xstrdup ("nobody");
-    config.runasuid = 0;
+    config.debuglevel = DFLT_DEBUGLEVEL;
+    config.nwthreads = DFLT_NWTHREADS;
+    config.foreground = DFLT_FOREGROUND;
+    config.auth_required = DFLT_AUTH_REQUIRED;
+    config.userdb = DFLT_USERDB;
+    config.allsquash = DFLT_ALLSQUASH;
+    config.squashuser = _xstrdup (DFLT_SQUASHUSER);
+    config.runasuid = DFLT_RUNASUID;
     config.listen = _xlist_create ((ListDelF)free);
-    _xlist_append (config.listen, _xstrdup ("0.0.0.0:564"));
+    _xlist_append (config.listen, _xstrdup (DFLT_LISTEN));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
-    config.exportall = 0;
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
-    config.configpath = _xstrdup (X_SYSCONFDIR "/diod.conf");
+    config.exportall = DFLT_EXPORTALL;
+#if defined(DFLT_CONFIGPATH)
+    config.configpath = _xstrdup (DFLT_CONFIGPATH);
 #else
     config.configpath = NULL;
 #endif
-    config.logdest = _xstrdup ("syslog:daemon:err");
+    config.logdest = _xstrdup (DFLT_LOGDEST);
     config.ro_mask = 0;
 }
 
@@ -596,38 +611,45 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         /* Don't override cmdline options when rereading config file.
          */
         if (!(config.ro_mask & RO_NWTHREADS)) {
-            _lua_getglobal_int (path, L, "nwthreads",
-                                &config.nwthreads);
+            config.nwthreads = DFLT_NWTHREADS;
+            _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
         }
         if (!(config.ro_mask & RO_AUTH_REQUIRED)) {
+            config.auth_required = DFLT_AUTH_REQUIRED;
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
         }
         if (!(config.ro_mask & RO_USERDB)) {
-            _lua_getglobal_int (path, L, "userdb",
-                                &config.userdb);
+            config.userdb = DFLT_USERDB;
+            _lua_getglobal_int (path, L, "userdb", &config.userdb);
         }
         if (!(config.ro_mask & RO_ALLSQUASH)) {
-            _lua_getglobal_int (path, L, "allsquash",
-                                &config.allsquash);
+            config.allsquash = DFLT_ALLSQUASH;
+            _lua_getglobal_int (path, L, "allsquash", &config.allsquash);
         }
         if (!(config.ro_mask & RO_SQUASHUSER)) {
-            _lua_getglobal_string (path, L, "squashuser",
-                                &config.squashuser);
+            free (config.squashuser);
+            config.squashuser = _xstrdup (DFLT_SQUASHUSER);
+            _lua_getglobal_string (path, L, "squashuser", &config.squashuser);
         }
         if (!(config.ro_mask & RO_LISTEN)) {
-            _lua_getglobal_list_of_strings (path, L, "listen",
-                                &config.listen);
+            list_destroy (config.listen);
+            config.listen = _xlist_create ((ListDelF)free);
+            _xlist_append (config.listen, _xstrdup (DFLT_LISTEN));
+            _lua_getglobal_list_of_strings (path, L, "listen", &config.listen);
         }
         if (!(config.ro_mask & RO_LOGDEST)) {
-            _lua_getglobal_string (path, L, "logdest",
-                                &config.logdest);
+            free (config.logdest);
+            config.logdest = _xstrdup (DFLT_LOGDEST);
+            _lua_getglobal_string (path, L, "logdest", &config.logdest);
         }
         if (!(config.ro_mask & RO_EXPORTALL)) {
-            _lua_getglobal_int (path, L, "exportall",
-                                &config.exportall);
+            config.exportall = DFLT_EXPORTALL;
+            _lua_getglobal_int (path, L, "exportall", &config.exportall);
         }
         if (!(config.ro_mask & RO_EXPORTS))
+            list_destroy (config.exports);
+            config.exports = _xlist_create ((ListDelF)_destroy_export);
             _lua_getglobal_exports (path, L, &config.exports);
         lua_close(L);
     }

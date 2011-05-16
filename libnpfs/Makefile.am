@@ -19,4 +19,4 @@ libnpfs_a_SOURCES = \
 	npfs.h \
 	npfsimpl.h \
 	9p.h \
-	syn.c
+	ctl.c

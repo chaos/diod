@@ -202,8 +202,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TLCREATE:
 		spf (s, len, "P9_TLCREATE tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.tlcreate.fid);
-		spf (s, len, " name %.*s", fc->u.tlcreate.name.len,
-					   fc->u.tlcreate.name.str);
+		spf (s, len, " name '%.*s'", fc->u.tlcreate.name.len,
+					     fc->u.tlcreate.name.str);
 		spf (s, len, " flags 0x%"PRIx32, fc->u.tlcreate.flags);
 		spf (s, len, " mode 0%"PRIo32, fc->u.tlcreate.mode);
 		spf (s, len, " gid %"PRIu32, fc->u.tlcreate.gid);
@@ -216,10 +216,10 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TSYMLINK:
 		spf (s, len, "P9_TSYMLINK tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.tsymlink.fid);
-		spf (s, len, " name %.*s", fc->u.tsymlink.name.len,
-					   fc->u.tsymlink.name.str);
-		spf (s, len, " symtgt %.*s", fc->u.tsymlink.symtgt.len,
-					   fc->u.tsymlink.symtgt.str);
+		spf (s, len, " name '%.*s'", fc->u.tsymlink.name.len,
+					     fc->u.tsymlink.name.str);
+		spf (s, len, " symtgt '%.*s'", fc->u.tsymlink.symtgt.len,
+					       fc->u.tsymlink.symtgt.str);
 		spf (s, len, " gid %"PRIu32, fc->u.tsymlink.gid);
 		break;
 	case P9_RSYMLINK:
@@ -229,8 +229,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TMKNOD:
 		spf (s, len, "P9_TMKNOD tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.tmknod.fid);
-		spf (s, len, " name %.*s", fc->u.tmknod.name.len,
-					   fc->u.tmknod.name.str);
+		spf (s, len, " name '%.*s'", fc->u.tmknod.name.len,
+					     fc->u.tmknod.name.str);
 		spf (s, len, " mode 0%"PRIo32, fc->u.tmknod.mode);
 		spf (s, len, " major %"PRIu32, fc->u.tmknod.major);
 		spf (s, len, " minor %"PRIu32, fc->u.tmknod.minor);
@@ -244,8 +244,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_TRENAME tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.trename.fid);
 		spf (s, len, " dfid%"PRIu32, fc->u.trename.dfid);
-		spf (s, len, " name %.*s", fc->u.trename.name.len,
-					   fc->u.trename.name.str);
+		spf (s, len, " name '%.*s'", fc->u.trename.name.len,
+					     fc->u.trename.name.str);
 		break;
 	case P9_RRENAME:
 		spf (s, len, "P9_RRENAME tag %u", fc->tag);
@@ -256,8 +256,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		break;
 	case P9_RREADLINK:
 		spf (s, len, "P9_RREADLINK tag %u", fc->tag);
-		spf (s, len, " target %.*s", fc->u.rreadlink.target.len,
-				   	     fc->u.rreadlink.target.str);
+		spf (s, len, " target '%.*s'", fc->u.rreadlink.target.len,
+				   	       fc->u.rreadlink.target.str);
 		break;
 	case P9_TGETATTR:
 		spf (s, len, "P9_TGETATTR tag %u", fc->tag);
@@ -373,8 +373,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_TXATTRWALK tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.txattrwalk.fid);
 		spf (s, len, " attrfid %"PRIu32, fc->u.txattrwalk.attrfid);
-		spf (s, len, " name %.*s", fc->u.txattrwalk.name.len,
-					   fc->u.txattrwalk.name.str);
+		spf (s, len, " name '%.*s'", fc->u.txattrwalk.name.len,
+					     fc->u.txattrwalk.name.str);
 		break;
 	case P9_RXATTRWALK:
 		spf (s, len, "P9_RXATTRWALK tag %u", fc->tag);
@@ -383,8 +383,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TXATTRCREATE:
 		spf (s, len, "P9_TXATTRCREATE tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.txattrcreate.fid);
-		spf (s, len, " name %.*s", fc->u.txattrcreate.name.len,
-					   fc->u.txattrcreate.name.str);
+		spf (s, len, " name '%.*s'", fc->u.txattrcreate.name.len,
+					     fc->u.txattrcreate.name.str);
 		spf (s, len, " size %"PRIu64, fc->u.txattrcreate.size);
 		spf (s, len, " flag %"PRIu32, fc->u.txattrcreate.flag);
 		break;
@@ -418,8 +418,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, " start %"PRIu64, fc->u.tlock.start);
 		spf (s, len, " length %"PRIu64, fc->u.tlock.length);
 		spf (s, len, " proc_id %"PRIu32, fc->u.tlock.proc_id);
-		spf (s, len, " client_id %.*s", fc->u.tlock.client_id.len,
-						fc->u.tlock.client_id.str);
+		spf (s, len, " client_id '%.*s'", fc->u.tlock.client_id.len,
+						  fc->u.tlock.client_id.str);
 		break;
 	case P9_RLOCK:
 		spf (s, len, "P9_RLOCK tag %u", fc->tag);
@@ -434,8 +434,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, " start %"PRIu64, fc->u.tgetlock.start);
 		spf (s, len, " length %"PRIu64, fc->u.tgetlock.length);
 		spf (s, len, " proc_id %"PRIu32, fc->u.tgetlock.proc_id);
-		spf (s, len, " client_id %.*s", fc->u.tgetlock.client_id.len,
-						fc->u.tgetlock.client_id.str);
+		spf (s, len, " client_id '%.*s'", fc->u.tgetlock.client_id.len,
+						  fc->u.tgetlock.client_id.str);
 		break;
 	case P9_RGETLOCK:
 		spf (s, len, "P9_RGETLOCK tag %u", fc->tag);
@@ -444,15 +444,15 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, " start %"PRIu64, fc->u.rgetlock.start);
 		spf (s, len, " length %"PRIu64, fc->u.rgetlock.length);
 		spf (s, len, " proc_id %"PRIu32, fc->u.rgetlock.proc_id);
-		spf (s, len, " client_id %.*s", fc->u.rgetlock.client_id.len,
-						fc->u.rgetlock.client_id.str);
+		spf (s, len, " client_id '%.*s'", fc->u.rgetlock.client_id.len,
+						  fc->u.rgetlock.client_id.str);
 		break;
 	case P9_TLINK:
 		spf (s, len, "P9_TLINK tag %u", fc->tag);
 		spf (s, len, " dfid %"PRIu32, fc->u.tlink.dfid);
 		spf (s, len, " fid %"PRIu32, fc->u.tlink.fid);
-		spf (s, len, " name %.*s", fc->u.tlink.name.len,
-					   fc->u.tlink.name.str);
+		spf (s, len, " name '%.*s'", fc->u.tlink.name.len,
+					     fc->u.tlink.name.str);
 		break;
 	case P9_RLINK:
 		spf (s, len, "P9_RLINK tag %u", fc->tag);
@@ -460,8 +460,8 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TMKDIR:
 		spf (s, len, "P9_TMKDIR tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.tmkdir.fid);
-		spf (s, len, " name %.*s", fc->u.tmkdir.name.len,
-					   fc->u.tmkdir.name.str);
+		spf (s, len, " name '%.*s'", fc->u.tmkdir.name.len,
+					     fc->u.tmkdir.name.str);
 		spf (s, len, " mode 0%"PRIo32, fc->u.tmkdir.mode);
 		spf (s, len, " gid %"PRIu32, fc->u.tmkdir.gid);
 		break;
@@ -472,22 +472,22 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TVERSION:
 		spf (s, len, "P9_TVERSION tag %u", fc->tag);
 		spf (s, len, " msize %u", fc->u.tversion.msize);
-		spf (s, len, " version %.*s", fc->u.tversion.version.len,
-					      fc->u.tversion.version.str);
+		spf (s, len, " version '%.*s'", fc->u.tversion.version.len,
+					        fc->u.tversion.version.str);
 		break;
 	case P9_RVERSION:
 		spf (s, len, "P9_RVERSION tag %u msize %u",
 			fc->tag, fc->u.rversion.msize);
-		spf (s, len, " version %.*s", fc->u.rversion.version.len,
-					      fc->u.rversion.version.str);
+		spf (s, len, " version '%.*s'", fc->u.rversion.version.len,
+					        fc->u.rversion.version.str);
 		break;
 	case P9_TAUTH:
 		spf (s, len, "P9_TAUTH tag %u afid %d",
 			fc->tag, fc->u.tauth.afid);
-		spf (s, len, " uname %.*s", fc->u.tauth.uname.len,
-					    fc->u.tauth.uname.str);
-		spf (s, len, " aname %.*s", fc->u.tauth.aname.len,
-					    fc->u.tauth.aname.str);
+		spf (s, len, " uname '%.*s'", fc->u.tauth.uname.len,
+					      fc->u.tauth.uname.str);
+		spf (s, len, " aname '%.*s'", fc->u.tauth.aname.len,
+					      fc->u.tauth.aname.str);
 		if (fc->u.tauth.n_uname != P9_NONUNAME)
 			spf (s, len, " n_uname %u", fc->u.tauth.n_uname);
 		else
@@ -501,10 +501,10 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_TATTACH tag %u", fc->tag);
 		spf (s, len, " fid %d afid %d",
 				fc->u.tattach.fid, fc->u.tattach.afid);
-		spf (s, len, " uname %.*s", fc->u.tattach.uname.len,
-					    fc->u.tattach.uname.str);
-		spf (s, len, " aname %.*s", fc->u.tattach.aname.len,
-					    fc->u.tattach.aname.str);
+		spf (s, len, " uname '%.*s'", fc->u.tattach.uname.len,
+					      fc->u.tattach.uname.str);
+		spf (s, len, " aname '%.*s'", fc->u.tattach.aname.len,
+					      fc->u.tattach.aname.str);
 		if (fc->u.tattach.n_uname != P9_NONUNAME)
 			spf (s, len, " n_uname %u", fc->u.tattach.n_uname);
 		else

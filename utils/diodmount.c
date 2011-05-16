@@ -466,6 +466,7 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
     if (!(uname = opt_find (o, "uname")))
         msg_exit ("uname is not set"); /* can't happen */
     uid = _uname2uid (uname);
+    aname = opt_find (o, "aname"); /* can be null */
     if (!opt_scanf (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
         msg_exit ("msize must be set to integer >= %d", P9_IOHDRSZ);
 
@@ -475,8 +476,12 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
 	errn_exit (np_rerror (), "version");
     if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0)
         errn_exit (np_rerror (), "auth");
-    if (!(root = npc_attach (fs, afid, aname, uid)))
-        errn_exit (np_rerror (), "attach");
+    if (!(root = npc_attach (fs, afid, aname, uid))) {
+        errn (np_rerror (), "attach");
+        if (afid)
+            (void)npc_clunk (afid);
+        exit (1);
+    }
     if (afid && npc_clunk (afid) < 0)
         errn_exit (np_rerror (), "clunk afid");
     if (npc_clunk (root) < 0)

@@ -475,7 +475,8 @@ _service_run (srvmode_t mode)
         flags |= SRV_FLAGS_NOUSERDB;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
         errn_exit (np_rerror (), "np_srv_create");
-    diod_register_ops (ss.srv);
+    if (diod_register_ops (ss.srv) < 0)
+        errn_exit (np_rerror (), "diod_register_ops");
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL)))
         errn_exit (n, "pthread_create _service_loop");

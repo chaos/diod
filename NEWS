@@ -1,3 +1,10 @@
+1.0-pre29:
+	Fix uninitialized aname in diodmount (regression from pre28).
+	Clunk afid if diodmount attach fails
+	Mount synthetic file system as 'ctl' rather than nil aname (issue 38).
+	Implement ctl/exports file and have auto.diod script use it.
+	On SIGHUP config reload, reset before reading config file value.
+
 1.0-pre28:
 	Rewrite npfile code and added some synthetic files for monitoring.
 	Don't setfsgid to gid outside of user's sg set.
