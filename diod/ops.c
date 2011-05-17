@@ -193,11 +193,18 @@ diod_register_ops (Npsrv *srv)
 static int
 _fidstat (Fid *fid)
 {
-    if (lstat (fid->path, &fid->stat) < 0) {
+    int n;
+    int fd;
+
+    if (fid->fd != -1)
+        n = fstat (fid->fd, &fid->stat);
+    else if (fid->dir != NULL && (fd = dirfd (fid->dir)) >= 0)
+        n = fstat (fd, &fid->stat);
+    else
+        n = lstat (fid->path, &fid->stat);
+    if (n < 0)
         np_uerror (errno);
-        return -1;
-    }
-    return 0;
+    return n;
 }
 
 /* Strdup an Npstr.
@@ -241,41 +248,6 @@ _malloc (size_t size)
 
     return p;
 }
-
-/* Read from specified offset.
- * Set npfs error state on error.
- */
-static ssize_t 
-_pread (Npfid *fid, void *buf, size_t count, off_t offset)
-{
-    Fid *f = fid->aux;
-    ssize_t n;
-
-    if ((n = pread (f->fd, buf, count, offset)) < 0) {
-        np_uerror (errno);
-        if (errno == EIO)
-            err ("read %s", f->path);
-    }
-    return n;
-}
-
-/* Write to specified offset.
- * Set npfs error state on error.
- */
-static ssize_t 
-_pwrite (Npfid *fid, void *buf, size_t count, off_t offset)
-{
-    Fid *f = fid->aux;
-    ssize_t n;
-
-    if ((n = pwrite (f->fd, buf, count, offset)) < 0) {
-        np_uerror (errno);
-        if (errno == EIO)
-            err ("write %s", f->path);
-    }
-    return n;
-}
-
 
 /* Allocate our local fid struct which becomes attached to Npfid->aux.
  * Set npfs error state on error.
@@ -332,7 +304,6 @@ static void
 _ustat2qid (struct stat *st, Npqid *qid)
 {
     qid->path = st->st_ino;
-    /* FIXME: ramifcations of always-zero version? */
     //qid->version = st->st_mtime ^ (st->st_size << 8);
     qid->version = 0;
     qid->type = 0;
@@ -347,13 +318,23 @@ _dirent2qid (struct dirent *d, Npqid *qid)
 {
     assert (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino;
-    /* FIXME: ramifcations of always-zero version? */
     qid->version = 0;
     qid->type = 0;
     if (d->d_type == DT_DIR)
         qid->type |= P9_QTDIR;
     if (d->d_type == DT_LNK)
         qid->type |= P9_QTSYMLINK;
+}
+
+static char *
+_mkpath(char *dirname, Npstr *name)
+{
+    int slen = strlen(dirname) + name->len + 2;
+    char *s = _malloc (slen);
+   
+    if (s)
+        snprintf (s, slen, "%s/%.*s", dirname, name->len, name->str);
+    return s;
 }
 
 int
@@ -395,42 +376,36 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
 
     if (aname->len == 0 || *aname->str != '/') {
         np_uerror (EPERM);
-        msg ("diod_attach: mount attempt for malformed aname");
-        goto done;
+        goto error;
     }
     if (!(f = _fidalloc ()) || !(f->path = _p9strdup(aname))) {
-        msg ("diod_attach: out of memory");
-        goto done;
+        np_uerror (ENOMEM);
+        goto error;
     }
     if (diod_conf_opt_runasuid ()) {
-        uid_t onlyuid = diod_conf_get_runasuid ();
-        if (fid->user->uid != onlyuid) {
+        if (fid->user->uid != diod_conf_get_runasuid ()) {
             np_uerror (EPERM);
-            msg ("diod_attach: server runs exclusively for uid=%d", onlyuid);
-            goto done;
+            goto error;
         }
     }
-    if (!diod_match_exports (f->path, fid->conn, fid->user, &f->xflags)) {
-        msg ("diod_attach: %s not exported", f->path);
-        goto done;
-    }
-    if (_fidstat (f) < 0) {
-        msg ("diod_attach: could not stat mount point");
-        goto done;
-    }
+    if (!diod_match_exports (f->path, fid->conn, fid->user, &f->xflags))
+        goto error;
+    if (_fidstat (f) < 0)
+        goto error;
     _ustat2qid (&f->stat, &qid);
     if ((ret = np_create_rattach (&qid)) == NULL) {
         np_uerror (ENOMEM);
-        msg ("diod_attach: out of memory");
-        goto done;
+        goto error;
     }
     fid->aux = f;
     np_fid_incref (fid);
-
-done:
-    if (np_rerror () && f)
-        _fidfree (f);
     return ret;
+error:
+    errn (np_rerror (), "diod_attach %s@%s:%.*s", fid->user->uname,
+          np_conn_get_client_id (fid->conn), aname->len, aname->str);
+    if (f)
+        _fidfree (f);
+    return NULL;
 }
 
 /* Twalk - walk a file path
@@ -441,27 +416,21 @@ int
 diod_clone (Npfid *fid, Npfid *newfid)
 {
     Fid *f = fid->aux;
-    Fid *nf = _fidalloc ();
-    int ret = 0;
+    Fid *nf = NULL;
 
-    if (!nf) {
-        msg ("diod_clone: out of memory");
-        goto done;
-    }
-    if (!(nf->path = _strdup (f->path))) {
-        msg ("diod_clone: out of memory");
-        goto done;
-    }
+    if (!(nf = _fidalloc ()))
+        goto error;
+    if (!(nf->path = _strdup (f->path)))
+        goto error;
     nf->xflags = f->xflags;
     newfid->aux = nf;
-    ret = 1;
-
-done:   
-    if (np_rerror ()) {
-        if (nf)
-            _fidfree (nf);
-    }
-    return ret;
+    return 1;
+error:
+    errn (np_rerror (), "diod_clone %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+    if (nf)
+        _fidfree (nf);
+    return 0;
 }
 
 /* Twalk - walk a file path
@@ -472,25 +441,14 @@ int
 diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
 {
     Fid *f = fid->aux;
-    int n; 
     struct stat st;
-    char *path = NULL;
-    int ret = 0;
+    char *npath;
 
-    if (_fidstat (f) < 0)
-        goto done;
-    n = strlen (f->path);
-    if (!(path = _malloc (n + wname->len + 2))) {
-        msg ("diod_walk: out of memory");
-        goto done;
-    }
-    memcpy (path, f->path, n);
-    path[n] = '/';
-    memcpy (path + n + 1, wname->str, wname->len);
-    path[n + wname->len + 1] = '\0';
-    if (lstat (path, &st) < 0) {
+    if (!(npath = _mkpath (f->path, wname)))
+        goto error;
+    if (lstat (npath, &st) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
     /* N.B. inodes would not be unique if we could cross over to another
      * file system.  But with the code below, ls -l returns ??? for mount
@@ -498,32 +456,24 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
      * How does NFS make them appear as empty directories?  That would be
      * prettier.
      */
+    if (_fidstat (f) < 0)
+        goto error;
     if (st.st_dev != f->stat.st_dev) { 
         np_uerror (EXDEV);
-        goto done;
+        goto error;
     }
     free (f->path);
-    f->path = path;
+    f->path = npath;
     _ustat2qid (&st, wqid);
-    ret = 1;
-
-done:
-    if (np_rerror ()) {
-        if (path)
-            free (path);
-    }
-    return ret;
-}
-
-static char *
-_mkpath(char *dirname, Npstr *name)
-{
-    int slen = strlen(dirname) + name->len + 2;
-    char *s = _malloc (slen);
-   
-    if (s)
-        snprintf (s, slen, "%s/%.*s", dirname, name->len, name->str);
-    return s;
+    return 1;
+error:
+    errn (np_rerror (), "diod_walk %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          wname->len, wname->str);
+error_quiet:
+    if (npath)
+        free (npath);
+    return 0;
 }
 
 /* Tread - read from a file or directory.
@@ -531,22 +481,27 @@ _mkpath(char *dirname, Npstr *name)
 Npfcall*
 diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
-    int n;
+    Fid *f = fid->aux;
     Npfcall *ret = NULL;
+    ssize_t n;
 
     if (!(ret = np_alloc_rread (count))) {
         np_uerror (ENOMEM);
-        msg ("diod_read: out of memory");
-        goto done;
+        goto error;
     }
-    n = _pread (fid, ret->u.rread.data, count, offset);
-    if (np_rerror ()) {
-        free (ret);
-        ret = NULL;
-    } else
-        np_set_rread_count (ret, n);
-done:
+    if ((n = pread (f->fd, ret->u.rread.data, count, offset)) < 0) {
+        np_uerror (errno);
+        goto error_quiet;
+    }
+    np_set_rread_count (ret, n);
     return ret;
+error:
+    errn (np_rerror (), "diod_read %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL; 
 }
 
 /* Twrite - write to a file.
@@ -554,23 +509,30 @@ done:
 Npfcall*
 diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
-    int n;
-    Npfcall *ret = NULL;
     Fid *f = fid->aux;
+    Npfcall *ret = NULL;
+    ssize_t n;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    if ((n = _pwrite (fid, data, count, offset)) < 0)
-        goto done;
+    if ((n = pwrite (f->fd, data, count, offset)) < 0) {
+        np_uerror (errno);
+        goto error_quiet;
+    }
     if (!(ret = np_create_rwrite (n))) {
         np_uerror (ENOMEM);
-        msg ("diod_write: out of memory");
-        goto done;
+        goto error;
     }
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_write %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 /* Tclunk - close a file.
@@ -578,14 +540,20 @@ done:
 Npfcall*
 diod_clunk (Npfid *fid)
 {
-    Npfcall *ret;
+    Fid *f = fid->aux;
+    Npfcall *ret = NULL;
 
     if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
-        msg ("diod_clunk: out of memory");
+        goto error;
     }
-
     return ret;
+error:
+    errn (np_rerror (), "diod_clunk %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 /* Tremove - remove a file or directory.
@@ -598,19 +566,24 @@ diod_remove (Npfid *fid)
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
     if (remove (f->path) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
     if (!(ret = np_create_rremove ())) {
         np_uerror (ENOMEM);
-        msg ("diod_remove: out of memory");
-        goto done;
+        goto error;
     }
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_remove %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 /* Tflush - abort in flight operations (npfs handles most of this).
@@ -621,9 +594,8 @@ diod_flush(Npreq *req)
     return;
 }
 
-/* Tstatfs - read file system  information (9P2000.L)
- * N.B. must call statfs() and statvfs() as
- * only statvfs provides (unsigned long) f_fsid
+/* Tstatfs - read file system information.
+ * N.B. must call statfs() for f_type and statvfs() for unsigned long f_fsid
  */
 Npfcall*
 diod_statfs (Npfid *fid)
@@ -633,27 +605,28 @@ diod_statfs (Npfid *fid)
     struct statvfs svb;
     Npfcall *ret = NULL;
 
-    if (_fidstat(f) < 0)
-        goto done;
     if (statfs (f->path, &sb) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error;
     }
     if (statvfs (f->path, &svb) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error;
     }
     if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
                                   sb.f_ffree, (u64) svb.f_fsid,
                                   sb.f_namelen))) {
         np_uerror (ENOMEM);
-        msg ("diod_statfs: out of memory");
-        goto done;
+        goto error;
     }
-
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_statfs %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
@@ -665,188 +638,211 @@ diod_lopen (Npfid *fid, u32 flags)
 
     if ((f->xflags & XFLAGS_RO) && ((flags & O_WRONLY) || (flags & O_RDWR))) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    /* Clients must use lcreate otherwise we don't have enough
-     * information to construct the file mode (need client umask and gid).
-     * Clear the flag and allow open to fail with ENOENT.
-     */
-    if ((flags & O_CREAT))
-        flags &= ~O_CREAT;
+    if ((flags & O_CREAT)) /* can't happen? */
+        flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
     if (_fidstat (f) < 0)
-        goto done;
+        goto error_quiet;
 
     if (S_ISDIR (f->stat.st_mode)) {
         f->dir = opendir (f->path);
         if (!f->dir) {
             np_uerror (errno);
-            goto done;
+            goto error_quiet;
         }
     } else {
         f->fd = open (f->path, flags);
         if (f->fd < 0) {
             np_uerror (errno);
-            goto done;
+            goto error_quiet;
         }
     }
-    if (_fidstat (f) < 0) {
-        err ("diod_lopen: could not stat file that we just opened");
-        goto done;
-    }
+    if (_fidstat (f) < 0)
+        goto error; /* can't happen? */
     _ustat2qid (&f->stat, &qid);
     if (!(res = np_create_rlopen (&qid, f->stat.st_blksize))) {
         np_uerror (ENOMEM);
-        msg ("diod_lopen: out of memory");
-        goto done;
-    }
-
-done:
-    if (np_rerror ()) {
-        if (f->dir) {
-            closedir (f->dir);
-            f->dir = NULL;
-        }
-        if (f->fd != -1) {
-            close (f->fd);
-            f->fd = -1;
-        }
+        goto error;
     }
     return res;
+error:
+    errn (np_rerror (), "diod_lopen %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (f->dir) {
+        (void)closedir (f->dir);
+        f->dir = NULL;
+    }
+    if (f->fd != -1) {
+        (void)close (f->fd); 
+        f->fd = -1;
+    }
+    if (res)
+        free (res);
+    return NULL;
 }
 
 Npfcall*
 diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
 {
-    Npfcall *ret = NULL;
     Fid *f = fid->aux;
+    Npfcall *ret = NULL;
     char *npath = NULL;
     Npqid qid;
+    int fd = -1;
+    struct stat sb;
     mode_t saved_umask;
+    int created = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    if (!(npath = _mkpath(f->path, name))) {
-        msg ("diod_lcreate: out of memory");
-        goto done;
-    }
-    /* assert (f->fd == -1); */
+    if (!(npath = _mkpath(f->path, name)))
+        goto error;
     saved_umask = umask(0);
-    if ((f->fd = creat (npath, mode)) < 0) {
+    if ((fd = creat (npath, mode)) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
+    created = 1;
     umask(saved_umask);
+    if (fstat (fd, &sb) < 0) {
+        np_uerror (errno);
+        goto error; /* shouldn't happen? */
+    }
+    _ustat2qid (&sb, &qid);
+    if (!((ret = np_create_rlcreate (&qid, sb.st_blksize)))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
     free (f->path);
     f->path = npath;
-    npath = NULL;
-    if (_fidstat (f) < 0) {
-        np_uerror (errno);
-        goto done;
+    f->fd = fd;
+    return ret;
+error:
+    errn (np_rerror (), "diod_lcreate %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          name->len, name->str);
+error_quiet:
+    if (fd >= 0) {
+        (void)close (fd);
     }
-    _ustat2qid (&f->stat, &qid);
-    if (!((ret = np_create_rlcreate (&qid, f->stat.st_blksize)))) {
-        np_uerror (ENOMEM);
-        msg ("diod_lcreate: out of memory");
-        goto done;
-    }
-done:
+    if (created && npath)
+        (void)unlink (npath);
     if (npath)
         free (npath);
-    return ret;
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
-diod_symlink(Npfid *dfid, Npstr *name, Npstr *symtgt, u32 gid)
+diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
 {
+    Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    Fid *df = dfid->aux;
     char *target = NULL, *npath = NULL;
     Npqid qid;
     struct stat sb;
     mode_t saved_umask;
+    int created = 0;
 
-    if ((df->xflags & XFLAGS_RO)) {
+    if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    if (!(npath = _mkpath(df->path, name))) {
-        msg ("diod_symlink: out of memory");
-        goto done;
-    }
-    if (!(target = _p9strdup (symtgt))) {
-        msg ("diod_symlink: out of memory");
-        goto done;
-    }
+    if (!(npath = _mkpath(f->path, name)))
+        goto error;
+    if (!(target = _p9strdup (symtgt)))
+        goto error;
     saved_umask = umask(0);
     if (symlink (target, npath) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
+    created = 1;
     umask(saved_umask);
     if (lstat (npath, &sb) < 0) {
         np_uerror (errno);
-        rmdir (npath);
-        goto done;
+        goto error; /* shouldn't happen? */
     }
     _ustat2qid (&sb, &qid);
     if (!((ret = np_create_rsymlink (&qid)))) {
         np_uerror (ENOMEM);
-        msg ("diod_symlink: out of memory");
-        goto done;
+        goto error;
     }
-done:
+    free (npath);
+    free (target);
+    return ret;
+error:
+    errn (np_rerror (), "diod_symlink %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          name->len, name->str);
+error_quiet:
+    if (created && npath)
+        (void)unlink (npath);
     if (npath)
         free (npath);
     if (target)
         free (target);
-    return ret;
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
-diod_mknod(Npfid *dfid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
+diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
 {
     Npfcall *ret = NULL;
-    Fid *df = dfid->aux;
+    Fid *f = fid->aux;
     char *npath = NULL;
     Npqid qid;
     struct stat sb;
     mode_t saved_umask;
+    int created = 0;
 
-    if ((df->xflags & XFLAGS_RO)) {
+    if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    if (!(npath = _mkpath(df->path, name))) {
-        msg ("diod_mknod: out of memory");
-        goto done;
-    }
+    if (!(npath = _mkpath(f->path, name)))
+        goto error;
     saved_umask = umask(0);
     if (mknod (npath, mode, makedev (major, minor)) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
+    created = 1;
     umask(saved_umask);
     if (lstat (npath, &sb) < 0) {
         np_uerror (errno);
-        rmdir (npath);
-        goto done;
+        goto error; /* shouldn't happen? */
     }
     _ustat2qid (&sb, &qid);
     if (!((ret = np_create_rsymlink (&qid)))) {
         np_uerror (ENOMEM);
-        msg ("diod_mknod: out of memory");
-        goto done;
+        goto error;
     }
-done:
+    free (npath);
+    return ret;
+error:
+    errn (np_rerror (), "diod_mknod %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          name->len, name->str);
+error_quiet:
+    if (created && npath)
+        (void)unlink (npath);
     if (npath)
         free (npath);
-    return ret;
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
-/* Trename - rename a file, potentially to another directory (9P2000.L)
+/* Trename - rename a file, potentially to another directory
  */
 Npfcall*
 diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
@@ -854,40 +850,39 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
     Fid *f = fid->aux;
     Fid *d = dfid->aux;
     Npfcall *ret = NULL;
-    char *newpath = NULL;
-    int newpathlen;
+    char *npath = NULL;
+    int renamed = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
+    if (!(npath = _mkpath(d->path, name)))
+        goto error;
+    if (rename (f->path, npath) < 0) {
+        np_uerror (errno);
+        goto error_quiet;
+    }
+    renamed = 1;
     if (!(ret = np_create_rrename ())) {
         np_uerror (ENOMEM);
-        msg ("diod_rename: out of memory");
-        goto done;
-    }
-    newpathlen = name->len + strlen (d->path) + 2;
-    if (!(newpath = _malloc (newpathlen))) {
-        msg ("diod_rename: out of memory");
-        goto done;
-    }
-    snprintf (newpath, newpathlen, "%s/%s", d->path, name->str);
-    if (rename (f->path, newpath) < 0) {
-        np_uerror (errno);
-        goto done;
+        goto error;
     }
     free (f->path);
-    f->path = newpath;
-done:
-    if (np_rerror ()) {
-        if (newpath)
-            free (newpath);
-        if (ret) {
-            free (ret);
-            ret = NULL;
-        }
-    }
+    f->path = npath;
     return ret;
+error:
+    errn (np_rerror (), "diod_rename %s@%s:%s to %s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          d->path, name->len, name->str);
+error_quiet:
+    if (renamed && npath)
+        (void)rename (npath, f->path);
+    if (npath)
+        free (npath);
+    if (ret)
+        free (f);
+    return NULL;
 }
 
 Npfcall*
@@ -900,16 +895,21 @@ diod_readlink(Npfid *fid)
 
     if ((n = readlink (f->path, target, sizeof(target))) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
     target[n] = '\0';
     if (!(ret = np_create_rreadlink(target))) {
         np_uerror (ENOMEM);
-        msg ("diod_readlink: out of memory");
-        goto done;
+        goto error;
     }
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_readlink %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
@@ -918,13 +918,11 @@ diod_getattr(Npfid *fid, u64 request_mask)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     Npqid qid;
-    //u64 result_mask = P9_GETATTR_BASIC;
-    u64 valid = request_mask;
 
     if (_fidstat (f) < 0)
-        goto done;
+        goto error_quiet;
     _ustat2qid (&f->stat, &qid);
-    if (!(ret = np_create_rgetattr(valid, &qid,
+    if (!(ret = np_create_rgetattr(request_mask, &qid,
                                     f->stat.st_mode,
                                     f->stat.st_uid,
                                     f->stat.st_gid,
@@ -941,11 +939,16 @@ diod_getattr(Npfid *fid, u64 request_mask)
                                     f->stat.st_ctim.tv_nsec,
                                     0, 0, 0, 0))) {
         np_uerror (ENOMEM);
-        msg ("diod_getattr: out of memory");
-        goto done;
+        goto error;
     }
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_getattr %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
@@ -959,17 +962,17 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
 
     if ((valid & P9_SETATTR_MODE) || (valid & P9_SETATTR_SIZE)) {
         if (_fidstat(f) < 0)
-            goto done;
+            goto error_quiet;
         fidstat_updated = 1;
         if (S_ISLNK(f->stat.st_mode)) {
             msg ("diod_setattr: unhandled mode/size update on symlink");
             np_uerror(EINVAL);
-            goto done;
+            goto error;
         }
     }
 
@@ -977,7 +980,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     if ((valid & P9_SETATTR_MODE)) {
         if (chmod (f->path, mode) < 0) {
             np_uerror(errno);
-            goto done;
+            goto error_quiet;
         }
         ctime_updated = 1;
     }
@@ -987,16 +990,16 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         if (lchown (f->path, (valid & P9_SETATTR_UID) ? uid : -1,
                              (valid & P9_SETATTR_GID) ? gid : -1) < 0) {
             np_uerror(errno);
-            goto done;
+            goto error_quiet;
         }
         ctime_updated = 1;
     }
 
-    /* truncate (N.B. dereferences symlinks */
+    /* truncate (N.B. dereferences symlinks) */
     if ((valid & P9_SETATTR_SIZE)) {
         if (truncate (f->path, size) < 0) {
             np_uerror(errno);
-            goto done;
+            goto error_quiet;
         }
         ctime_updated = 1;
     }
@@ -1030,7 +1033,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 
         if (utimensat(-1, f->path, ts, AT_SYMLINK_NOFOLLOW) < 0) {
             np_uerror(errno);
-            goto done;
+            goto error_quiet;
         }
         ctime_updated = 1;
 #else /* HAVE_UTIMENSAT */
@@ -1042,11 +1045,11 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             tvp = NULL; /* set both to now */
         } else {
             if (!fidstat_updated && _fidstat(f) < 0)
-                goto done;
+                goto error_quiet;
             fidstat_updated = 1;
             if (gettimeofday (&now, NULL) < 0) {
                 np_uerror (errno);
-                goto done;
+                goto error_quiet;
             }
             if (!(valid & P9_SETATTR_ATIME)) {
                 tv[0].tv_sec = f->stat.st_atim.tv_sec;
@@ -1073,7 +1076,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         }
         if (utimes (f->path, tvp) < 0) {
             np_uerror(errno);
-            goto done;
+            goto error_quiet;
         }
         ctime_updated = 1;
 #endif
@@ -1081,16 +1084,21 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     if ((valid & P9_SETATTR_CTIME) && !ctime_updated) {
         if (lchown (f->path, -1, -1) < 0) {
             np_uerror (errno);
-            goto done;
+            goto error_quiet;
         }
     }
     if (!(ret = np_create_rsetattr())) {
         np_uerror (ENOMEM);
-        msg ("diod_setattr: out of memory");
-        goto done;
+        goto error;
     }
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_setattr %s@%s:%s (valid=0x%x)",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path, valid);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 static u32
@@ -1112,7 +1120,7 @@ _copy_dirent_linux (Fid *f, u8 *buf, u32 buflen)
         _dirent2qid (f->dirent, &qid);
     }
     ret = np_serialize_p9dirent(&qid, f->dirent->d_off, f->dirent->d_type,
-                                 f->dirent->d_name, buf, buflen);
+                                      f->dirent->d_name, buf, buflen);
 done:
     return ret;
 }
@@ -1133,7 +1141,7 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
         seekdir (f->dir, offset);
     do {
         saved_dir_pos = telldir (f->dir);
-        if (!(f->dirent = readdir (f->dir)))
+        if (!(f->dirent = readdir (f->dir))) /* FIXME: use readdir_r */
             break;
         i = _copy_dirent_linux (f, buf + n, count - n);
         if (i == 0) {
@@ -1154,8 +1162,7 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 
     if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
-        msg ("diod_readdir: out of memory");
-        goto done;
+        goto error;
     }
     n = _read_dir_linux (f, ret->u.rreaddir.data, offset, count);
     if (np_rerror ()) {
@@ -1163,35 +1170,41 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
         ret = NULL;
     } else
         np_finalize_rreaddir (ret, n);
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_readdir %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
 diod_fsync (Npfid *fid)
 {
-    Npfcall *ret = NULL;
     Fid *f = fid->aux;
+    Npfcall *ret = NULL;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
-    }
-    if (f->fd == -1) { /* FIXME: should this be silently ignored? */
-        np_uerror (EBADF);
-        goto done;
+        goto error_quiet;
     }
     if (fsync(f->fd) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
     if (!((ret = np_create_rfsync ()))) {
         np_uerror (ENOMEM);
-        msg ("diod_fsync: out of memory");
-        goto done;
+        goto error;
     }
-done:
     return ret;
+error:
+    errn (np_rerror (), "diod_fsync %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 /* Locking note:
@@ -1203,25 +1216,20 @@ Npfcall*
 diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
            Npstr *client_id)
 {
-    Npfcall *ret = NULL;
     Fid *f = fid->aux;
-    char *cid = _p9strdup (client_id);
+    Npfcall *ret = NULL;
     u8 status = P9_LOCK_ERROR;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
-    }
-    if (!cid) {
-        np_uerror (ENOMEM);
-        goto done;
+        goto error_quiet;
     }
     if (flags & ~P9_LOCK_FLAGS_BLOCK) { /* only one valid flag for now */
         np_uerror (EINVAL);             /*  (which we ignore) */
-        goto done;
+        goto error;
     }
     if (_fidstat(f) < 0)
-        goto done;
+        goto error_quiet;
     switch (type) {
         case F_UNLCK:
             if (flock (f->fd, LOCK_UN) >= 0) {
@@ -1249,37 +1257,40 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
             break;
         default:
             np_uerror (EINVAL);
-            goto done;
+            goto error;
     }
     if (!((ret = np_create_rlock (status)))) {
         np_uerror (ENOMEM);
-        msg ("diod_lock: out of memory");
-        goto done;
+        goto error;
     }
-done:
-    if (cid)
-        free (cid);
     return ret;
+error:
+    errn (np_rerror (), "diod_lock %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
 diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
              Npstr *client_id)
 {
+    Fid *f = fid->aux;
     Npfcall *ret = NULL;
     char *cid = _p9strdup (client_id);
-    Fid *f = fid->aux;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
     if (!cid) {
         np_uerror (ENOMEM);
-        goto done;
+        goto error;
     }
     if (_fidstat(f) < 0)
-        goto done;
+        goto error_quiet;
     switch (type) {
         case F_RDLCK:
             switch (f->lock_type) {
@@ -1318,92 +1329,115 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
             break;
         default:
             np_uerror (EINVAL);
-            goto done;
+            goto error;
     }
     if (type != LOCK_UN) {
         /* FIXME: need to fake up start, length, proc_id, cid? */
     }
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
-        msg ("diod_getlock: out of memory");
-        goto done;
+        goto error;
     }
-done:
+    free (cid);
+    return ret;
+error:
+    errn (np_rerror (), "diod_getlock %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
+    if (ret)
+        free (ret);
     if (cid)
         free (cid);
-    return ret;
+    return NULL;
 }
 
 Npfcall*
 diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
 {
+    Fid *f = fid->aux;
     Npfcall *ret = NULL;
     Fid *df = dfid->aux;
-    Fid *f = fid->aux;
     char *npath = NULL;
+    int created = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    if (!(npath = _mkpath(df->path, name))) {
-        msg ("diod_link: out of memory");
-        goto done;
-    }
+    if (!(npath = _mkpath(df->path, name)))
+        goto error;
     if (link (f->path, npath) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
+    created = 1;
     if (!((ret = np_create_rlink ()))) {
         np_uerror (ENOMEM);
-        msg ("diod_link: out of memory");
-        goto done;
+        goto error;
     }
-done:
+    free (npath);
+    return ret;
+error:
+    errn (np_rerror (), "diod_link %s@%s:%s %s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          df->path, name->len, name->str);
+error_quiet:
+    if (created && npath)
+        (void)unlink (npath);
     if (npath)
         free (npath);
-    return ret;
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 Npfcall*
-diod_mkdir (Npfid *dfid, Npstr *name, u32 mode, u32 gid)
+diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
 {
+    Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    Fid *df = dfid->aux;
     char *npath = NULL;
     Npqid qid;
     struct stat sb;
     mode_t saved_umask;
+    int created = 0;
 
-    if ((df->xflags & XFLAGS_RO)) {
+    if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
-        goto done;
+        goto error_quiet;
     }
-    if (!(npath = _mkpath(df->path, name))) {
-        msg ("diod_mkdir: out of memory");
-        goto done;
-    }
+    if (!(npath = _mkpath(f->path, name)))
+        goto error;
     saved_umask = umask(0);
     if (mkdir (npath, mode) < 0) {
         np_uerror (errno);
-        goto done;
+        goto error_quiet;
     }
+    created = 1;
     umask(saved_umask);
     if (lstat (npath, &sb) < 0) {
         np_uerror (errno);
-        rmdir (npath);
-        goto done;
+        goto error; /* shouldn't happen? */
     }
     _ustat2qid (&sb, &qid);
     if (!((ret = np_create_rmkdir (&qid)))) {
         np_uerror (ENOMEM);
-        msg ("diod_mkdir: out of memory");
-        goto done;
+        goto error;
     }
-done:
+    free (npath);
+    return ret;
+error:
+    errn (np_rerror (), "diod_mkdir %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
+          name->len, name->str);
+error_quiet:
+    if (created && npath)
+        (void)rmdir(npath);
     if (npath)
         free (npath);
-    return ret;
+    if (ret)
+        free (ret);
+    return NULL;
 }
 
 /*
