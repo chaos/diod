@@ -65,8 +65,10 @@ np_fidpool_destroy(Npfidpool *pool)
 		while (f != NULL) {
 			ff = f->next;
 			srv = f->conn->srv;
-			np_logmsg (srv, "fid %d not clunked (from %s)", f->fid,
-				   np_conn_get_client_id(f->conn));
+			np_logmsg (srv, "%s@%s:%s fid %d not clunked",
+			           f->user ? f->user->uname : "<unknown>",
+				   np_conn_get_client_id(f->conn),
+				   f->aname ? f->aname : "<NULL>", f->fid);
 			if ((f->type & P9_QTAUTH)) {
 				if (srv->auth && srv->auth->clunk)
 					(*srv->auth->clunk)(f);
@@ -75,7 +77,11 @@ np_fidpool_destroy(Npfidpool *pool)
 			} else {
 				if (srv->fiddestroy)
 					(*srv->fiddestroy)(f);
-			}	
+			}
+			if (f->aname)
+				free(f->aname);
+			if (f->user)
+				np_user_decref(f->user);
 			free(f);
 			f = ff;
 		}
@@ -162,7 +168,7 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 			pthread_mutex_unlock(&fp->lock);
 			return NULL;
 		}
-
+		f->aname = NULL;
 		pthread_mutex_init(&f->lock, NULL);
 		f->fid = fid;
 		f->conn = conn;
@@ -230,7 +236,8 @@ np_fid_destroy(Npfid *fid)
 
 	if (fid->user)
 		np_user_decref(fid->user);
-
+	if (fid->aname)
+		free (fid->aname);
 	free(fid);
 
 	return;

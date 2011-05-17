@@ -110,6 +110,7 @@ struct Npfid {
 	int		refcount;
 	u8		type;
 	Npuser*		user;
+	char*		aname;
 	void*		aux;
 
 	Npfid*		next;	/* list of fids within a bucket */
@@ -148,7 +149,6 @@ struct Npconn {
 
 	u64		reqs_in;
 	u64		reqs_out;
-	char		aname[128]; /* last in wins */
 	char		client_id[128];
 	u32		authuser;
 	u32		msize;
@@ -315,8 +315,6 @@ void np_respond(Npreq *, Npfcall *);
 char *np_conn_get_client_id(Npconn *);
 int np_conn_get_authuser(Npconn *, u32 *);
 void np_conn_set_authuser(Npconn *, u32);
-void np_conn_set_aname(Npconn *, char *);
-char *np_conn_get_aname(Npconn *);
 
 /* fidpool.c */
 Npfidpool *np_fidpool_create(void);
@@ -448,7 +446,7 @@ Nptrans *np_fdtrans_create(int, int);
 unsigned long np_rerror(void);
 void np_uerror(unsigned long ecode);
 
-/* syn.c */
+/* ctl.c */
 Npfcall *np_ctl_attach(Npfid *fid, Npfid *afid, char *aname);
 int np_ctl_clone(Npfid *fid, Npfid *newfid);
 int np_ctl_walk(Npfid *newfid, Npstr *wname, Npqid *wqid);

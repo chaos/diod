@@ -51,6 +51,7 @@ static void *np_wthread_proc(void *a);
 static char *_get_version (void *a);
 static char *_get_connections (void *a);
 static char *_get_wthreads (void *a);
+static char *_get_requests (void *a);
 
 Npsrv*
 np_srv_create(int nwthread, int flags)
@@ -78,6 +79,8 @@ np_srv_create(int nwthread, int flags)
 	if (!np_ctl_addfile (srv->ctlroot, "connections",_get_connections, srv))
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "wthreads", _get_wthreads, srv))
+		goto error;
+	if (!np_ctl_addfile (srv->ctlroot, "requests", _get_requests, srv))
 		goto error;
 	if (np_usercache_create (srv) < 0)
 		goto error;
@@ -257,6 +260,121 @@ np_wthread_create(Npsrv *srv)
 	return 0;
 }
 
+/* Look up operation's fid and assign it to req->fid.
+ * This is done before the request is handed off to a worker, with
+ * the plan of using fid data in scheduling work.
+ * The fid refcount is incremented here, then decremented in np_respond ().
+ */
+static void
+np_preprocess_request(Npreq *req)
+{
+	Npfcall *tc = req->tcall;
+
+	switch (tc->type) {
+		case P9_TSTATFS:
+			req->fid = np_fid_find (req->conn, tc->u.tstatfs.fid);
+			break;
+		case P9_TLOPEN:
+			req->fid = np_fid_find (req->conn, tc->u.tlopen.fid);
+			break;
+		case P9_TLCREATE:
+			req->fid = np_fid_find (req->conn, tc->u.tlcreate.fid);
+			break;
+		case P9_TSYMLINK:
+			req->fid = np_fid_find (req->conn, tc->u.tsymlink.fid);
+			break;
+		case P9_TMKNOD:
+			req->fid = np_fid_find (req->conn, tc->u.tmknod.fid);
+			break;
+		case P9_TRENAME:
+			req->fid = np_fid_find (req->conn, tc->u.trename.fid);
+			break;
+		case P9_TREADLINK:
+			req->fid = np_fid_find (req->conn, tc->u.treadlink.fid);
+			break;
+		case P9_TGETATTR:
+			req->fid = np_fid_find (req->conn, tc->u.tgetattr.fid);
+			break;
+		case P9_TSETATTR:
+			req->fid = np_fid_find (req->conn, tc->u.tsetattr.fid);
+			break;
+		case P9_TXATTRWALK:
+			req->fid = np_fid_find (req->conn,
+						tc->u.txattrwalk.fid);
+			break;
+		case P9_TXATTRCREATE:
+			req->fid = np_fid_find (req->conn,
+						tc->u.txattrcreate.fid);
+			break;
+		case P9_TREADDIR:
+			req->fid = np_fid_find (req->conn, tc->u.treaddir.fid);
+			break;
+		case P9_TFSYNC:
+			req->fid = np_fid_find (req->conn, tc->u.tfsync.fid);
+			break;
+		case P9_TLOCK:
+			req->fid = np_fid_find (req->conn, tc->u.tlock.fid);
+			break;
+		case P9_TGETLOCK:
+			req->fid = np_fid_find (req->conn, tc->u.tgetlock.fid);
+			break;
+		case P9_TLINK:
+			req->fid = np_fid_find (req->conn, tc->u.tlink.dfid);
+			break;
+		case P9_TMKDIR:
+			req->fid = np_fid_find (req->conn, tc->u.tmkdir.fid);
+			break;
+		case P9_TVERSION:
+			break;
+		case P9_TAUTH:
+			if (np_fid_find (req->conn, tc->u.tauth.afid))
+				break;
+			req->fid = np_fid_create (req->conn, tc->u.tauth.afid,
+						  NULL);
+			if (!req->fid)
+				break;
+			req->fid->aname = np_strdup (&tc->u.tauth.aname);
+			if (!req->fid->aname) {
+				np_fid_destroy(req->fid);
+				req->fid = NULL;
+			}
+			break;
+		case P9_TATTACH:
+			if (np_fid_find (req->conn, tc->u.tattach.fid))
+				break;
+			req->fid = np_fid_create (req->conn, tc->u.tattach.fid,
+						  NULL);
+			if (!req->fid)
+				break;
+			req->fid->aname = np_strdup (&tc->u.tattach.aname);
+			if (!req->fid->aname) {
+				np_fid_destroy(req->fid);
+				req->fid = NULL;
+			}
+			break;
+		case P9_TFLUSH:
+			break;
+		case P9_TWALK:
+			req->fid = np_fid_find (req->conn, tc->u.twalk.fid);
+			break;
+		case P9_TREAD:
+			req->fid = np_fid_find (req->conn, tc->u.tread.fid);
+			break;
+		case P9_TWRITE:
+			req->fid = np_fid_find (req->conn, tc->u.twrite.fid);
+			break;
+		case P9_TCLUNK:
+			req->fid = np_fid_find (req->conn, tc->u.tclunk.fid);
+			break;
+		case P9_TREMOVE:
+			req->fid = np_fid_find (req->conn, tc->u.tremove.fid);
+			break;
+		default:
+			break;
+	}
+	if (req->fid)
+		np_fid_incref (req->fid);
+}
 
 static Npfcall*
 np_process_request(Npreq *req)
@@ -475,6 +593,8 @@ Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {
 	req->wthread = NULL;
 	req->fid = NULL;
 
+	np_preprocess_request (req); /* assigns req->fid */
+
 	return req;
 }
 
@@ -574,11 +694,10 @@ _get_connections (void *a)
 	}
 	for (cc = srv->conns; cc != NULL; cc = cc->next) {
 		
-		if (aspf (&s, &len, "%s:%s %d %d/%d\n",
+		if (aspf (&s, &len, "%s %d %d %d\n",
 				np_conn_get_client_id(cc),
-				np_conn_get_aname(cc),
-				np_fidpool_count (cc->fidpool),
-				cc->reqs_in, cc->reqs_out) < 0) {
+				cc->reqs_in, cc->reqs_out,
+				np_fidpool_count (cc->fidpool)) < 0) {
 			np_uerror (ENOMEM);
 			goto error_unlock;
 		}
@@ -642,6 +761,55 @@ _get_wthreads (void *a)
 			goto error_unlock;
 		}
 	}
+	if ((err = pthread_mutex_unlock(&srv->lock))) {
+		np_uerror (err);
+		goto error;
+	}
+	return s;
+error_unlock:
+	(void)pthread_mutex_unlock(&srv->lock);
+error:
+	if (s)
+		free(s);
+	return NULL;
+}
+
+static char *
+_get_one_request (char **sp, int *lp, Npreq *req)
+{
+	char *uname = req->fid ? req->fid->user->uname : "-";
+	char *aname = req->fid && req->fid->aname ? req->fid->aname : "-";
+	char reqstr[40];
+
+	np_snprintfcall (reqstr, sizeof (reqstr), req->tcall);
+	if (aspf (sp, lp, "%-10.10s %-10.10s %-10.10s %s...\n",
+		 			np_conn_get_client_id (req->conn),
+					aname, uname, reqstr) < 0) {
+		np_uerror (ENOMEM);
+		return NULL;
+	}
+	return *sp;
+}
+
+static char *
+_get_requests(void *a)
+{
+	Npsrv *srv = (Npsrv *)a;
+	int err;
+	char *s = NULL;
+	int len = 0;
+	Npreq *req;
+
+	if ((err = pthread_mutex_lock(&srv->lock))) {
+		np_uerror (err);
+		goto error;
+	}
+	for (req = srv->workreqs; req != NULL; req = req->next)
+		if (!(_get_one_request (&s, &len, req)))
+			goto error_unlock;
+	for (req = srv->reqs_first; req != NULL; req = req->next)
+		if (!(_get_one_request (&s, &len, req)))
+			goto error_unlock;
 	if ((err = pthread_mutex_unlock(&srv->lock))) {
 		np_uerror (err);
 		goto error;

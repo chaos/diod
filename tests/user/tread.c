@@ -39,14 +39,16 @@ _copy_from9 (Npcfid *fid, int fd)
     while ((n = npc_read (fid, buf, sizeof (buf))) > 0) {
         done = 0;
         do {
-            if ((m = write (fd, buf + done, n - done)) < 0)
-                err_exit ("write");
+            if ((m = write (fd, buf + done, n - done)) < 0) {
+                err ("write");
+                return;
+            }
             done += m;
         } while (done < n);
     
     }
     if (n < 0)
-        err_exit ("npc_read");
+        err ("npc_read");
 }            
 
 int
@@ -69,13 +71,12 @@ main (int argc, char *argv[])
 
     if (!(root = npc_mount (0, 65536+24, aname, diod_auth)))
         errn_exit (np_rerror (), "npc_mount");
-    if (!(fid = npc_open_bypath (root, infile, O_RDONLY)))
-        errn_exit (np_rerror (), "npc_open_bypath");
-
-    _copy_from9 (fid, fd);
-
-    if (npc_clunk (fid) < 0)
-        errn_exit (np_rerror (), "npc_clunk");
+    if ((fid = npc_open_bypath (root, infile, O_RDONLY))) {
+        _copy_from9 (fid, fd);
+        if (npc_clunk (fid) < 0)
+            errn (np_rerror (), "npc_clunk");
+    } else
+        errn (np_rerror (), "npc_open_bypath");
     npc_umount (root);
 
     if (close (fd) < 0)

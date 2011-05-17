@@ -84,7 +84,6 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	}
 	snprintf(conn->client_id, sizeof(conn->client_id), "%s", client_id);
 	conn->authuser = P9_NONUNAME;
-	conn->aname[0] = '\0';
 
 	conn->trans = trans;
 	conn->aux = NULL;
@@ -445,16 +444,4 @@ np_conn_get_authuser(Npconn *conn, u32 *uidp)
 	}
 
 	return ret;
-}
-
-void
-np_conn_set_aname(Npconn *conn, char *aname)
-{
-	snprintf (conn->aname, sizeof (conn->aname), "%s", aname ? aname : "");
-}
-
-char *
-np_conn_get_aname(Npconn *conn)
-{
-	return conn->aname;
 }
