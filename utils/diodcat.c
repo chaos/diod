@@ -156,8 +156,8 @@ static int
 cat9 (Npcfid *root, char *path)
 {
     Npcfid *fid = NULL;
+    char *buf = NULL;
     int n, m, done;
-    char *buf;
     int ret = -1;
 
     if (!(fid = npc_open_bypath (root, path, O_RDONLY))) {
