@@ -209,7 +209,7 @@ catfiles (int fd, uid_t uid, int msize, char *aname, char **av, int ac)
         goto done;
     }
     if (!(root = npc_attach (fs, afid, aname, uid))) {
-        errn (np_rerror (), "error attaching to %s", aname);
+        errn (np_rerror (), "error attaching to aname='%s'", aname ? aname : "");
         goto done;
     }
     for (i = 0; i < ac; i++) {
