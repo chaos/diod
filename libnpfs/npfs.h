@@ -32,6 +32,7 @@ typedef struct Nptrans Nptrans;
 typedef struct Npconn Npconn;
 typedef struct Npreq Npreq;
 typedef struct Npwthread Npwthread;
+typedef struct Nptpool Nptpool;
 typedef struct Npauth Npauth;
 typedef struct Npsrv Npsrv;
 typedef struct Npuser Npuser;
@@ -145,7 +146,6 @@ struct Npconn {
 
 	int		resetting;
 	pthread_cond_t	resetcond;
-	pthread_cond_t	resetdonecond;
 
 	u64		reqs_in;
 	u64		reqs_out;
@@ -180,7 +180,7 @@ struct Npreq {
 };
 
 struct Npwthread {
-	Npsrv*		srv;
+	Nptpool*	tpool;
 	int		shutdown;
 	enum { WT_START, WT_IDLE, WT_WORK, WT_REPLY, WT_SHUT } state;
 	pthread_t	thread;
@@ -189,6 +189,17 @@ struct Npwthread {
 	u32		fsgid;
 	u64		reqs_total;
 	Npwthread	*next;
+};
+
+struct Nptpool {
+	Npsrv*		srv;
+	int		nwthread;
+	Npwthread*	wthreads;
+	Npreq*		reqs_first;
+	Npreq*		reqs_last;
+	Npreq*		workreqs;
+	pthread_cond_t	reqcond; /* use with srv->lock */
+	Nptpool		*next;
 };
 
 struct Npauth {
@@ -271,16 +282,12 @@ struct Npsrv {
 
 	/* implementation specific */
 	pthread_mutex_t	lock;
-	pthread_cond_t	reqcond;
 	pthread_cond_t	conncountcond;
 	int		conncount;
 	int		connhistory;
 	Npconn*		conns;
+	Nptpool*	tpool;
 	int		nwthread;
-	Npwthread*	wthreads;
-	Npreq*		reqs_first;
-	Npreq*		reqs_last;
-	Npreq*		workreqs;
 };
 
 struct Npuser {
@@ -311,7 +318,6 @@ Npconn *np_conn_create(Npsrv *, Nptrans *, char *);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
 void np_conn_respond(Npreq *req);
-void np_respond(Npreq *, Npfcall *);
 char *np_conn_get_client_id(Npconn *);
 int np_conn_get_authuser(Npconn *, u32 *);
 void np_conn_set_authuser(Npconn *, u32);

@@ -68,7 +68,6 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	pthread_mutex_init(&conn->lock, NULL);
 	pthread_mutex_init(&conn->wlock, NULL);
 	pthread_cond_init(&conn->resetcond, NULL);
-	pthread_cond_init(&conn->resetdonecond, NULL);
 
 	conn->refcount = 0;
 	conn->resetting = 0;
@@ -128,7 +127,6 @@ np_conn_decref(Npconn *conn)
 	pthread_mutex_unlock(&conn->lock);
 	pthread_mutex_destroy(&conn->lock);
 	pthread_cond_destroy(&conn->resetcond);
-	pthread_cond_destroy(&conn->resetdonecond);
 	free(conn);
 }
 
@@ -159,15 +157,7 @@ np_conn_read_proc(void *a)
 	fc = _alloc_npfcall(conn->msize);
 	n = 0;
 	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n)) > 0) {
-		pthread_mutex_lock(&conn->lock);
-		if (conn->resetting) {
-			pthread_cond_wait(&conn->resetdonecond, &conn->lock);
-			n = 0;	/* discard all input */
-			i = 0;
-		}
-		pthread_mutex_unlock(&conn->lock);
 		n += i;
-
 again:
 		size = np_peek_size (fc->pkt, n);
 		if (size == 0 || n < size)
@@ -203,6 +193,7 @@ again:
 		n -= size;
 
 		/* Encapsulate fc in a request and hand to srv worker threads.
+		 * In np_req_alloc, req->fid is looked up/initialized.
 		 */
 		req = np_req_alloc(conn, fc);
 		if (!req) {
@@ -212,11 +203,9 @@ again:
 			break;
 		}
 		pthread_mutex_lock(&srv->lock);
-		if (!conn->resetting) {
-			conn->reqs_in++;
-			np_srv_add_req(srv, req);
-		} else 
-			np_req_unref(req);
+		conn->reqs_in++;
+		/* FIXME: select appropriate tpool */
+		np_srv_add_req(srv->tpool, req);
 		pthread_mutex_unlock(&srv->lock);
 		fc = fc1;
 		if (n > 0)
@@ -244,15 +233,131 @@ again:
 	return NULL;
 }
 
+static Npreq *
+_get_waiting_reqs (Npconn *conn)
+{
+	Npsrv *srv = conn->srv;
+	Npreq *req, *req1, *preqs;
+	Nptpool *tp;
+
+	/* assert: srv->lock held */
+	preqs = NULL;
+	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
+		req = tp->reqs_first;
+		while (req != NULL) {
+			req1 = req->next;
+			if (req->conn == conn) {
+				np_srv_remove_req(tp, req);
+				req->next = preqs;
+				preqs = req;
+			}
+			req = req1;
+		}
+	}
+	return preqs;
+}
+
+static void
+_flush_waiting_reqs (Npreq *reqs)
+{
+	Npreq *req = reqs;
+	Npreq *req1;
+
+	/* assert: srv->lock NOT held */
+	while (req != NULL) {
+		req1 = req->next;
+		np_conn_respond(req);
+		np_req_unref(req);
+		req = req1;
+	}
+}
+
+static int
+_count_working_reqs (Npconn *conn, int boolonly)
+{
+	Npsrv *srv = conn->srv;
+	Nptpool *tp;
+	Npreq *req;
+	int n;
+
+	/* assert: srv->lock held */
+	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
+		for (req = tp->workreqs; req != NULL; req = req->next) {
+			if (req->conn != conn)
+				continue;
+			if (req->tcall->type != P9_TVERSION)
+				n++;
+			if (boolonly && n > 0)
+				break;		
+		}
+		if (boolonly && n > 0)
+			break;
+	}
+	return n;
+}
+
+static int
+_get_working_reqs (Npconn *conn, Npreq ***rp, int *lp)
+{
+	Npsrv *srv = conn->srv;
+	Npreq *req, **reqs = NULL;
+	Nptpool *tp;
+	int n;
+
+	/* assert: srv->lock held */
+	n = _count_working_reqs (conn, 0);
+	if ((reqs = malloc(n * sizeof(Npreq *))))
+		goto error;
+	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
+		for (req = tp->workreqs; req != NULL; req = req->next) {
+			if (req->conn != conn)
+				continue;
+			if (req->tcall->type != P9_TVERSION)
+				reqs[n++] = np_req_ref (req);
+		}
+	}
+	*lp = n;
+	*rp = reqs;
+	return 0;
+error:
+	if (reqs)
+		free (reqs);
+	return -1;
+}
+
+static void
+_flush_working_reqs (Npreq **reqs, int len)
+{
+	int i;
+
+	/* assert: srv->lock NOT held */
+	for(i = 0; i < len; i++) {
+		Npreq *req = reqs[i];
+		if (req->conn->srv->flush)
+			(*req->conn->srv->flush)(req);
+	}
+}
+
+static void
+_free_working_reqs (Npreq **reqs, int len)
+{
+	int i;
+
+	/* assert: srv->lock NOT held */
+	for(i = 0; i < len; i++) 
+		np_req_unref(reqs[i]);
+	free(reqs);
+}
+
 /* Clear all state associated with conn out of the srv.
  * No more I/O is possible; we have disassociated the trans from the conn.
  */
 static void
 np_conn_reset(Npconn *conn)
 {
-	int i, n;
+	int reqslen;
 	Npsrv *srv;
-	Npreq *req, *req1, *preqs, **reqs;
+	Npreq *preqs, **reqs;
 
 	pthread_mutex_lock(&conn->lock);
 	conn->resetting = 1;
@@ -260,96 +365,33 @@ np_conn_reset(Npconn *conn)
 	
 	pthread_mutex_lock(&conn->srv->lock);
 	srv = conn->srv;
-	// first flush all outstanding requests
-	preqs = NULL;
-	req = srv->reqs_first;
-	while (req != NULL) {
-		req1 = req->next;
-		if (req->conn == conn) {
-			np_srv_remove_req(srv, req);
-			req->next = preqs;
-			preqs = req;
-		}
-		req = req1;
-	}
-
-	// then flush all working requests
-	n = 0;
-	req = conn->srv->workreqs;
-	while (req != NULL) {
-		if (req->conn == conn && req->tcall->type != P9_TVERSION)
-			n++;
-
-		req = req->next;
-	}
-
-	reqs = malloc(n * sizeof(Npreq *));
-	if (reqs) {
-		n = 0;
-		req = conn->srv->workreqs;
-		while (req != NULL) {
-			if (req->conn == conn && req->tcall->type != P9_TVERSION)
-				reqs[n++] = np_req_ref(req);
-			req = req->next;
-		}
+	preqs = _get_waiting_reqs (conn);
+	if (_get_working_reqs (conn, &reqs, &reqslen) < 0) {
+		pthread_mutex_unlock(&conn->srv->lock);
+		goto error;
 	}
 	pthread_mutex_unlock(&conn->srv->lock);
-	if (!reqs) /* out of memory */
-		return;
 
-	req = preqs;
-	while (req != NULL) {
-		req1 = req->next;
-		np_conn_respond(req);
-		np_req_unref(req);
-		req = req1;
-	}
+	_flush_waiting_reqs (preqs);
+	_flush_working_reqs (reqs, reqslen);
 
-	for(i = 0; i < n; i++) {
-		req = reqs[i];
-		if (req->conn->srv->flush)
-			(*req->conn->srv->flush)(req);
-	}
-
-	/* wait until all working requests finish */
-/*
-	pthread_mutex_lock(&conn->lock);
-	while (1) {
-		for(i = 0; i < n; i++) 
-			if (!reqs[i]->responded)
-				break;
-
-		if (i >= n)
-			break;
-
-		pthread_cond_wait(&conn->resetcond, &conn->lock);
-	}
-*/
 	pthread_mutex_lock(&srv->lock);
-	while (1) {
-		for(req = srv->workreqs; req != NULL; req = req->next)
-			if (req->conn==conn && req->tcall->type != P9_TVERSION)
-				break;
-
-		if (req == NULL)
-			break;
-
+	while (_count_working_reqs (conn, 1) > 0)
 		pthread_cond_wait(&conn->resetcond, &srv->lock);
-	}
 	pthread_mutex_unlock(&srv->lock);
 
+	pthread_mutex_lock(&conn->lock);
 	if (conn->fidpool) {
 		np_fidpool_destroy(conn->fidpool);
 		conn->fidpool = NULL;
 	}
-
 	conn->resetting = 0;
 	pthread_mutex_unlock(&conn->lock);
 
-	/* free the working requests */
-	for(i = 0; i < n; i++) 
-		np_req_unref(reqs[i]);
-	free(reqs);
+	_free_working_reqs (reqs, reqslen);
+	return;
+error:
+	return;
 }
 
 /* Called by srv workers to transmit req->rcall->pkt.
@@ -368,8 +410,6 @@ np_conn_respond(Npreq *req)
 
 	pthread_mutex_lock(&conn->lock);
 	send = conn->trans && !conn->resetting;
-	if (send)
-		conn->reqs_out++;
 	pthread_mutex_unlock(&conn->lock);
 
 	if (send) {
@@ -377,6 +417,7 @@ np_conn_respond(Npreq *req)
 			_debug_trace (srv, rc);
 		pthread_mutex_lock(&conn->wlock);
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);
+		conn->reqs_out++;
 		pthread_mutex_unlock(&conn->wlock);
 		if (n <= 0) { /* write error */
 			pthread_mutex_lock(&conn->lock);
