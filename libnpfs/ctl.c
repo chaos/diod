@@ -52,19 +52,11 @@ _next_inum (void)
 {
 	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 	static int i = 1;
-	int ret = -1, err;
+	int ret;
 
-	if ((err = pthread_mutex_lock (&lock))) {
-		np_uerror (err);
-		goto done;
-	}
+	xpthread_mutex_lock (&lock);
 	ret = i++;
-	if ((err = pthread_mutex_unlock (&lock))) {
-		np_uerror (err);
-		ret = -1;
-		goto done;
-	}
-done:
+	xpthread_mutex_unlock (&lock);
 	return ret;
 }
 

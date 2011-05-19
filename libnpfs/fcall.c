@@ -249,43 +249,43 @@ np_flush(Npreq *req, Npfcall *tc)
 	Npfcall *ret = NULL;
 	Nptpool *tp;
 
-	pthread_mutex_lock(&conn->srv->lock);
+	xpthread_mutex_lock(&conn->srv->lock);
 	// check pending requests
 	for (tp = conn->srv->tpool; tp != NULL; tp = tp->next) {
-		pthread_mutex_lock(&tp->lock);
+		xpthread_mutex_lock(&tp->lock);
 		for(creq = tp->reqs_first; creq != NULL; creq = creq->next) {
 			if (creq->conn==conn && creq->tag==oldtag) {
-				pthread_mutex_lock(&tp->lock);
+				xpthread_mutex_lock(&tp->lock);
 				np_srv_remove_req(tp, creq);
-				pthread_mutex_unlock(&tp->lock);
-				pthread_mutex_lock(&creq->lock);
+				xpthread_mutex_unlock(&tp->lock);
+				xpthread_mutex_lock(&creq->lock);
 				np_conn_respond(creq); /* doesn't send anything */
-				pthread_mutex_unlock(&creq->lock);
+				xpthread_mutex_unlock(&creq->lock);
 				np_req_unref(creq);
 				ret = np_create_rflush();
 				creq = NULL;
 				goto done;
 			}
 		}
-		pthread_mutex_unlock(&tp->lock);
+		xpthread_mutex_unlock(&tp->lock);
 	}
 
 	// check working requests
 	for (tp = conn->srv->tpool; tp != NULL; tp = tp->next) {
-		pthread_mutex_lock(&tp->lock);
+		xpthread_mutex_lock(&tp->lock);
 		creq = tp->workreqs;
 		while (creq != NULL) {
 			if (creq->conn==conn && creq->tag==oldtag) {
 				np_req_ref(creq);
-				pthread_mutex_lock(&creq->lock);
+				xpthread_mutex_lock(&creq->lock);
 				req->flushreq = creq->flushreq;
 				creq->flushreq = req;
-				pthread_mutex_unlock(&creq->lock);
+				xpthread_mutex_unlock(&creq->lock);
 				goto done;
 			}
 			creq = creq->next;
 		}
-		pthread_mutex_unlock(&tp->lock);
+		xpthread_mutex_unlock(&tp->lock);
 	}
 
 	// if not found, return P9_RFLUSH
@@ -293,7 +293,7 @@ np_flush(Npreq *req, Npfcall *tc)
 		ret = np_create_rflush();
 
 done:
-	pthread_mutex_unlock(&conn->srv->lock);
+	xpthread_mutex_unlock(&conn->srv->lock);
 
 	// if working request found, try to flush it
 	if (creq && req->conn->srv->flush) {

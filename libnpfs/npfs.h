@@ -215,10 +215,12 @@ struct Npauth {
 };	
 
 enum {
-	/* lower u16 reserved for debug levels */
+	/* debug */
 	SRV_FLAGS_DEBUG_9PTRACE	=0x00000001,
 	SRV_FLAGS_DEBUG_USER    =0x00000002,
 	SRV_FLAGS_DEBUG_FIDPOOL =0x00000004,
+
+	/* features */
 	SRV_FLAGS_SETFSID	=0x00010000,
 	SRV_FLAGS_AUTHCONN	=0x00020000,
 	SRV_FLAGS_NOUSERDB	=0x00040000,

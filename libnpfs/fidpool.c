@@ -100,12 +100,12 @@ np_fidpool_count(Npfidpool *pool)
 	Npfid *f;
 	int count = 0;
 
-	pthread_mutex_lock(&pool->lock);
+	xpthread_mutex_lock(&pool->lock);
 	for(i = 0; i < pool->size; i++) {
 		for (f = pool->htable[i]; f != NULL; f = f->next)
 			count++;
 	}
-	pthread_mutex_unlock(&pool->lock);
+	xpthread_mutex_unlock(&pool->lock);
 
 	return count;
 }
@@ -144,10 +144,10 @@ np_fid_find(Npconn *conn, u32 fid)
 	Npfid *ret;
 
 	fp = conn->fidpool;
-	pthread_mutex_lock(&fp->lock);
+	xpthread_mutex_lock(&fp->lock);
 	hash = fid % fp->size;
 	ret = np_fid_lookup(fp, fid, hash);
-	pthread_mutex_unlock(&fp->lock);
+	xpthread_mutex_unlock(&fp->lock);
 
 	return ret;
 }
@@ -160,7 +160,7 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 	Npfid **htable, *f;
 
 	fp = conn->fidpool;
-	pthread_mutex_lock(&fp->lock);
+	xpthread_mutex_lock(&fp->lock);
 	htable = fp->htable;
 	hash = fid % FID_HTABLE_SIZE;
 	f = np_fid_lookup(fp, fid, hash);
@@ -168,7 +168,7 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 		f = malloc(sizeof(*f));
 		if (!f) {
 			np_uerror (ENOMEM);
-			pthread_mutex_unlock(&fp->lock);
+			xpthread_mutex_unlock(&fp->lock);
 			return NULL;
 		}
 		f->aname = NULL;
@@ -191,7 +191,7 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 		htable[hash] = f;
 	}
 
-	pthread_mutex_unlock(&fp->lock);
+	xpthread_mutex_unlock(&fp->lock);
 
 	return f;
 }
@@ -212,7 +212,7 @@ np_fid_destroy(Npfid *fid)
 		return;
 
 //	printf("destroy conn %p fid %d\n", conn, fid->fid);
-	pthread_mutex_lock(&fp->lock);
+	xpthread_mutex_lock(&fp->lock);
 	hash = fid->fid % fp->size;
 	htable = fp->htable;
 	if (fid->prev)
@@ -223,7 +223,7 @@ np_fid_destroy(Npfid *fid)
 	if (fid->next)
 		fid->next->prev = fid->prev;
 
-	pthread_mutex_unlock(&fp->lock);
+	xpthread_mutex_unlock(&fp->lock);
 
 	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
 		np_logmsg (fid->conn->srv, "fid_destroy: fid %d", fid->fid);
@@ -255,12 +255,12 @@ np_fid_incref(Npfid *fid)
 	if (!fid)
 		return;
 
-	pthread_mutex_lock(&fid->lock);
+	xpthread_mutex_lock(&fid->lock);
 	fid->refcount++;
 	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
 		np_logmsg (fid->conn->srv, "fid_incref: fid %d ref=%d",
 			   fid->fid, fid->refcount);
-	pthread_mutex_unlock(&fid->lock);
+	xpthread_mutex_unlock(&fid->lock);
 }
 
 void
@@ -271,12 +271,12 @@ np_fid_decref(Npfid *fid)
 	if (!fid)
 		return;
 
-	pthread_mutex_lock(&fid->lock);
+	xpthread_mutex_lock(&fid->lock);
 	n = --fid->refcount;
 	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
 		np_logmsg (fid->conn->srv, "fid_decref: fid %d ref=%d",
 			   fid->fid, fid->refcount);
-	pthread_mutex_unlock(&fid->lock);
+	xpthread_mutex_unlock(&fid->lock);
 
 	if (!n)
 		np_fid_destroy(fid);
