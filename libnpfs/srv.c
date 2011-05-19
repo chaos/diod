@@ -56,6 +56,7 @@ static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 static char *_ctl_get_version (void *a);
 static char *_ctl_get_connections (void *a);
 static char *_ctl_get_wthreads (void *a);
+static char *_ctl_get_tpools (void *a);
 static char *_ctl_get_requests (void *a);
 
 Npsrv*
@@ -83,6 +84,8 @@ np_srv_create(int nwthread, int flags)
 			     _ctl_get_connections, srv))
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "wthreads", _ctl_get_wthreads, srv))
+		goto error;
+	if (!np_ctl_addfile (srv->ctlroot, "tpools", _ctl_get_tpools, srv))
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "requests", _ctl_get_requests, srv))
 		goto error;
@@ -236,13 +239,14 @@ np_wthread_create(Nptpool *tp)
 		np_uerror (ENOMEM);
 		goto error;
 	}
+	memset (wt, 0, sizeof (*wt));
 	wt->tpool = tp;
 	wt->shutdown = 0;
 	wt->state = WT_START;
 	wt->fsuid = geteuid ();
 	wt->sguid = P9_NONUNAME;
 	wt->fsgid = getegid ();
-	wt->reqs_total = 0;
+	pthread_mutex_init(&wt->stats.lock, NULL);
 	if ((err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt))) {
 		np_uerror (err);
 		goto error;
@@ -528,10 +532,13 @@ np_preprocess_request(Npreq *req)
 }
 
 static Npfcall*
-np_process_request(Npreq *req)
+np_process_request(Npreq *req, Npstats *stats)
 {
 	Npfcall *rc = NULL;
 	Npfcall *tc = req->tcall;
+	struct timeval t1, t2, t;
+	int n;
+	
 	int ecode;
 
 	np_uerror(0);
@@ -558,7 +565,16 @@ np_process_request(Npreq *req)
 			rc = np_readlink(req, tc);
 			break;
 		case P9_TGETATTR:
+			n = gettimeofday (&t1, NULL);
 			rc = np_getattr(req, tc);
+			if (n == 0)	
+				n = gettimeofday (&t2, NULL);
+			if (n == 0 && rc && !np_rerror ()) {
+				timersub (&t2, &t1, &t);
+				xpthread_mutex_lock (&stats->lock);
+				stats->gusec = t.tv_usec + 1000000ULL*t.tv_sec;
+				xpthread_mutex_unlock (&stats->lock);
+			}
 			break;
 		case P9_TSETATTR:
 			rc = np_setattr(req, tc);
@@ -603,10 +619,30 @@ np_process_request(Npreq *req)
 			rc = np_walk(req, tc);
 			break;
 		case P9_TREAD:
+			n = gettimeofday (&t1, NULL);
 			rc = np_read(req, tc);
+			if (n == 0)	
+				n = gettimeofday (&t2, NULL);
+			if (n == 0 && rc && !np_rerror ()) {
+				timersub (&t2, &t1, &t);
+				xpthread_mutex_lock (&stats->lock);
+				stats->rusec = t.tv_usec + 1000000ULL*t.tv_sec;
+				stats->rbytes += rc->u.rread.count;
+				xpthread_mutex_unlock (&stats->lock);
+			}
 			break;
 		case P9_TWRITE:
+			n = gettimeofday (&t1, NULL);
 			rc = np_write(req, tc);
+			if (n == 0)	
+				n = gettimeofday (&t2, NULL);
+			if (n == 0 && rc && !np_rerror ()) {
+				timersub (&t2, &t1, &t);
+				xpthread_mutex_lock (&stats->lock);
+				stats->wusec = t.tv_usec + 1000000ULL*t.tv_sec;
+				stats->wbytes += rc->u.rwrite.count;
+				xpthread_mutex_unlock (&stats->lock);
+			}
 			break;
 		case P9_TCLUNK:
 			rc = np_clunk(req, tc);
@@ -625,6 +661,9 @@ np_process_request(Npreq *req)
 			free(rc);
 		rc = np_create_rlerror(ecode);
 	}
+	xpthread_mutex_lock (&stats->lock);
+	stats->nreq++;
+	xpthread_mutex_unlock (&stats->lock);
 
 	return rc;
 }
@@ -652,12 +691,11 @@ np_wthread_proc(void *a)
 
 		req->wthread = wt;
 		wt->state = WT_WORK;
-		rc = np_process_request(req);
+		rc = np_process_request(req, &wt->stats);
 		if (rc) {
 			wt->state = WT_REPLY;
 			np_respond(tp, req, rc);
 		}
-		wt->reqs_total++;
 		xpthread_mutex_lock(&tp->lock);
 	}
 	xpthread_mutex_unlock (&tp->lock);
@@ -895,13 +933,67 @@ _ctl_get_wthreads (void *a)
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
 		xpthread_mutex_lock(&tp->lock);
 		for (i = 0, wt = tp->wthreads; wt != NULL; wt = wt->next) {
-			if (aspf (&s, &len, "%s[%d]: %s (%d:%d) %"PRIu64"\n",
+			xpthread_mutex_lock(&wt->stats.lock);
+			if (aspf (&s, &len, "%s[%d] %s (%d:%d) "
+					"%"PRIu64" %"PRIu64" %"PRIu64" "
+					"%"PRIu64" %"PRIu64" %"PRIu64"\n",
 					tp->name, i++, _wtstatestr (wt),
 					wt->fsuid, wt->fsgid,
-					wt->reqs_total) < 0) {
+					wt->stats.nreq, wt->stats.rbytes,
+					wt->stats.wbytes, wt->stats.rusec,
+					wt->stats.wusec, wt->stats.gusec) < 0) {
 				np_uerror (ENOMEM);
 				goto error_unlock;
 			}
+			xpthread_mutex_unlock(&wt->stats.lock);
+		}
+		xpthread_mutex_unlock(&tp->lock);
+	}
+	xpthread_mutex_unlock(&srv->lock);
+	return s;
+error_unlock:
+	xpthread_mutex_unlock(&wt->stats.lock);
+	xpthread_mutex_unlock(&tp->lock);
+	xpthread_mutex_unlock(&srv->lock);
+	if (s)
+		free(s);
+	return NULL;
+}
+
+static char *
+_ctl_get_tpools (void *a)
+{
+	Npsrv *srv = (Npsrv *)a;
+	Nptpool *tp;
+	Npwthread *wt;
+	char *s = NULL;
+	int len = 0;
+	Npstats stats;
+
+	xpthread_mutex_lock(&srv->lock);
+	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
+		memset (&stats, 0, sizeof(stats));
+		xpthread_mutex_lock(&tp->lock);
+		for (wt = tp->wthreads; wt != NULL; wt = wt->next) {
+			xpthread_mutex_lock(&wt->stats.lock);
+			stats.nreq += wt->stats.nreq;
+			stats.rbytes += wt->stats.rbytes;
+			stats.wbytes += wt->stats.wbytes;
+			if (wt->stats.rusec > stats.rusec)
+				stats.rusec = wt->stats.rusec;
+			if (wt->stats.wusec > stats.wusec)
+				stats.wusec = wt->stats.wusec;
+			if (wt->stats.gusec > stats.gusec)
+				stats.gusec = wt->stats.gusec;
+			xpthread_mutex_unlock(&wt->stats.lock);
+		}
+		if (aspf (&s, &len, "%s %"PRIu64" %"PRIu64" %"PRIu64" "
+				       "%"PRIu64" %"PRIu64" %"PRIu64"\n",
+				tp->name, stats.nreq, stats.rbytes,
+				stats.wbytes, stats.rusec, stats.wusec,
+				stats.gusec) < 0) {
+			np_uerror (ENOMEM);
+			goto error_unlock;
 		}
 		xpthread_mutex_unlock(&tp->lock);
 	}

@@ -31,6 +31,7 @@ typedef struct Npbuf Npbuf;
 typedef struct Nptrans Nptrans;
 typedef struct Npconn Npconn;
 typedef struct Npreq Npreq;
+typedef struct Npstats Npstats;
 typedef struct Npwthread Npwthread;
 typedef struct Nptpool Nptpool;
 typedef struct Npauth Npauth;
@@ -180,6 +181,16 @@ struct Npreq {
 	Npwthread*	wthread;/* for requests that are worked on */
 };
 
+struct Npstats {
+	pthread_mutex_t	lock;
+	u64		nreq;		/* request count */
+	u64		rbytes;		/* read (bytes) count */
+	u64		wbytes;		/* read (bytes) count */
+	u64		rusec;		/* usec to service last read */
+	u64		wusec;		/* usec to service last write */
+	u64		gusec;		/* usec to service last getattr */
+};
+
 struct Npwthread {
 	Nptpool*	tpool;
 	int		shutdown;
@@ -188,7 +199,7 @@ struct Npwthread {
 	u32		fsuid;
 	u32		sguid;
 	u32		fsgid;
-	u64		reqs_total;
+	Npstats		stats;
 	Npwthread	*next;
 };
 
