@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <pthread.h>
 #include <errno.h>
+#include <assert.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -82,6 +83,8 @@ np_fidpool_destroy(Npfidpool *pool)
 				free(f->aname);
 			if (f->user)
 				np_user_decref(f->user);
+			if (f->tpool)
+				np_tpool_decref(f->tpool);
 			free(f);
 			f = ff;
 		}
@@ -169,6 +172,7 @@ np_fid_create(Npconn *conn, u32 fid, void *aux)
 			return NULL;
 		}
 		f->aname = NULL;
+		f->tpool = NULL;
 		pthread_mutex_init(&f->lock, NULL);
 		f->fid = fid;
 		f->conn = conn;
@@ -236,6 +240,8 @@ np_fid_destroy(Npfid *fid)
 
 	if (fid->user)
 		np_user_decref(fid->user);
+	if (fid->tpool)
+		np_tpool_decref(fid->tpool);
 	if (fid->aname)
 		free (fid->aname);
 	free(fid);

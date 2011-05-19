@@ -76,7 +76,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodcat [OPTIONS] [-h hostname] [-a aname] file [file...]\n"
+"Usage: diodcat [OPTIONS] [-h hostname] [-a aname] [file [file...]]\n"
 "   -h,--hostname HOST    hostname (default localhost)\n"
 "   -a,--aname NAME       file system (default ctl)\n"
 "   -p,--port PORT        port (default 564)\n"

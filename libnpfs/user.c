@@ -117,12 +117,8 @@ _get_usercache (void *a)
 	time_t now = time (NULL);
 	char *s = NULL;
 	int len = 0;
-	int err;
 
-	if ((err = pthread_mutex_lock (&uc->lock))) {
-		np_uerror (err);
-		goto error;
-	}
+	pthread_mutex_lock (&uc->lock);
 	_usercache_expire (srv);
 	for (u = uc->users; u != NULL; u = u->next) {
 		int ttl = uc->ttl - (now - u->t);
@@ -130,19 +126,15 @@ _get_usercache (void *a)
 		if (aspf (&s, &len, "%s(%d,%d+%d) %d\n", u->uname,
 			  u->uid, u->gid, u->nsg, u->uid ? ttl : 0) < 0) {
 			np_uerror (ENOMEM);
-			goto error_unlock;
+			pthread_mutex_unlock (&uc->lock);
+			goto error;
 		}
 	}
-	if ((err = pthread_mutex_unlock (&uc->lock))) {
-		np_uerror (err);
-		goto error;
-	}
+	pthread_mutex_unlock (&uc->lock);
 	return s;
-error_unlock:
+error:
 	if (s)
 		free (s);
-	(void)pthread_mutex_unlock (&uc->lock);
-error:
 	return NULL;
 }
 
@@ -201,9 +193,9 @@ np_user_incref(Npuser *u)
 	if (!u)
 		return;
 
-	pthread_mutex_lock(&u->lock);
+	pthread_mutex_lock (&u->lock);
 	u->refcount++;
-	pthread_mutex_unlock(&u->lock);
+	pthread_mutex_unlock (&u->lock);
 }
 
 void
@@ -212,10 +204,10 @@ np_user_decref(Npuser *u)
 	if (!u)
 		return;
 
-	pthread_mutex_lock(&u->lock);
+	pthread_mutex_lock (&u->lock);
 	u->refcount--;
 	if (u->refcount > 0) {
-		pthread_mutex_unlock(&u->lock);
+		pthread_mutex_unlock (&u->lock);
 		return;
 	}
 
@@ -435,26 +427,15 @@ np_uname2user (Npsrv *srv, char *uname)
 {
 	Npusercache *uc = srv->usercache;
 	Npuser *u = NULL;
-	int err;
 
-	if ((err = pthread_mutex_lock (&uc->lock))) {
-		np_uerror (err);
-		np_logerr (srv, "uname2user: unable to lock usercache");
-		goto error;
-	}
+	pthread_mutex_lock (&uc->lock);
 	if (!(u = _usercache_lookup (srv, uname, P9_NONUNAME)))
 		if ((u = _real_lookup_byname (srv, uname)))
 			_usercache_add (srv, u);
-	if ((err = pthread_mutex_unlock (&uc->lock))) {
-		np_uerror (err);
-		np_logerr (srv, "uname2user: unable to unlock usercache");
-		goto error;
-	}
+	pthread_mutex_unlock (&uc->lock);
 	if (u)
 		np_user_incref (u);
 	return u;
-error:
-	return NULL;
 }
 
 Npuser *
@@ -462,26 +443,15 @@ np_uid2user (Npsrv *srv, uid_t uid)
 {
 	Npusercache *uc = srv->usercache;
 	Npuser *u = NULL;
-	int err;
 
-	if ((err = pthread_mutex_lock (&uc->lock))) {
-		np_uerror (err);
-		np_logerr (srv, "uid2user: unable to lock usercache");
-		goto error;
-	}
+	pthread_mutex_lock (&uc->lock);
 	if (!(u = _usercache_lookup (srv, NULL, uid)))
 		if ((u = _real_lookup_byuid (srv, uid)))
 			_usercache_add (srv, u);
-	if ((err = pthread_mutex_unlock (&uc->lock))) {
-		np_uerror (err);
-		np_logerr (srv, "uid2user: unable to unlock usercache");
-		goto error;
-	}
+	pthread_mutex_unlock (&uc->lock);
 	if (u)
 		np_user_incref (u);
 	return u;
-error:
-	return NULL;
 }
 
 void
@@ -489,21 +459,12 @@ np_usercache_flush (Npsrv *srv)
 {
 	Npusercache *uc = srv->usercache;
 	Npuser *u;
-	int err;
 
-	if ((err = pthread_mutex_lock (&uc->lock))) {
-		np_uerror (err);
-		np_logerr (srv, "usercache_flush: unable to lock usercache");
-		return;
-	}
+	pthread_mutex_lock (&uc->lock);
 	u = uc->users;
 	while (u)
 		u = _usercache_del (srv, NULL, u);
-	if ((err = pthread_mutex_unlock (&uc->lock))) {
-		np_uerror (err);
-		np_logerr (srv, "usercache_flush: unable to unlock usercache");
-		return;
-	}
+	pthread_mutex_unlock (&uc->lock);
 }
 
 Npuser *

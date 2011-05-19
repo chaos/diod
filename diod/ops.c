@@ -151,10 +151,10 @@ diod_register_ops (Npsrv *srv)
     srv->msize = 65536;
     srv->fiddestroy = diod_fiddestroy;
     srv->logmsg = diod_log_msg;
-
     srv->remapuser = diod_remapuser;
     srv->auth_required = diod_auth_required;
     srv->auth = diod_auth_functions;
+
     srv->attach = diod_attach;
     srv->clone = diod_clone;
     srv->walk = diod_walk;

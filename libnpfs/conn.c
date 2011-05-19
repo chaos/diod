@@ -202,11 +202,10 @@ again:
 				   conn->client_id);
 			break;
 		}
-		pthread_mutex_lock(&srv->lock);
+		np_srv_add_req(srv, req);
+		pthread_mutex_lock(&conn->lock);
 		conn->reqs_in++;
-		/* FIXME: select appropriate tpool */
-		np_srv_add_req(srv->tpool, req);
-		pthread_mutex_unlock(&srv->lock);
+		pthread_mutex_unlock(&conn->lock);
 		fc = fc1;
 		if (n > 0)
 			goto again;
@@ -243,16 +242,20 @@ _get_waiting_reqs (Npconn *conn)
 	/* assert: srv->lock held */
 	preqs = NULL;
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
+		pthread_mutex_lock (&tp->lock);
 		req = tp->reqs_first;
 		while (req != NULL) {
 			req1 = req->next;
 			if (req->conn == conn) {
+				pthread_mutex_lock(&tp->lock);
 				np_srv_remove_req(tp, req);
+				pthread_mutex_unlock(&tp->lock);
 				req->next = preqs;
 				preqs = req;
 			}
 			req = req1;
 		}
+		pthread_mutex_unlock (&tp->lock);
 	}
 	return preqs;
 }
@@ -263,7 +266,6 @@ _flush_waiting_reqs (Npreq *reqs)
 	Npreq *req = reqs;
 	Npreq *req1;
 
-	/* assert: srv->lock NOT held */
 	while (req != NULL) {
 		req1 = req->next;
 		np_conn_respond(req);
@@ -282,6 +284,7 @@ _count_working_reqs (Npconn *conn, int boolonly)
 
 	/* assert: srv->lock held */
 	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
+		pthread_mutex_lock (&tp->lock);
 		for (req = tp->workreqs; req != NULL; req = req->next) {
 			if (req->conn != conn)
 				continue;
@@ -290,6 +293,7 @@ _count_working_reqs (Npconn *conn, int boolonly)
 			if (boolonly && n > 0)
 				break;		
 		}
+		pthread_mutex_unlock (&tp->lock);
 		if (boolonly && n > 0)
 			break;
 	}
@@ -309,12 +313,14 @@ _get_working_reqs (Npconn *conn, Npreq ***rp, int *lp)
 	if ((reqs = malloc(n * sizeof(Npreq *))))
 		goto error;
 	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
+		pthread_mutex_lock (&tp->lock);
 		for (req = tp->workreqs; req != NULL; req = req->next) {
 			if (req->conn != conn)
 				continue;
 			if (req->tcall->type != P9_TVERSION)
 				reqs[n++] = np_req_ref (req);
 		}
+		pthread_mutex_unlock (&tp->lock);
 	}
 	*lp = n;
 	*rp = reqs;
@@ -330,7 +336,6 @@ _flush_working_reqs (Npreq **reqs, int len)
 {
 	int i;
 
-	/* assert: srv->lock NOT held */
 	for(i = 0; i < len; i++) {
 		Npreq *req = reqs[i];
 		if (req->conn->srv->flush)
@@ -343,7 +348,6 @@ _free_working_reqs (Npreq **reqs, int len)
 {
 	int i;
 
-	/* assert: srv->lock NOT held */
 	for(i = 0; i < len; i++) 
 		np_req_unref(reqs[i]);
 	free(reqs);

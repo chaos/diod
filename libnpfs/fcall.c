@@ -252,9 +252,12 @@ np_flush(Npreq *req, Npfcall *tc)
 	pthread_mutex_lock(&conn->srv->lock);
 	// check pending requests
 	for (tp = conn->srv->tpool; tp != NULL; tp = tp->next) {
+		pthread_mutex_lock(&tp->lock);
 		for(creq = tp->reqs_first; creq != NULL; creq = creq->next) {
 			if (creq->conn==conn && creq->tag==oldtag) {
+				pthread_mutex_lock(&tp->lock);
 				np_srv_remove_req(tp, creq);
+				pthread_mutex_unlock(&tp->lock);
 				pthread_mutex_lock(&creq->lock);
 				np_conn_respond(creq); /* doesn't send anything */
 				pthread_mutex_unlock(&creq->lock);
@@ -264,10 +267,12 @@ np_flush(Npreq *req, Npfcall *tc)
 				goto done;
 			}
 		}
+		pthread_mutex_unlock(&tp->lock);
 	}
 
 	// check working requests
 	for (tp = conn->srv->tpool; tp != NULL; tp = tp->next) {
+		pthread_mutex_lock(&tp->lock);
 		creq = tp->workreqs;
 		while (creq != NULL) {
 			if (creq->conn==conn && creq->tag==oldtag) {
@@ -280,6 +285,7 @@ np_flush(Npreq *req, Npfcall *tc)
 			}
 			creq = creq->next;
 		}
+		pthread_mutex_unlock(&tp->lock);
 	}
 
 	// if not found, return P9_RFLUSH
@@ -344,6 +350,8 @@ np_walk(Npreq *req, Npfcall *tc)
 		}
 		np_user_incref(fid->user);
 		newfid->user = fid->user;
+		np_tpool_incref(fid->tpool);
+		newfid->tpool = fid->tpool;
 		newfid->type = fid->type;
 		if (!(newfid->aname = strdup (fid->aname))) {
 			np_uerror (ENOMEM);

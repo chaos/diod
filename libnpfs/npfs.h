@@ -111,7 +111,8 @@ struct Npfid {
 	int		refcount;
 	u8		type;
 	Npuser*		user;
-	char*		aname;
+	Nptpool*	tpool;	/* tpool preference, if any (else NULL) */
+	char		*aname;
 	void*		aux;
 
 	Npfid*		next;	/* list of fids within a bucket */
@@ -192,13 +193,16 @@ struct Npwthread {
 };
 
 struct Nptpool {
+	char*		name;
 	Npsrv*		srv;
+	int		refcount;
 	int		nwthread;
 	Npwthread*	wthreads;
 	Npreq*		reqs_first;
 	Npreq*		reqs_last;
 	Npreq*		workreqs;
-	pthread_cond_t	reqcond; /* use with srv->lock */
+	pthread_cond_t	reqcond;
+	pthread_mutex_t lock;
 	Nptpool		*next;
 };
 
@@ -218,6 +222,7 @@ enum {
 	SRV_FLAGS_SETFSID	=0x00010000,
 	SRV_FLAGS_AUTHCONN	=0x00020000,
 	SRV_FLAGS_NOUSERDB	=0x00040000,
+	SRV_FLAGS_TPOOL_ANAME	=0x00080000,
 };
 
 typedef char * (*SynGetF)(void *);
@@ -312,6 +317,8 @@ void np_logerr(Npsrv *srv, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 void np_logmsg(Npsrv *srv, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
+void np_tpool_incref(Nptpool *);
+void np_tpool_decref(Nptpool *);
 
 /* conn.c */
 Npconn *np_conn_create(Npsrv *, Nptrans *, char *);
@@ -345,8 +352,10 @@ char *np_strdup(Npstr *str);
 int np_strcmp(Npstr *str, char *cs);
 int np_strncmp(Npstr *str, char *cs, int len);
 int np_str9cmp(Npstr *s1, Npstr *s2);
-void spf (char *s, int len, const char *fmt, ...);
-int aspf (char **sp, int *lp, const char *fmt, ...);
+void spf (char *s, int len, const char *fmt, ...)
+	__attribute__ ((format (printf, 3,4)));
+int aspf (char **sp, int *lp, const char *fmt, ...)
+	__attribute__ ((format (printf, 3,4)));
 
 /* np.c */
 int np_peek_size(u8 *buf, int len);

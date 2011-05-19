@@ -81,6 +81,7 @@
 #define RO_EXPORTALL        0x1000
 #define RO_ALLSQUASH        0x2000
 #define RO_SQUASHUSER       0x4000
+#define RO_THREADMODE       0x8000
 
 #define DFLT_DEBUGLEVEL     0
 #define DFLT_NWTHREADS      16
@@ -96,6 +97,7 @@
 #define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
 #endif
 #define DFLT_LOGDEST        "syslog:daemon:err"
+#define DFLT_THREADMODE     "default"
 
 typedef struct {
     int          debuglevel;
@@ -111,6 +113,7 @@ typedef struct {
     List         exports;
     char        *configpath;
     char        *logdest;
+    char        *threadmode;
     int          ro_mask; 
 } Conf;
 
@@ -201,6 +204,7 @@ diod_conf_init (void)
     config.configpath = NULL;
 #endif
     config.logdest = _xstrdup (DFLT_LOGDEST);
+    config.threadmode = _xstrdup (DFLT_THREADMODE);
     config.ro_mask = 0;
 }
 
@@ -229,6 +233,18 @@ void diod_conf_set_logdest (char *s)
         free (config.logdest);
     config.logdest = _xstrdup (s);
     config.ro_mask |= RO_LOGDEST;
+}
+
+/* threadmode - thread pool management mode ("default" or "aname")
+ */
+char *diod_conf_get_threadmode (void) { return config.threadmode; }
+int diod_conf_opt_threadmode (void) { return config.ro_mask & RO_THREADMODE; }
+void diod_conf_set_threadmode (char *s)
+{
+    if (config.threadmode)
+        free (config.threadmode);
+    config.threadmode = _xstrdup (s);
+    config.ro_mask |= RO_THREADMODE;
 }
 
 /* configpath - config file path
@@ -613,6 +629,11 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.ro_mask & RO_NWTHREADS)) {
             config.nwthreads = DFLT_NWTHREADS;
             _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
+        }
+        if (!(config.ro_mask & RO_THREADMODE)) {
+            free (config.threadmode);
+            config.threadmode = _xstrdup (DFLT_THREADMODE);
+            _lua_getglobal_string (path, L, "threadmode", &config.threadmode);
         }
         if (!(config.ro_mask & RO_AUTH_REQUIRED)) {
             config.auth_required = DFLT_AUTH_REQUIRED;
