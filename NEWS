@@ -1,3 +1,11 @@
+1.0-pre30:
+	Implement per-aname thread pools --threadmode=aname (issue 26).
+	Provide diodcat defaults for host, aname, and file.
+	Fix diodcat segfault when file does not exist.
+	Normalize logged errors in diod operation handlers.
+	Export more performance data via ctl interface.
+	Cleanup.
+
 1.0-pre29:
 	Fix uninitialized aname in diodmount (regression from pre28).
 	Clunk afid if diodmount attach fails
