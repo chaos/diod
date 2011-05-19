@@ -77,8 +77,8 @@ usage (void)
 {
     fprintf (stderr,
 "Usage: diodcat [OPTIONS] [-h hostname] [-a aname] file [file...]\n"
-"   -h,--hostname HOST    hostname\n"
-"   -a,--aname NAME       file system\n"
+"   -h,--hostname HOST    hostname (default localhost)\n"
+"   -a,--aname NAME       file system (default ctl)\n"
 "   -p,--port PORT        port (default 564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
@@ -125,8 +125,6 @@ main (int argc, char *argv[])
                 usage ();
         }
     }
-    if (optind == argc)
-        usage ();
 
     if (signal (SIGPIPE, SIG_IGN) == SIG_ERR)
         err_exit ("signal");
@@ -137,10 +135,12 @@ main (int argc, char *argv[])
         fd = 0;
     } else {
         if (!hostname) 
-            usage ();
+            hostname = "localhost";
         if ((fd = diod_sock_connect (hostname, port, 1, 0)) < 0)
             exit (1);
     }
+    if (!aname)
+        aname = "ctl";
 
     if (catfiles (fd, uid, msize, aname, argv + optind, argc - optind) < 0)
         exit (1);
@@ -212,9 +212,13 @@ catfiles (int fd, uid_t uid, int msize, char *aname, char **av, int ac)
         errn (np_rerror (), "error attaching to aname='%s'", aname ? aname : "");
         goto done;
     }
-    for (i = 0; i < ac; i++) {
-        if (cat9 (root, av[i]) < 0) {
+    if (ac == 0) {
+        if (cat9 (root, "version") < 0)
             goto done;
+    } else {
+        for (i = 0; i < ac; i++) {
+            if (cat9 (root, av[i]) < 0)
+                goto done;
         }
     }
     ret = 0;
