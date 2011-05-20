@@ -841,16 +841,13 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 	if (srv->logmsg) {
 		char buf[128];
 		char ebuf[64];
-		int ecode = np_rerror ();
+		char *s = strerror_r (np_rerror (), ebuf, sizeof (ebuf));
 
 		va_start (ap, fmt);
 		vsnprintf (buf, sizeof(buf), fmt, ap);
 		va_end (ap);
 
-		if (strerror_r (ecode, ebuf, sizeof (ebuf)) == -1)
-			snprintf (ebuf, sizeof (ebuf), "error %d", ecode);
-
-		np_logmsg (srv, "%s: %s", buf, ebuf);
+		np_logmsg (srv, "%s: %s", buf, s);
 	}
 }
 

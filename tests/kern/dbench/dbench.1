@@ -1,0 +1,125 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" First parameter, NAME, should be all caps
+.\" Second parameter, SECTION, should be 1-8, maybe w/ subsection
+.\" other parameters are allowed: see man(7), man(1)
+.TH DBENCH 1 "October 15, 2001"
+.\" Please adjust this date whenever revising the manpage.
+.\"
+.\" Some roff macros, for reference:
+.\" .nh        disable hyphenation
+.\" .hy        enable hyphenation
+.\" .ad l      left justify
+.\" .ad b      justify to both left and right margins
+.\" .nf        disable filling
+.\" .fi        enable filling
+.\" .br        insert line break
+.\" .sp <n>    insert n+1 empty lines
+.\" for manpage-specific macros, see man(7)
+.SH NAME
+dbench \- Measure disk throughput for simulated netbench run
+.SH SYNOPSIS
+.B dbench
+.RI [ options ] numclients
+.br
+.B tbench
+.RI [ options ] numclients server
+.B tbench_srv
+.RI [ options ]
+.SH DESCRIPTION
+This manual page documents briefly the
+.B dbench
+and
+.B tbench
+benchmarks.
+This manual page was written for the Debian GNU/Linux distribution
+because the original program does not have a manual page.  However,
+it has fairly easy to read source code.
+.PP
+.\" TeX users may be more comfortable with the \fB<whatever>\fP and
+.\" \fI<whatever>\fP escape sequences to invode bold face and italics, 
+.\" respectively.
+Netbench is a terrible benchmark, but it's an "industry standard" and
+it's what is used in the press to rate windows fileservers like Samba
+and WindowsNT.
+.br
+Given the requirements of running netbench (60 and 150 Windows PCs all
+on switched fast ethernet and a really grunty server, and a to open up
+netbench to the masses.
+.br
+Both \fBdbench\fP and \fBtbench\fP read a load description file called
+client.txt that was derived from a capture of a real
+netbench run. client.txt is about 25MB and describes the
+500 thousand operations that a netbench client does in a typical
+netbench run. They parse client.txt and use it to produce
+the same load without having to buy a huge lab.
+.br
+dbench produces only the filesystem load. It does all the same IO
+calls that the smbd server in Samba would produce when confronted with
+a netbench run. It does no networking calls. 
+.br
+tbench produces only the TCP and process load. It does the same socket
+calls that smbd would do under a netbench load. It does no filesystem
+calls. The idea behind tbench is to eliminate smbd from the netbench
+test, as though the smbd code could be made infinately fast.
+.SH OPTIONS
+The \fBdbench\fP program takes a number, which indicates the number of clients to run simultaneously.  It can also take the following options:
+.TP
+.B \-c client.txt
+Use this as the full path name of the client.txt file (the default is
+/usr/share/dbench/client.txt).
+.TP
+.B \-s
+Use synchronous file IO on all file operations.
+.TP
+.B \-t TIME
+set the runtime of the benchmark in seconds (default 600)
+.TP
+.B \-D DIR
+set the base directory to run the filesystem operations in
+.TP
+.B \-x
+enable xattr support, simulating the xattr operations Samba4 would
+need to perform to run the load
+.TP
+.B \-S
+Use synchronous IO for all directory operations (unlink, rmdir, mkdir
+and rename).
+.br
+The \fBtbench\fP program takes a number, which indicates the number of
+clients to run simultaneously, and a server name: \fBtbench_srv\fP
+should be invoked on that server before invoking \fBtbench\fP.
+\fBtbench\fP can also take the following options:
+.TP
+.B \-c loadfile
+Use this as the full path name of the client.txt file (the default is
+/usr/share/dbench/client.txt).
+.TP
+.B \-T option[,...]
+This sets the socket options for the connection to the server.  The
+options are a comma-separated list of one or more of the following:
+.BR "SO_KEEPALIVE" ,
+.BR "SO_REUSEADDR" ,
+.BR "SO_BROADCAST" ,
+.BR "SO_NODELAY" ,
+.BR "SO_LOWDELAY" ,
+.BR "SO_THROUGHPUT" ,
+.BR "SO_SNDBUF" =number,
+.BR "SO_RCVBUF" =number,
+.BR "SO_SNDLOWAT" =number,
+.BR "SO_RCVLOWAT" =number,
+.BR "SO_SNDTIMEO" =number, and
+.BR "SO_RCVTIMEO" =number.
+See 
+.BR socket (7)
+for details about these options.
+.br
+The \fBtbench_srv\fP can only take one option:
+.B \-t option[,...]
+as documented above.
+.SH SEE ALSO
+.I /usr/share/doc/dbench/README
+contains the original README by Andrew Tridgell which accompanies the
+dbench source.
+.SH AUTHOR
+This manual page was written by Paul Russell <prussell@alderaan.franken.de>,
+for the Debian GNU/Linux system (but may be used by others).

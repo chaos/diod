@@ -3,17 +3,129 @@
 /* Define if building universal (internal helper macro) */
 #undef AC_APPLE_UNIVERSAL_BUILD
 
+/* Define to 1 if you have the `asprintf' function. */
+#undef HAVE_ASPRINTF
+
+/* Define to 1 if you have the `attr_get' function. */
+#undef HAVE_ATTR_GET
+
+/* Define to 1 if you have the `attr_getf' function. */
+#undef HAVE_ATTR_GETF
+
+/* Define to 1 if you have the `attr_list' function. */
+#undef HAVE_ATTR_LIST
+
+/* Define to 1 if you have the `attr_listf' function. */
+#undef HAVE_ATTR_LISTF
+
+/* Define to 1 if you have the `attr_remove' function. */
+#undef HAVE_ATTR_REMOVE
+
+/* Define to 1 if you have the `attr_removef' function. */
+#undef HAVE_ATTR_REMOVEF
+
+/* Define to 1 if you have the `attr_set' function. */
+#undef HAVE_ATTR_SET
+
+/* Define to 1 if you have the `attr_setf' function. */
+#undef HAVE_ATTR_SETF
+
+/* Define to 1 if you have the <attr/xattr.h> header file. */
+#undef HAVE_ATTR_XATTR_H
+
+/* Define to 1 if you have the <ctype.h> header file. */
+#undef HAVE_CTYPE_H
+
+/* Define to 1 if you have the <dirent.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_DIRENT_H
+
+/* Whether we have EA support */
+#undef HAVE_EA_SUPPORT
+
+/* Define to 1 if you have the `extattr_delete_fd' function. */
+#undef HAVE_EXTATTR_DELETE_FD
+
+/* Define to 1 if you have the `extattr_delete_file' function. */
+#undef HAVE_EXTATTR_DELETE_FILE
+
+/* Define to 1 if you have the `extattr_delete_link' function. */
+#undef HAVE_EXTATTR_DELETE_LINK
+
+/* Define to 1 if you have the `extattr_get_fd' function. */
+#undef HAVE_EXTATTR_GET_FD
+
+/* Define to 1 if you have the `extattr_get_file' function. */
+#undef HAVE_EXTATTR_GET_FILE
+
+/* Define to 1 if you have the `extattr_get_link' function. */
+#undef HAVE_EXTATTR_GET_LINK
+
+/* Define to 1 if you have the `extattr_list_fd' function. */
+#undef HAVE_EXTATTR_LIST_FD
+
+/* Define to 1 if you have the `extattr_list_file' function. */
+#undef HAVE_EXTATTR_LIST_FILE
+
+/* Define to 1 if you have the `extattr_list_link' function. */
+#undef HAVE_EXTATTR_LIST_LINK
+
+/* Define to 1 if you have the `extattr_set_fd' function. */
+#undef HAVE_EXTATTR_SET_FD
+
+/* Define to 1 if you have the `extattr_set_file' function. */
+#undef HAVE_EXTATTR_SET_FILE
+
+/* Define to 1 if you have the `extattr_set_link' function. */
+#undef HAVE_EXTATTR_SET_LINK
+
+/* Define to 1 if you have the `fdatasync' function. */
+#undef HAVE_FDATASYNC
+
+/* Define to 1 if you have the `fgetxattr' function. */
+#undef HAVE_FGETXATTR
+
+/* Define to 1 if you have the `flistxattr' function. */
+#undef HAVE_FLISTXATTR
+
+/* Define to 1 if you have the `fremovexattr' function. */
+#undef HAVE_FREMOVEXATTR
+
+/* Define to 1 if you have the `fsetxattr' function. */
+#undef HAVE_FSETXATTR
+
 /* Define to 1 if you have the <getopt.h> header file. */
 #undef HAVE_GETOPT_H
 
 /* Define to 1 if you have the `getopt_long' function. */
 #undef HAVE_GETOPT_LONG
 
+/* Define to 1 if you have the `getxattr' function. */
+#undef HAVE_GETXATTR
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if you have the `lgetxattr' function. */
+#undef HAVE_LGETXATTR
+
 /* Define to 1 if you have the `munge' library (-lmunge). */
 #undef HAVE_LIBMUNGE
+
+/* Define to 1 if you have the `popt' library (-lpopt). */
+#undef HAVE_LIBPOPT
+
+/* Define to 1 if you have the `listxattr' function. */
+#undef HAVE_LISTXATTR
+
+/* Define to 1 if you have the `llistxattr' function. */
+#undef HAVE_LLISTXATTR
+
+/* Define to 1 if you have the `lremovexattr' function. */
+#undef HAVE_LREMOVEXATTR
+
+/* Define to 1 if you have the `lsetxattr' function. */
+#undef HAVE_LSETXATTR
 
 /* Define to 1 if you have the <lualib.h> header file. */
 #undef HAVE_LUALIB_H
@@ -24,8 +136,20 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
+/* Define to 1 if you have the <ndir.h> header file, and it defines `DIR'. */
+#undef HAVE_NDIR_H
+
 /* Define to 1 if you have the <pthread.h> header file. */
 #undef HAVE_PTHREAD_H
+
+/* Define to 1 if you have the `removexattr' function. */
+#undef HAVE_REMOVEXATTR
+
+/* Define to 1 if you have the `setxattr' function. */
+#undef HAVE_SETXATTR
+
+/* Define to 1 if you have the `snprintf' function. */
+#undef HAVE_SNPRINTF
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
@@ -39,11 +163,43 @@
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
 
+/* Define to 1 if you have the <sys/attributes.h> header file. */
+#undef HAVE_SYS_ATTRIBUTES_H
+
+/* Define to 1 if you have the <sys/dir.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_SYS_DIR_H
+
+/* Define to 1 if you have the <sys/extattr.h> header file. */
+#undef HAVE_SYS_EXTATTR_H
+
+/* Define to 1 if you have the <sys/mount.h> header file. */
+#undef HAVE_SYS_MOUNT_H
+
+/* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
+   */
+#undef HAVE_SYS_NDIR_H
+
+/* Define to 1 if you have the <sys/statvfs.h> header file. */
+#undef HAVE_SYS_STATVFS_H
+
 /* Define to 1 if you have the <sys/stat.h> header file. */
 #undef HAVE_SYS_STAT_H
 
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
+
+/* Define to 1 if you have the <sys/uio.h> header file. */
+#undef HAVE_SYS_UIO_H
+
+/* Define to 1 if you have the <sys/vfs.h> header file. */
+#undef HAVE_SYS_VFS_H
+
+/* Define to 1 if you have <sys/wait.h> that is POSIX.1 compatible. */
+#undef HAVE_SYS_WAIT_H
+
+/* Define to 1 if you have the <sys/xattr.h> header file. */
+#undef HAVE_SYS_XATTR_H
 
 /* Define if you have tcp wrappers */
 #undef HAVE_TCP_WRAPPERS
@@ -54,11 +210,20 @@
 /* Define to 1 if you have the `utimensat' function. */
 #undef HAVE_UTIMENSAT
 
+/* Define to 1 if you have the `vasprintf' function. */
+#undef HAVE_VASPRINTF
+
+/* Whether va_copy() is available */
+#undef HAVE_VA_COPY
+
 /* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_VSNPRINTF
 
 /* Define to 1 if you have the `vsscanf' function. */
 #undef HAVE_VSSCANF
+
+/* Whether __va_copy() is available */
+#undef HAVE___VA_COPY
 
 /* Define the project alias string (name-ver or name-ver-rel). */
 #undef META_ALIAS
@@ -107,6 +272,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
+#undef TIME_WITH_SYS_TIME
 
 /* Version number of package */
 #undef VERSION
@@ -173,6 +341,9 @@
 
 /* Expansion of the "sysconfdir" installation directory. */
 #undef X_SYSCONFDIR
+
+/* Define _GNU_SOURCE so that we get all necessary prototypes */
+#undef _GNU_SOURCE
 
 /* Define to 1 if you plan to link against multithreaded code. */
 #undef _REENTRANT

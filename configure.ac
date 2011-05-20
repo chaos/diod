@@ -26,6 +26,12 @@ if test "$GCC" = yes; then
 fi
 AC_PROG_RANLIB
 
+# dbench is part of 'make check' so get its stuff into config.h
+AC_DEFINE([_GNU_SOURCE], 1,
+          [Define _GNU_SOURCE so that we get all necessary prototypes])
+DBENCH_FU
+X_AC_CHECK_COND_LIB(popt, poptGetArgs)
+
 ##
 # Checks for header files.
 ##
@@ -86,6 +92,8 @@ AC_CONFIG_FILES( \
   tests/Makefile \
   tests/misc/Makefile \
   tests/kern/Makefile \
+  tests/kern/fstest/Makefile \
+  tests/kern/dbench/Makefile \
   tests/user/Makefile \
   etc/Makefile \
 )

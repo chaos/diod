@@ -26,16 +26,16 @@ if ! modprobe 9p 2>/dev/null; then
     exit 77
 fi
 rm -f $TEST.diod $TEST.out
-# Special case for t29 which requires tclsh
+# t29 requires tclsh
 if [ "`basename $TEST`" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
     echo "tclsh is not installed" >$TEST.out
     exit 77
 fi
-# Special diod option for t30 (tests --allsquash)
+# t30 needs tests the diod -S,--allsquash option
 if [ "`basename $TEST`" = "t30" ]; then
     opt="-S" 
 fi
-# Special option for t31
+# t31 (fstest) needs diod -N,--no-userdb and 'prove' (perl-Test-Harness)
 if [ "`basename $TEST`" = "t31" ]; then
     if ! which prove >/dev/null 2>&1; then
         echo "prove is not installed" >$TEST.out
@@ -69,5 +69,5 @@ fi
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
 
-diff $TEST.exp $TEST.out >$TEST.diff
+[ ! -f $TEST.exp ] || diff $TEST.exp $TEST.out >$TEST.diff
 exit $?

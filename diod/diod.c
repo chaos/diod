@@ -26,9 +26,6 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#ifndef _GNU_SOURCE
-#define _GNU_SOURCE         /* ppoll () */
-#endif
 #include <poll.h>
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE         /* daemon () */

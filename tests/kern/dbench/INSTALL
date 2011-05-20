@@ -1,0 +1,11 @@
+Quick guide to installing/running dbench & co:
+
+1) Run 'make' in the source directory
+
+2) cd into the directory in which you wish to run the benchmark
+
+3) either copy client.txt into that directory, or specify it's path
+with -c
+
+4) run the appropriate benchmark program
+

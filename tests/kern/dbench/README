@@ -1,0 +1,274 @@
+Emulating Netbench
+==================
+
+Netbench is a terrible benchmark, but it's an "industry standard" and
+it's what is used in the press to rate windows fileservers like Samba
+and WindowsNT.
+
+The big problem with netbench for the open source community is that
+very few people who work on open source software have the facilities
+to run it properly. You need a lab with between 60 and 150 windows PC,
+all on switched fast ethernet and a really grunty server (say a quad
+xeon with 1GB ram and hardware raid). Then you need some way to nurse
+all those machines along so they will run a very fussy benchmark suite
+without crashing. Not easy and very expensive. Only one person in the
+open source community that I know of has access to such a lab (Jeremy
+Allison at SGI).
+
+In order for the development methodologies of the open source
+community to work we need to be able to run this benchmark in an
+environment that a bunch of us have access to. We need the source to
+the benchmark so we can see what it does. We need to be able to split
+it into pieces to look for individual bottlenecks. In short, we need
+to open up netbench to the masses.
+
+To do this I have written three tools, dbench, tbench and
+smbtorture. All three read a load description file called client.txt
+that was derived from a network sniffer dump of a real netbench
+run. client.txt is about 4MB and describes the 90 thousand operations
+that a netbench client does in a typical netbench run. They parse
+client.txt and use it to produce the same load without having to buy a
+huge lab. They can simulate any number of simultaneous clients.
+
+client.txt must either be in the working directory, or specified on
+the command line with the -c option.
+
+dbench
+------
+
+dbench produces only the filesystem load. It does all the same IO
+calls that the smbd server in Samba would produce when confronted with
+a netbench run. It does no networking calls. 
+
+You can get dbench from ftp://samba.org/pub/tridge/dbench/
+You run it as "dbench N" where N is the number of clients to
+simulate. It gives out three numbers like this (this is from a 144
+client run on a quad xeon box):
+
+	Throughput 40.6701 MB/sec (NB=50.8376 MB/sec  406.701 MBit/sec)
+
+the first is the true throughput as seen by dbench. The second and
+third numbers are "netbench scaled" numbers that give the throughput
+that would be seen by Win9X boxes after taking into account the client
+file cacheing performed by oplocks. They are given in both MB/sec and
+MBit/sec as different netbench reports use different scales.
+
+tbench
+------
+
+tbench produces only the TCP and process load. It does the same socket
+calls that smbd would do under a netbench load. It does no filesystem
+calls. The idea behind tbench is to eliminate smbd from the netbench
+test, as though the smbd code could be made infinately fast. The
+throughput results of tbench tell us how fast a netbench run could go
+if we eliminated all filesystem IO and SMB packet processing.  tbench
+is built as part of the dbench package.
+
+To run tbench first run tbench_srv on the server. Then run "tbench N SERVER"
+on the client. N is the number of clients to simulate and SERVER is
+the hostname of the server. The results are given in the same format
+as dbench.
+
+smbtorture
+----------
+
+smbtorture is the stress tester from the Samba suite. I've recently
+added a stress test that allows you to simulate the full netbench
+benchmark, including all network traffic and filesystem IO.
+
+To run smbtorture you first need to install Samba version 2.0.X. The
+binary distrubtions at ftp://ftp.samba.org/pub/samba/bin-pkgs/redhat/
+would do fine if you don't want to compile it yourself. Then setup a
+netbench share on the fastest disk you have, making sure you have at
+least 25MB free per simulated client. The simplest smb.conf would look
+something like this:
+
+[global]
+	security = share
+
+[netbench]
+	path = /data/netbench
+	read only = no
+	guest ok = yes
+
+Then you need smbtorture. You can either grab a precompiled i386
+Redhat5.2 binary from ftp://samba.org/pub/tridge/dbench/smbtorture.gz
+or you can follow the instructions at http://samba.org/cvs.html to
+download the SAMBA_2_0 branch of the Samba cvs tree and use 
+"make smbtorture" to build it.
+
+Finally, you'll need client.txt from
+ftp://samba.org/pub/tridge/dbench/dbench.tgz in the same directory
+that you run smbtorture from.
+
+To run it you do this:
+
+  smbtorture //localhost/netbench -U% -N 32 NBW95
+
+that will run a 32 client load. You can, of course, also run
+smbtorture against a dfferent SMB server (such as a NT server) to give
+comparitive results for any client load that the server can handle.
+
+Even better is to run smbtorture on one machine and smbd on another,
+connected by a very fast network (such as gigabit ethernet). That will
+stop the smbtorture code itself from loading the server and will also
+test the network driver instead of the loopback driver.
+
+results
+-------
+
+To give you an idea of what to expect here are some results on a quad
+xeon machine running Linux 2.2.9 with 1GB of memory (it has 4GB but
+Linux only uses 1GB by default). The machine also has a 45GB hardware
+raid system and a Alteon AceNIC gigabit network card.
+
+The results below are in netbench MB/sec (the NB= number in the
+result). Multiply by 8 to get the MBit/sec numbers that Mindcraft used
+in their graphs. The first column is the number of simulated clients,
+the second is the result.
+
+With dbench I get:
+
+16  118
+32  103
+48  81
+64  74
+80  67
+96  57
+112 57
+128 54
+
+With tbench on loopback I get:
+
+16  31
+32  30
+48  29
+64  29
+80  28
+
+With tbench running across the gigabit network (using a dual
+processor Origin200 as the client) I get:
+
+16  29
+32  29
+48  29
+64  29
+
+
+With smbtorture running over loopback I get:
+
+16  18
+32  18
+48  18
+64  17
+80  16
+
+With smbtorture running across the gigabit network (using a dual
+processor Origin200 as the client) I get:
+
+16  16
+32  20
+48  21
+64  20
+80  19
+
+With smbtorture running across the gigabit network but with smbd
+modified so that write_file() and read_file() are null operations
+(which eliminates the file IO) I get:
+
+16  17
+32  22
+48  24
+64  24
+80  24
+
+
+The above results show that, at least for this hardware configuration,
+the problem isn't the filesystem code or the raid drivers. More tests
+will be needed to find out exactly what the problem is but it looks
+like a TCP scaling problem.
+
+comparison with NT
+------------------
+
+Hopefully Jeremy will be able to run smbtorture against NT on the same
+hardwre sometime in the next week so we have direct numbers for
+comparison, but from looking at the mindcraft numbers under netbench
+we would expect NT to get about the following:
+
+16  8
+32  14
+48  21
+64  27
+80  31
+
+so we do well by comparison with small client loads but fall behind
+quite a lot with large loads. Note that the numbers in the mindcraft
+report for Linux/Samba are quite a long way behind what I give above
+because mindcraft did a hopeless job of tuning Linux/Samba.
+
+comparison with netbench
+------------------------
+
+An initial comparison with real netbench results shows that smbtorture
+does produce very similar throughput numbers. They aren't exactly the
+same but they are similar enough for us to target our tuning efforts
+and expect to see improvements reflected in real netbench runs. When
+we find something that looks promising we can get Jeremy to run a real
+netbench test.
+
+
+a quick hack
+------------
+
+the tbench results really pointed at the problem being the Linux TCP
+stack. I made a quick (and very unsafe!) hack to Samba and the Linux
+kernel to see if I could remove the lock_kernel() in sys_sendto() and
+sys_recvfrom() for smbd processes by passing a MSG_NOLOCK flag in
+send() and recv(). That gave an enormous improvement in the loopback
+tbench results:
+
+16  31->51
+32  30->49
+48  29->47
+64  29->46
+80  28->44
+
+and in the loopback smbtorture results I also saw a big improvement:
+
+16  18->26
+32  18->27
+48  18->26
+64  17->25
+80  16->24
+
+that's a 50% improvement. I suspect the numbers will be higher with a
+real netbench run as it won't have the overhead of running 80
+smbtorture clients on the same box as the server.
+
+
+realistic load?
+---------------
+
+One question some people may ask is whether the above represents a
+realistic load on a fileserver. It doesn't. Nearly 90% of the
+read/write IO operations in netbench are writes whereas in a "normal"
+office load reads dominate. Also, the load is *much* higher than a
+normal office PC would put on a server. There aren't many office PCs
+that write over a hundred megabytes of data to a server in a few
+minutes, unless maybe they are copying a CD.
+
+That doesn't mean the benchmark is useless, it just means you
+shouldn't use this for purchasing decisions unless you really
+understand the results and how they relate to your environment.
+
+
+license
+-------
+
+smbtorture and dbench are released under the terms of the GNU Public
+License version 3 or later.
+
+
+Andrew Tridgell
+tridge@samba.org

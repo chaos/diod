@@ -207,18 +207,16 @@ _verr (int errnum, const char *fmt, va_list ap)
 {
     char buf[128];
     char errbuf[64];
-
-    if (strerror_r (errnum, errbuf, sizeof (errbuf)) == -1) /* XSI version */
-        snprintf (errbuf, sizeof (errbuf), "unknown error code"); 
+    char *s = strerror_r (errnum, errbuf, sizeof (errbuf)); /* GNU version */
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {
         case DEST_LOGF:
-            fprintf (logf, "%s: %s: %s\n", prog, buf, errbuf);
+            fprintf (logf, "%s: %s: %s\n", prog, buf, s);
             fflush (logf);
             break;
         case DEST_SYSLOG:
-            syslog (syslog_level, "%s: %s", buf, errbuf);
+            syslog (syslog_level, "%s: %s", buf, s);
             break;
     }
 }

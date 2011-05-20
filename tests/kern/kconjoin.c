@@ -35,7 +35,6 @@
 #include <string.h>
 #include <libgen.h>
 #include <stdarg.h>
-#define _GNU_SOURCE
 #include <sched.h>
 
 #include "diod_log.h"

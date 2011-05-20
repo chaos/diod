@@ -26,7 +26,6 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#define _GNU_SOURCE     /* asprintf */
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>

@@ -39,6 +39,7 @@ DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/auto.diod.in $(srcdir)/diod.init.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
+	$(top_srcdir)/config/dbench.m4 \
 	$(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
@@ -83,6 +84,7 @@ LDFLAGS = @LDFLAGS@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
 LIBOBJS = @LIBOBJS@
+LIBPOPT = @LIBPOPT@
 LIBPTHREAD = @LIBPTHREAD@
 LIBS = @LIBS@
 LIBWRAP = @LIBWRAP@
