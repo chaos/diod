@@ -35,6 +35,14 @@ fi
 if [ "`basename $TEST`" = "t30" ]; then
     opt="-S" 
 fi
+# Special option for t31
+if [ "`basename $TEST`" = "t31" ]; then
+    if ! which prove >/dev/null 2>&1; then
+        echo "prove is not installed" >$TEST.out
+        exit 77
+    fi
+    opt="-N" 
+fi
 
 ulimit -c unlimited
 

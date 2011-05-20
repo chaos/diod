@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+PATH_FSTEST=$(pwd)/fstest
+cd $PATH_MNTDIR
+prove --nocolor -r $PATH_FSTEST \
+	| sed -e 's!'$PATH_FSTEST/'!!g' | grep -v 'Files='

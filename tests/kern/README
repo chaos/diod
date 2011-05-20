@@ -34,3 +34,4 @@ t27	Check that negative dentries are not cached.
 t28	Rsync /etc into 9p and compare.
 t29	Check that tcl file -delete works.
 t30	Test allsquash option.
+t31	Run fstest with server --no-userdb option (takes a couple minutes)

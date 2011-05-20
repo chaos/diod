@@ -1,0 +1,56 @@
+fstest modified for diod - distributed I/O daemon.
+
+fstest uncovered a problem with diod:  switching effective group id or
+supplemental groups and expecting that change to affect the result of
+an p9_lopen or p9_setattr call does not work.  A number of tests,
+documented in diod issue 37 on google code, expect this to work.
+It is a legitimate POSIX expectation.
+
+http://code.google.com/p/diod/issues/detail?id=37
+
+In the interest of making fstest a viable regression test for diod,
+this copy has been modified so the tests that had that particular
+expectation now pass.  Some remain effective tests, some are now rendered
+ineffective.
+
+To run fstest, "remount" an ext3 file system like say /tmp on /mnt
+with diod running with the --no-auth) and --no-userdb options, e.g.
+
+	# diod -N -n -e /tmp 
+	# mount -t diod localhost:/tmp /mnt
+	# cd /mnt
+	# prove -r /path/to/fstest
+
+Jim Garlick
+10 May 2011
+
+---------
+
+$FreeBSD: src/tools/regression/fstest/README,v 1.1 2007/01/28 00:10:28 pjd Exp $
+
+Few notes on how to use fstest in short steps:
+
+	# cd fstest
+	# vi tests/conf
+	Change 'fs' to file system type you want to test. These can be:
+	UFS, ZFS, ext3, ntfs-3g and xfs.
+	# vi Makefile
+	You may need to manually tweak few things by editing CFLAGS lines
+	at the top of the file.
+	# make
+	It will compile fstest utility which is used by regression tests.
+	# cd /path/to/file/system/you/want/to/test/
+	The test must be run as root user.
+	# prove -r /path/to/fstest/
+
+That's all. Enjoy.
+
+Currently supported operating systems: FreeBSD, Solaris, Linux.
+Currently supported file system types: UFS, ZFS, ext3, ntfs-3g, xfs.
+
+Author: 
+Pawel Jakub Dawidek <pjd@FreeBSD.org>
+
+Linux port:
+Jean-Pierre Andre <jean-pierre.andre@wanadoo.fr>
+Szabolcs Szakacsits <szaka@ntfs-3g.org>

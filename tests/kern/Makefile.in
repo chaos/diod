@@ -37,7 +37,7 @@ target_triplet = @target@
 check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
 	trename$(EXEEXT) tstat$(EXEEXT) tflock$(EXEEXT) \
 	tflock2$(EXEEXT) tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) \
-	tfsgid$(EXEEXT)
+	tfsgid$(EXEEXT) fstest/fstest$(EXEEXT)
 subdir = tests/kern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -53,11 +53,20 @@ mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
+fstest_fstest_SOURCES = fstest/fstest.c
+fstest_fstest_OBJECTS = fstest.$(OBJEXT)
+fstest_fstest_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+fstest_fstest_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am__dirstamp = $(am__leading_dot)dirstamp
 am__objects_1 =
 am_kconjoin_OBJECTS = kconjoin.$(OBJEXT) $(am__objects_1)
 kconjoin_OBJECTS = $(am_kconjoin_OBJECTS)
 kconjoin_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 kconjoin_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -143,10 +152,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(kconjoin_SOURCES) tfcntl2.c tfcntl3.c $(tflock_SOURCES) \
-	tflock2.c $(tfsgid_SOURCES) $(trename_SOURCES) \
-	$(tstat_SOURCES) $(tstatfs_SOURCES) $(tsuppgrp_SOURCES)
-DIST_SOURCES = $(kconjoin_SOURCES) tfcntl2.c tfcntl3.c \
+SOURCES = fstest/fstest.c $(kconjoin_SOURCES) tfcntl2.c tfcntl3.c \
+	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
+	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
+	$(tsuppgrp_SOURCES)
+DIST_SOURCES = fstest/fstest.c $(kconjoin_SOURCES) tfcntl2.c tfcntl3.c \
 	$(tflock_SOURCES) tflock2.c $(tfsgid_SOURCES) \
 	$(trename_SOURCES) $(tstat_SOURCES) $(tstatfs_SOURCES) \
 	$(tsuppgrp_SOURCES)
@@ -285,7 +295,7 @@ top_srcdir = @top_srcdir@
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODMOUNT=$(top_builddir)/utils/diodmount" "./runtest"
 TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
-	t23 t24 t25 t26 t27 t28 t29 t30
+	t23 t24 t25 t26 t27 t28 t29 t30 t31
 
 
 #XFAIL_TESTS =
@@ -347,6 +357,12 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+fstest/$(am__dirstamp):
+	@$(MKDIR_P) fstest
+	@: > fstest/$(am__dirstamp)
+fstest/fstest$(EXEEXT): $(fstest_fstest_OBJECTS) $(fstest_fstest_DEPENDENCIES) fstest/$(am__dirstamp)
+	@rm -f fstest/fstest$(EXEEXT)
+	$(LINK) $(fstest_fstest_OBJECTS) $(fstest_fstest_LDADD) $(LIBS)
 kconjoin$(EXEEXT): $(kconjoin_OBJECTS) $(kconjoin_DEPENDENCIES) 
 	@rm -f kconjoin$(EXEEXT)
 	$(LINK) $(kconjoin_OBJECTS) $(kconjoin_LDADD) $(LIBS)
@@ -384,6 +400,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fstest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kconjoin.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl3.Po@am__quote@
@@ -408,6 +425,20 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(COMPILE) -c `$(CYGPATH_W) '$<'`
+
+fstest.o: fstest/fstest.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fstest.o -MD -MP -MF $(DEPDIR)/fstest.Tpo -c -o fstest.o `test -f 'fstest/fstest.c' || echo '$(srcdir)/'`fstest/fstest.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fstest.Tpo $(DEPDIR)/fstest.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fstest/fstest.c' object='fstest.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fstest.o `test -f 'fstest/fstest.c' || echo '$(srcdir)/'`fstest/fstest.c
+
+fstest.obj: fstest/fstest.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fstest.obj -MD -MP -MF $(DEPDIR)/fstest.Tpo -c -o fstest.obj `if test -f 'fstest/fstest.c'; then $(CYGPATH_W) 'fstest/fstest.c'; else $(CYGPATH_W) '$(srcdir)/fstest/fstest.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fstest.Tpo $(DEPDIR)/fstest.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='fstest/fstest.c' object='fstest.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fstest.obj `if test -f 'fstest/fstest.c'; then $(CYGPATH_W) 'fstest/fstest.c'; else $(CYGPATH_W) '$(srcdir)/fstest/fstest.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
@@ -611,6 +642,7 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f fstest/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
