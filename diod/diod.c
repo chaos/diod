@@ -69,7 +69,7 @@ static void          _service_run (srvmode_t mode);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fsd:l:w:e:Eu:SL:nc:Nt:"
+#define OPTIONS "fsd:l:w:e:Eu:SL:nc:Nt:U:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -85,6 +85,7 @@ static const struct option longopts[] = {
     {"no-userdb",       no_argument,        0, 'N'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"allsquash",       no_argument,        0, 'S'},
+    {"squashuser",      required_argument,  0, 'U'},
     {"logdest",         required_argument,  0, 'L'},
     {"config-file",     required_argument,  0, 'c'},
     {"threadmode",      required_argument,  0, 't'},
@@ -108,7 +109,8 @@ usage()
 "   -n,--no-auth           disable authentication check\n"
 "   -N,--no-userdb         bypass password/group file lookup\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
-"   -S,--allsquash         map all users to nobody\n"
+"   -S,--allsquash         map all users to the squash user\n"
+"   -U,--squashuser USER   set the squash user (default nobody)\n"
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -c,--config-file FILE  set config file path\n"
@@ -183,6 +185,9 @@ main(int argc, char **argv)
                 break;
             case 'S':   /* --allsquash */
                 diod_conf_set_allsquash (1);
+                break;
+            case 'U':   /* --allsquash */
+                diod_conf_set_squashuser (optarg);
                 break;
             case 'u':   /* --runas-uid UID */
                 if (geteuid () == 0) {
