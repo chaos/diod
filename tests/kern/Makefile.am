@@ -11,7 +11,10 @@ check_PROGRAMS = \
 	tfsgid \
 	postmark
 
-SUBDIRS = dbench fstest
+SUBDIRS = fstest
+if HAVE_LIBPOPT
+SUBDIRS += dbench
+endif
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
