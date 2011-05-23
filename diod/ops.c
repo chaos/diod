@@ -207,55 +207,13 @@ _fidstat (Fid *fid)
     return n;
 }
 
-/* Strdup an Npstr.
- * Set npfs error state on error.
- */
-static char *
-_p9strdup (Npstr *s9)
-{
-    char *s = np_strdup (s9);
-
-    if (!s)
-        np_uerror (ENOMEM);
-
-    return s;
-}
-
-/* Strdup a regular string.
- * Set npfs error state on error.
- */
-static char *
-_strdup (char *str)
-{
-    char *s = strdup (str);
-
-    if (!s)
-        np_uerror (ENOMEM);
-
-    return s;
-}
-
-/* Malloc memory.
- * Set npfs error state on error.
- */
-static void *
-_malloc (size_t size)
-{
-    void *p = malloc (size);
-
-    if (!p)
-        np_uerror (ENOMEM);
-
-    return p;
-}
-
 /* Allocate our local fid struct which becomes attached to Npfid->aux.
  * Set npfs error state on error.
  */
 static Fid *
 _fidalloc (void)
 {
-    Fid *f = _malloc (sizeof(*f));
+    Fid *f = malloc (sizeof(*f));
 
     if (f) {
         f->path = NULL;
@@ -330,7 +288,7 @@ static char *
 _mkpath(char *dirname, Npstr *name)
 {
     int slen = strlen(dirname) + name->len + 2;
-    char *s = _malloc (slen);
+    char *s = malloc (slen);
    
     if (s)
         snprintf (s, slen, "%s/%.*s", dirname, name->len, name->str);
@@ -378,7 +336,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         np_uerror (EPERM);
         goto error;
     }
-    if (!(f = _fidalloc ()) || !(f->path = _p9strdup(aname))) {
+    if (!(f = _fidalloc ()) || !(f->path = np_strdup (aname))) {
         np_uerror (ENOMEM);
         goto error;
     }
@@ -418,10 +376,10 @@ diod_clone (Npfid *fid, Npfid *newfid)
     Fid *f = fid->aux;
     Fid *nf = NULL;
 
-    if (!(nf = _fidalloc ()))
+    if (!(nf = _fidalloc ()) || !(nf->path = strdup (f->path))) {
+        np_uerror (ENOMEM);
         goto error;
-    if (!(nf->path = _strdup (f->path)))
-        goto error;
+    }
     nf->xflags = f->xflags;
     newfid->aux = nf;
     return 1;
@@ -444,8 +402,10 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
     struct stat st;
     char *npath;
 
-    if (!(npath = _mkpath (f->path, wname)))
+    if (!(npath = _mkpath (f->path, wname))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     if (lstat (npath, &st) < 0) {
         np_uerror (errno);
         goto error_quiet;
@@ -700,8 +660,10 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _mkpath(f->path, name)))
+    if (!(npath = _mkpath(f->path, name))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     saved_umask = umask(0);
     if ((fd = creat (npath, mode)) < 0) {
         np_uerror (errno);
@@ -754,10 +716,14 @@ diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _mkpath(f->path, name)))
+    if (!(npath = _mkpath(f->path, name))) {
+        np_uerror (ENOMEM);
         goto error;
-    if (!(target = _p9strdup (symtgt)))
+    }
+    if (!(target = np_strdup (symtgt))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     saved_umask = umask(0);
     if (symlink (target, npath) < 0) {
         np_uerror (errno);
@@ -808,8 +774,10 @@ diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _mkpath(f->path, name)))
+    if (!(npath = _mkpath(f->path, name))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     saved_umask = umask(0);
     if (mknod (npath, mode, makedev (major, minor)) < 0) {
         np_uerror (errno);
@@ -857,8 +825,10 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _mkpath(d->path, name)))
+    if (!(npath = _mkpath(d->path, name))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     if (rename (f->path, npath) < 0) {
         np_uerror (errno);
         goto error_quiet;
@@ -1279,13 +1249,13 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
 {
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
-    char *cid = _p9strdup (client_id);
+    char *cid = NULL;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!cid) {
+    if (!(cid = np_strdup (client_id))) {
         np_uerror (ENOMEM);
         goto error;
     }
@@ -1364,8 +1334,10 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _mkpath(df->path, name)))
+    if (!(npath = _mkpath(df->path, name))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     if (link (f->path, npath) < 0) {
         np_uerror (errno);
         goto error_quiet;
@@ -1406,8 +1378,10 @@ diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _mkpath(f->path, name)))
+    if (!(npath = _mkpath(f->path, name))) {
+        np_uerror (ENOMEM);
         goto error;
+    }
     saved_umask = umask(0);
     if (mkdir (npath, mode) < 0) {
         np_uerror (errno);
