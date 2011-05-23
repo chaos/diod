@@ -56,7 +56,8 @@ am_dbench_OBJECTS = fileio.$(OBJEXT) util.$(OBJEXT) dbench.$(OBJEXT) \
 	child.$(OBJEXT) system.$(OBJEXT) snprintf.$(OBJEXT)
 dbench_OBJECTS = $(am_dbench_OBJECTS)
 dbench_LDADD = $(LDADD)
-dbench_DEPENDENCIES =
+am__DEPENDENCIES_1 =
+dbench_DEPENDENCIES = $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -202,7 +203,7 @@ AM_CFLAGS = @GCCWARN@
 
 # VERSION=4.00
 AM_CPPFLAGS = -DDATADIR=\"$(X_DATADIR)\"
-LDADD = -lpopt
+LDADD = $(LIBPOPT)
 dbench_SOURCES = \
 	fileio.c \
 	util.c \

@@ -12,7 +12,7 @@ check_PROGRAMS = \
 	postmark
 
 SUBDIRS = fstest
-if HAVE_LIBPOPT
+if DBENCH
 SUBDIRS += dbench
 endif
 

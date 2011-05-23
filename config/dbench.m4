@@ -1,4 +1,10 @@
-AC_DEFUN([DBENCH_FU], [
+AC_DEFUN([DBENCH], [
+
+enable_dbench=no
+X_AC_CHECK_COND_LIB(popt, poptGetArgs)
+if test x$ac_cv_lib_popt_poptGetArgs == xyes; then
+enable_dbench=yes
+# here to 'else # popt' is taken from dbench configure.ac
 
 AC_HEADER_DIRENT
 AC_HEADER_TIME
@@ -52,4 +58,9 @@ if test x"$dbench_cv_HAVE___VA_COPY" = x"yes"; then
 fi
 fi
 
+else # popt
+AC_MSG_WARN([no libpopt so 'make check' will skip dbench run])
+fi
+AM_CONDITIONAL([DBENCH], [test x$enable_dbench == xyes])
 ])
+

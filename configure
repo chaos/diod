@@ -643,10 +643,12 @@ LIBLUA
 LIBMUNGE
 LIBWRAP
 LIBPTHREAD
-LIBPOPT
+DBENCH_FALSE
+DBENCH_TRUE
 EGREP
 GREP
 CPP
+LIBPOPT
 RANLIB
 GCCWARN
 am__fastdepCC_FALSE
@@ -2860,6 +2862,12 @@ fi
 
 
 
+
+cat >>confdefs.h <<\_ACEOF
+#define _GNU_SOURCE 1
+_ACEOF
+
+
 ##
 # Checks for programs
 ##
@@ -4082,12 +4090,7 @@ else
 fi
 
 
-# dbench is part of 'make check' so get its stuff into config.h
-
-cat >>confdefs.h <<\_ACEOF
-#define _GNU_SOURCE 1
-_ACEOF
-
+# dbench is conditionally compiled for 'make check'
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -4712,6 +4715,161 @@ done
 
 
 
+
+enable_dbench=no
+
+  { $as_echo "$as_me:$LINENO: checking for poptGetArgs in default libs" >&5
+$as_echo_n "checking for poptGetArgs in default libs... " >&6; }
+if test "${x_ac_cv_lib_none_poptGetArgs+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char poptGetArgs ();
+int
+main ()
+{
+return poptGetArgs ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  x_ac_cv_lib_none_poptGetArgs=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	x_ac_cv_lib_none_poptGetArgs=no
+
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:$LINENO: result: $x_ac_cv_lib_none_poptGetArgs" >&5
+$as_echo "$x_ac_cv_lib_none_poptGetArgs" >&6; }
+  if test $x_ac_cv_lib_none_poptGetArgs = no; then
+  { $as_echo "$as_me:$LINENO: checking for poptGetArgs in -lpopt" >&5
+$as_echo_n "checking for poptGetArgs in -lpopt... " >&6; }
+if test "${ac_cv_lib_popt_poptGetArgs+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpopt  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char poptGetArgs ();
+int
+main ()
+{
+return poptGetArgs ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_lib_popt_poptGetArgs=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_popt_poptGetArgs=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_popt_poptGetArgs" >&5
+$as_echo "$ac_cv_lib_popt_poptGetArgs" >&6; }
+if test "x$ac_cv_lib_popt_poptGetArgs" = x""yes; then
+
+
+
+        LIBPOPT="-lpopt";
+
+        cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBPOPT 1
+_ACEOF
+
+
+
+fi
+
+
+fi
+
+
+if test x$ac_cv_lib_popt_poptGetArgs == xyes; then
+enable_dbench=yes
+# here to 'else # popt' is taken from dbench configure.ac
 
 
 
@@ -7092,154 +7250,16 @@ _ACEOF
 fi
 fi
 
-
-
-  { $as_echo "$as_me:$LINENO: checking for poptGetArgs in default libs" >&5
-$as_echo_n "checking for poptGetArgs in default libs... " >&6; }
-if test "${x_ac_cv_lib_none_poptGetArgs+set}" = set; then
-  $as_echo_n "(cached) " >&6
+else # popt
+{ $as_echo "$as_me:$LINENO: WARNING: no libpopt so 'make check' will skip dbench run" >&5
+$as_echo "$as_me: WARNING: no libpopt so 'make check' will skip dbench run" >&2;}
+fi
+ if test x$enable_dbench == xyes; then
+  DBENCH_TRUE=
+  DBENCH_FALSE='#'
 else
-
-    cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char poptGetArgs ();
-int
-main ()
-{
-return poptGetArgs ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  x_ac_cv_lib_none_poptGetArgs=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	x_ac_cv_lib_none_poptGetArgs=no
-
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-
-fi
-{ $as_echo "$as_me:$LINENO: result: $x_ac_cv_lib_none_poptGetArgs" >&5
-$as_echo "$x_ac_cv_lib_none_poptGetArgs" >&6; }
-  if test $x_ac_cv_lib_none_poptGetArgs = no; then
-  { $as_echo "$as_me:$LINENO: checking for poptGetArgs in -lpopt" >&5
-$as_echo_n "checking for poptGetArgs in -lpopt... " >&6; }
-if test "${ac_cv_lib_popt_poptGetArgs+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpopt  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char poptGetArgs ();
-int
-main ()
-{
-return poptGetArgs ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  ac_cv_lib_popt_poptGetArgs=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_popt_poptGetArgs=no
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_popt_poptGetArgs" >&5
-$as_echo "$ac_cv_lib_popt_poptGetArgs" >&6; }
-if test "x$ac_cv_lib_popt_poptGetArgs" = x""yes; then
-
-
-
-        LIBPOPT="-lpopt";
-
-        cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPOPT 1
-_ACEOF
-
-
-
-fi
-
-
+  DBENCH_TRUE='#'
+  DBENCH_FALSE=
 fi
 
 
@@ -9208,6 +9228,13 @@ if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   { { $as_echo "$as_me:$LINENO: error: conditional \"am__fastdepCC\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
 $as_echo "$as_me: error: conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "${DBENCH_TRUE}" && test -z "${DBENCH_FALSE}"; then
+  { { $as_echo "$as_me:$LINENO: error: conditional \"DBENCH\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+$as_echo "$as_me: error: conditional \"DBENCH\" was never defined.
 Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi

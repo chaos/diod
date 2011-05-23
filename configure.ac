@@ -16,6 +16,9 @@ AM_INIT_AUTOMAKE($META_NAME, $META_VERSION)
 AM_CONFIG_HEADER([config/config.h])
 AM_MAINTAINER_MODE
 
+AC_DEFINE([_GNU_SOURCE], 1,
+          [Define _GNU_SOURCE so that we get all necessary prototypes])
+
 ##
 # Checks for programs
 ##
@@ -26,11 +29,8 @@ if test "$GCC" = yes; then
 fi
 AC_PROG_RANLIB
 
-# dbench is part of 'make check' so get its stuff into config.h
-AC_DEFINE([_GNU_SOURCE], 1,
-          [Define _GNU_SOURCE so that we get all necessary prototypes])
-DBENCH_FU
-X_AC_CHECK_COND_LIB(popt, poptGetArgs)
+# dbench is conditionally compiled for 'make check'
+DBENCH
 
 ##
 # Checks for header files.

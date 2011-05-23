@@ -38,6 +38,7 @@ check_PROGRAMS = kconjoin$(EXEEXT) tsuppgrp$(EXEEXT) tstatfs$(EXEEXT) \
 	trename$(EXEEXT) tstat$(EXEEXT) tflock$(EXEEXT) \
 	tflock2$(EXEEXT) tfcntl2$(EXEEXT) tfcntl3$(EXEEXT) \
 	tfsgid$(EXEEXT) postmark$(EXEEXT)
+@DBENCH_TRUE@am__append_1 = dbench
 subdir = tests/kern
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -176,7 +177,7 @@ ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
 red=; grn=; lgn=; blu=; std=
-DIST_SUBDIRS = $(SUBDIRS)
+DIST_SUBDIRS = fstest dbench
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
   dir0=`pwd`; \
@@ -331,7 +332,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-SUBDIRS = dbench fstest
+SUBDIRS = fstest $(am__append_1)
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODMOUNT=$(top_builddir)/utils/diodmount" "./runtest"
 TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \

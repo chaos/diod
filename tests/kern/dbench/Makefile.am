@@ -4,7 +4,7 @@ AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = -DDATADIR=\"$(X_DATADIR)\"
 
-LDADD = -lpopt
+LDADD = $(LIBPOPT)
 
 check_PROGRAMS = dbench
 
