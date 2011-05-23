@@ -160,22 +160,15 @@ Npcfid* npc_open_bypath (Npcfid *root, char *path, u32 mode);
 Npcfid *npc_create_bypath (Npcfid *root, char *path, u32 perm, u32 mode,
 			   gid_t gid);
 
-/* Like npc_pread (), except issue multiple READ requests until EOF or
- * buffer is exhausted.
- * Returns bytes read, 0 on EOF, or -1 on error (retrieve with np_rerror ()).
- */
-int npc_pread_all(Npcfid *fid, void *buf, u32 count, u64 offset);
-
 /* Like read (2).  Just a npc_pread() using offset stored in fid.
  * Returns bytes read, 0 on EOF, or -1 on error (retrieve with np_rerror ()).
  */
 int npc_read(Npcfid *fid, void *buf, u32 count);
 
-/* Like npc_read (), except issue multiple READ requests until EOF or
- * buffer is exhausted.
- * Returns bytes read, 0 on EOF, or -1 on error (retrieve with np_rerror ()).
+/* Shorthand for walk/open/read[count]/close, i.e. read the whole file.
+ * Returns bytes read, or -1 on error (retrieve with np_rerror ()).
  */
-int npc_read_all(Npcfid *fid, void *buf, u32 count);
+int npc_get(Npcfid *root, char *path, void *buf, u32 count);
 
 /* npc_read_all() up to and including the next '\n' character, or until buffer
  * is exhausted, whichever comes first.
@@ -183,23 +176,19 @@ int npc_read_all(Npcfid *fid, void *buf, u32 count);
  */
 char *npc_gets(Npcfid *fid, char *buf, u32 count);
 
-/* Like npc_pwrite (), except issue multiple WRITE requests until
- * buffer is exhausted.
- * Returns bytes written or -1 on error (retrieve with np_rerror ()).
- */
-int npc_pwrite_all(Npcfid *fid, void *buf, u32 count, u64 offset);
-
 /* Like write (2).  Just a npc_pwrite () using offset stored in fid.
  * Returns bytes written or -1 on error (retrieve with np_rerror ()).
  */
 int npc_write(Npcfid *fid, void *buf, u32 count);
 
-/* Like npc_write () except issue multiple WRITE requests until buffer
- * is exhausted.
+/* Shorthand for walk/open/write[count]/close, i.e. overwrite entire
+ * existing file with buffer.
+ * Returns bytes written or -1 on error (retrieve with np_rerror ()).
  */
-int npc_write_all(Npcfid *fid, void *buf, u32 count);
+int npc_put(Npcfid *root, char *path, void *buf, u32 count);
 
-/* Like np_write_all (fid, buf, strlen (buf))
+/* Like npc_write(fid,buf,strlen(buf)) except issue multiple writes as needed.
+ * Returns bytes written or -1 on error (retrieve with np_rerror ()).
  */
 int npc_puts(Npcfid *fid, char *buf);
 

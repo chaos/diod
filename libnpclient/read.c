@@ -33,6 +33,9 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -66,22 +69,6 @@ done:
 }
 
 int
-npc_pread_all(Npcfid *fid, void *buf, u32 count, u64 offset)
-{
-	int n, done = 0;
-
-	while (done < count) {
-		n = npc_pread(fid, buf + done, count - done, offset + done);
-		if (n < 0)
-			return -1;
-		if (n == 0)
-			break;
-		done += n;
-	}
-	return done;
-}
-
-int
 npc_read(Npcfid *fid, void *buf, u32 count)
 {
 	int ret;
@@ -93,10 +80,13 @@ npc_read(Npcfid *fid, void *buf, u32 count)
 }
 
 int
-npc_read_all(Npcfid *fid, void *buf, u32 count)
+npc_get(Npcfid *root, char *path, void *buf, u32 count)
 {
 	int n, done = 0;
+	Npcfid *fid;
 
+	if (!(fid = npc_open_bypath(root, path, O_RDONLY)))
+		return -1;
 	while (done < count) {
 		n = npc_read(fid, buf + done, count - done);
 		if (n < 0)
@@ -105,9 +95,13 @@ npc_read_all(Npcfid *fid, void *buf, u32 count)
 			break;
 		done += n;
 	}
+	if (npc_clunk (fid) < 0)
+		return -1;
 	return done;
 }
 
+/* FIXME: embed a buffer in Npcfid like stdio.
+ */
 char *
 npc_gets(Npcfid *fid, char *buf, u32 count)
 {

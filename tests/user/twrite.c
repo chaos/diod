@@ -33,14 +33,19 @@ usage (void)
 static void
 _copy_to9 (int fd, Npcfid *fid)
 {
-    int n;
+    int n, m, done;
     u8 buf[65536];
 
     while ((n = read (fd, buf, sizeof (buf))) > 0) {
-        if (npc_write_all (fid, buf, n) < 0) {
-            err ("npc_write_all");
-            return;
-        }
+        done = 0;
+        do {
+            m = npc_write (fid, buf + done, n - done);
+            if (m < 0) {
+                err ("npc_write");
+                return;
+            }
+            done += m;
+        } while (done < n);
     }
     if (n < 0)
         err ("read");

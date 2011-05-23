@@ -33,6 +33,9 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -64,20 +67,6 @@ done:
 }
 
 int
-npc_pwrite_all(Npcfid *fid, void *buf, u32 count, u64 offset)
-{
-	int n, done = 0;
-
-	while (done < count) {
-		n = npc_pwrite(fid, buf + done, count - done, offset + done);
-		if (n < 0)
-			return -1;
-		done += n;
-	}
-	return done;
-}
-
-int
 npc_write(Npcfid *fid, void *buf, u32 count)
 {
 	int ret;
@@ -89,21 +78,38 @@ npc_write(Npcfid *fid, void *buf, u32 count)
 }
 
 int
-npc_write_all(Npcfid *fid, void *buf, u32 count)
+npc_put(Npcfid *root, char *path, void *buf, u32 count)
 {
 	int n, done = 0;
+	Npcfid *fid;
 
+	if (!(fid = npc_open_bypath (root, path, O_WRONLY)))
+		return -1;
 	while (done < count) {
 		n = npc_write(fid, buf + done, count - done);
-		if (n < 0)
-			return -1;
+		if (n < 0) {
+			done = -1;
+			break;
+		}
 		done += n;
 	}
+	if (npc_clunk (fid) < 0)
+		done = -1;
 	return done;
 }
 
 int
 npc_puts (Npcfid *fid, char *buf)
 {
-	return npc_write_all (fid, buf, strlen (buf));
+	int n, count = strlen (buf), done = 0;
+
+	while (done < count) {
+		n = npc_write(fid, buf + done, count - done);
+		if (n < 0) {
+			done = -1;
+			break;
+		}
+		done += n;
+	}
+	return done;
 }
