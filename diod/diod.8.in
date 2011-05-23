@@ -58,13 +58,13 @@ This option overrides the \fIallsquash\fR setting in diod.conf (5).
 .I "-U, --squashuser"
 Set the squash user.  The default is nobody.
 This option overrides the \fIsquashuser\fR setting in diod.conf (5).
+Note: if \fBdiod\fR is not run as root, the effective uid overrides
+the \fIsquashuser\fR.
 .TP
 .I "-u, --runas-uid UID"
 Run the server as UID and only allow that user to attach.
 If invoked as root, \fBdiod\fR sets real and effective uid, gid, and
 supplementary groups to those belonging to UID.
-If invoked as UID, \fBdiod\fR does not change these.
-It is an error to run \fBdiod\fR as a user other than UID or root, 
 .TP
 .I "-L, --logdest DEST"
 Set the destination for logging.  Possible destinations are

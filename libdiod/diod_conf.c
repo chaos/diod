@@ -83,22 +83,6 @@
 #define RO_SQUASHUSER       0x4000
 #define RO_THREADMODE       0x8000
 
-#define DFLT_DEBUGLEVEL     0
-#define DFLT_NWTHREADS      16
-#define DFLT_FOREGROUND     0
-#define DFLT_AUTH_REQUIRED  1
-#define DFLT_USERDB         1
-#define DFLT_ALLSQUASH      0
-#define DFLT_SQUASHUSER     "nobody"
-#define DFLT_RUNASUID       0
-#define DFLT_LISTEN         "0.0.0.0:564"
-#define DFLT_EXPORTALL      0
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
-#define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
-#endif
-#define DFLT_LOGDEST        "syslog:daemon:err"
-#define DFLT_THREADMODE     "default"
-
 typedef struct {
     int          debuglevel;
     int          nwthreads;

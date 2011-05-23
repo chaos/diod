@@ -186,24 +186,22 @@ main(int argc, char **argv)
             case 'S':   /* --allsquash */
                 diod_conf_set_allsquash (1);
                 break;
-            case 'U':   /* --allsquash */
+            case 'U':   /* --squashuser USER */
                 diod_conf_set_squashuser (optarg);
                 break;
-            case 'u':   /* --runas-uid UID */
-                if (geteuid () == 0) {
-                    uid_t uid;
-                    char *end;
+            case 'u': { /* --runas-uid UID */
+                uid_t uid;
+                char *end;
 
-                    errno = 0;
-                    uid = strtoul (optarg, &end, 10);
-                    if (errno != 0)
-                        err_exit ("error parsing --runas-uid argument");
-                    if (*end != '\0')
-                        msg_exit ("error parsing --runas-uid argument");
-                    diod_conf_set_runasuid (uid);
-                } else 
-                    msg_exit ("must be root to run diod as another user");
+                errno = 0;
+                uid = strtoul (optarg, &end, 10);
+                if (errno != 0)
+                    err_exit ("error parsing --runas-uid argument");
+                if (*end != '\0')
+                    msg_exit ("error parsing --runas-uid argument");
+                diod_conf_set_runasuid (uid);
                 break;
+            }
             case 'L':   /* --logdest DEST */
                 diod_conf_set_logdest (optarg);
                 diod_log_set_dest (optarg);
@@ -219,6 +217,9 @@ main(int argc, char **argv)
     }
     if (optind < argc)
         usage();
+
+    if (diod_conf_opt_runasuid () && diod_conf_get_allsquash ())
+        err_exit ("--runas-uid and allsquash cannot be used together");
 
     diod_conf_validate_exports ();
 
@@ -443,6 +444,7 @@ _service_run (srvmode_t mode)
     int nwthreads = diod_conf_get_nwthreads ();
     char *threadmode = diod_conf_get_threadmode ();
     int flags = diod_conf_get_debuglevel ();
+    uid_t euid = geteuid ();
     int n;
 
     ss.shutdown = 0;
@@ -459,25 +461,42 @@ _service_run (srvmode_t mode)
                 msg_exit ("failed to set up listen ports");
             break;
     }
+
+    /* manipulate squash/runas users if not root */
+    if (euid != 0) {
+        if (diod_conf_get_allsquash ()) {
+            struct passwd *pw = getpwuid (euid);
+            char *su = diod_conf_get_squashuser ();
+            if (!pw)
+                msg_exit ("getpwuid on effective uid failed");
+            if (strcmp (pw->pw_name, su) != 0) {
+                if (strcmp (su, DFLT_SQUASHUSER) != 0)
+                    msg ("changing squashuser '%s' to '%s' "
+                         "since you are not root", su, pw->pw_name);
+                diod_conf_set_squashuser (pw->pw_name); /* fixes issue 41 */
+            }
+        } else { /* N.B. runasuser cannot be set in the config file */
+            uid_t ruid = diod_conf_get_runasuid ();
+            if (diod_conf_opt_runasuid () && ruid != euid)
+                msg ("changing runasuid %d to %d "
+                     "since you are not root", ruid, euid);
+            diod_conf_set_runasuid (euid);
+        }
+    }
+        
     if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
         _daemonize (); /* implicit fork - no pthreads before this */
     if (!diod_conf_get_foreground () && mode != SRV_STDIN) 
         diod_log_set_dest (diod_conf_get_logdest ());
 
-    /* Drop root permission if running as one user.
-     * If not root, arrange to run (only) as current effective uid.
-     */
-    if (diod_conf_get_allsquash ())
-        _become_user (diod_conf_get_squashuser (), -1, 1);
-    else if (geteuid () != 0)
-        diod_conf_set_runasuid (geteuid ());
-    else if (diod_conf_opt_runasuid ()) {
-        uid_t uid = diod_conf_get_runasuid ();
-    
-        if (uid != geteuid ())
-            _become_user (NULL, uid, 1);
+    /* drop root */
+    if (euid == 0) {
+        if (diod_conf_get_allsquash ())
+            _become_user (diod_conf_get_squashuser (), -1, 1);
+        else if (diod_conf_opt_runasuid ())
+            _become_user (NULL, diod_conf_get_runasuid (), 1);
     }
-
+    
     flags |= SRV_FLAGS_AUTHCONN;
     if (geteuid () == 0)
         flags |= SRV_FLAGS_SETFSID;
