@@ -69,7 +69,7 @@ static void          _service_run (srvmode_t mode);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fsd:l:w:e:Eu:SL:nc:Nt:U:"
+#define OPTIONS "fsd:l:w:e:Eu:SL:nc:NU:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -88,7 +88,6 @@ static const struct option longopts[] = {
     {"squashuser",      required_argument,  0, 'U'},
     {"logdest",         required_argument,  0, 'L'},
     {"config-file",     required_argument,  0, 'c'},
-    {"threadmode",      required_argument,  0, 't'},
     {0, 0, 0, 0},
 };
 #else
@@ -114,7 +113,6 @@ usage()
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -c,--config-file FILE  set config file path\n"
-"   -t,--threadmode MODE   set thread mode (default or aname)\n"
     );
     exit (1);
 }
@@ -205,11 +203,6 @@ main(int argc, char **argv)
             case 'L':   /* --logdest DEST */
                 diod_conf_set_logdest (optarg);
                 diod_log_set_dest (optarg);
-                break;
-            case 't':   /* --threadmode MODE */
-                if (strcmp (optarg, "aname") && strcmp (optarg, "default"))
-                    msg_exit ("threadmode can only be default or aname");
-                diod_conf_set_threadmode (optarg);
                 break;
             default:
                 usage();
@@ -442,7 +435,6 @@ _service_run (srvmode_t mode)
 {
     List l = diod_conf_get_listen ();
     int nwthreads = diod_conf_get_nwthreads ();
-    char *threadmode = diod_conf_get_threadmode ();
     int flags = diod_conf_get_debuglevel ();
     uid_t euid = geteuid ();
     int n;
@@ -502,8 +494,6 @@ _service_run (srvmode_t mode)
         flags |= SRV_FLAGS_SETFSID;
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
-    if (strcmp (threadmode, "aname") == 0)
-        flags |= SRV_FLAGS_TPOOL_ANAME;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
         errn_exit (np_rerror (), "np_srv_create");
     if (diod_register_ops (ss.srv) < 0)

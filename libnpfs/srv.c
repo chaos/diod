@@ -338,7 +338,7 @@ np_tpool_select (Npreq *req)
 	Npsrv *srv = req->conn->srv;
 	Nptpool *tp;
 
-	if (!(srv->flags & SRV_FLAGS_TPOOL_ANAME))
+	if ((srv->flags & SRV_FLAGS_TPOOL_SINGLE))
 		return;
 	if (!req->fid || !req->fid->aname || *req->fid->aname != '/')
 		return;

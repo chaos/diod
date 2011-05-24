@@ -35,7 +35,6 @@
 #define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
 #endif
 #define DFLT_LOGDEST        "syslog:daemon:err"
-#define DFLT_THREADMODE     "default"
 
 void	diod_conf_init (void);
 void	diod_conf_fini (void);
@@ -55,10 +54,6 @@ void    diod_conf_set_debuglevel (int i);
 int     diod_conf_get_nwthreads (void);
 int     diod_conf_opt_nwthreads (void);
 void    diod_conf_set_nwthreads (int i);
-
-char   *diod_conf_get_threadmode (void);
-int     diod_conf_opt_threadmode (void);
-void    diod_conf_set_threadmode (char *s);
 
 int     diod_conf_get_foreground (void);
 int     diod_conf_opt_foreground (void);

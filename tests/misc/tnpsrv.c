@@ -72,6 +72,7 @@ main (int argc, char *argv[])
 
     /* wait for exactly one connect/disconnect */
     np_srv_wait_conncount (srv, 1);
+    sleep(1); /* racy here - conn reader needs time to process EOF */
     np_srv_destroy (srv);
 
     diod_conf_fini ();

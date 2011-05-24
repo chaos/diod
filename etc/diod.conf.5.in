@@ -35,8 +35,8 @@ If new file systems are mounted after \fBdiod\fR
 has started, they will become immediately mountable.
 .TP
 .I "nwthreads = INTEGER"
-Sets the (fixed) number of worker threads created to handle 9P requests.
-The default is 16.
+Sets the (fixed) number of worker threads created to handle 9P requests
+for a unique aname.  The default is 16 per aname.
 .TP
 .I "auth_required = 0"
 Allow clients to connect without authentication, i.e. without a valid

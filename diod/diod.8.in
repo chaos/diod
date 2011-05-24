@@ -28,7 +28,8 @@ This option may be specified more than once.
 It overrides the \fIlisten\fR config file setting.
 .TP
 .I "-w, --nwthreads INT"
-Set the number of worker threads to spawn to handle 9P operations.
+Set the number of worker threads to spawn to handle 9P operations
+for each unique aname.
 This option overrides the \fInwthreads\fR setting in diod.conf (5).
 The default is 16.
 .TP

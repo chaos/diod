@@ -53,7 +53,7 @@ client (void *arg)
 
     for (j = 0; j < t->iterations; j++) {
         if (!(afid = npc_auth (t->fs, t->aname, t->uid, diod_auth))
-						&& np_rerror () != 0) {
+                            && np_rerror () != 0) {
             errn_exit (np_rerror (), "npc_auth");
         }
         if (!(root = npc_attach (t->fs, afid, t->aname, t->uid))) {
@@ -118,18 +118,18 @@ main (int argc, char *argv[])
         errn_exit (np_rerror (), "npc_start");
 
     for (i = 0; i < numthreads; i++) {
-	t[i].fs = fs;
-	t[i].uid = uids[i % numusers];
-	t[i].aname = aname;
+        t[i].fs = fs;
+        t[i].uid = uids[i % numusers];
+        t[i].aname = aname;
         t[i].numgetattrs = numgetattrs;
         t[i].iterations = iterations;
-	err = pthread_create (&t[i].t, NULL, client, &t[i]);
+        err = pthread_create (&t[i].t, NULL, client, &t[i]);
         if (err)
             errn_exit (err, "pthread_create");
     } 
 
     for (i = 0; i < numthreads; i++) {
-	pthread_join (t[i].t, NULL);
+        pthread_join (t[i].t, NULL);
     }
 
     npc_finish (fs);
