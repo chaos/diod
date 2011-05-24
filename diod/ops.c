@@ -1159,7 +1159,7 @@ diod_fsync (Npfid *fid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (fsync(f->fd) < 0) {
+    if (fsync(f->dir ? dirfd (f->dir) : f->fd) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }

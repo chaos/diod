@@ -48,6 +48,11 @@ if [ "`basename $TEST`" = "t32" ] && ! [ -x dbench/dbench ]; then
     echo "dbench was not built" >$TEST.out
     exit 77
 fi
+# t34 requires svnadmin
+if [ "`basename $TEST`" = "t34" ] && ! which svnadmin >/dev/null 2>&1; then
+    echo "svnadmin is not installed" >$TEST.out
+    exit 77
+fi
 
 ulimit -c unlimited
 
