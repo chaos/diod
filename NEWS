@@ -1,3 +1,11 @@
+1.0-pre31:
+	Remove 'threadmode' option and make threadmode=aname the default.
+	Fix ignored open flags in create case (issue 43).
+	Fix fsync returning EBADF on directory (issue 42).
+	Override squashuser when euid != 0 (issue 41).
+	Add --squashuser command line option.
+	Improve test coverage.
+
 1.0-pre30:
 	Implement per-aname thread pools --threadmode=aname (issue 26).
 	Provide diodcat defaults for host, aname, and file.
