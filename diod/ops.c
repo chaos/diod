@@ -660,12 +660,14 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
+    if (!(flags & O_CREAT)) /* can't happen? */
+        flags |= O_CREAT;
     if (!(npath = _mkpath(f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
     saved_umask = umask(0);
-    if ((fd = creat (npath, mode)) < 0) {
+    if ((fd = open (npath, flags, mode)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
