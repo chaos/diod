@@ -62,24 +62,29 @@ _cmd (char *cmdline)
     return basename (fqcmd);
 }
 
-static void
+static int
 _interpret_status (int s, char *cmd)
 {
-    if (WIFEXITED (s))
-        msg ("%s exited with rc=%d", cmd, WEXITSTATUS (s));
-    else if (WIFSIGNALED (s))
+    int rc = 1;
+
+    if (WIFEXITED (s)) {
+        rc = WEXITSTATUS (s);
+        msg ("%s exited with rc=%d", cmd, rc);
+    } else if (WIFSIGNALED (s))
         msg ("%s killed with signal %d%s", cmd, WTERMSIG (s),
             WCOREDUMP (s) ? " (core dumped)" : "");
     else if (WIFSTOPPED (s))
         msg ("%s stopped with signal %d", cmd, WSTOPSIG (s));
     else if (WIFCONTINUED (s))
         msg ("%s restarted with SIGCONT", cmd);
+
+    return rc;
 }
 
 int
 main (int argc, char *argv[])
 {
-    int cs = -1, s[2];
+    int cs = -1, s[2], mntrc;
     char *srvcmd, *mntcmd, *tstcmd;
     pid_t pid;
 
@@ -107,7 +112,8 @@ main (int argc, char *argv[])
                 err_exit ("unshare");
             if ((cs = system (mntcmd)) == -1)
                 err_exit ("failed to run %s", _cmd (mntcmd));
-            _interpret_status (cs, _cmd (mntcmd));
+            if (_interpret_status (cs, _cmd (mntcmd)))
+                exit (1);
             close (0);
             if ((cs = system (tstcmd)) == -1)
                 err_exit ("fork for %s leg", _cmd (tstcmd));
