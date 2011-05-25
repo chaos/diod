@@ -79,5 +79,5 @@ fi
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
 
-[ ! -f $TEST.exp ] || diff $TEST.exp $TEST.out >$TEST.diff
+diff $TEST.exp $TEST.out >$TEST.diff
 exit $?

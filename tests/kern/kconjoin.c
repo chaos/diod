@@ -84,7 +84,7 @@ _interpret_status (int s, char *cmd)
 int
 main (int argc, char *argv[])
 {
-    int cs = -1, s[2], mntrc;
+    int cs = -1, s[2];
     char *srvcmd, *mntcmd, *tstcmd;
     pid_t pid;
 
