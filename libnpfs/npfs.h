@@ -183,12 +183,9 @@ struct Npreq {
 
 struct Npstats {
 	pthread_mutex_t	lock;
-	u64		nreq;		/* request count */
-	u64		rbytes;		/* read (bytes) count */
-	u64		wbytes;		/* read (bytes) count */
-	u64		rusec;		/* usec to service last read */
-	u64		wusec;		/* usec to service last write */
-	u64		gusec;		/* usec to service last getattr */
+	u64		nreqs[P9_RWSTAT+1];
+	u64		rbytes;
+	u64		wbytes;
 };
 
 struct Npwthread {
@@ -199,7 +196,6 @@ struct Npwthread {
 	u32		fsuid;
 	u32		sguid;
 	u32		fsgid;
-	Npstats		stats;
 	Npwthread	*next;
 };
 
@@ -212,6 +208,7 @@ struct Nptpool {
 	Npreq*		reqs_first;
 	Npreq*		reqs_last;
 	Npreq*		workreqs;
+	Npstats		stats;
 	pthread_cond_t	reqcond;
 	pthread_mutex_t lock;
 	Nptpool		*next;
