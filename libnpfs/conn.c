@@ -247,9 +247,7 @@ _get_waiting_reqs (Npconn *conn)
 		while (req != NULL) {
 			req1 = req->next;
 			if (req->conn == conn) {
-				xpthread_mutex_lock(&tp->lock);
 				np_srv_remove_req(tp, req);
-				xpthread_mutex_unlock(&tp->lock);
 				req->next = preqs;
 				preqs = req;
 			}
@@ -381,7 +379,7 @@ np_conn_reset(Npconn *conn)
 
 	xpthread_mutex_lock(&srv->lock);
 	while (_count_working_reqs (conn, 1) > 0)
-		pthread_cond_wait(&conn->resetcond, &srv->lock);
+		xpthread_cond_wait(&conn->resetcond, &srv->lock);
 	xpthread_mutex_unlock(&srv->lock);
 
 	xpthread_mutex_lock(&conn->lock);
@@ -439,7 +437,7 @@ done:
 
 	if (conn->resetting) {
 		xpthread_mutex_lock(&conn->srv->lock);
-		pthread_cond_broadcast(&conn->resetcond);
+		xpthread_cond_broadcast(&conn->resetcond);
 		xpthread_mutex_unlock(&conn->srv->lock);
 	}
 

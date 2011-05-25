@@ -255,9 +255,7 @@ np_flush(Npreq *req, Npfcall *tc)
 		xpthread_mutex_lock(&tp->lock);
 		for(creq = tp->reqs_first; creq != NULL; creq = creq->next) {
 			if (creq->conn==conn && creq->tag==oldtag) {
-				xpthread_mutex_lock(&tp->lock);
 				np_srv_remove_req(tp, creq);
-				xpthread_mutex_unlock(&tp->lock);
 				xpthread_mutex_lock(&creq->lock);
 				np_conn_respond(creq); /* doesn't send anything */
 				xpthread_mutex_unlock(&creq->lock);
