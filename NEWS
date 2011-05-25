@@ -1,3 +1,8 @@
+1.0-pre32:
+	Fix two places where thread pool lock could be taken twice.
+	Rework 'tpools' synthetic file content.
+	Test cleanup.
+
 1.0-pre31:
 	Remove 'threadmode' option and make threadmode=aname the default.
 	Fix ignored open flags in create case (issue 43).
