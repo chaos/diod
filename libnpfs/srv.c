@@ -870,53 +870,20 @@ _ctl_get_tpools (void *a)
 	Nptpool *tp;
 	Npreq *req;
 	char *s = NULL;
-	u64 reqs;
 	int n, len = 0;
 
 	xpthread_mutex_lock(&srv->lock);
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
 		xpthread_mutex_lock(&tp->lock);
 		xpthread_mutex_lock(&tp->stats.lock);
-		reqs = 0;
+		tp->stats.name = tp->name;
+		tp->stats.numfids = tp->refcount;
+		tp->stats.numreqs = 0;
 		for (req = tp->reqs_first; req != NULL; req = req->next)
-			reqs++;
+			tp->stats.numreqs++;
 		for (req = tp->workreqs; req != NULL; req = req->next)
-			reqs++;
-		n = aspf (&s, &len, "%s %"PRIu64" %d %"PRIu64" %"PRIu64" "
-			  "%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" "
-			  "%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" "
-			  "%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" "
-			  "%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" "
-			  "%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" "
-			  "%"PRIu64"\n",
-			  tp->name, reqs, tp->refcount,
-			  tp->stats.rbytes, tp->stats.wbytes,
-			  tp->stats.nreqs[P9_TSTATFS],
-			  tp->stats.nreqs[P9_TLOPEN],
-			  tp->stats.nreqs[P9_TLCREATE],
-			  tp->stats.nreqs[P9_TSYMLINK],
-			  tp->stats.nreqs[P9_TMKNOD],
-			  tp->stats.nreqs[P9_TRENAME],
-			  tp->stats.nreqs[P9_TREADLINK],
-			  tp->stats.nreqs[P9_TGETATTR],
-			  tp->stats.nreqs[P9_TSETATTR],
-			  tp->stats.nreqs[P9_TXATTRWALK],
-			  tp->stats.nreqs[P9_TXATTRCREATE],
-			  tp->stats.nreqs[P9_TREADDIR],
-			  tp->stats.nreqs[P9_TFSYNC],
-			  tp->stats.nreqs[P9_TLOCK],
-			  tp->stats.nreqs[P9_TGETLOCK],
-			  tp->stats.nreqs[P9_TLINK],
-			  tp->stats.nreqs[P9_TMKDIR],
-			  tp->stats.nreqs[P9_TVERSION],
-			  tp->stats.nreqs[P9_TAUTH],
-			  tp->stats.nreqs[P9_TATTACH],
-			  tp->stats.nreqs[P9_TFLUSH],
-			  tp->stats.nreqs[P9_TWALK],
-			  tp->stats.nreqs[P9_TREAD],
-			  tp->stats.nreqs[P9_TWRITE],
-			  tp->stats.nreqs[P9_TCLUNK],
-			  tp->stats.nreqs[P9_TREMOVE]);
+			tp->stats.numreqs++;
+		n = np_encode_tpools_str (&s, &len, &tp->stats);
 		xpthread_mutex_unlock(&tp->stats.lock);
 		xpthread_mutex_unlock(&tp->lock);
 		if (n < 0) {

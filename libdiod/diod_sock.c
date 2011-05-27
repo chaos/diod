@@ -245,11 +245,10 @@ diod_sock_accept_one (Npsrv *srv, int fd)
  * Return fd on success, -1 on failure.
  */
 int
-diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
+diod_sock_connect (char *host, char *port, int flags)
 {
     int error, fd = -1;
     struct addrinfo hints, *res = NULL, *r;
-    int i;
     char *errmsg = NULL;
 
     memset (&hints, 0, sizeof (hints));
@@ -257,29 +256,27 @@ diod_sock_connect (char *host, char *port, int maxtries, int retry_wait_ms)
     hints.ai_socktype = SOCK_STREAM;
 
     if ((error = getaddrinfo (host, port, &hints, &res)) != 0) {
-        msg ("getaddrinfo %s:%s: %s", host, port, gai_strerror (error));
+        if (!(flags & DIOD_SOCK_QUIET))
+            msg ("getaddrinfo %s:%s: %s", host, port, gai_strerror (error));
         goto done;
     }
     if (!res) {
-        msg ("could not look up %s:%s", host, port);
+        if (!(flags & DIOD_SOCK_QUIET))
+            msg ("could not look up %s:%s", host, port);
         goto done;
     }
-    for (i = 0; i < maxtries; i++) {
-        if (i > 0)
-            usleep (1000 * retry_wait_ms);
-        for (r = res; r != NULL; r = r->ai_next) {
-            if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0) {
-                errmsg = "socket";
-                continue;
-            }
-            if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
-                errmsg = "connect";
-                close (fd);
-                fd = -1;
-            }
+    for (r = res; r != NULL; r = r->ai_next) {
+        if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0) {
+            errmsg = "socket";
+            continue;
+        }
+        if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
+            errmsg = "connect";
+            close (fd);
+            fd = -1;
         }
     }
-    if (fd < 0 && errmsg)
+    if (fd < 0 && errmsg && !(flags & DIOD_SOCK_QUIET))
         err ("%s", errmsg);
     if (res)
         freeaddrinfo (res);

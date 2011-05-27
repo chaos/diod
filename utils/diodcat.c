@@ -136,7 +136,7 @@ main (int argc, char *argv[])
     } else {
         if (!hostname) 
             hostname = "localhost";
-        if ((fd = diod_sock_connect (hostname, port, 1, 0)) < 0)
+        if ((fd = diod_sock_connect (hostname, port, 0)) < 0)
             exit (1);
     }
     if (!aname)

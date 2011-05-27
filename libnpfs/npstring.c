@@ -30,6 +30,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -149,3 +150,90 @@ spf (char *s, int len, const char *fmt, ...)
         va_end (ap);
 }
 
+int
+np_decode_tpools_str (char *s, Npstats *stats)
+{
+	int n;
+
+	n = sscanf (s, "%as %d %d " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64,
+			&stats->name, &stats->numreqs, &stats->numfids,
+			&stats->rbytes, &stats->wbytes,
+			&stats->nreqs[P9_TSTATFS],
+			&stats->nreqs[P9_TLOPEN],
+			&stats->nreqs[P9_TLCREATE],
+			&stats->nreqs[P9_TSYMLINK],
+			&stats->nreqs[P9_TMKNOD],
+			&stats->nreqs[P9_TRENAME],
+			&stats->nreqs[P9_TREADLINK],
+			&stats->nreqs[P9_TGETATTR],
+			&stats->nreqs[P9_TSETATTR],
+			&stats->nreqs[P9_TXATTRWALK],
+			&stats->nreqs[P9_TXATTRCREATE],
+			&stats->nreqs[P9_TREADDIR],
+			&stats->nreqs[P9_TFSYNC],
+			&stats->nreqs[P9_TLOCK],
+			&stats->nreqs[P9_TGETLOCK],
+			&stats->nreqs[P9_TLINK],
+			&stats->nreqs[P9_TMKDIR],
+			&stats->nreqs[P9_TVERSION],
+			&stats->nreqs[P9_TAUTH],
+			&stats->nreqs[P9_TATTACH],
+			&stats->nreqs[P9_TFLUSH],
+			&stats->nreqs[P9_TWALK],
+			&stats->nreqs[P9_TREAD],
+			&stats->nreqs[P9_TWRITE],
+			&stats->nreqs[P9_TCLUNK],
+			&stats->nreqs[P9_TREMOVE]);
+	if (n != 31) {
+		if (stats->name) {
+			free (stats->name);
+			stats->name = NULL;
+		}
+		return -1;
+	}
+	return 0;
+}
+
+int
+np_encode_tpools_str (char **s, int *len, Npstats *stats)
+{
+	return aspf (s, len, "%s %d %d " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64"\n",
+			stats->name, stats->numreqs, stats->numfids,
+			stats->rbytes, stats->wbytes,
+			stats->nreqs[P9_TSTATFS],
+			stats->nreqs[P9_TLOPEN],
+			stats->nreqs[P9_TLCREATE],
+			stats->nreqs[P9_TSYMLINK],
+			stats->nreqs[P9_TMKNOD],
+			stats->nreqs[P9_TRENAME],
+			stats->nreqs[P9_TREADLINK],
+			stats->nreqs[P9_TGETATTR],
+			stats->nreqs[P9_TSETATTR],
+			stats->nreqs[P9_TXATTRWALK],
+			stats->nreqs[P9_TXATTRCREATE],
+			stats->nreqs[P9_TREADDIR],
+			stats->nreqs[P9_TFSYNC],
+			stats->nreqs[P9_TLOCK],
+			stats->nreqs[P9_TGETLOCK],
+			stats->nreqs[P9_TLINK],
+			stats->nreqs[P9_TMKDIR],
+			stats->nreqs[P9_TVERSION],
+			stats->nreqs[P9_TAUTH],
+			stats->nreqs[P9_TATTACH],
+			stats->nreqs[P9_TFLUSH],
+			stats->nreqs[P9_TWALK],
+			stats->nreqs[P9_TREAD],
+			stats->nreqs[P9_TWRITE],
+			stats->nreqs[P9_TCLUNK],
+			stats->nreqs[P9_TREMOVE]);
+}

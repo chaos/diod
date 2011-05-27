@@ -219,7 +219,7 @@ main (int argc, char *argv[])
         while ((host = hostlist_next (hi)) && sfd < 0) {
             if (vopt)
                 msg ("trying to connect to host %s port %s", host, port);
-            sfd = diod_sock_connect (host, port, 1, 0);
+            sfd = diod_sock_connect (host, port, 0);
         }
         hostlist_iterator_destroy (hi);
         if (sfd < 0)

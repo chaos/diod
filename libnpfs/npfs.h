@@ -183,6 +183,9 @@ struct Npreq {
 
 struct Npstats {
 	pthread_mutex_t	lock;
+	char		*name;	
+	int		numfids;
+	int		numreqs;
 	u64		nreqs[P9_RWSTAT+1];
 	u64		rbytes;
 	u64		wbytes;
@@ -329,6 +332,7 @@ void np_logmsg(Npsrv *srv, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 void np_tpool_incref(Nptpool *);
 void np_tpool_decref(Nptpool *);
+int np_decode_tpools_str (char *s, Npstats *stats);
 
 /* conn.c */
 Npconn *np_conn_create(Npsrv *, Nptrans *, char *);
@@ -366,6 +370,8 @@ void spf (char *s, int len, const char *fmt, ...)
 	__attribute__ ((format (printf, 3,4)));
 int aspf (char **sp, int *lp, const char *fmt, ...)
 	__attribute__ ((format (printf, 3,4)));
+int np_encode_tpools_str (char **s, int *len, Npstats *stats);
+int np_decode_tpools_str (char *s, Npstats *stats);
 
 /* np.c */
 int np_peek_size(u8 *buf, int len);

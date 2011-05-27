@@ -35,7 +35,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT)
+sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT) dtop$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/diodcat.8.in $(srcdir)/diodmount.8.in
@@ -44,6 +44,7 @@ am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/dbench.m4 \
 	$(top_srcdir)/config/x_ac_check_cond_lib.m4 \
 	$(top_srcdir)/config/x_ac_check_pthreads.m4 \
+	$(top_srcdir)/config/x_ac_curses.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
 	$(top_srcdir)/config/x_ac_wrap.m4 $(top_srcdir)/configure.ac
@@ -64,11 +65,14 @@ am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 diodcat_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodmount_OBJECTS = diodmount.$(OBJEXT) $(am__objects_1)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
 diodmount_DEPENDENCIES = $(am__DEPENDENCIES_2)
+am_dtop_OBJECTS = dtop.$(OBJEXT) sample.$(OBJEXT)
+dtop_OBJECTS = $(am_dtop_OBJECTS)
+dtop_DEPENDENCIES = $(am__DEPENDENCIES_2)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -77,8 +81,8 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES)
-DIST_SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES)
+SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES) $(dtop_SOURCES)
+DIST_SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES) $(dtop_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -133,6 +137,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBCURSES = @LIBCURSES@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
 LIBOBJS = @LIBOBJS@
@@ -243,7 +248,7 @@ common_ldadd = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCURSES)
 
 common_sources = \
 	opt.c \
@@ -253,9 +258,12 @@ diodmount_LDADD = $(common_ldadd)
 diodmount_SOURCES = diodmount.c $(common_sources)
 diodcat_LDADD = $(common_ldadd)
 diodcat_SOURCES = diodcat.c $(common_sources)
+dtop_LDADD = $(common_ldadd)
+dtop_SOURCES = dtop.c sample.c
 man8_MANS = \
         diodmount.8 \
-        diodcat.8
+        diodcat.8 \
+        dtop.8
 
 all: all-am
 
@@ -338,6 +346,9 @@ diodcat$(EXEEXT): $(diodcat_OBJECTS) $(diodcat_DEPENDENCIES)
 diodmount$(EXEEXT): $(diodmount_OBJECTS) $(diodmount_DEPENDENCIES) 
 	@rm -f diodmount$(EXEEXT)
 	$(LINK) $(diodmount_OBJECTS) $(diodmount_LDADD) $(LIBS)
+dtop$(EXEEXT): $(dtop_OBJECTS) $(dtop_DEPENDENCIES) 
+	@rm -f dtop$(EXEEXT)
+	$(LINK) $(dtop_OBJECTS) $(dtop_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -347,7 +358,9 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodcat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dtop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sample.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
