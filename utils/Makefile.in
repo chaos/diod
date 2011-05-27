@@ -38,7 +38,8 @@ target_triplet = @target@
 sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT) dtop$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diodcat.8.in $(srcdir)/diodmount.8.in
+	$(srcdir)/diodcat.8.in $(srcdir)/diodmount.8.in \
+	$(srcdir)/dtop.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/dbench.m4 \
@@ -52,7 +53,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodmount.8 diodcat.8
+CONFIG_CLEAN_FILES = diodmount.8 diodcat.8 dtop.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
@@ -302,6 +303,8 @@ $(am__aclocal_m4_deps):
 diodmount.8: $(top_builddir)/config.status $(srcdir)/diodmount.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 diodcat.8: $(top_builddir)/config.status $(srcdir)/diodcat.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+dtop.8: $(top_builddir)/config.status $(srcdir)/dtop.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-sbinPROGRAMS: $(sbin_PROGRAMS)
 	@$(NORMAL_INSTALL)
