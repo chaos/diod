@@ -22,7 +22,7 @@ TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/utils/diodmount"
 TESTS_ENVIRONMENT += "./runtest"
 
 TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
-	t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 t34
+	t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 t34 t35
 
 #XFAIL_TESTS =
 

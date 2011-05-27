@@ -1,0 +1,5 @@
+tflush: sent 100 tversions
+tflush: sent 1 tflush
+tflush: received 100/101 responses
+conjoin: t15 exited with rc=0
+conjoin: diod exited with rc=0

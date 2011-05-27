@@ -53,6 +53,11 @@ if [ "`basename $TEST`" = "t34" ] && ! which svnadmin >/dev/null 2>&1; then
     echo "svnadmin is not installed" >$TEST.out
     exit 77
 fi
+# t35 requires scrub
+if [ "`basename $TEST`" = "t35" ] && ! which scrub >/dev/null 2>&1; then
+    echo "scrub is not installed" >$TEST.out
+    exit 77
+fi
 
 ulimit -c unlimited
 

@@ -262,6 +262,7 @@ np_flush(Npreq *req, Npfcall *tc)
 				np_req_unref(creq);
 				ret = np_create_rflush();
 				creq = NULL;
+				xpthread_mutex_unlock(&tp->lock);
 				goto done;
 			}
 		}
@@ -279,6 +280,7 @@ np_flush(Npreq *req, Npfcall *tc)
 				req->flushreq = creq->flushreq;
 				creq->flushreq = req;
 				xpthread_mutex_unlock(&creq->lock);
+				xpthread_mutex_unlock(&tp->lock);
 				goto done;
 			}
 			creq = creq->next;

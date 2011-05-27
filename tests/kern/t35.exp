@@ -1,0 +1,8 @@
+kconjoin: diodmount exited with rc=0
+creating 100mb file
+100+0 records in
+100+0 records out
+scrubbing
+interrupting
+kconjoin: t35 exited with rc=0
+kconjoin: diod exited with rc=0
