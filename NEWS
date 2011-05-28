@@ -1,3 +1,7 @@
+1.0-pre33:
+	Add dtop monitoring tool.
+	Fix deadlock when handling a P9_TFLUSH (issue 44).
+
 1.0-pre32:
 	Fix two places where thread pool lock could be taken twice.
 	Rework 'tpools' synthetic file content.
