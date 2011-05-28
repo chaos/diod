@@ -1,6 +1,6 @@
 Name: diod
 Version: 1.0
-Release: pre33
+Release: pre34
 
 Summary:  I/O forwarding server for 9P.
 License: GPL
@@ -14,6 +14,7 @@ BuildRequires: tcp_wrappers
 BuildRequires: zlib-devel
 BuildRequires: lua-devel
 BuildRequires: munge-devel
+BuildRequires: ncurses-devel
 
 %description
 diod is a 9P server used in combination with the kernel v9fs file

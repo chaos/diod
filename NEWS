@@ -1,3 +1,6 @@
+1.0-pre34:
+	Fix a missing Buildrequires in the spec file.
+
 1.0-pre33:
 	Add dtop monitoring tool.
 	Fix deadlock when handling a P9_TFLUSH (issue 44).
