@@ -78,6 +78,7 @@ static void
 _flush_series (Npcfsys *fs, Npcfid *root)
 {
     Npfcall *rc = NULL, *tc = NULL, *ac = NULL;
+    Npcfid *f;
     u16 tag, flushtag;
     int n, i;
     struct sigaction sa;
@@ -90,9 +91,12 @@ _flush_series (Npcfsys *fs, Npcfid *root)
     if (sigaction (SIGALRM, &sa, NULL) < 0)
         err_exit ("sigaction");
 
-    /* write 100 tversions */
+    if (!(f = npc_open_bypath (root, "/", 0644)))
+        err_exit ("open)");
+
+    /* write 100 fsyncs */
     for (i = 0; i < 100; i++) {
-        if (!(tc = np_create_tversion (fs->msize, "9P2000.L")))
+        if (!(tc = np_create_tfsync (f->fid)))
             msg_exit ("out of memory");
         flushtag = tag = npc_get_id(fs->tagpool);
         np_set_tag(tc, tag);
@@ -104,7 +108,7 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         //msg ("sent tversion tag %d", tc->tag);
         free(tc);
     }
-    msg ("sent 100 tversions");
+    msg ("sent 100 tfsyncs");
 
     /* flush the most recent */
     if (!(ac = np_create_tflush (flushtag)))
@@ -122,11 +126,16 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         
     /* receive up to 101 responses with 1s timeout */
     for (i = 0; i < 101; i++) {
-        if (!(rc = malloc(sizeof(*rc) + fs->msize)))
+        /* Trick: both rfsync and rflush are the same size (empty).
+         * Read exactly that much.  Code bloats if we can't assume that.
+         */
+        int size = sizeof(rc->size)+sizeof(rc->type)+sizeof(rc->tag);
+        assert (size <= fs->msize);
+        if (!(rc = malloc(sizeof(*rc) + size)))
             msg_exit ("out of memory");
         rc->pkt = (u8*)rc + sizeof(*rc);
         alarm (1);
-        n = np_trans_read(fs->trans, rc->pkt, fs->msize);
+        n = np_trans_read(fs->trans, rc->pkt, size);
         if (n < 0) {
             if (errno == EINTR)
                 break;
@@ -137,6 +146,8 @@ _flush_series (Npcfsys *fs, Npcfid *root)
             msg_exit ("np_trans_read: unexpected EOF");
         if (!np_deserialize (rc, rc->pkt))
             msg_exit ("failed to deserialize response in one go");
+        if (rc->type != P9_RFSYNC && rc->type != P9_RFLUSH)
+            msg_exit ("received unexpected reply type (%d)", rc->type);
         //msg ("received tag %d", rc->tag);
         free(rc);
         //npc_put_id(fs->tagpool, rc->tag);
@@ -145,6 +156,8 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         msg ("received 100/101 respones");
     else 
         msg ("received %d responses", i);
+
+    (void)npc_clunk (f);
 }
 
 /*

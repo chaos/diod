@@ -15,7 +15,6 @@ TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
 TESTS_ENVIRONMENT += "./runtest"
 
 TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14 t15
-XFAIL_TESTS=t15
 
 $(TESTS): exp.d
 
