@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# svnadmin create $PATH_MNTDIR/svnroot
-
 echo creating 100mb file
 dd if=/dev/zero of=$PATH_MNTDIR/file bs=1024k count=100 status=noxfer
 echo scrubbing

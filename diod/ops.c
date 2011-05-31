@@ -595,6 +595,7 @@ diod_lopen (Npfid *fid, u32 flags)
     Fid *f = fid->aux;
     Npfcall *res = NULL;
     Npqid qid;
+    u32 iounit = 0; /* client will use msize-P9_IOHDRSZ */
 
     if ((f->xflags & XFLAGS_RO) && ((flags & O_WRONLY) || (flags & O_RDWR))) {
         np_uerror (EROFS);
@@ -622,7 +623,8 @@ diod_lopen (Npfid *fid, u32 flags)
     if (_fidstat (f) < 0)
         goto error; /* can't happen? */
     _ustat2qid (&f->stat, &qid);
-    if (!(res = np_create_rlopen (&qid, f->stat.st_blksize))) {
+    //iounit = f->stat.st_blksize;
+    if (!(res = np_create_rlopen (&qid, iounit))) {
         np_uerror (ENOMEM);
         goto error;
     }
@@ -655,6 +657,7 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
     struct stat sb;
     mode_t saved_umask;
     int created = 0;
+    u32 iounit = 0; /* client will use msize-P9_IOHDRSZ */
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -678,7 +681,8 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         goto error; /* shouldn't happen? */
     }
     _ustat2qid (&sb, &qid);
-    if (!((ret = np_create_rlcreate (&qid, sb.st_blksize)))) {
+    //iounit = sb.st_blksize;
+    if (!((ret = np_create_rlcreate (&qid, iounit)))) {
         np_uerror (ENOMEM);
         goto error;
     }

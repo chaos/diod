@@ -432,7 +432,7 @@ _reader (void *arg)
         if (fd == -1)
             fd = diod_sock_connect (tp->host, "564", DIOD_SOCK_QUIET);
         if (fd != -1 && root == NULL)
-            root = npc_mount (fd, 65536+24, "ctl", diod_auth);
+            root = npc_mount (fd, 65536, "ctl", diod_auth);
         if (fd != -1 && root != NULL) {
             len = npc_get (root, "tpools", buf, sizeof (buf) - 1);
         }

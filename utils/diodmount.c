@@ -79,7 +79,7 @@ static const struct option longopts[] = {
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
 
-#define DIOD_DEFAULT_MSIZE 65512
+#define DIOD_DEFAULT_MSIZE 65536
 static uid_t _uname2uid (char *uname);
 static void _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt,
                          int fopt, int nopt);
