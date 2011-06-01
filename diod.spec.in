@@ -9,9 +9,7 @@ Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
-# tcp_wrappers-devel on rhel6
-BuildRequires: tcp_wrappers
-BuildRequires: zlib-devel
+BuildRequires: tcp_wrappers-devel
 BuildRequires: lua-devel
 BuildRequires: munge-devel
 BuildRequires: ncurses-devel
