@@ -1,3 +1,8 @@
+1.0-pre35:
+	Never destroy tpools (temporary workaround for issue 47).
+	lcreate and lopen return iounit = 0 instead of st_blksize.
+	Fix flush test kern/t35 (issue 45)
+
 1.0-pre34:
 	Fix a missing Buildrequires in the spec file.
 
