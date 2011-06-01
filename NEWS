@@ -1,3 +1,7 @@
+1.0-pre36:
+	Undo workaround for issue 47.
+	Fix numerous small coverity problems.
+
 1.0-pre35:
 	Never destroy tpools (temporary workaround for issue 47).
 	lcreate and lopen return iounit = 0 instead of st_blksize.
