@@ -184,6 +184,7 @@ _free_user (Npuser *u)
 		free (u->uname);
 	if (u->sg)
 		free (u->sg);
+	pthread_mutex_destroy(&u->lock);
 	free (u);
 }
 
@@ -201,17 +202,16 @@ np_user_incref(Npuser *u)
 void
 np_user_decref(Npuser *u)
 {
+	int n;
+
 	if (!u)
 		return;
 
 	xpthread_mutex_lock (&u->lock);
-	u->refcount--;
-	if (u->refcount > 0) {
-		xpthread_mutex_unlock (&u->lock);
+	n = --u->refcount;
+	xpthread_mutex_unlock (&u->lock);
+	if (n > 0)
 		return;
-	}
-
-	pthread_mutex_destroy(&u->lock);
 	_free_user (u);
 }
 
