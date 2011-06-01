@@ -436,9 +436,7 @@ done:
 	req->rcall = NULL;
 
 	if (conn->resetting) {
-		xpthread_mutex_lock(&conn->srv->lock);
 		xpthread_cond_broadcast(&conn->resetcond);
-		xpthread_mutex_unlock(&conn->srv->lock);
 	}
 
 	if (trans) /* np_conn_read_proc will take care of resetting */
