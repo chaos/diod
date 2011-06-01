@@ -153,7 +153,8 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 	xpthread_cond_signal(&srv->conncountcond);
 	xpthread_mutex_unlock(&srv->lock);
 
-	np_tpool_cleanup (srv);
+	// XXX temporarily skip this while working on issue 47
+	// np_tpool_cleanup (srv);
 }
 
 /* Block the caller until the server has no active connections,
