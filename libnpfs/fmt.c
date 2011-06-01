@@ -162,8 +162,10 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	int i;
 
 	s[0] = '\0';
-	if (!fc)
+	if (!fc) {
 		spf (s, len, "NULL");
+		return;
+	}
 
 	switch (fc->type) {
 	case P9_TLERROR:
