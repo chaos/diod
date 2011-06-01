@@ -226,7 +226,7 @@ writeafid(Npfid *afid, u64 offset, u32 count, u8 *data)
     da_t da;
     int ret = -1;
 
-    if (!afid || !afid->aux || (!data && count > 0)) {
+    if (!afid || !afid->aux || !data || count == 0) {
         np_uerror (EIO);
         err ("writeafid: invalid arguments");
         goto done;
