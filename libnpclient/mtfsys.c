@@ -538,8 +538,10 @@ npc_reqalloc()
 	Npcreq *req;
 
 	req = malloc(sizeof(*req));
-	if (!req)
+	if (!req) {
 		np_uerror(ENOMEM);
+		return NULL;
+	}
 
 	req->fsys = NULL;
 	req->tag = P9_NOTAG;
