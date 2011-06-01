@@ -308,7 +308,7 @@ _get_working_reqs (Npconn *conn, Npreq ***rp, int *lp)
 
 	/* assert: srv->lock held */
 	n = _count_working_reqs (conn, 0);
-	if ((reqs = malloc(n * sizeof(Npreq *))))
+	if (!(reqs = malloc(n * sizeof(Npreq *))))
 		goto error;
 	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
 		xpthread_mutex_lock (&tp->lock);
