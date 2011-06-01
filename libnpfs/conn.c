@@ -284,9 +284,7 @@ _count_working_reqs (Npconn *conn, int boolonly)
 	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
 		xpthread_mutex_lock (&tp->lock);
 		for (req = tp->workreqs; req != NULL; req = req->next) {
-			if (req->conn != conn)
-				continue;
-			if (req->tcall->type != P9_TVERSION)
+			if (req->conn == conn)
 				n++;
 			if (boolonly && n > 0)
 				break;		
@@ -313,9 +311,7 @@ _get_working_reqs (Npconn *conn, Npreq ***rp, int *lp)
 	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
 		xpthread_mutex_lock (&tp->lock);
 		for (req = tp->workreqs; req != NULL; req = req->next) {
-			if (req->conn != conn)
-				continue;
-			if (req->tcall->type != P9_TVERSION)
+			if (req->conn == conn)
 				reqs[n++] = np_req_ref (req);
 		}
 		xpthread_mutex_unlock (&tp->lock);
