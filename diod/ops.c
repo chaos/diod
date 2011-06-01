@@ -869,7 +869,7 @@ diod_readlink(Npfid *fid)
     char target[PATH_MAX + 1];
     int n;
 
-    if ((n = readlink (f->path, target, sizeof(target))) < 0) {
+    if ((n = readlink (f->path, target, sizeof(target) - 1)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
