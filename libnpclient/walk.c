@@ -105,7 +105,7 @@ error:
 		free(rc);
 	if (tc)
 		free(tc);
-	if (nfid->fid == fid->fid) {
+	if (fid && nfid->fid == fid->fid) {
 		int saved_err = np_rerror ();
 		(void)npc_clunk (fid);
 		np_uerror (saved_err);
