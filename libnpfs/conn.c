@@ -320,8 +320,6 @@ _get_working_reqs (Npconn *conn, Npreq ***rp, int *lp)
 	*rp = reqs;
 	return 0;
 error:
-	if (reqs)
-		free (reqs);
 	return -1;
 }
 
