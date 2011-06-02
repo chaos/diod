@@ -1,3 +1,7 @@
+1.0-pre37:
+	Drop per-threadpool locks and support for flushing working requests.
+	Fix numerous small coverity problems.
+
 1.0-pre36:
 	Undo workaround for issue 47.
 	Fix numerous small coverity problems.
@@ -8,7 +12,7 @@
 	Fix flush test kern/t35 (issue 45)
 
 1.0-pre34:
-	Fix a missing Buildrequires in the spec file.
+	Fix a missing Buildrequires for tcp_wrappers-devel in the spec file.
 
 1.0-pre33:
 	Add dtop monitoring tool.
