@@ -149,8 +149,6 @@ struct Npconn {
 	int		resetting;
 	pthread_cond_t	resetcond;
 
-	u64		reqs_in;
-	u64		reqs_out;
 	char		client_id[128];
 	u32		authuser;
 	u32		msize;
@@ -171,9 +169,6 @@ struct Npreq {
 	u16		tag;
 	Npfcall*	tcall;
 	Npfcall*	rcall;
-	int		cancelled;
-	int		responded;
-	Npreq*		flushreq;
 	Npfid*		fid;
 
 	Npreq*		next;	/* list of all outstanding requests */
@@ -182,7 +177,6 @@ struct Npreq {
 };
 
 struct Npstats {
-	pthread_mutex_t	lock;
 	char		*name;	
 	int		numfids;
 	int		numreqs;
@@ -212,7 +206,6 @@ struct Nptpool {
 	Npreq*		workreqs;
 	Npstats		stats;
 	pthread_cond_t	reqcond;
-	pthread_mutex_t lock;
 	Nptpool		*next;
 };
 
@@ -269,7 +262,6 @@ struct Npsrv {
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);
 	Npfcall*	(*attach)(Npfid *fid, Npfid *afid, Npstr *aname);
-	void		(*flush)(Npreq *req);
 	int		(*clone)(Npfid *fid, Npfid *newfid);
 	int		(*walk)(Npfid *fid, Npstr *wname, Npqid *wqid);
 	Npfcall*	(*read)(Npfid *fid, u64 offset, u32 count, Npreq *req);

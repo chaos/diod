@@ -114,7 +114,6 @@ Npfcall     *diod_write  (Npfid *fid, u64 offset, u32 count, u8 *data,
                           Npreq *req);
 Npfcall     *diod_clunk  (Npfid *fid);
 Npfcall     *diod_remove (Npfid *fid);
-void         diod_flush  (Npreq *req);
 void         diod_fiddestroy(Npfid *fid);
 
 Npfcall     *diod_statfs (Npfid *fid);
@@ -162,7 +161,6 @@ diod_register_ops (Npsrv *srv)
     srv->write = diod_write;
     srv->clunk = diod_clunk;
     srv->remove = diod_remove;
-    srv->flush = diod_flush;
     srv->statfs = diod_statfs;
     srv->lopen = diod_lopen;
     srv->lcreate = diod_lcreate;
@@ -544,14 +542,6 @@ error_quiet:
     if (ret)
         free (ret);
     return NULL;
-}
-
-/* Tflush - abort in flight operations (npfs handles most of this).
- */
-void
-diod_flush(Npreq *req)
-{
-    return;
 }
 
 /* Tstatfs - read file system information.

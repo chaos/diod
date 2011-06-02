@@ -74,8 +74,6 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	conn->srv = srv;
 	conn->msize = srv->msize;
 	conn->shutdown = 0;
-	conn->reqs_in = 0;
-	conn->reqs_out = 0;
 	if (!(conn->fidpool = np_fidpool_create())) {
 		free (conn);
 		errno = ENOMEM;
@@ -202,10 +200,10 @@ again:
 				   conn->client_id);
 			break;
 		}
+		xpthread_mutex_lock(&srv->lock);	
 		np_srv_add_req(srv, req);
-		xpthread_mutex_lock(&conn->lock);
-		conn->reqs_in++;
-		xpthread_mutex_unlock(&conn->lock);
+		xpthread_mutex_unlock(&srv->lock);	
+		
 		fc = fc1;
 		if (n > 0)
 			goto again;
@@ -242,7 +240,6 @@ _get_waiting_reqs (Npconn *conn)
 	/* assert: srv->lock held */
 	preqs = NULL;
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		xpthread_mutex_lock (&tp->lock);
 		req = tp->reqs_first;
 		while (req != NULL) {
 			req1 = req->next;
@@ -253,7 +250,6 @@ _get_waiting_reqs (Npconn *conn)
 			}
 			req = req1;
 		}
-		xpthread_mutex_unlock (&tp->lock);
 	}
 	return preqs;
 }
@@ -273,7 +269,7 @@ _flush_waiting_reqs (Npreq *reqs)
 }
 
 static int
-_count_working_reqs (Npconn *conn, int boolonly)
+_count_working_reqs (Npconn *conn)
 {
 	Npsrv *srv = conn->srv;
 	Nptpool *tp;
@@ -282,67 +278,12 @@ _count_working_reqs (Npconn *conn, int boolonly)
 
 	/* assert: srv->lock held */
 	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
-		xpthread_mutex_lock (&tp->lock);
 		for (req = tp->workreqs; req != NULL; req = req->next) {
 			if (req->conn == conn)
 				n++;
-			if (boolonly && n > 0)
-				break;		
 		}
-		xpthread_mutex_unlock (&tp->lock);
-		if (boolonly && n > 0)
-			break;
 	}
 	return n;
-}
-
-static int
-_get_working_reqs (Npconn *conn, Npreq ***rp, int *lp)
-{
-	Npsrv *srv = conn->srv;
-	Npreq *req, **reqs = NULL;
-	Nptpool *tp;
-	int n;
-
-	/* assert: srv->lock held */
-	n = _count_working_reqs (conn, 0);
-	if (!(reqs = malloc(n * sizeof(Npreq *))))
-		goto error;
-	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
-		xpthread_mutex_lock (&tp->lock);
-		for (req = tp->workreqs; req != NULL; req = req->next) {
-			if (req->conn == conn)
-				reqs[n++] = np_req_ref (req);
-		}
-		xpthread_mutex_unlock (&tp->lock);
-	}
-	*lp = n;
-	*rp = reqs;
-	return 0;
-error:
-	return -1;
-}
-
-static void
-_flush_working_reqs (Npreq **reqs, int len)
-{
-	int i;
-
-	for(i = 0; i < len; i++) {
-		Npreq *req = reqs[i];
-		if (req->conn->srv->flush)
-			(*req->conn->srv->flush)(req);
-	}
-}
-
-static void
-_free_working_reqs (Npreq **reqs, int len)
-{
-	int i;
-
-	for(i = 0; i < len; i++) 
-		np_req_unref(reqs[i]);
-	free(reqs);
 }
 
 /* Clear all state associated with conn out of the srv.
@@ -351,30 +292,22 @@ _free_working_reqs (Npreq **reqs, int len)
 static void
 np_conn_reset(Npconn *conn)
 {
-	int reqslen;
-	Npsrv *srv;
-	Npreq *preqs, **reqs;
+	Npreq *preqs;
 
 	xpthread_mutex_lock(&conn->lock);
 	conn->resetting = 1;
 	xpthread_mutex_unlock(&conn->lock);
 	
 	xpthread_mutex_lock(&conn->srv->lock);
-	srv = conn->srv;
 	preqs = _get_waiting_reqs (conn);
-	if (_get_working_reqs (conn, &reqs, &reqslen) < 0) {
-		xpthread_mutex_unlock(&conn->srv->lock);
-		goto error;
-	}
 	xpthread_mutex_unlock(&conn->srv->lock);
 
 	_flush_waiting_reqs (preqs);
-	_flush_working_reqs (reqs, reqslen);
 
-	xpthread_mutex_lock(&srv->lock);
-	while (_count_working_reqs (conn, 1) > 0)
-		xpthread_cond_wait(&conn->resetcond, &srv->lock);
-	xpthread_mutex_unlock(&srv->lock);
+	xpthread_mutex_lock(&conn->srv->lock);
+	while (_count_working_reqs (conn) > 0)
+		xpthread_cond_wait(&conn->resetcond, &conn->srv->lock);
+	xpthread_mutex_unlock(&conn->srv->lock);
 
 	xpthread_mutex_lock(&conn->lock);
 	if (conn->fidpool) {
@@ -383,11 +316,6 @@ np_conn_reset(Npconn *conn)
 	}
 	conn->resetting = 0;
 	xpthread_mutex_unlock(&conn->lock);
-
-	_free_working_reqs (reqs, reqslen);
-	return;
-error:
-	return;
 }
 
 /* Called by srv workers to transmit req->rcall->pkt.
@@ -413,7 +341,6 @@ np_conn_respond(Npreq *req)
 			_debug_trace (srv, rc);
 		xpthread_mutex_lock(&conn->wlock);
 		n = np_trans_write(conn->trans, rc->pkt, rc->size);
-		conn->reqs_out++;
 		xpthread_mutex_unlock(&conn->wlock);
 		if (n <= 0) { /* write error */
 			xpthread_mutex_lock(&conn->lock);

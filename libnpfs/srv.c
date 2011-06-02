@@ -52,6 +52,7 @@ static void *np_wthread_proc(void *a);
 static void np_respond(Nptpool *tp, Npreq *req, Npfcall *rc);
 static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
+static void np_tpool_incref_nolock (Nptpool *tp);
 
 static char *_ctl_get_version (void *a);
 static char *_ctl_get_connections (void *a);
@@ -91,7 +92,7 @@ np_srv_create(int nwthread, int flags)
 	srv->nwthread = nwthread;
 	if (!(srv->tpool = np_tpool_create (srv, "default")))
 		goto error;
-	np_tpool_incref (srv->tpool);
+	np_tpool_incref_nolock (srv->tpool);
 	return srv;
 error:
 	if (srv)
@@ -112,21 +113,17 @@ np_srv_destroy(Npsrv *srv)
 int
 np_srv_add_conn(Npsrv *srv, Npconn *conn)
 {
-	int ret;
-
-	ret = 0;
 	xpthread_mutex_lock(&srv->lock);
 	np_conn_incref(conn);
 	conn->srv = srv;
 	conn->next = srv->conns;
 	srv->conns = conn;
-	ret = 1;
 	srv->conncount++;
 	srv->connhistory++;
 	xpthread_cond_signal(&srv->conncountcond);
 	xpthread_mutex_unlock(&srv->lock);
 
-	return ret;
+	return 1;
 }
 
 void
@@ -174,25 +171,24 @@ np_srv_add_req(Npsrv *srv, Npreq *req)
 {
 	Nptpool *tp = NULL;
 
+	/* assert: srv->lock held */
 	if (req->fid)
 		tp = req->fid->tpool;
 	if (!tp)
 		tp = srv->tpool;
-	xpthread_mutex_lock(&tp->lock);
 	req->prev = tp->reqs_last;
 	if (tp->reqs_last)
 		tp->reqs_last->next = req;
 	tp->reqs_last = req;
 	if (!tp->reqs_first)
 		tp->reqs_first = req;
-	xpthread_mutex_unlock(&tp->lock);
 	xpthread_cond_signal(&tp->reqcond);
 }
 
 void
 np_srv_remove_req(Nptpool *tp, Npreq *req)
 {
-	/* assert: tp->lock held */
+	/* assert: srv->lock held */
 	if (req->prev)
 		req->prev->next = req->next;
 	if (req->next)
@@ -206,7 +202,7 @@ np_srv_remove_req(Nptpool *tp, Npreq *req)
 static void
 np_srv_add_workreq(Nptpool *tp, Npreq *req)
 {
-	/* assert: tp->lock held */
+	/* assert: srv->lock held */
 	if (tp->workreqs)
 		tp->workreqs->prev = req;
 	req->next = tp->workreqs;
@@ -217,7 +213,7 @@ np_srv_add_workreq(Nptpool *tp, Npreq *req)
 static void
 np_srv_remove_workreq(Nptpool *tp, Npreq *req)
 {
-	/* assert: tp->lock held */
+	/* assert: srv->lock held */
 	if (req->prev)
 		req->prev->next = req->next;
 	else
@@ -232,6 +228,7 @@ np_wthread_create(Nptpool *tp)
 	int err;
 	Npwthread *wt;
 
+	/* assert srv->lock held */
 	if (!(wt = malloc(sizeof(*wt)))) {
 		np_uerror (ENOMEM);
 		goto error;
@@ -246,10 +243,8 @@ np_wthread_create(Nptpool *tp)
 		np_uerror (err);
 		goto error;
 	}
-	xpthread_mutex_lock(&tp->lock);
 	wt->next = tp->wthreads;
 	tp->wthreads = wt;
-	xpthread_mutex_unlock(&tp->lock);
 	return 0;
 error:
 	return -1;
@@ -282,8 +277,6 @@ np_tpool_destroy(Nptpool *tp)
 		free (wt);
 	}
 	pthread_cond_destroy (&tp->reqcond);
-	pthread_mutex_destroy (&tp->lock);
-	pthread_mutex_destroy (&tp->stats.lock);
 	if (tp->name)
 		free (tp->name);
 	free (tp);
@@ -294,6 +287,7 @@ np_tpool_create(Npsrv *srv, char *name)
 {
 	Nptpool *tp;
 
+	/* assert srv->lock held */
 	if (!(tp = malloc (sizeof (*tp)))) {
 		np_uerror (ENOMEM);
 		goto error;
@@ -305,8 +299,6 @@ np_tpool_create(Npsrv *srv, char *name)
 	}
 	tp->srv = srv;
 	tp->refcount = 0;
-	pthread_mutex_init(&tp->stats.lock, NULL);
-	pthread_mutex_init(&tp->lock, NULL);
 	pthread_cond_init(&tp->reqcond, NULL);
 	for(tp->nwthread = 0; tp->nwthread < srv->nwthread; tp->nwthread++) {
 		if (np_wthread_create(tp) < 0)
@@ -319,14 +311,20 @@ error:
 	return NULL;
 }
 
-void
-np_tpool_incref (Nptpool *tp)
+static void
+np_tpool_incref_nolock (Nptpool *tp)
 {
 	if (!tp)
 		return;
-	xpthread_mutex_lock (&tp->lock);
 	tp->refcount++;
-	xpthread_mutex_unlock (&tp->lock);
+}
+
+void
+np_tpool_incref (Nptpool *tp)
+{
+	xpthread_mutex_lock (&tp->srv->lock);
+	np_tpool_incref_nolock (tp);
+	xpthread_mutex_unlock (&tp->srv->lock);
 }
 
 void
@@ -357,7 +355,7 @@ np_tpool_select (Npreq *req)
 			np_logerr (srv, "np_tpool_create %s", req->fid->aname);
 	}
 	if (tp) {
-		np_tpool_incref (tp);
+		np_tpool_incref_nolock (tp);
 		req->fid->tpool = tp;
 	}
 	xpthread_mutex_unlock (&srv->lock);
@@ -372,22 +370,19 @@ np_tpool_decref (Nptpool *tp)
 {
 	if (!tp)
 		return;
-	xpthread_mutex_lock (&tp->lock);
+	xpthread_mutex_lock (&tp->srv->lock);
 	tp->refcount--;
-	xpthread_mutex_unlock (&tp->lock);
+	xpthread_mutex_unlock (&tp->srv->lock);
 }
 
 static void
 np_tpool_cleanup (Npsrv *srv)
 {
-	Nptpool *tp, *next, *dead , *prev = NULL;
+	Nptpool *tp, *next, *dead = NULL, *prev = NULL;
 
 	xpthread_mutex_lock (&srv->lock);
-	prev = NULL;
-	dead = NULL;
 	for (tp = srv->tpool; tp != NULL; tp = next) {
 		next = tp->next;
-		xpthread_mutex_lock (&tp->lock);
 		assert (tp->refcount >= 0);
 		if (tp->refcount == 0) {
 			tp->next = dead;
@@ -398,7 +393,6 @@ np_tpool_cleanup (Npsrv *srv)
 				srv->tpool = next;
 		} else
 			prev = tp;
-		xpthread_mutex_unlock (&tp->lock);
 	}
 	xpthread_mutex_unlock (&srv->lock);
 	for (tp = dead; tp != NULL; tp = next) {
@@ -526,7 +520,7 @@ np_preprocess_request(Npreq *req)
 }
 
 static Npfcall*
-np_process_request(Npreq *req, Npstats *stats)
+np_process_request(Npreq *req, Nptpool *tp)
 {
 	Npfcall *rc = NULL;
 	Npfcall *tc = req->tcall;
@@ -628,11 +622,11 @@ np_process_request(Npreq *req, Npstats *stats)
 		rc = np_create_rlerror(ecode);
 	}
 	if (valid_op) {
-		xpthread_mutex_lock (&stats->lock);
-		stats->rbytes += rbytes;
-		stats->wbytes += wbytes;
-		stats->nreqs[tc->type]++;
-		xpthread_mutex_unlock (&stats->lock);
+		xpthread_mutex_lock (&tp->srv->lock);
+		tp->stats.rbytes += rbytes;
+		tp->stats.wbytes += wbytes;
+		tp->stats.nreqs[tc->type]++;
+		xpthread_mutex_unlock (&tp->srv->lock);
 	}
 
 	return rc;
@@ -646,26 +640,24 @@ np_wthread_proc(void *a)
 	Npreq *req = NULL;
 	Npfcall *rc;
 
-	xpthread_mutex_lock(&tp->lock);
+	xpthread_mutex_lock(&tp->srv->lock);
 	while (!wt->shutdown) {
 		req = tp->reqs_first;
 		if (!req) {
-			xpthread_cond_wait(&tp->reqcond, &tp->lock);
+			xpthread_cond_wait(&tp->reqcond, &tp->srv->lock);
 			continue;
 		}
-
 		np_srv_remove_req(tp, req);
 		np_srv_add_workreq(tp, req);
-		xpthread_mutex_unlock(&tp->lock);
+		xpthread_mutex_unlock(&tp->srv->lock);
 
 		req->wthread = wt;
-		rc = np_process_request(req, &tp->stats);
-		if (rc) {
+		rc = np_process_request(req, tp);
+		if (rc)
 			np_respond(tp, req, rc);
-		}
-		xpthread_mutex_lock(&tp->lock);
+		xpthread_mutex_lock(&tp->srv->lock);
 	}
-	xpthread_mutex_unlock (&tp->lock);
+	xpthread_mutex_unlock (&tp->srv->lock);
 
 	return NULL;
 }
@@ -673,23 +665,11 @@ np_wthread_proc(void *a)
 static void
 np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 {
-	Npreq *freq, *nreq;
+	Npreq *nreq;
 
-	xpthread_mutex_lock(&req->lock);
-	if (req->responded) {
-		free(rc);
-		xpthread_mutex_unlock(&req->lock);
-		np_req_unref(req);
-		return;
-	}
-	req->responded = 1;
-	xpthread_mutex_unlock(&req->lock);
-
-	xpthread_mutex_lock(&tp->lock);
+	xpthread_mutex_lock(&tp->srv->lock);
 	np_srv_remove_workreq(tp, req);
-	for(freq = req->flushreq; freq != NULL; freq = freq->flushreq)
-		np_srv_remove_workreq(tp, freq);
-	xpthread_mutex_unlock(&tp->lock);
+	xpthread_mutex_unlock(&tp->srv->lock);
 
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
@@ -702,15 +682,6 @@ np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 		np_conn_respond(req);		
 	}
 
-	for(freq = req->flushreq; freq != NULL; freq = nreq) {
-		nreq = freq->flushreq;
-		xpthread_mutex_lock(&freq->lock);
-		freq->rcall = np_create_rflush();
-		np_set_tag(freq->rcall, freq->tag);
-		np_conn_respond(freq);
-		xpthread_mutex_unlock(&freq->lock);
-		np_req_unref(freq);
-	}
 	xpthread_mutex_unlock(&req->lock);
 	np_req_unref(req);
 }
@@ -740,8 +711,6 @@ Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {
 	req->tag = tc->tag;
 	req->tcall = tc;
 	req->rcall = NULL;
-	req->responded = 0;
-	req->flushreq = NULL;
 	req->next = NULL;
 	req->prev = NULL;
 	req->wthread = NULL;
@@ -840,9 +809,8 @@ _ctl_get_connections (void *a)
 	xpthread_mutex_lock(&srv->lock);
 	for (cc = srv->conns; cc != NULL; cc = cc->next) {
 		xpthread_mutex_lock(&cc->lock);
-		if (aspf (&s, &len, "%s %"PRIu64" %"PRIu64" %d\n",
+		if (aspf (&s, &len, "%s %d\n",
 				np_conn_get_client_id(cc),
-				cc->reqs_in, cc->reqs_out,
 				np_fidpool_count (cc->fidpool)) < 0) {
 			np_uerror (ENOMEM);
 			goto error_unlock;
@@ -870,8 +838,6 @@ _ctl_get_tpools (void *a)
 
 	xpthread_mutex_lock(&srv->lock);
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		xpthread_mutex_lock(&tp->lock);
-		xpthread_mutex_lock(&tp->stats.lock);
 		tp->stats.name = tp->name;
 		tp->stats.numfids = tp->refcount;
 		tp->stats.numreqs = 0;
@@ -880,8 +846,6 @@ _ctl_get_tpools (void *a)
 		for (req = tp->workreqs; req != NULL; req = req->next)
 			tp->stats.numreqs++;
 		n = np_encode_tpools_str (&s, &len, &tp->stats);
-		xpthread_mutex_unlock(&tp->stats.lock);
-		xpthread_mutex_unlock(&tp->lock);
 		if (n < 0) {
 			np_uerror (ENOMEM);
 			goto error_unlock;
@@ -924,19 +888,16 @@ _ctl_get_requests(void *a)
 
 	xpthread_mutex_lock(&srv->lock);
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		xpthread_mutex_lock(&tp->lock);
 		for (req = tp->workreqs; req != NULL; req = req->next)
 			if (!(_get_one_request (&s, &len, req)))
 				goto error_unlock;
 		for (req = tp->reqs_first; req != NULL; req = req->next)
 			if (!(_get_one_request (&s, &len, req)))
 				goto error_unlock;
-		xpthread_mutex_unlock(&tp->lock);
 	}
 	xpthread_mutex_unlock(&srv->lock);
 	return s;
 error_unlock:
-	xpthread_mutex_unlock(&tp->lock);
 	xpthread_mutex_unlock(&srv->lock);
 	if (s)
 		free(s);
