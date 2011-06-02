@@ -271,6 +271,7 @@ _become_user (char *name, uid_t uid, int realtoo)
         err_exit ("setreuid");
     if (setreuid (realtoo ? pwd->pw_uid : -1, pwd->pw_uid) < 0)
         err_exit ("setreuid");
+    free (buf);
 }
 
 /* Remove any resource limits.
