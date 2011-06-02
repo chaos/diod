@@ -673,7 +673,7 @@ np_wthread_proc(void *a)
 static void
 np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 {
-	Npreq *freq;
+	Npreq *freq, *nreq;
 
 	xpthread_mutex_lock(&req->lock);
 	if (req->responded) {
@@ -702,7 +702,8 @@ np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 		np_conn_respond(req);		
 	}
 
-	for(freq = req->flushreq; freq != NULL; freq = freq->flushreq) {
+	for(freq = req->flushreq; freq != NULL; freq = nreq) {
+		nreq = freq->flushreq;
 		xpthread_mutex_lock(&freq->lock);
 		freq->rcall = np_create_rflush();
 		np_set_tag(freq->rcall, freq->tag);
