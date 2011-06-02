@@ -545,7 +545,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		}
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
-			gid_t ret;
+			int ret;
 
 			if ((ret = setfsgid (gid)) < 0) {
 				np_uerror (errno);
@@ -577,7 +577,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			wt->sguid = u->uid;
 		}
 		if (wt->fsuid != u->uid) {
-			uid_t ret;
+			int ret;
 
 			if ((ret = setfsuid (u->uid)) < 0) {
 				np_uerror (errno);
