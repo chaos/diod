@@ -408,6 +408,8 @@ _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt)
         msg ("mount %s %s -o%s", spec, dir, options);
     if (!fopt)
         _mount (spec, dir, mountflags, NULL);
+
+    free (options);
 }
 
 static int
