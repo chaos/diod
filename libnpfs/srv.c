@@ -665,8 +665,6 @@ np_wthread_proc(void *a)
 static void
 np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 {
-	Npreq *nreq;
-
 	xpthread_mutex_lock(&tp->srv->lock);
 	np_srv_remove_workreq(tp, req);
 	xpthread_mutex_unlock(&tp->srv->lock);
