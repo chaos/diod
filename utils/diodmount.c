@@ -272,7 +272,7 @@ _parse_spec (char *spec, Opt o)
     if (strlen (host) == 0)
         msg_exit ("no host specified");
     if (!aname || strlen (aname) == 0)
-        aname = opt_find (o, "aname");
+        ; /* aname = opt_find (o, "aname"); */
     else if (!opt_addf (o, "aname=%s", aname))
         msg_exit ("you cannot have both -oaname and spec=host:aname");
     if (!(hl = hostlist_create (host)))
