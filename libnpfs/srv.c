@@ -239,7 +239,6 @@ np_wthread_create(Nptpool *tp)
 	memset (wt, 0, sizeof (*wt));
 	wt->tpool = tp;
 	wt->shutdown = 0;
-	wt->state = WT_START;
 	wt->fsuid = geteuid ();
 	wt->sguid = P9_NONUNAME;
 	wt->fsgid = getegid ();
@@ -649,7 +648,6 @@ np_wthread_proc(void *a)
 
 	xpthread_mutex_lock(&tp->lock);
 	while (!wt->shutdown) {
-		wt->state = WT_IDLE;
 		req = tp->reqs_first;
 		if (!req) {
 			xpthread_cond_wait(&tp->reqcond, &tp->lock);
@@ -661,16 +659,13 @@ np_wthread_proc(void *a)
 		xpthread_mutex_unlock(&tp->lock);
 
 		req->wthread = wt;
-		wt->state = WT_WORK;
 		rc = np_process_request(req, &tp->stats);
 		if (rc) {
-			wt->state = WT_REPLY;
 			np_respond(tp, req, rc);
 		}
 		xpthread_mutex_lock(&tp->lock);
 	}
 	xpthread_mutex_unlock (&tp->lock);
-	wt->state = WT_SHUT;
 
 	return NULL;
 }
