@@ -107,8 +107,7 @@ error:
 		int saved_err = np_rerror ();
 		(void)npc_clunk (fid);
 		np_uerror (saved_err);
-	}
-	if (fid)
+	} else if (fid)
 		npc_fid_free (fid);
 	if (fname)
 		free(fname);
