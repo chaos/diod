@@ -53,8 +53,8 @@ check_fsid (char *s, uid_t uid, gid_t gid)
 static void
 change_fsid (char *s, uid_t fromuid, gid_t fromgid, uid_t uid, gid_t gid)
 {
-    uid_t u;
-    gid_t g;
+    int u;
+    int g;
 
     msg ("%s: changing to %d:%d", s, uid, gid);
     if (fromuid != uid) {

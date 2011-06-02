@@ -72,8 +72,8 @@ read_file (char *path)
 static void
 change_fsid (uid_t olduid, gid_t oldgid, uid_t uid, gid_t gid)
 {
-    uid_t u;
-    gid_t g;
+    int u;
+    int g;
 
     if (uid != olduid) {
         u = setfsuid (uid);
