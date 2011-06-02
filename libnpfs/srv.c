@@ -322,6 +322,8 @@ np_tpool_incref_nolock (Nptpool *tp)
 void
 np_tpool_incref (Nptpool *tp)
 {
+	if (!tp)
+		return;
 	xpthread_mutex_lock (&tp->srv->lock);
 	np_tpool_incref_nolock (tp);
 	xpthread_mutex_unlock (&tp->srv->lock);
