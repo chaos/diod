@@ -1,3 +1,6 @@
+1.0-pre38:
+	Fix a compiler warning that prevented RPM from building.
+
 1.0-pre37:
 	Drop per-threadpool locks and support for flushing working requests.
 	Fix numerous small coverity problems.
