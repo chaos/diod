@@ -71,7 +71,7 @@ static int
 _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
 {
     struct addrinfo hints, *res = NULL, *r;
-    int opt, i, error, fd, nents = 0;
+    int opt, error, fd, nents = 0;
     struct pollfd *fds = *fdsp;
     int nfds = *nfdsp;
     int ret = 0;
@@ -98,7 +98,7 @@ _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
         msg ("out of memory");
         goto done;
     }
-    for (r = res; r != NULL; r = r->ai_next, i++) {
+    for (r = res; r != NULL; r = r->ai_next) {
         if ((fd = socket (r->ai_family, r->ai_socktype, 0)) < 0) {
             err ("socket: %s:%s", host, port);
             continue;
