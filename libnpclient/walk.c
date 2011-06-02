@@ -89,10 +89,8 @@ npc_walk(Npcfid *nfid, char *path)
 			np_uerror(ENOENT);
 			goto error;
 		}
-		if (tc)
-			free(tc);
-		if (rc)
-			free(rc);
+		free(tc);
+		free(rc);
 		if (!t || *s=='\0')
 			break;
 	}
