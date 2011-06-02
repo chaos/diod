@@ -132,10 +132,7 @@ _alloc_file (char *name, u8 type)
 		np_uerror (ENOMEM);
 		goto error;
 	}
-	if ((file->qid.path = _next_inum ()) < 0) {
-		np_uerror (ENOMEM);
-		goto error;
-	}
+	file->qid.path = _next_inum ();
 	file->qid.type = type | P9_QTTMP;
 	file->qid.version = 0;
 	if ((type & P9_QTDIR))
