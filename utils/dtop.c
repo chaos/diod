@@ -48,6 +48,7 @@
 #include <sys/time.h>
 #include <pthread.h>
 #include <inttypes.h>
+#include <dirent.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -59,6 +60,9 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "sample.h"
+
+int mvwprintw(WINDOW *win, int y, int x, const char *fmt, ...)
+    __attribute__ ((format (printf, 4, 5)));
 
 #define OPTIONS "h:p:"
 #if HAVE_GETOPT_LONG
@@ -75,13 +79,10 @@ static const struct option longopts[] = {
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
 #endif
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
-#endif
 
 typedef struct {
     char host[MAXHOSTNAMELEN];
-    char aname[MAXPATHLEN];
+    char aname[PATH_MAX];
 } Tpoolkey; 
 
 typedef struct {
@@ -101,14 +102,15 @@ typedef struct {
     int fd;
     Npcfid *root;
     pthread_t thread;
+    int anames;
     double rmbps;
     double wmbps;
-    double iops;
     double numfids;
     double numreqs;
     double totreqs;
+    double numconns;
     sample_t mem_cached;
-    sample_t mem_writeback;
+    sample_t mem_dirty;
     sample_t nfs_ops;
     time_t last_poll;
 } Server;
@@ -249,7 +251,7 @@ _update_display_topwin (WINDOW *win)
 
     wclear (win);
     mvwprintw (win, y, 0, "%s", "DIOD - Distributed I/O Daemon");
-    mvwprintw (win, y++, 55, "%*s", strlen (ts) - 1, ts);
+    mvwprintw (win, y++, 55, "%*s", (int)(strlen (ts) - 1), ts);
     y++; 
 
     mvwprintw (win, y++, 0,
@@ -334,16 +336,18 @@ _update_display_server (WINDOW *win)
     wmove (win, y++, 0);
 
     wattron (win, A_REVERSE);
-    wprintw (win, "%10.10s %14.14s %6.6s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s\n",
-             "server", "status", "fids", "reqs", "queue", "rMB/s", "wMB/s", "IOPS", "cache", "wback", "nfs/s");
+    wprintw (win,
+    "%10.10s %5.5s %5.5s %6.6s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s\n",
+    "server", "aname", "conns", "fids", "reqs", "queue", "rMB/s", "wMB/s",
+    "cache", "dirty", "nfs/s");
     wattroff (win, A_REVERSE);
 
     /* zero server stats */
     if (!(itr = list_iterator_create (servers)))
         msg_exit ("out of memory");    
     while ((sp = list_next (itr))) {
-        sp->numfids = sp->numreqs = sp->totreqs = 0;
-        sp->rmbps = sp->wmbps = sp->iops = 0;
+        sp->anames = sp->numfids = sp->numreqs = sp->totreqs = 0;
+        sp->rmbps = sp->wmbps = 0;
     }
     list_iterator_destroy (itr);
 
@@ -353,12 +357,12 @@ _update_display_server (WINDOW *win)
         sp = list_find_first (servers, (ListFindF)_match_serverhost,
                               tp->key.host);
         if (sp) {
+            sp->anames++;
             sp->numfids += sample_val (tp->numfids, t);
             sp->totreqs += sample_rate (tp->totreqs, t);
             sp->numreqs += sample_val (tp->numreqs, t); /* queue */
             sp->rmbps += sample_rate (tp->rbytes, t) / (1024*1024);
             sp->wmbps += sample_rate (tp->wbytes, t) / (1024*1024);
-            sp->iops += sample_rate (tp->iops, t);
         }
     }
     list_iterator_destroy (itr);
@@ -367,16 +371,24 @@ _update_display_server (WINDOW *win)
     if (!(itr = list_iterator_create (servers)))
         msg_exit ("out of memory");    
     while ((sp = list_next (itr))) {
-        char *stat = t - sp->last_poll > stale_secs ? "stale" : "ok";
+        mvwprintw (win, y, 0, "%10.10s ", sp->host);
+        if (t - sp->last_poll < stale_secs) {
+            mvwprintw (win, y, 11,
+            "%5.0d %5.0f %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
+            sp->anames,
+            sp->numconns,
+            sp->numfids,
+            sp->totreqs,
+            sp->numreqs,
+            sp->rmbps,
+            sp->wmbps,
+            sample_val (sp->mem_cached, t) / 1024,
+            sample_val (sp->mem_dirty, t) / 1024,
+            sample_rate (sp->nfs_ops, t));
+        }
+        y++;
+        
 
-        mvwprintw (win, y++, 0,
-                "%10.10s %14.14s %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
-                    sp->host, sp->fd == -1 ? "offline" : stat,
-                    sp->numfids, sp->totreqs, sp->numreqs,
-                    sp->rmbps, sp->wmbps, sp->iops,
-                    sample_val (sp->mem_cached, t) / 1024,
-                    sample_val (sp->mem_writeback, t) / 1024);
-                    sample_rate (sp->nfs_ops, t);
     }
     list_iterator_destroy (itr);
 
@@ -563,10 +575,12 @@ _read_ctl_meminfo (Server *sp)
         p = strchr (s, '\n');
         if (p)
             *p++ = '\0';
-        if (!strncmp (s, "Cached:", 7))
+        if (!strncmp (s, "Cached:", 7)) {
             sample_update (sp->mem_cached, strtod (s + 7, NULL), now);
-        else if (!strncmp (s, "Writeback:", 10))
-            sample_update (sp->mem_writeback, strtod (s + 10, NULL), now);
+        } else if (!strncmp (s, "Dirty:", 6)) {
+            sample_update (sp->mem_dirty, strtod (s + 6, NULL), now);
+            break;
+        }
     }
     free (buf);
     return 0;
@@ -585,10 +599,33 @@ _read_ctl_nfsops (Server *sp)
         p = strchr (s, '\n');
         if (p)
             *p++ = '\0';
-        if (!strncmp (s, "rpc", 3))
+        if (!strncmp (s, "rpc", 3)) {
             sample_update (sp->nfs_ops, strtod (s + 3, NULL), now);
+            break;
+        }
     }
     free (buf);
+    return 0;
+}
+
+static int
+_read_ctl_connections (Server *sp)
+{
+    time_t now;
+    char *buf, *s, *p;
+    int count = 0;
+
+    if (!(buf = npc_aget (sp->root, "connections")))
+        return -1;
+    now = time (NULL);
+    for (s = buf; s && *s; s = p) {
+        p = strchr (s, '\n');
+        if (p)
+            *p++ = '\0';
+        count++;
+    }
+    free (buf);
+    sp->numconns = count;
     return 0;
 }
 
@@ -610,7 +647,7 @@ _reader (void *arg)
             goto skip;
         }
         if (_read_ctl_tpools (sp) < 0 || _read_ctl_meminfo (sp) < 0
-                                      || _read_ctl_nfsops (sp) < 0) {
+         || _read_ctl_nfsops (sp) < 0 || _read_ctl_connections (sp) < 0) {
             (void)npc_umount (sp->root); /* closes fd */
             sp->root = NULL;
             sp->fd = -1;
@@ -638,7 +675,7 @@ _server_create (char *host, double poll_sec)
     sp->fd = -1;
     sp->root = NULL;
     sp->mem_cached = sample_create (stale_secs);
-    sp->mem_writeback = sample_create (stale_secs);
+    sp->mem_dirty = sample_create (stale_secs);
     sp->nfs_ops = sample_create (stale_secs);
     if ((err = pthread_create (&sp->thread, NULL, _reader, sp)))
         errn_exit (err, "pthread_create");

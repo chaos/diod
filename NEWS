@@ -1,7 +1,7 @@
 1.0-pre39:
 	Fix a null pointer deref regression introduced in 1.0-pre37.
 
-.0-pre38:
+1.0-pre38:
 	Fix a compiler warning that prevented RPM from building.
 
 1.0-pre37:
