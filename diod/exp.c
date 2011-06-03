@@ -244,7 +244,7 @@ done:
 }
 
 char *
-diod_get_exports (void *a)
+diod_get_exports (char *name, void *a)
 {
     List exports = diod_conf_get_exports ();
     List seen = NULL;

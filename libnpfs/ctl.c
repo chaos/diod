@@ -36,6 +36,7 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <sys/time.h>
+#include <unistd.h>
 #include <dirent.h>
 
 #include "9p.h"
@@ -149,6 +150,77 @@ _alloc_file (char *name, u8 type)
 error:
 	np_ctl_delfile (file);
 	return NULL;
+}
+
+#define GET_PROC_CHUNK 64
+static char *
+np_ctl_get_proc (char *name, void *arg)
+{
+	char path[PATH_MAX + 1];
+	int ssize = 0;
+	char *s = NULL;
+	int fd = -1, n, len;
+
+	snprintf (path, sizeof(path), "/proc/%s", name);
+	for (n = 0; n < strlen (path); n++) {
+		if (path[n] == '.')
+			path[n] = '/';	
+	}
+	if ((fd = open (path, O_RDONLY)) < 0) {
+		np_uerror (errno);
+		goto error;
+	}
+	len = 0;
+	do {
+		if (!s) {
+			ssize = GET_PROC_CHUNK;
+			s = malloc (ssize);
+		} else if (ssize - len == 1) {
+			ssize += GET_PROC_CHUNK;
+			s = realloc (s, ssize);
+		}
+		if (!s) {
+			np_uerror (ENOMEM);
+			goto error;
+		}
+		n = read (fd, s + len, ssize - len - 1);
+		if (n > 0)
+			len += n;
+	} while (n > 0);
+	if (n < 0) {
+		np_uerror (errno);
+		goto error;
+	}
+	(void)close (fd);
+	s[len] = '\0';
+	return s;
+
+error:
+	if (s)
+		free (s);
+	if (fd >= 0)
+		(void)close (fd);
+	return NULL;	
+}
+
+Npfile *
+np_ctl_addfile_proc (Npfile *parent, char *name)
+{
+	Npfile *file;
+
+	if (!(parent->qid.type & P9_QTDIR)) {
+		np_uerror (EINVAL);
+		return NULL;
+	}
+	if (!(file = _alloc_file (name, P9_QTFILE)))
+		return NULL;
+	file->getf = np_ctl_get_proc;
+	file->getf_arg = NULL;
+	file->next = parent->child;
+	parent->child = file;
+	(void)gettimeofday(&parent->mtime, NULL);
+
+	return file;
 }
 
 Npfile *
@@ -337,7 +409,8 @@ np_ctl_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 
 	if (!f->data) {
 		assert (f->file->getf != NULL);
-		if (!(f->data = f->file->getf (f->file->getf_arg)))
+		if (!(f->data = f->file->getf (f->file->name,
+					       f->file->getf_arg)))
 			if (np_rerror ()) /* NULL is a valid (empty) result */
 				goto done;
 	}

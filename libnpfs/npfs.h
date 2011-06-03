@@ -230,7 +230,7 @@ enum {
 	SRV_FLAGS_TPOOL_SINGLE	=0x00080000,
 };
 
-typedef char * (*SynGetF)(void *);
+typedef char * (*SynGetF)(char *name, void *arg);
 
 struct Npfile {
         char                    *name;
@@ -482,5 +482,6 @@ void np_ctl_fiddestroy (Npfid *fid);
 int np_ctl_initialize (Npsrv *srv);
 void np_ctl_finalize (Npsrv *srv);
 Npfile *np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg);
+Npfile *np_ctl_addfile_proc (Npfile *parent, char *name);
 Npfile *np_ctl_adddir (Npfile *parent, char *name);
 void np_ctl_delfile (Npfile *file);

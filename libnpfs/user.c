@@ -109,7 +109,7 @@ _usercache_lookup (Npsrv *srv, char *uname, uid_t uid)
 }
 
 static char *
-_get_usercache (void *a)
+_get_usercache (char *name, void *a)
 {
 	Npsrv *srv = (Npsrv *)a;
 	Npusercache *uc = srv->usercache;

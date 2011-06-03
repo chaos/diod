@@ -54,10 +54,10 @@ static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 static void np_tpool_incref_nolock (Nptpool *tp);
 
-static char *_ctl_get_version (void *a);
-static char *_ctl_get_connections (void *a);
-static char *_ctl_get_tpools (void *a);
-static char *_ctl_get_requests (void *a);
+static char *_ctl_get_version (char *name, void *a);
+static char *_ctl_get_connections (char *name, void *a);
+static char *_ctl_get_tpools (char *name, void *a);
+static char *_ctl_get_requests (char *name, void *a);
 
 Npsrv*
 np_srv_create(int nwthread, int flags)
@@ -86,6 +86,10 @@ np_srv_create(int nwthread, int flags)
 	if (!np_ctl_addfile (srv->ctlroot, "tpools", _ctl_get_tpools, srv))
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "requests", _ctl_get_requests, srv))
+		goto error;
+	if (!np_ctl_addfile_proc (srv->ctlroot, "meminfo"))
+		goto error;
+	if (!np_ctl_addfile_proc (srv->ctlroot, "net.rpc.nfs"))
 		goto error;
 	if (np_usercache_create (srv) < 0)
 		goto error;
@@ -788,7 +792,7 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 }
 
 static char *
-_ctl_get_version (void *a)
+_ctl_get_version (char *name, void *a)
 {
 	char *s = NULL;
 	int len = 0;
@@ -799,7 +803,7 @@ _ctl_get_version (void *a)
 }
 
 static char *
-_ctl_get_connections (void *a)
+_ctl_get_connections (char *name, void *a)
 {
 	Npsrv *srv = (Npsrv *)a;
 	Npconn *cc;
@@ -828,7 +832,7 @@ error_unlock:
 }
 
 static char *
-_ctl_get_tpools (void *a)
+_ctl_get_tpools (char *name, void *a)
 {
 	Npsrv *srv = (Npsrv *)a;
 	Nptpool *tp;
@@ -878,7 +882,7 @@ _get_one_request (char **sp, int *lp, Npreq *req)
 }
 
 static char *
-_ctl_get_requests(void *a)
+_ctl_get_requests(char *name, void *a)
 {
 	Npsrv *srv = (Npsrv *)a;
 	Nptpool *tp;

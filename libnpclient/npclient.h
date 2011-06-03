@@ -170,6 +170,13 @@ int npc_read(Npcfid *fid, void *buf, u32 count);
  */
 int npc_get(Npcfid *root, char *path, void *buf, u32 count);
 
+
+/* Same as npc_get but result is a null terminated string that the caller
+ * must free.  Returns NULL on error (retrieve wtih np_rerror ()).
+ */
+char *npc_aget(Npcfid *root, char *path);
+
+
 /* npc_read_all() up to and including the next '\n' character, or until buffer
  * is exhausted, whichever comes first.
  * Returns bytes read, 0 on EOF, or -1 on error (retrieve with np_rerror ()).

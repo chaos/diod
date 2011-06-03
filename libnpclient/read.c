@@ -100,6 +100,49 @@ npc_get(Npcfid *root, char *path, void *buf, u32 count)
 	return done;
 }
 
+#define AGET_CHUNK 64
+char *
+npc_aget(Npcfid *root, char *path)
+{
+	int n, len;
+	Npcfid *fid = NULL;
+	char *s = NULL;;
+	int ssize = 0;
+
+	if (!(fid = npc_open_bypath(root, path, O_RDONLY)))
+		goto error;
+	len = 0;
+	do {
+		if (!s) {
+			ssize = AGET_CHUNK;
+			s = malloc (ssize);
+		} else if (ssize - len == 1) {
+			ssize += AGET_CHUNK;
+			s = realloc (s, ssize);
+		}
+		if (!s) {
+			np_uerror (ENOMEM);
+			goto error;
+		}
+		n = npc_read(fid, s + len, ssize - len - 1);
+		if (n > 0)
+			len += n;
+	} while (n > 0);
+	if (n < 0)
+		goto error;
+	if (npc_clunk (fid) < 0)
+		goto error;
+	s[len] = '\0';
+	return s;
+error:
+	if (s)
+		free (s);
+	if (fid)
+		(void)npc_clunk (fid);
+	return NULL;
+}
+
+
 /* FIXME: embed a buffer in Npcfid like stdio.
  */
 char *

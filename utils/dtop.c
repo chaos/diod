@@ -98,6 +98,8 @@ typedef struct {
 typedef struct {
     char *host;
     double poll_sec;
+    int fd;
+    Npcfid *root;
     pthread_t thread;
     double rmbps;
     double wmbps;
@@ -105,10 +107,13 @@ typedef struct {
     double numfids;
     double numreqs;
     double totreqs;
+    sample_t mem_cached;
+    sample_t mem_writeback;
+    sample_t nfs_ops;
+    time_t last_poll;
 } Server;
 
 #define TOPWIN_LINES    7
-#define SUBWIN
 
 static List tpools = NULL;
 static List servers = NULL;
@@ -329,8 +334,8 @@ _update_display_server (WINDOW *win)
     wmove (win, y++, 0);
 
     wattron (win, A_REVERSE);
-    wprintw (win, "%10.10s %14.14s %6.6s %5.5s %5.5s %5.5s %5.5s %5.5s\n",
-             "server", "", "fids", "reqs", "queue", "rMB/s", "wMB/s", "IOPS");
+    wprintw (win, "%10.10s %14.14s %6.6s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s %5.5s\n",
+             "server", "status", "fids", "reqs", "queue", "rMB/s", "wMB/s", "IOPS", "cache", "wback", "nfs/s");
     wattroff (win, A_REVERSE);
 
     /* zero server stats */
@@ -362,10 +367,16 @@ _update_display_server (WINDOW *win)
     if (!(itr = list_iterator_create (servers)))
         msg_exit ("out of memory");    
     while ((sp = list_next (itr))) {
+        char *stat = t - sp->last_poll > stale_secs ? "stale" : "ok";
+
         mvwprintw (win, y++, 0,
-                "%10.10s %14.14s %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
-                    sp->host, "", sp->numfids, sp->totreqs, sp->numreqs,
-                    sp->rmbps, sp->wmbps, sp->iops);
+                "%10.10s %14.14s %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
+                    sp->host, sp->fd == -1 ? "offline" : stat,
+                    sp->numfids, sp->totreqs, sp->numreqs,
+                    sp->rmbps, sp->wmbps, sp->iops,
+                    sample_val (sp->mem_cached, t) / 1024,
+                    sample_val (sp->mem_writeback, t) / 1024);
+                    sample_rate (sp->nfs_ops, t);
     }
     list_iterator_destroy (itr);
 
@@ -520,45 +531,93 @@ _update (char *host, time_t t, char *s)
         free (stats.name);
 }
 
+static int
+_read_ctl_tpools (Server *sp)
+{
+    time_t now;
+    char *buf, *s, *p;
+
+    if (!(buf = npc_aget (sp->root, "tpools")))
+        return -1;
+    now = time (NULL);
+    for (s = buf; s && *s; s = p) {
+        p = strchr (s, '\n');
+        if (p)
+            *p++ = '\0';
+        _update (sp->host, now, s);
+    }
+    free (buf);
+    return 0;
+}
+
+static int
+_read_ctl_meminfo (Server *sp)
+{
+    time_t now;
+    char *buf, *s, *p;
+
+    if (!(buf = npc_aget (sp->root, "meminfo")))
+        return -1;
+    now = time (NULL);
+    for (s = buf; s && *s; s = p) {
+        p = strchr (s, '\n');
+        if (p)
+            *p++ = '\0';
+        if (!strncmp (s, "Cached:", 7))
+            sample_update (sp->mem_cached, strtod (s + 7, NULL), now);
+        else if (!strncmp (s, "Writeback:", 10))
+            sample_update (sp->mem_writeback, strtod (s + 10, NULL), now);
+    }
+    free (buf);
+    return 0;
+}
+
+static int
+_read_ctl_nfsops (Server *sp)
+{
+    time_t now;
+    char *buf, *s, *p;
+
+    if (!(buf = npc_aget (sp->root, "net.rpc.nfs")))
+        return -1;
+    now = time (NULL);
+    for (s = buf; s && *s; s = p) {
+        p = strchr (s, '\n');
+        if (p)
+            *p++ = '\0';
+        if (!strncmp (s, "rpc", 3))
+            sample_update (sp->nfs_ops, strtod (s + 3, NULL), now);
+    }
+    free (buf);
+    return 0;
+}
+
 static void *
 _reader (void *arg)
 {
     Server *sp = (Server *)arg;
-    int fd = -1, len;
-    Npcfid *root = NULL;
-    char buf[8192], *s, *p;
-    time_t now;
 
     for (;;) {
-        len = -1;
-        if (fd == -1)
-            fd = diod_sock_connect (sp->host, "564", DIOD_SOCK_QUIET);
-        if (fd != -1 && root == NULL)
-            root = npc_mount (fd, 65536, "ctl", diod_auth);
-        if (fd != -1 && root != NULL) {
-            len = npc_get (root, "tpools", buf, sizeof (buf) - 1);
+        if (sp->fd == -1)
+            sp->fd = diod_sock_connect (sp->host, "564", DIOD_SOCK_QUIET);
+        if (sp->fd == -1)
+            goto skip;
+        if (sp->root == NULL)
+            sp->root = npc_mount (sp->fd, 65536, "ctl", diod_auth);
+        if (sp->root == NULL) {
+            (void)close (sp->fd);
+            sp->fd = -1;
+            goto skip;
         }
-        if (len > 0) {
-            now = time(NULL);
-            buf[len] = '\0';
-            for (s = buf; s && *s; s = p) {
-                p = strchr (s, '\n');
-                if (p)
-                    *p++ = '\0';
-                _update (sp->host, now, s);
-            }
+        if (_read_ctl_tpools (sp) < 0 || _read_ctl_meminfo (sp) < 0
+                                      || _read_ctl_nfsops (sp) < 0) {
+            (void)npc_umount (sp->root); /* closes fd */
+            sp->root = NULL;
+            sp->fd = -1;
+            goto skip;
         }
-        if (fd != -1 && (root == NULL || len < 0)) {
-            if (root != NULL) {
-                npc_umount (root); /* closes fd */
-                root = NULL;
-                fd = -1;
-            }
-            if (fd != -1) {
-                close (fd);
-                fd = -1;
-            }
-        }
+        sp->last_poll = time (NULL);
+skip:
         usleep ((useconds_t)(sp->poll_sec * 1E6));
     }
     return NULL;
@@ -576,6 +635,11 @@ _server_create (char *host, double poll_sec)
     sp->poll_sec = poll_sec;
     if (!(sp->host = strdup (host)))
         err_exit ("out of memory");
+    sp->fd = -1;
+    sp->root = NULL;
+    sp->mem_cached = sample_create (stale_secs);
+    sp->mem_writeback = sample_create (stale_secs);
+    sp->nfs_ops = sample_create (stale_secs);
     if ((err = pthread_create (&sp->thread, NULL, _reader, sp)))
         errn_exit (err, "pthread_create");
     return sp;
