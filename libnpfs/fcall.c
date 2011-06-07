@@ -1044,3 +1044,22 @@ np_mkdir(Npreq *req, Npfcall *tc)
 done:
 	return rc;
 }
+
+/* renameat and unlinkat are new, post 2.6.38.  Kernels will fall back
+ * to rename and remove if they get EOPNOTSUPP error.
+ * FIXME: implement these
+ */
+
+Npfcall *
+np_renameat (Npreq *req, Npfcall *tc)
+{
+	np_uerror (EOPNOTSUPP);
+	return NULL;
+}
+
+Npfcall *
+np_unlinkat (Npreq *req, Npfcall *tc)
+{
+	np_uerror (EOPNOTSUPP);
+	return NULL;
+}

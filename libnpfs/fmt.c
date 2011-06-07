@@ -471,6 +471,28 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_RMKDIR tag %u qid ", fc->tag);
 		np_printqid(s, len, &fc->u.rmkdir.qid);
 		break;
+	case P9_TRENAMEAT:
+		spf (s, len, "P9_TRENAMEAT tag %u", fc->tag);
+		spf (s, len, " olddirfid %"PRIu32, fc->u.trenameat.olddirfid);
+		spf (s, len, " oldname '%.*s'", fc->u.trenameat.oldname.len,
+					        fc->u.trenameat.oldname.str);
+		spf (s, len, " newdirfid %"PRIu32, fc->u.trenameat.newdirfid);
+		spf (s, len, " newname '%.*s'", fc->u.trenameat.newname.len,
+					        fc->u.trenameat.newname.str);
+		break;
+	case P9_RRENAMEAT:
+		spf (s, len, "P9_RRENAMEAT tag %u", fc->tag);
+		break;
+	case P9_TUNLINKAT:
+		spf (s, len, "P9_TUNLINKAT tag %u", fc->tag);
+		spf (s, len, " dirfid %"PRIu32, fc->u.tunlinkat.dirfid);
+		spf (s, len, " name '%.*s'", fc->u.tunlinkat.name.len,
+					     fc->u.tunlinkat.name.str);
+		spf (s, len, " flags %"PRIu32, fc->u.tunlinkat.flags);
+		break;	
+	case P9_RUNLINKAT:
+		spf (s, len, "P9_RUNLINKAT tag %u", fc->tag);
+		break;
 	case P9_TVERSION:
 		spf (s, len, "P9_TVERSION tag %u", fc->tag);
 		spf (s, len, " msize %u", fc->u.tversion.msize);

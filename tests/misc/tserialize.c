@@ -42,6 +42,8 @@ static void test_tlock (void);          static void test_rlock (void);
 static void test_tgetlock (void);       static void test_rgetlock (void);
 static void test_tlink (void);          static void test_rlink (void);
 static void test_tmkdir (void);         static void test_rmkdir (void);
+static void test_trenameat (void);      static void test_rrenameat (void);
+static void test_tunlinkat (void);      static void test_runlinkat (void);
 
 static void test_tversion (void);       static void test_rversion (void);
 static void test_tauth (void);          static void test_rauth (void);
@@ -87,6 +89,8 @@ main (int argc, char *argv[])
     test_tgetlock ();   test_rgetlock ();
     test_tlink ();      test_rlink ();
     test_tmkdir ();     test_rmkdir ();
+    test_trenameat ();  test_rrenameat ();
+    test_tunlinkat ();  test_runlinkat ();
 
     test_tversion ();   test_rversion ();
     test_tauth ();      test_rauth ();
@@ -776,6 +780,67 @@ test_rmkdir (void)
     assert (fc->u.rmkdir.qid.type == fc2->u.rmkdir.qid.type);
     assert (fc->u.rmkdir.qid.version == fc2->u.rmkdir.qid.version);
     assert (fc->u.rmkdir.qid.path == fc2->u.rmkdir.qid.path);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_trenameat (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_trenameat (1, "abc", 2, "zyx")))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TRENAMEAT,  __FUNCTION__);
+
+    assert (fc->u.trenameat.olddirfid == fc2->u.trenameat.olddirfid);
+    assert (np_str9cmp (&fc->u.trenameat.oldname, &fc2->u.trenameat.oldname) == 0);
+    assert (fc->u.trenameat.newdirfid == fc2->u.trenameat.newdirfid);
+    assert (np_str9cmp (&fc->u.trenameat.newname, &fc2->u.trenameat.newname) == 0);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_rrenameat (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_rrenameat ()))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RRENAMEAT,  __FUNCTION__);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_tunlinkat (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_tunlinkat(1, "abc", 2)))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_TUNLINKAT,  __FUNCTION__);
+
+    assert (fc->u.tunlinkat.dirfid == fc2->u.tunlinkat.dirfid);
+    assert (np_str9cmp (&fc->u.tunlinkat.name, &fc2->u.tunlinkat.name) == 0);
+    assert (fc->u.tunlinkat.flags == fc2->u.tunlinkat.flags);
+
+    free (fc);
+    free (fc2);
+}
+
+static void
+test_runlinkat (void)
+{
+    Npfcall *fc, *fc2;
+
+    if (!(fc = np_create_runlinkat ()))
+        msg_exit ("out of memory");
+    fc2 = _rcv_buf (fc, P9_RUNLINKAT,  __FUNCTION__);
 
     free (fc);
     free (fc2);

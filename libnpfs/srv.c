@@ -586,6 +586,12 @@ np_process_request(Npreq *req, Nptpool *tp)
 		case P9_TMKDIR:
 			rc = np_mkdir(req, tc);
 			break;
+		case P9_TRENAMEAT:
+			rc = np_renameat (req, tc);
+			break;
+		case P9_TUNLINKAT:
+			rc = np_unlinkat (req, tc);
+			break;
 		case P9_TVERSION:
 			rc = np_version(req, tc);
 			break;

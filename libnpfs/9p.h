@@ -126,6 +126,10 @@ enum p9_msg_t {
 	P9_RLINK,
 	P9_TMKDIR = 72,
 	P9_RMKDIR,
+	P9_TRENAMEAT = 74,
+	P9_RRENAMEAT,
+	P9_TUNLINKAT = 76,
+	P9_RUNLINKAT,
 	P9_TVERSION = 100,
 	P9_RVERSION,
 	P9_TAUTH = 102,
@@ -467,6 +471,21 @@ struct p9_tmkdir {
 };
 struct p9_rmkdir {
 	struct p9_qid qid;
+};
+struct p9_trenameat {
+	u32 olddirfid;
+	struct p9_str oldname;
+	u32 newdirfid;
+	struct p9_str newname;
+};
+struct p9_rrenameat {
+};
+struct p9_tunlinkat {
+	u32 dirfid;
+	struct p9_str name;
+	u32 flags;
+};
+struct p9_runlinkat {
 };
 struct p9_tawrite {
 	u32 fid;

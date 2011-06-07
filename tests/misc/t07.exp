@@ -70,6 +70,14 @@ test_tmkdir(72): 24
 P9_TMKDIR tag 42 fid 1 name 'abc' mode 02 gid 3
 test_rmkdir(73): 20
 P9_RMKDIR tag 42 qid (0000000000000003 2 '')
+test_trenameat(74): 25
+P9_TRENAMEAT tag 42 olddirfid 1 oldname 'abc' newdirfid 2 newname 'zyx'
+test_rrenameat(75): 7
+P9_RRENAMEAT tag 42
+test_tunlinkat(76): 20
+P9_TUNLINKAT tag 42 dirfid 1 name 'abc' flags 2
+test_runlinkat(77): 7
+P9_RUNLINKAT tag 42
 test_tversion(100): 21
 P9_TVERSION tag 42 msize 4096 version '9p2000.L'
 test_rversion(101): 21

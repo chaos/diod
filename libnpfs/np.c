@@ -1241,6 +1241,70 @@ np_create_rmkdir(struct p9_qid *qid)
 	return np_post_check(fc, bufp);
 }
 
+Npfcall *
+np_create_trenameat(u32 olddirfid, char *oldname, u32 newdirfid, char *newname)
+{
+	int size = sizeof(u32) + sizeof(u16) + strlen(oldname)
+		 + sizeof(u32) + sizeof(u16) + strlen(newname);
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
+
+	if (!(fc = np_create_common(bufp, size, P9_TRENAMEAT)))
+		return NULL;
+        buf_put_int32(bufp, olddirfid, &fc->u.trenameat.olddirfid);
+        buf_put_str(bufp, oldname, &fc->u.trenameat.oldname);
+        buf_put_int32(bufp, newdirfid, &fc->u.trenameat.newdirfid);
+        buf_put_str(bufp, newname, &fc->u.trenameat.newname);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_rrenameat(void)
+{
+	int size = 0;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
+
+	if (!(fc = np_create_common(bufp, size, P9_RRENAMEAT)))
+		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_tunlinkat(u32 dirfid, char *name, u32 flags)
+{
+        int size = sizeof(u32) + sizeof(u16) + strlen(name) + sizeof(u32);
+        struct cbuf buffer;
+        struct cbuf *bufp = &buffer;
+        Npfcall *fc;
+
+        if (!(fc = np_create_common(bufp, size, P9_TUNLINKAT)))
+                return NULL;
+        buf_put_int32(bufp, dirfid, &fc->u.tunlinkat.dirfid);
+        buf_put_str(bufp, name, &fc->u.tunlinkat.name);
+        buf_put_int32(bufp, flags, &fc->u.tunlinkat.flags);
+
+        return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_runlinkat(void)
+{
+	int size = 0;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
+
+	if (!(fc = np_create_common(bufp, size, P9_RUNLINKAT)))
+		return NULL;
+
+	return np_post_check(fc, bufp);
+}
+
 int
 np_peek_size(u8 *buf, int len)
 {
@@ -1527,6 +1591,21 @@ np_deserialize(Npfcall *fc, u8 *data)
 		break;
 	case P9_RMKDIR:
 		buf_get_qid(bufp, &fc->u.rmkdir.qid);
+		break;
+	case P9_TRENAMEAT:
+		fc->u.trenameat.olddirfid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.trenameat.oldname);
+		fc->u.trenameat.newdirfid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.trenameat.newname);
+		break;
+	case P9_RRENAMEAT:
+		break;
+	case P9_TUNLINKAT:
+		fc->u.tunlinkat.dirfid = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tunlinkat.name);
+		fc->u.tunlinkat.flags = buf_get_int32(bufp);
+		break;
+	case P9_RUNLINKAT:
 		break;	
 	}
 

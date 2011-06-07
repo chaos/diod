@@ -81,6 +81,10 @@ struct Npfcall {
 	   struct p9_rlink rlink;
 	   struct p9_tmkdir tmkdir;
 	   struct p9_rmkdir rmkdir;
+	   struct p9_trenameat trenameat;
+	   struct p9_rrenameat rrenameat;
+	   struct p9_tunlinkat tunlinkat;
+	   struct p9_runlinkat runlinkat;
 
 	   struct p9_tversion tversion;
 	   struct p9_rversion rversion;
@@ -445,6 +449,11 @@ Npfcall *np_create_tlink(u32 dfid, u32 fid, char *name);
 Npfcall *np_create_rlink(void);
 Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
 Npfcall *np_create_rmkdir(struct p9_qid *qid);
+Npfcall *np_create_trenameat(u32 olddirfid, char *oldname,
+			     u32 newdirfid, char *newname);
+Npfcall *np_create_rrenameat(void);
+Npfcall *np_create_tunlinkat(u32 dirfid, char *name, u32 flags);
+Npfcall *np_create_runlinkat(void);
 
 /* fmt.c */
 void np_snprintfcall(char *s, int len, Npfcall *fc);

@@ -49,6 +49,8 @@ Npfcall *np_lock(Npreq *req, Npfcall *tc);
 Npfcall *np_getlock(Npreq *req, Npfcall *tc);
 Npfcall *np_link(Npreq *req, Npfcall *tc);
 Npfcall *np_mkdir(Npreq *req, Npfcall *tc);
+Npfcall *np_renameat(Npreq *req, Npfcall *tc);
+Npfcall *np_unlinkat(Npreq *req, Npfcall *tc);
 
 /* srv.c */
 void np_srv_add_req(Npsrv *srv, Npreq *req);
