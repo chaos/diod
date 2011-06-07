@@ -153,6 +153,9 @@ np_conn_read_proc(void *a)
 	np_conn_incref(conn);
 	srv = conn->srv;
 	fc = _alloc_npfcall(conn->msize);
+	if (!fc)
+		np_logerr (srv, "out of memory in receive path - "
+				"dropping connection to '%s'", conn->client_id);
 	n = 0;
 	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n)) > 0) {
 		n += i;
