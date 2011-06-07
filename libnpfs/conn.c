@@ -51,7 +51,6 @@
 #include "npfsimpl.h"
 
 static Npfcall *_alloc_npfcall(int msize);
-static void _free_npfcall(Npfcall *rc);
 static void *np_conn_read_proc(void *);
 static void np_conn_reset(Npconn *conn);
 
@@ -220,7 +219,7 @@ again:
 	trans = conn->trans;
 	conn->trans = NULL;
 	if (fc)
-		_free_npfcall(fc);
+		free(fc);
 	xpthread_mutex_unlock(&conn->lock);
 
 	np_srv_remove_conn(conn->srv, conn);
@@ -330,7 +329,7 @@ np_conn_respond(Npreq *req)
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
 	Npfcall *rc = req->rcall;
-	Nptrans *trans = NULL;
+	Nptrans *destroy_trans = NULL;
 
 	if (!rc)
 		goto done;
@@ -347,24 +346,27 @@ np_conn_respond(Npreq *req)
 		xpthread_mutex_unlock(&conn->wlock);
 		if (n <= 0) { /* write error */
 			xpthread_mutex_lock(&conn->lock);
-			trans = conn->trans;
+			destroy_trans = conn->trans;
 			conn->trans = NULL;
 			xpthread_mutex_unlock(&conn->lock);
 		}
 	}
 
 done:
-	_free_npfcall(req->tcall);
-	free(req->rcall);
-	req->tcall = NULL;
-	req->rcall = NULL;
-
+	if (req->tcall) {
+		free(req->tcall);
+		req->tcall = NULL;
+	}
+	if (req->rcall) {
+		free(req->rcall);
+		req->rcall = NULL;
+	}
 	if (conn->resetting) {
 		xpthread_cond_broadcast(&conn->resetcond);
 	}
 
-	if (trans) /* np_conn_read_proc will take care of resetting */
-		np_trans_destroy(trans); 
+	if (destroy_trans) /* np_conn_read_proc will take care of resetting */
+		np_trans_destroy(destroy_trans); 
 }
 
 static Npfcall *
@@ -376,13 +378,6 @@ _alloc_npfcall(int msize)
 		fc->pkt = (u8*) fc + sizeof(*fc);
 
 	return fc;
-}
-
-static void
-_free_npfcall(Npfcall *rc)
-{
-	if (rc)
-		free (rc);
 }
 
 char *
