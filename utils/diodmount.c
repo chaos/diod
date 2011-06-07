@@ -33,6 +33,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -190,7 +191,7 @@ main (int argc, char *argv[])
     /* Set debug level.
      */
     if (!opt_find (o, "debug"))
-        opt_addf (o, "debug=%d", 0);
+        opt_addf (o, "debug=%d", 0x1); /* send errors to dmesg */
 
     /* Server is on an inherited file descriptor.
      * For testing, we start server on a socketpair duped to fd 0.
@@ -232,7 +233,7 @@ main (int argc, char *argv[])
     assert (opt_find (o, "trans=fd"));
     assert (opt_scanf (o, "msize=%d", &i));
     assert (opt_find (o, "version=9p2000.L"));
-    assert (opt_scanf (o, "debug=%d", &i));
+    assert (opt_scanf (o, "debug=%d", &i) || opt_scanf (o, "debug=%x", &i));
     assert (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
     assert ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
          || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
@@ -489,8 +490,11 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
         errn_exit (np_rerror (), "clunk root");
     if (vopt)
         msg ("mount -t 9p %s %s -o%s", spec, dir, options);
-    if (!fopt)
+    if (!fopt) {
+        if (fcntl (fd, F_SETFL, O_NONBLOCK) < 0)
+            err_exit ("setting O_NONBLOCK flag");
         _mount (spec, dir, mountflags, options9p);
+    }
     npc_finish (fs); /* closes fd */
 
     if (!nopt) {
