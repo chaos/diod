@@ -202,9 +202,20 @@ again:
 				   conn->client_id);
 			break;
 		}
-		xpthread_mutex_lock(&srv->lock);	
-		np_srv_add_req(srv, req);
-		xpthread_mutex_unlock(&srv->lock);	
+
+		/* Enqueue request for processing by next available worker
+		 * thread, except P9_TFLUSH which is handled immediately.
+		 */
+		if (fc->type == P9_TFLUSH) {
+			Npfcall *rc;
+
+			rc = np_flush (req, fc);
+			np_req_respond (req, rc);
+		} else {
+			xpthread_mutex_lock(&srv->lock);	
+			np_srv_add_req(srv, req);
+			xpthread_mutex_unlock(&srv->lock);	
+		}
 		
 		fc = fc1;
 		if (n > 0)

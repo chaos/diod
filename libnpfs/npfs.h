@@ -322,6 +322,7 @@ void np_srv_destroy(Npsrv *srv);
 void np_srv_remove_conn(Npsrv *, Npconn *);
 int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
+void np_req_respond(Npreq *req, Npfcall *rc);
 void np_logerr(Npsrv *srv, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 void np_logmsg(Npsrv *srv, const char *fmt, ...)

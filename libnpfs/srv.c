@@ -49,7 +49,6 @@ struct Reqpool {
 static Nptpool *np_tpool_create(Npsrv *srv, char *name);
 static void np_tpool_cleanup (Npsrv *srv);
 static void *np_wthread_proc(void *a);
-static void np_respond(Nptpool *tp, Npreq *req, Npfcall *rc);
 static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 static void np_tpool_incref_nolock (Nptpool *tp);
@@ -602,7 +601,7 @@ np_process_request(Npreq *req, Nptpool *tp)
 			rc = np_attach(req, tc);
 			break;
 		case P9_TFLUSH:
-			rc = np_flush(req, tc);
+			assert (0); /* handled in receive path */
 			break;
 		case P9_TWALK:
 			rc = np_walk(req, tc);
@@ -665,7 +664,12 @@ np_wthread_proc(void *a)
 		xpthread_mutex_unlock(&tp->srv->lock);
 
 		rc = np_process_request(req, tp);
-		np_respond(tp, req, rc);
+
+		xpthread_mutex_lock(&tp->srv->lock);
+		np_srv_remove_workreq(tp, req);
+		xpthread_mutex_unlock(&tp->srv->lock);
+
+		np_req_respond(req, rc);
 			
 		xpthread_mutex_lock(&tp->srv->lock);
 	}
@@ -674,13 +678,9 @@ np_wthread_proc(void *a)
 	return NULL;
 }
 
-static void
-np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
+void
+np_req_respond(Npreq *req, Npfcall *rc)
 {
-	xpthread_mutex_lock(&tp->srv->lock);
-	np_srv_remove_workreq(tp, req);
-	xpthread_mutex_unlock(&tp->srv->lock);
-
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
 	if (req->rcall && !req->flushed) {
@@ -691,7 +691,8 @@ np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 	np_req_unref(req);
 }
 
-Npreq *np_req_alloc(Npconn *conn, Npfcall *tc) {
+Npreq *
+np_req_alloc(Npconn *conn, Npfcall *tc) {
 	Npreq *req;
 
 	req = NULL;
