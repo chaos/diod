@@ -32,6 +32,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <signal.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -243,6 +244,7 @@ error:
 Npfcall*
 np_flush(Npreq *req, Npfcall *tc)
 {
+	int fflag = (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG);
 	u16 oldtag = tc->u.tflush.oldtag;
 	Npreq *creq;
 	Npfcall *ret;
@@ -253,18 +255,16 @@ np_flush(Npreq *req, Npfcall *tc)
 		for(creq = tp->reqs_first; creq != NULL; creq = creq->next) {
 			if (creq->conn==req->conn && creq->tag==oldtag) {
 				np_srv_remove_req(tp, creq);
-				xpthread_mutex_lock(&creq->lock);
-				np_conn_respond(creq);
-				xpthread_mutex_unlock(&creq->lock);
 				np_req_unref(creq);
 				goto done;
 			}
 		}
 		for(creq = tp->workreqs; creq != NULL; creq = creq->next) {
 			if (creq->conn==req->conn && creq->tag==oldtag) {
-				xpthread_mutex_lock(&creq->lock);
 				creq->flushed = 1;
-				xpthread_mutex_unlock(&creq->lock);
+				if (creq->wthread && fflag)
+					pthread_kill (creq->wthread->thread,
+						      SIGINT);
 				goto done;
 			}
 		}

@@ -359,6 +359,8 @@ _sighand (int sig)
         case SIGUSR1:
             ss.shutdown = 1;
             break;
+        case SIGINT:
+            break;
         default:
             msg ("caught signal %d: ignoring", sig);
             break;
@@ -406,6 +408,8 @@ _service_loop (void *arg)
 
 /* Set up signal handlers for SIGHUP and SIGTERM and block them.
  * Threads will inherit this signal mask; _service_loop () will unblock.
+ * Install handler for SIGINT and don't block - this signal is used to
+ * interrupt I/O operations when handling a 9p flush.
  */
 static void
 _service_sigsetup (void)
@@ -421,6 +425,8 @@ _service_sigsetup (void)
     if (sigaction (SIGTERM, &sa, NULL) < 0)
         err_exit ("sigaction");
     if (sigaction (SIGUSR1, &sa, NULL) < 0)
+        err_exit ("sigaction");
+    if (sigaction (SIGINT, &sa, NULL) < 0)
         err_exit ("sigaction");
 
     sigemptyset (&sigs);
@@ -491,6 +497,7 @@ _service_run (srvmode_t mode)
     }
     
     flags |= SRV_FLAGS_AUTHCONN;
+    flags |= SRV_FLAGS_FLUSHSIG;
     if (geteuid () == 0)
         flags |= SRV_FLAGS_SETFSID;
     if (!diod_conf_get_userdb ())
