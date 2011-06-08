@@ -109,7 +109,6 @@ int
 np_srv_add_conn(Npsrv *srv, Npconn *conn)
 {
 	xpthread_mutex_lock(&srv->lock);
-	np_conn_incref(conn);
 	conn->srv = srv;
 	conn->next = srv->conns;
 	srv->conns = conn;
@@ -140,7 +139,6 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 		c = *pc;
 	}
 
-	np_conn_decref(conn);
 	srv->conncount--;
 	xpthread_cond_signal(&srv->conncountcond);
 	xpthread_mutex_unlock(&srv->lock);

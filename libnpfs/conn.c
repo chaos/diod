@@ -21,19 +21,6 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
-/* Server should:
- * 1) accept a connection from client
- * 2) create a 'trans' instance for the connection
- * 3) call np_conn_create () to create 'conn' and thread to service requests
- */
-
-/* Conn reference counting:
- * . np_conn_create () ref=0
- * . np_conn_read_proc () start ref++, finish ref--
- * . np_srv_add_conn () ref++,         np_srv_remove_conn () ref--
- * . np_req_alloc () ref++	       np_req_unref () ref--
- */
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -53,7 +40,7 @@
 
 static Npfcall *_alloc_npfcall(int msize);
 static void *np_conn_read_proc(void *);
-static void np_conn_reset(Npconn *conn);
+static void np_conn_flush (Npconn *conn);
 
 Npconn*
 np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
@@ -67,10 +54,8 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	}
 	pthread_mutex_init(&conn->lock, NULL);
 	pthread_mutex_init(&conn->wlock, NULL);
-	pthread_cond_init(&conn->resetcond, NULL);
 
 	conn->refcount = 0;
-	conn->resetting = 0;
 	conn->srv = srv;
 	conn->msize = srv->msize;
 	conn->shutdown = 0;
@@ -109,22 +94,26 @@ np_conn_incref(Npconn *conn)
 void
 np_conn_decref(Npconn *conn)
 {
+	int n;
+
 	xpthread_mutex_lock(&conn->lock);
 	assert(conn->refcount > 0);
-	conn->refcount--;
-	if (conn->refcount) {
-		xpthread_mutex_unlock(&conn->lock);
+	n = --conn->refcount;
+	xpthread_mutex_unlock(&conn->lock);
+	if (n > 0)
 		return;
-	}
 
 	if (conn->fidpool) {
 		np_fidpool_destroy(conn->fidpool);
 		conn->fidpool = NULL;
 	}
-	
-	xpthread_mutex_unlock(&conn->lock);
+	if (conn->trans) {
+		np_trans_destroy (conn->trans);
+		conn->trans = NULL;
+	}
 	pthread_mutex_destroy(&conn->lock);
-	pthread_cond_destroy(&conn->resetcond);
+	pthread_mutex_destroy(&conn->wlock);
+	np_srv_remove_conn (conn->srv, conn);
 	free(conn);
 }
 
@@ -145,7 +134,6 @@ np_conn_read_proc(void *a)
 	int i, n, size;
 	Npsrv *srv;
 	Npconn *conn = (Npconn *)a;
-	Nptrans *trans;
 	Npreq *req;
 	Npfcall *fc, *fc1;
 
@@ -154,10 +142,21 @@ np_conn_read_proc(void *a)
 	srv = conn->srv;
 	fc = _alloc_npfcall(conn->msize);
 	if (!fc)
-		np_logerr (srv, "out of memory in receive path - "
+		np_logmsg (srv, "out of memory in receive path - "
 				"dropping connection to '%s'", conn->client_id);
 	n = 0;
-	while (fc && conn->trans && (i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n)) > 0) {
+	while (fc && conn->trans) {
+		i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n);
+		if (i < 0) {
+			np_logerr (srv, "read error - "
+				   "dropping connection to '%s'",
+				   conn->client_id);
+			break;
+		}
+		/* This is the normal exit path for umount.
+		 */
+		if (i == 0)
+			break;
 		n += i;
 again:
 		size = np_peek_size (fc->pkt, n);
@@ -198,7 +197,7 @@ again:
 		 */
 		req = np_req_alloc(conn, fc);
 		if (!req) {
-			np_logerr (srv, "out of memory in receive path - "
+			np_logmsg (srv, "out of memory in receive path - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
 			break;
@@ -226,40 +225,12 @@ again:
 	/* Just got EOF on read, or some other fatal error for the
 	 * connection like out of memory.
 	 */
-
-	xpthread_mutex_lock(&conn->lock);
-	trans = conn->trans;
-	conn->trans = NULL;
 	if (fc)
-		free(fc);
-	xpthread_mutex_unlock(&conn->lock);
+		free (fc);
 
-	np_srv_remove_conn(conn->srv, conn);
-	np_conn_reset(conn);
-
-	if (trans)
-		np_trans_destroy(trans);
-
+	np_conn_flush (conn);
 	np_conn_decref(conn);
 	return NULL;
-}
-
-static int
-_count_working_reqs (Npconn *conn)
-{
-	Npsrv *srv = conn->srv;
-	Nptpool *tp;
-	Npreq *req;
-	int n;
-
-	/* assert: srv->lock held */
-	for (n = 0, tp = srv->tpool; tp != NULL; tp = tp->next) {
-		for (req = tp->workreqs; req != NULL; req = req->next) {
-			if (req->conn == conn)
-				n++;
-		}
-	}
-	return n;
 }
 
 static void
@@ -288,69 +259,22 @@ np_conn_flush (Npconn *conn)
 	xpthread_mutex_unlock(&conn->srv->lock);
 }
 
-/* Clear all state associated with conn out of the srv.
- * No more I/O is possible; we have disassociated the trans from the conn.
- */
-static void
-np_conn_reset(Npconn *conn)
-{
-	xpthread_mutex_lock(&conn->lock);
-	conn->resetting = 1;
-	xpthread_mutex_unlock(&conn->lock);
-
-	np_conn_flush (conn);	
-
-	xpthread_mutex_lock(&conn->srv->lock);
-	while (_count_working_reqs (conn) > 0)
-		xpthread_cond_wait(&conn->resetcond, &conn->srv->lock);
-	xpthread_mutex_unlock(&conn->srv->lock);
-
-	xpthread_mutex_lock(&conn->lock);
-	if (conn->fidpool) {
-		np_fidpool_destroy(conn->fidpool);
-		conn->fidpool = NULL;
-	}
-	conn->resetting = 0;
-	xpthread_mutex_unlock(&conn->lock);
-}
-
-/* Called by srv workers to transmit req->rcall->pkt.
- */
 void
 np_conn_respond(Npreq *req)
 {
-	int n, send;
+	int n;
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
 	Npfcall *rc = req->rcall;
-	Nptrans *destroy_trans = NULL;
 
-	if (!rc)
-		goto done;
-
-	xpthread_mutex_lock(&conn->lock);
-	send = conn->trans && !conn->resetting;
-	xpthread_mutex_unlock(&conn->lock);
-
-	if (send) {
-		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
-			_debug_trace (srv, rc);
-		xpthread_mutex_lock(&conn->wlock);
-		n = np_trans_write(conn->trans, rc->pkt, rc->size);
-		xpthread_mutex_unlock(&conn->wlock);
-		if (n <= 0) { /* write error */
-			xpthread_mutex_lock(&conn->lock);
-			destroy_trans = conn->trans;
-			conn->trans = NULL;
-			xpthread_mutex_unlock(&conn->lock);
-		}
-	}
-
-done:
-	if (conn->resetting)
-		xpthread_cond_broadcast(&conn->resetcond);
-	if (destroy_trans) /* np_conn_read_proc will take care of resetting */
-		np_trans_destroy(destroy_trans); 
+	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
+		_debug_trace (srv, rc);
+	xpthread_mutex_lock(&conn->wlock);
+	n = np_trans_write(conn->trans, rc->pkt, rc->size);
+	/* FIXME: handle partial write */
+	xpthread_mutex_unlock(&conn->wlock);
+	if (n <= 0)
+		np_logerr (srv, "write to '%s'", conn->client_id);
 }
 
 static Npfcall *

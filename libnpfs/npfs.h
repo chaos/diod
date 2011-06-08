@@ -150,9 +150,6 @@ struct Npconn {
 	pthread_mutex_t	wlock;
 	int		refcount;
 
-	int		resetting;
-	pthread_cond_t	resetcond;
-
 	char		client_id[128];
 	u32		authuser;
 	u32		msize;
