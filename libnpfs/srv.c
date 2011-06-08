@@ -682,17 +682,12 @@ np_respond(Nptpool *tp, Npreq *req, Npfcall *rc)
 	xpthread_mutex_unlock(&tp->srv->lock);
 
 	xpthread_mutex_lock(&req->lock);
-	if (req->fid != NULL) {
-		np_fid_decref(req->fid);
-		req->fid = NULL;
-	}
 	req->rcall = rc;
 	if (req->rcall && !req->flushed) {
 		np_set_tag(req->rcall, req->tag);
 		np_conn_respond(req);		
 	}
 	xpthread_mutex_unlock(&req->lock);
-
 	np_req_unref(req);
 }
 
@@ -753,8 +748,14 @@ np_req_unref(Npreq *req)
 	}
 	xpthread_mutex_unlock(&req->lock);
 
-	if (req->conn)
+	if (req->fid) {
+		np_fid_decref(req->fid);
+		req->fid = NULL;
+	}
+	if (req->conn) {
 		np_conn_decref(req->conn);
+		req->conn = NULL;
+	}
 	if (req->tcall) {
 		free (req->tcall);
 		req->tcall = NULL;
