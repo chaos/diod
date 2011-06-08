@@ -49,6 +49,7 @@ typedef struct {
 } Fid;
 
 static char *_ctl_get_version (char *name, void *a);
+static char *_ctl_get_proc (char *name, void *arg);
 
 static int
 _next_inum (void)
@@ -154,9 +155,9 @@ error:
 	return NULL;
 }
 
-#define GET_PROC_CHUNK 64
+#define GET_PROC_CHUNK 4096
 static char *
-np_ctl_get_proc (char *name, void *arg)
+_ctl_get_proc (char *name, void *arg)
 {
 	char path[PATH_MAX + 1];
 	int ssize = 0;
@@ -203,26 +204,6 @@ error:
 	if (fd >= 0)
 		(void)close (fd);
 	return NULL;	
-}
-
-Npfile *
-np_ctl_addfile_proc (Npfile *parent, char *name)
-{
-	Npfile *file;
-
-	if (!(parent->qid.type & P9_QTDIR)) {
-		np_uerror (EINVAL);
-		return NULL;
-	}
-	if (!(file = _alloc_file (name, P9_QTFILE)))
-		return NULL;
-	file->getf = np_ctl_get_proc;
-	file->getf_arg = NULL;
-	file->next = parent->child;
-	parent->child = file;
-	(void)gettimeofday(&parent->mtime, NULL);
-
-	return file;
 }
 
 Npfile *
@@ -286,7 +267,10 @@ np_ctl_initialize (Npsrv *srv)
 
 	if (!np_ctl_addfile (root, "version", _ctl_get_version, NULL))
 		goto error;
-
+	if (!np_ctl_addfile (root, "meminfo", _ctl_get_proc, NULL))
+		goto error;
+	if (!np_ctl_addfile (root, "net.rpc.nfs", _ctl_get_proc, NULL))
+		goto error;
 	return 0;
 error:
 	np_ctl_finalize (srv);

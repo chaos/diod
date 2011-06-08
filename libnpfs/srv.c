@@ -83,10 +83,6 @@ np_srv_create(int nwthread, int flags)
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "requests", _ctl_get_requests, srv))
 		goto error;
-	if (!np_ctl_addfile_proc (srv->ctlroot, "meminfo"))
-		goto error;
-	if (!np_ctl_addfile_proc (srv->ctlroot, "net.rpc.nfs"))
-		goto error;
 	if (np_usercache_create (srv) < 0)
 		goto error;
 	srv->nwthread = nwthread;
