@@ -257,10 +257,19 @@ np_flush(Npreq *req, Npfcall *tc)
 				np_conn_respond(creq);
 				xpthread_mutex_unlock(&creq->lock);
 				np_req_unref(creq);
-				break;
+				goto done;
+			}
+		}
+		for(creq = tp->workreqs; creq != NULL; creq = creq->next) {
+			if (creq->conn==req->conn && creq->tag==oldtag) {
+				xpthread_mutex_lock(&creq->lock);
+				creq->flushed = 1;
+				xpthread_mutex_unlock(&creq->lock);
+				goto done;
 			}
 		}
 	}
+done:
 	xpthread_mutex_unlock(&req->conn->srv->lock);
 	if (!(ret = np_create_rflush ()))
 		np_uerror (ENOMEM);

@@ -353,18 +353,8 @@ np_conn_respond(Npreq *req)
 	}
 
 done:
-	if (req->tcall) {
-		free(req->tcall);
-		req->tcall = NULL;
-	}
-	if (req->rcall) {
-		free(req->rcall);
-		req->rcall = NULL;
-	}
-	if (conn->resetting) {
+	if (conn->resetting)
 		xpthread_cond_broadcast(&conn->resetcond);
-	}
-
 	if (destroy_trans) /* np_conn_read_proc will take care of resetting */
 		np_trans_destroy(destroy_trans); 
 }

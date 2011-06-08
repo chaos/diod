@@ -171,6 +171,7 @@ struct Npreq {
 	int		refcount;
 	Npconn*		conn;
 	u16		tag;
+	int		flushed;
 	Npfcall*	tcall;
 	Npfcall*	rcall;
 	Npfid*		fid;
