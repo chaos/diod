@@ -48,6 +48,8 @@ typedef struct {
 	void	*data;
 } Fid;
 
+static char *_ctl_get_version (char *name, void *a);
+
 static int
 _next_inum (void)
 {
@@ -279,9 +281,27 @@ np_ctl_initialize (Npsrv *srv)
 	Npfile *root = NULL;
 
 	if (!(root = _alloc_file ("root", P9_QTDIR)))
-		return -1;
+		goto error;
 	srv->ctlroot = root;
+
+	if (!np_ctl_addfile (root, "version", _ctl_get_version, NULL))
+		goto error;
+
 	return 0;
+error:
+	np_ctl_finalize (srv);
+	return -1;
+}
+
+static char *
+_ctl_get_version (char *name, void *a)
+{
+        char *s = NULL;
+        int len = 0;
+
+        if (aspf (&s, &len, "%s\n", META_ALIAS) < 0)
+                np_uerror (ENOMEM);
+        return s;
 }
 
 /**

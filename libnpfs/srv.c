@@ -53,7 +53,6 @@ static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 static void np_tpool_incref_nolock (Nptpool *tp);
 
-static char *_ctl_get_version (char *name, void *a);
 static char *_ctl_get_connections (char *name, void *a);
 static char *_ctl_get_tpools (char *name, void *a);
 static char *_ctl_get_requests (char *name, void *a);
@@ -76,8 +75,6 @@ np_srv_create(int nwthread, int flags)
 	srv->flags = flags;
 
 	if (np_ctl_initialize (srv) < 0)
-		goto error;
-	if (!np_ctl_addfile (srv->ctlroot, "version", _ctl_get_version, NULL))
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "connections",
 			     _ctl_get_connections, srv))
@@ -807,17 +804,6 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 
 		np_logmsg (srv, "%s: %s", buf, s);
 	}
-}
-
-static char *
-_ctl_get_version (char *name, void *a)
-{
-	char *s = NULL;
-	int len = 0;
-
-	if (aspf (&s, &len, "%s\n", META_ALIAS) < 0)
-                np_uerror (ENOMEM);
-        return s;
 }
 
 static char *
