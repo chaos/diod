@@ -100,7 +100,7 @@ npc_get(Npcfid *root, char *path, void *buf, u32 count)
 	return done;
 }
 
-#define AGET_CHUNK 64
+#define AGET_CHUNK 4096
 char *
 npc_aget(Npcfid *root, char *path)
 {
