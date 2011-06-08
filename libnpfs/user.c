@@ -153,7 +153,7 @@ np_usercache_create (Npsrv *srv)
 	uc->ttl	= 60;
 	srv->usercache = uc;
 
-	if (!np_ctl_addfile (srv->ctlroot, "usercache", _get_usercache, srv)) {
+	if (!np_ctl_addfile (srv->ctlroot, "usercache", _get_usercache,srv,0)) {
 		free (srv->usercache);
 		return -1;
 	}

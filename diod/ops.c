@@ -179,7 +179,7 @@ diod_register_ops (Npsrv *srv)
     srv->link = diod_link;
     srv->mkdir = diod_mkdir;
 
-    if (!np_ctl_addfile (srv->ctlroot, "exports", diod_get_exports, srv))
+    if (!np_ctl_addfile (srv->ctlroot, "exports", diod_get_exports, srv, 0))
         return -1;
 
     return 0;

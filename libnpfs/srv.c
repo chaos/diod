@@ -53,7 +53,7 @@ static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 static void np_tpool_incref_nolock (Nptpool *tp);
 
-static char *_ctl_get_connections (char *name, void *a);
+static char *_ctl_get_conns (char *name, void *a);
 static char *_ctl_get_tpools (char *name, void *a);
 static char *_ctl_get_requests (char *name, void *a);
 
@@ -76,12 +76,11 @@ np_srv_create(int nwthread, int flags)
 
 	if (np_ctl_initialize (srv) < 0)
 		goto error;
-	if (!np_ctl_addfile (srv->ctlroot, "connections",
-			     _ctl_get_connections, srv))
+	if (!np_ctl_addfile (srv->ctlroot, "connections", _ctl_get_conns,srv,0))
 		goto error;
-	if (!np_ctl_addfile (srv->ctlroot, "tpools", _ctl_get_tpools, srv))
+	if (!np_ctl_addfile (srv->ctlroot, "tpools", _ctl_get_tpools, srv, 0))
 		goto error;
-	if (!np_ctl_addfile (srv->ctlroot, "requests", _ctl_get_requests, srv))
+	if (!np_ctl_addfile (srv->ctlroot, "requests", _ctl_get_requests,srv,0))
 		goto error;
 	if (np_usercache_create (srv) < 0)
 		goto error;
@@ -803,7 +802,7 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 }
 
 static char *
-_ctl_get_connections (char *name, void *a)
+_ctl_get_conns (char *name, void *a)
 {
 	Npsrv *srv = (Npsrv *)a;
 	Npconn *cc;

@@ -207,7 +207,7 @@ error:
 }
 
 Npfile *
-np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg)
+np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg, int flags)
 {
 	Npfile *file;
 
@@ -217,8 +217,11 @@ np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg)
 	}
 	if (!(file = _alloc_file (name, P9_QTFILE)))
 		return NULL;
+	if ((flags & NP_CTL_FLAGS_SINK))
+		file->mode |= S_IWUSR | S_IWGRP | S_IWOTH;
 	file->getf = getf;
 	file->getf_arg = arg;
+	file->flags = flags;
 	file->next = parent->child;
 	parent->child = file;
 	(void)gettimeofday(&parent->mtime, NULL);
@@ -265,11 +268,21 @@ np_ctl_initialize (Npsrv *srv)
 		goto error;
 	srv->ctlroot = root;
 
-	if (!np_ctl_addfile (root, "version", _ctl_get_version, NULL))
+	if (!np_ctl_addfile (root, "version", _ctl_get_version, NULL, 0))
 		goto error;
-	if (!np_ctl_addfile (root, "meminfo", _ctl_get_proc, NULL))
+	if (!np_ctl_addfile (root, "zero", NULL, NULL, NP_CTL_FLAGS_ZEROSRC))
 		goto error;
-	if (!np_ctl_addfile (root, "net.rpc.nfs", _ctl_get_proc, NULL))
+	if (!np_ctl_addfile (root, "zero100", NULL, NULL,
+			     NP_CTL_FLAGS_ZEROSRC | NP_CTL_FLAGS_DELAY100MS))
+		goto error;
+	if (!np_ctl_addfile (root, "null", NULL, NULL, NP_CTL_FLAGS_SINK))
+		goto error;
+	if (!np_ctl_addfile (root, "null100", NULL, NULL,
+			     NP_CTL_FLAGS_SINK | NP_CTL_FLAGS_DELAY100MS))
+		goto error;
+	if (!np_ctl_addfile (root, "meminfo", _ctl_get_proc, NULL, 0))
+		goto error;
+	if (!np_ctl_addfile (root, "net.rpc.nfs", _ctl_get_proc, NULL, 0))
 		goto error;
 	return 0;
 error:
@@ -386,11 +399,14 @@ np_ctl_lopen(Npfid *fid, u32 mode)
 	Fid *f = fid->aux;
 	Npfcall *rc = NULL;
 
-	if ((mode & O_WRONLY) || (mode & O_RDWR)) {
+	if (((mode & O_WRONLY) || (mode & O_RDWR))
+				&& !(f->file->flags & NP_CTL_FLAGS_SINK)) {
 		np_uerror (EACCES);
 		goto done;
 	}
-	if (!(fid->type & P9_QTDIR) && !f->file->getf) {
+	if (((mode & O_RDONLY) || (mode & O_RDWR)) && !f->file->getf
+				&& !(fid->type & P9_QTDIR)
+				&& !(f->file->flags & NP_CTL_FLAGS_ZEROSRC)){
 		np_uerror (EACCES);
 		goto done;
 	}
@@ -411,6 +427,15 @@ np_ctl_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	Npfcall *rc = NULL;
 	int len;
 
+	if ((f->file->flags & NP_CTL_FLAGS_DELAY100MS))
+		usleep (100*1000);
+	if ((f->file->flags & NP_CTL_FLAGS_ZEROSRC)) {
+		if ((rc = np_alloc_rread (count)))
+			memset (rc->u.rread.data, 0, count);
+		else 
+			np_uerror (ENOMEM);
+		goto done;
+	}
 	if (!f->data) {
 		assert (f->file->getf != NULL);
 		if (!(f->data = f->file->getf (f->file->name,
@@ -480,12 +505,36 @@ np_ctl_getattr(Npfid *fid, u64 request_mask)
 }
 
 Npfcall *
+np_ctl_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
+              u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
+{
+	Npfcall *rc;
+
+	/* do nothing for now - we exist only for setattr on /dev/null */
+
+	if (!(rc = np_create_rsetattr()))
+		np_uerror (ENOMEM);
+	return rc;
+}
+
+Npfcall *
 np_ctl_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
-	Npfcall *rc = NULL;
+	Fid *f = fid->aux;
+	Npfcall *rc = NULL;	
 
-	np_uerror (ENOSYS);
-
+	/* limited write capability for now */
+	if (!(f->file->flags & NP_CTL_FLAGS_SINK)) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
+	if ((f->file->flags & NP_CTL_FLAGS_DELAY100MS))
+		usleep (100*1000);
+	if (!(rc = np_create_rwrite (count))) {
+		np_uerror (ENOMEM);
+		goto done;
+	}
+done:
 	return rc;
 }
 

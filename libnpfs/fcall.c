@@ -785,8 +785,16 @@ np_setattr(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
-		np_uerror (EPERM);
-		goto done;
+		rc = np_ctl_setattr(fid,
+				    tc->u.tsetattr.valid,
+				    tc->u.tsetattr.mode,
+				    tc->u.tsetattr.uid,
+				    tc->u.tsetattr.gid,
+				    tc->u.tsetattr.size,
+				    tc->u.tsetattr.atime_sec,
+				    tc->u.tsetattr.atime_nsec,
+				    tc->u.tsetattr.mtime_sec,
+				    tc->u.tsetattr.mtime_nsec);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
 			goto done;

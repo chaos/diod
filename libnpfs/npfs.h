@@ -242,6 +242,7 @@ struct Npfile {
         Npqid                    qid;
         SynGetF                  getf;
         void                    *getf_arg;
+	int			flags;
 	uid_t			uid;
 	gid_t			gid;
 	mode_t			mode;
@@ -480,6 +481,9 @@ unsigned long np_rerror(void);
 void np_uerror(unsigned long ecode);
 
 /* ctl.c */
+#define NP_CTL_FLAGS_DELAY100MS		0x01
+#define NP_CTL_FLAGS_ZEROSRC		0x02
+#define NP_CTL_FLAGS_SINK		0x04
 Npfcall *np_ctl_attach(Npfid *fid, Npfid *afid, char *aname);
 int np_ctl_clone(Npfid *fid, Npfid *newfid);
 int np_ctl_walk(Npfid *newfid, Npstr *wname, Npqid *wqid);
@@ -488,10 +492,14 @@ Npfcall* np_ctl_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req);
 Npfcall* np_ctl_clunk(Npfid *fid);
 Npfcall* np_ctl_lopen(Npfid *fid, u32 mode);
 Npfcall* np_ctl_getattr(Npfid *fid, u64 request_mask);
+Npfcall* np_ctl_setattr(Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid,
+			u64 size, u64 atime_sec, u64 atime_nsec,
+			u64 mtime_sec, u64 mtime_nsec);
 Npfcall* np_ctl_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
 void np_ctl_fiddestroy (Npfid *fid);
 int np_ctl_initialize (Npsrv *srv);
 void np_ctl_finalize (Npsrv *srv);
-Npfile *np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg);
+Npfile *np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg,
+			int flags);
 Npfile *np_ctl_adddir (Npfile *parent, char *name);
 void np_ctl_delfile (Npfile *file);
