@@ -244,7 +244,6 @@ error:
 Npfcall*
 np_flush(Npreq *req, Npfcall *tc)
 {
-	int fflag = (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG);
 	u16 oldtag = tc->u.tflush.oldtag;
 	Npreq *creq;
 	Npfcall *ret;
@@ -253,20 +252,19 @@ np_flush(Npreq *req, Npfcall *tc)
 	xpthread_mutex_lock(&req->conn->srv->lock);
 	for (tp = req->conn->srv->tpool; tp != NULL; tp = tp->next) {
 		for(creq = tp->reqs_first; creq != NULL; creq = creq->next) {
-			if (creq->conn==req->conn && creq->tag==oldtag) {
-				np_srv_remove_req(tp, creq);
-				np_req_unref(creq);
-				goto done;
-			}
+			if (!(creq->conn==req->conn && creq->tag==oldtag))
+				continue;
+			np_srv_remove_req(tp, creq);
+			np_req_unref(creq);
+			goto done;
 		}
 		for(creq = tp->workreqs; creq != NULL; creq = creq->next) {
-			if (creq->conn==req->conn && creq->tag==oldtag) {
-				creq->flushed = 1;
-				if (creq->wthread && fflag)
-					pthread_kill (creq->wthread->thread,
-						      SIGINT);
-				goto done;
-			}
+			if (!(creq->conn==req->conn && creq->tag==oldtag))
+				continue;
+			creq->flushed = 1;
+			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)
+				pthread_kill (creq->wthread->thread, SIGINT);
+			goto done;
 		}
 	}
 done:

@@ -44,6 +44,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <pthread.h>
+#include <signal.h>
 #include <assert.h>
 
 #include "9p.h"
@@ -243,44 +244,6 @@ again:
 	return NULL;
 }
 
-static Npreq *
-_get_waiting_reqs (Npconn *conn)
-{
-	Npsrv *srv = conn->srv;
-	Npreq *req, *req1, *preqs;
-	Nptpool *tp;
-
-	/* assert: srv->lock held */
-	preqs = NULL;
-	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		req = tp->reqs_first;
-		while (req != NULL) {
-			req1 = req->next;
-			if (req->conn == conn) {
-				np_srv_remove_req(tp, req);
-				req->next = preqs;
-				preqs = req;
-			}
-			req = req1;
-		}
-	}
-	return preqs;
-}
-
-static void
-_flush_waiting_reqs (Npreq *reqs)
-{
-	Npreq *req = reqs;
-	Npreq *req1;
-
-	while (req != NULL) {
-		req1 = req->next;
-		np_conn_respond(req);
-		np_req_unref(req);
-		req = req1;
-	}
-}
-
 static int
 _count_working_reqs (Npconn *conn)
 {
@@ -299,23 +262,43 @@ _count_working_reqs (Npconn *conn)
 	return n;
 }
 
+static void
+np_conn_flush (Npconn *conn)
+{
+	Nptpool *tp;
+	Npreq *creq, *nextreq;
+
+	xpthread_mutex_lock(&conn->srv->lock);
+	for (tp = conn->srv->tpool; tp != NULL; tp = tp->next) {
+		for (creq = tp->reqs_first; creq != NULL; creq = nextreq) {
+			nextreq = creq->next;
+			if (creq->conn != conn)
+				continue;
+			np_srv_remove_req(tp, creq);
+			np_req_unref(creq);
+		}
+		for (creq = tp->workreqs; creq != NULL; creq = creq->next) {
+			if (creq->conn != conn)
+				continue;
+			creq->flushed = 1;
+			if (conn->srv->flags & SRV_FLAGS_FLUSHSIG)
+				pthread_kill (creq->wthread->thread, SIGINT);
+		}
+	}
+	xpthread_mutex_unlock(&conn->srv->lock);
+}
+
 /* Clear all state associated with conn out of the srv.
  * No more I/O is possible; we have disassociated the trans from the conn.
  */
 static void
 np_conn_reset(Npconn *conn)
 {
-	Npreq *preqs;
-
 	xpthread_mutex_lock(&conn->lock);
 	conn->resetting = 1;
 	xpthread_mutex_unlock(&conn->lock);
-	
-	xpthread_mutex_lock(&conn->srv->lock);
-	preqs = _get_waiting_reqs (conn);
-	xpthread_mutex_unlock(&conn->srv->lock);
 
-	_flush_waiting_reqs (preqs);
+	np_conn_flush (conn);	
 
 	xpthread_mutex_lock(&conn->srv->lock);
 	while (_count_working_reqs (conn) > 0)
