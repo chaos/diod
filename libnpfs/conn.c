@@ -148,6 +148,7 @@ np_conn_read_proc(void *a)
 	while (fc && conn->trans) {
 		i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n);
 		if (i < 0) {
+			np_uerror (errno);
 			np_logerr (srv, "read error - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
@@ -170,7 +171,7 @@ again:
 		 */
 		if (!np_deserialize(fc, fc->pkt)) {
 			_debug_trace (srv, fc);
-			np_logerr (srv, "protocol error - "
+			np_logmsg (srv, "protocol error - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
 			break;
@@ -183,7 +184,7 @@ again:
 		 */
 		fc1 = _alloc_npfcall(conn->msize);
 		if (!fc1) {
-			np_logerr (srv, "out of memory in receive path - "
+			np_logmsg (srv, "out of memory in receive path - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
 			break;
@@ -262,7 +263,7 @@ np_conn_flush (Npconn *conn)
 void
 np_conn_respond(Npreq *req)
 {
-	int n;
+	int n, len;
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
 	Npfcall *rc = req->rcall;
@@ -270,11 +271,17 @@ np_conn_respond(Npreq *req)
 	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
 		_debug_trace (srv, rc);
 	xpthread_mutex_lock(&conn->wlock);
-	n = np_trans_write(conn->trans, rc->pkt, rc->size);
-	/* FIXME: handle partial write */
+	len = 0;
+	do {
+		n = np_trans_write(conn->trans, rc->pkt + len, rc->size - len);
+		if (n > 0)
+			len += n;
+	} while (n > 0 && len < rc->size);
 	xpthread_mutex_unlock(&conn->wlock);
-	if (n <= 0)
+	if (n <= 0) {
+		np_uerror (errno);
 		np_logerr (srv, "write to '%s'", conn->client_id);
+	}
 }
 
 static Npfcall *
