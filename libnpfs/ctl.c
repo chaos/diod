@@ -105,23 +105,6 @@ np_ctl_delfile (Npfile *file)
 	}	
 }
 
-typedef enum {DIRMODE, FILEMODE} whichmode_t;
-static void
-_update_mode (Npfile *file, whichmode_t wm)
-{
-	switch (wm) {
-	case DIRMODE:
-		file->mode = S_IFDIR;
-		file->mode |= S_IRUSR | S_IRGRP | S_IROTH;
-		file->mode |= S_IXUSR | S_IXGRP | S_IXOTH;
-		break;
-	case FILEMODE:
-		file->mode = S_IFREG;
-		file->mode |= S_IRUSR | S_IRGRP | S_IROTH;
-		break;
-	}
-}
-
 static Npfile *
 _alloc_file (char *name, u8 type)
 {
@@ -139,10 +122,14 @@ _alloc_file (char *name, u8 type)
 	file->qid.path = _next_inum ();
 	file->qid.type = type | P9_QTTMP;
 	file->qid.version = 0;
-	if ((type & P9_QTDIR))
-		_update_mode (file, DIRMODE);
-	else
-		_update_mode (file, FILEMODE);
+	if ((type & P9_QTDIR)) {
+		file->mode = S_IFDIR;
+		file->mode |= S_IRUSR | S_IRGRP | S_IROTH;
+		file->mode |= S_IXUSR | S_IXGRP | S_IXOTH;
+	} else {
+		file->mode = S_IFREG;
+		file->mode |= S_IRUSR | S_IRGRP | S_IROTH;
+	}
 	file->uid = 0;
 	file->gid = 0;
 	(void)gettimeofday (&file->atime, NULL);
@@ -436,8 +423,7 @@ np_ctl_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 			np_uerror (ENOMEM);
 		goto done;
 	}
-	if (!f->data) {
-		assert (f->file->getf != NULL);
+	if (!f->data && f->file->getf) {
 		if (!(f->data = f->file->getf (f->file->name,
 					       f->file->getf_arg)))
 			if (np_rerror ()) /* NULL is a valid (empty) result */
