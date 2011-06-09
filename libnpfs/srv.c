@@ -598,11 +598,13 @@ np_process_request(Npreq *req, Nptpool *tp)
 			break;
 		case P9_TREAD:
 			rc = np_read(req, tc);
-			rbytes = rc->u.rread.count;
+			if (rc)
+				rbytes = rc->u.rread.count;
 			break;
 		case P9_TWRITE:
 			rc = np_write(req, tc);
-			wbytes = rc->u.rwrite.count;
+			if (rc)
+				wbytes = rc->u.rwrite.count;
 			break;
 		case P9_TCLUNK:
 			rc = np_clunk(req, tc);

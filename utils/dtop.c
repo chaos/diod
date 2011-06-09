@@ -586,25 +586,27 @@ _read_ctl_meminfo (Server *sp)
     return 0;
 }
 
+/* nfs module may not be loaded, so this is not fatal like the others.
+ */
 static int
 _read_ctl_nfsops (Server *sp)
 {
     time_t now;
     char *buf, *s, *p;
 
-    if (!(buf = npc_aget (sp->root, "net.rpc.nfs")))
-        return -1;
-    now = time (NULL);
-    for (s = buf; s && *s; s = p) {
-        p = strchr (s, '\n');
-        if (p)
-            *p++ = '\0';
-        if (!strncmp (s, "rpc", 3)) {
-            sample_update (sp->nfs_ops, strtod (s + 3, NULL), now);
-            break;
+    if ((buf = npc_aget (sp->root, "net.rpc.nfs"))) {
+        now = time (NULL);
+        for (s = buf; s && *s; s = p) {
+            p = strchr (s, '\n');
+            if (p)
+                *p++ = '\0';
+            if (!strncmp (s, "rpc", 3)) {
+                sample_update (sp->nfs_ops, strtod (s + 3, NULL), now);
+                break;
+            }
         }
+	free (buf);
     }
-    free (buf);
     return 0;
 }
 

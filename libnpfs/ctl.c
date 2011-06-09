@@ -424,10 +424,9 @@ np_ctl_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 		goto done;
 	}
 	if (!f->data && f->file->getf) {
-		if (!(f->data = f->file->getf (f->file->name,
-					       f->file->getf_arg)))
-			if (np_rerror ()) /* NULL is a valid (empty) result */
-				goto done;
+		f->data = f->file->getf (f->file->name, f->file->getf_arg);
+		if (!f->data && np_rerror ())
+			goto done;
 	}
 	len = f->data ? strlen (f->data) : 0;
 	if (offset > len)
