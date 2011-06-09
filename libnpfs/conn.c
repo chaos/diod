@@ -253,7 +253,7 @@ np_conn_flush (Npconn *conn)
 				continue;
 			creq->flushed = 1;
 			if (conn->srv->flags & SRV_FLAGS_FLUSHSIG)
-				pthread_kill (creq->wthread->thread, SIGINT);
+				pthread_kill (creq->wthread->thread, SIGUSR2);
 		}
 	}
 	xpthread_mutex_unlock(&conn->srv->lock);

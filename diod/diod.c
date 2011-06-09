@@ -359,7 +359,7 @@ _sighand (int sig)
         case SIGUSR1:
             ss.shutdown = 1;
             break;
-        case SIGINT:
+        case SIGUSR2:
             break;
         default:
             msg ("caught signal %d: ignoring", sig);
@@ -408,7 +408,7 @@ _service_loop (void *arg)
 
 /* Set up signal handlers for SIGHUP and SIGTERM and block them.
  * Threads will inherit this signal mask; _service_loop () will unblock.
- * Install handler for SIGINT and don't block - this signal is used to
+ * Install handler for SIGUSR2 and don't block - this signal is used to
  * interrupt I/O operations when handling a 9p flush.
  */
 static void
@@ -426,7 +426,7 @@ _service_sigsetup (void)
         err_exit ("sigaction");
     if (sigaction (SIGUSR1, &sa, NULL) < 0)
         err_exit ("sigaction");
-    if (sigaction (SIGINT, &sa, NULL) < 0)
+    if (sigaction (SIGUSR2, &sa, NULL) < 0)
         err_exit ("sigaction");
 
     sigemptyset (&sigs);

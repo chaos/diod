@@ -263,7 +263,7 @@ np_flush(Npreq *req, Npfcall *tc)
 				continue;
 			creq->flushed = 1;
 			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)
-				pthread_kill (creq->wthread->thread, SIGINT);
+				pthread_kill (creq->wthread->thread, SIGUSR2);
 			goto done;
 		}
 	}
