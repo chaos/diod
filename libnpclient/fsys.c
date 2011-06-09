@@ -60,6 +60,7 @@ npc_create_fsys(int fd, int msize)
 		return NULL;
 	}
 
+	np_uerror (0);
 	pthread_mutex_init(&fs->lock, NULL);
 	fs->msize = msize;
 	fs->trans = NULL;
@@ -80,7 +81,6 @@ npc_create_fsys(int fd, int msize)
 	fs->fidpool = npc_create_pool(P9_NOFID);
 	if (!fs->fidpool)
 		goto error;
-
 	return fs;
 
 error:

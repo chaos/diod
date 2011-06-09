@@ -75,6 +75,7 @@ npc_create_mtfsys(int fd, int msize)
 		return NULL;
 	}
 
+	np_uerror (0);
 	pthread_mutex_init(&fs->lock, NULL);
 	pthread_cond_init(&fs->cond, NULL);
 	fs->msize = msize;

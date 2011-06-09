@@ -146,6 +146,7 @@ main (int argc, char *argv[])
     double poll_sec = 1;
     char *host;
     int c;
+    sigset_t sigs;
 
     diod_log_init (argv[0]);
 
@@ -179,6 +180,11 @@ main (int argc, char *argv[])
 
     if (!(tpools = list_create ((ListDelF)_destroy_tpool)))
         err_exit ("out of memory");
+
+    sigemptyset (&sigs);
+    sigaddset (&sigs, SIGPIPE);
+    if (sigprocmask (SIG_BLOCK, &sigs, NULL) < 0)
+        err_exit ("sigprocmask");
 
     /* Launch readers - create a list of Servers.
      */
