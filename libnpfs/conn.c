@@ -212,6 +212,10 @@ again:
 
 			rc = np_flush (req, fc);
 			np_req_respond (req, rc);
+
+			xpthread_mutex_lock (&srv->lock);
+			srv->tpool->stats.nreqs[P9_TFLUSH]++;
+			xpthread_mutex_unlock (&srv->lock);
 		} else {
 			xpthread_mutex_lock(&srv->lock);	
 			np_srv_add_req(srv, req);
