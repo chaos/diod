@@ -40,11 +40,13 @@
 Npfcall *
 np_version(Npreq *req, Npfcall *tc)
 {
+	Npsrv *srv = req->conn->srv;
 	Npfcall *rc = NULL;
 	int msize = tc->u.tversion.msize;
 
 	if (msize < P9_IOHDRSZ + 1) {
 		np_uerror(EIO);
+		np_logerr(srv, "version: msize is too small");
 		return NULL;
 	}
 	if (msize > req->conn->msize)
@@ -52,10 +54,14 @@ np_version(Npreq *req, Npfcall *tc)
 	if (msize < req->conn->msize)
 		req->conn->msize = msize; /* conn->msize can only be reduced */
 	if (np_strcmp(&tc->u.tversion.version, "9P2000.L") == 0) {
-		if (!(rc = np_create_rversion(msize, "9P2000.L")))
+		if (!(rc = np_create_rversion(msize, "9P2000.L"))) {
 			np_uerror(ENOMEM);
-	} else
+			np_logerr(srv, "version: out of memory");
+		}
+	} else {
 		np_uerror(EIO);
+		np_logerr(srv, "version: unsupported version");
+	}
 	return rc;
 }
 
@@ -286,6 +292,7 @@ np_walk(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (conn->srv, "walk: invalid fid");
 		goto done;
 	}
 #if 0
@@ -295,8 +302,10 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 #endif
 	/* FIXME: error if fid has been opened */
+
 	if (tc->u.twalk.nwname > P9_MAXWELEM) {
 		np_uerror(EIO);
+		np_logerr (conn->srv, "walk: too many elements");
 		goto done;
 	}
 
@@ -304,6 +313,7 @@ np_walk(Npreq *req, Npfcall *tc)
 		newfid = np_fid_find(conn, tc->u.twalk.newfid);
 		if (newfid) {
 			np_uerror(EIO);
+			np_logerr (conn->srv, "walk: invalid newfid");
 			goto done;
 		}
 		newfid = np_fid_create(conn, tc->u.twalk.newfid, NULL);
@@ -325,6 +335,7 @@ np_walk(Npreq *req, Npfcall *tc)
 		newfid->type = fid->type;
 		if (!(newfid->aname = strdup (fid->aname))) {
 			np_uerror (ENOMEM);
+			np_logerr (conn->srv, "walk: out of memory");
 			goto done;
 		}
 	} else
