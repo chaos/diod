@@ -236,7 +236,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		rc = np_ctl_attach (fid, afid, fid->aname);
 	} else {
 		if (!srv->attach) {
-			np_uerror (EIO);
+			np_uerror (ENOSYS);
 			goto error;
 		}
 		rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
@@ -389,10 +389,13 @@ np_read(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (conn->srv, "read: invalid fid");
 		goto done;
 	}
 	if (tc->u.tread.count + P9_IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
+		np_logerr (conn->srv, "read: count %u too large",
+			   tc->u.tread.count);
 		goto done;
 	}
 
@@ -410,12 +413,12 @@ np_read(Npreq *req, Npfcall *tc)
 				rc = NULL;
 			}
 		} else
-			np_uerror(EIO);
-
+			np_uerror(ENOSYS);
 		goto done;
 	}
 	if ((fid->type & P9_QTDIR)) {
 		np_uerror(EIO);
+		np_logerr (conn->srv, "read: fid refers to a directory");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -446,6 +449,7 @@ np_write(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (conn->srv, "write: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTAUTH) {
@@ -456,18 +460,19 @@ np_write(Npreq *req, Npfcall *tc)
 				if (!(rc = np_create_rwrite(n)))
 					np_uerror(ENOMEM);
 
-			goto done;
-		} else {
-			np_uerror(EIO);
-			goto done;
-		}
+		} else
+			np_uerror(ENOSYS);
+		goto done;
 	}
 	if ((fid->type & P9_QTDIR)) {
-		np_uerror(EPERM);
+		np_uerror(EIO);
+		np_logerr (conn->srv, "write: fid refers to a directory");
 		goto done;
 	}
 	if (tc->u.twrite.count + P9_IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
+		np_logerr (conn->srv, "write: count %u too large",
+			   tc->u.twrite.count);
 		goto done;
 	}
 
@@ -498,6 +503,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "clunk: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTAUTH) {
@@ -506,8 +512,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 			if (!(rc = np_create_rclunk()))
 				np_uerror(ENOMEM);
 		} else
-			np_uerror(EIO);
-
+			np_uerror(ENOSYS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -534,6 +539,7 @@ np_remove(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "remove: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -562,6 +568,7 @@ np_statfs(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "statfs: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -587,6 +594,7 @@ np_lopen(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "lopen: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -612,6 +620,7 @@ np_lcreate(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "lcreate: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -646,6 +655,7 @@ np_symlink(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "symlink: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -675,6 +685,7 @@ np_mknod(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "mknod: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -707,10 +718,12 @@ np_rename(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "rename: invalid fid");
 		goto done;
 	}
 	if (!(dfid = np_fid_find(req->conn, tc->u.trename.dfid))) {
 		np_uerror(EIO);
+		np_logerr (req->conn->srv, "rename: invalid dfid");
 		goto done;
 	}
 	np_fid_incref(dfid);
@@ -739,6 +752,7 @@ np_readlink(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "readlink: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -765,6 +779,7 @@ np_getattr(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "getattr: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -791,6 +806,7 @@ np_setattr(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "setattr: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -835,10 +851,12 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "xattrwalk: invalid fid");
 		goto done;
 	}
 	if (!(attrfid = np_fid_find(req->conn, tc->u.txattrwalk.attrfid))) {
 		np_uerror(EIO);
+		np_logerr (req->conn->srv, "xattrwalk: invalid attrfid");
 		goto done;
 	}
 	np_fid_incref(attrfid); /* XXX decref needed? */
@@ -867,6 +885,7 @@ np_xattrcreate(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "xattrcreate: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -896,10 +915,13 @@ np_readdir(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "readdir: invalid fid");
 		goto done;
 	}
 	if (tc->u.treaddir.count + P9_READDIRHDRSZ > req->conn->msize) {
 		np_uerror(EIO);
+		np_logerr (req->conn->srv, "readdir: count %u too large",
+			   tc->u.treaddir.count);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -928,6 +950,7 @@ np_fsync(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "fsync: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -954,6 +977,7 @@ np_lock(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "lock: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -986,6 +1010,7 @@ np_getlock(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "getlock: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -1018,10 +1043,12 @@ np_link(Npreq *req, Npfcall *tc)
 
 	if (!dfid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "link: invalid dfid");
 		goto done;
 	}
 	if (!(fid = np_fid_find(req->conn, tc->u.tlink.fid))) {
 		np_uerror(EIO);
+		np_logerr (req->conn->srv, "link: invalid fid");
 		goto done;
 	}
 	np_fid_incref(fid);
@@ -1050,6 +1077,7 @@ np_mkdir(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
+		np_logerr (req->conn->srv, "mkdir: invalid fid");
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
