@@ -675,6 +675,10 @@ np_req_respond(Npreq *req, Npfcall *rc)
 {
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
+	if (req->fid) {
+		np_fid_decref(req->fid);
+		req->fid = NULL;
+	}
 	if (req->rcall && !req->flushed) {
 		np_set_tag(req->rcall, req->tag);
 		np_conn_respond(req);		
