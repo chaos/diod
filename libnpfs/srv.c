@@ -326,19 +326,22 @@ void
 np_tpool_select (Npreq *req)
 {
 	Npsrv *srv = req->conn->srv;
-	Nptpool *tp;
+	Nptpool *tp = NULL;
 
-	if ((srv->flags & SRV_FLAGS_TPOOL_SINGLE))
-		return;
-	if (!req->fid || !req->fid->aname || *req->fid->aname != '/')
-		return;
-	if (req->fid->tpool)
+	assert (srv->tpool != NULL);
+	if (!req->fid || req->fid->tpool)
 		return;
 
 	xpthread_mutex_lock (&srv->lock);
-	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		if (!strcmp (req->fid->aname, tp->name))
-			break;
+	if ((srv->flags & SRV_FLAGS_TPOOL_SINGLE) || !req->fid->aname
+						  || *req->fid->aname != '/') {
+		tp = srv->tpool;
+	}
+	if (!tp) {
+		for (tp = srv->tpool; tp != NULL; tp = tp->next) {
+			if (!strcmp (req->fid->aname, tp->name))
+				break;
+		}
 	}
 	if (!tp) {
 		tp = np_tpool_create(srv, req->fid->aname);
