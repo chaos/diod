@@ -1,26 +1,47 @@
 tnpsrv: P9_TVERSION tag 65535 msize 8192 version '9P2000.L'
 tnpsrv: P9_RVERSION tag 65535 msize 8192 version '9P2000.L'
-tnpsrv: P9_TAUTH tag 0 afid 0 uname '' aname '/foo' n_uname 0
-tnpsrv: P9_RLERROR tag 0 ecode 0
-tnpsrv: P9_TATTACH tag 1 fid 0 afid -1 uname '' aname '/foo' n_uname 0
+tnpsrv: P9_TATTACH tag 0 fid 0 afid -1 uname '' aname 'ctl' n_uname 0
 tnpsrv: user lookup: 0
-tnpsrv: P9_RATTACH tag 1 qid (0000000000000003 2 '')
-tnpsrv: P9_TATTACH tag 2 fid 1 afid -1 uname '' aname '/foo' n_uname 0
-tnpsrv: P9_RATTACH tag 2 qid (0000000000000003 2 '')
-tnpsrv: P9_TATTACH tag 3 fid 2 afid -1 uname '' aname '/foo' n_uname 1
+tnpsrv: P9_RATTACH tag 0 qid (0000000000000001 0 'dt')
+tnpsrv: P9_TWALK tag 0 fid 0 newfid 1 nwname 1 'tpools'
+tnpsrv: P9_RWALK tag 0 nwqid 1 (000000000000000a 0 't')
+tnpsrv: P9_TLOPEN tag 0 fid 1 flags 00
+tnpsrv: P9_RLOPEN tag 0 qid (000000000000000a 0 't') iounit 0
+tnpsrv: P9_TREAD tag 0 fid 1 offset 0 count 4095
+tnpsrv: P9_RREAD tag 0 count 68
+64656661 756c7420 31203320 30203020 30203120 30203020 30203020 30203020 
+30203020 30203020 30203020 30203020 30203120 30203120 30203120 30203020 
+tnpsrv: P9_TREAD tag 0 fid 1 offset 68 count 4027
+tnpsrv: P9_RREAD tag 0 count 0
+tnpsrv: P9_TCLUNK tag 0 fid 1
+tnpsrv: P9_RCLUNK tag 0
+tnpsrv: P9_TATTACH tag 0 fid 1 afid -1 uname '' aname 'ctl' n_uname 1
 tnpsrv: user lookup: 1
-tnpsrv: P9_RATTACH tag 3 qid (0000000000000003 2 '')
-tnpsrv: P9_TATTACH tag 4 fid 3 afid -1 uname '' aname '/foo' n_uname 1
-tnpsrv: P9_RATTACH tag 4 qid (0000000000000003 2 '')
-tnpsrv: P9_TATTACH tag 5 fid 4 afid -1 uname '' aname '/foo' n_uname 0
-tnpsrv: P9_RATTACH tag 5 qid (0000000000000003 2 '')
-tnpsrv: P9_TCLUNK tag 6 fid 4
-tnpsrv: P9_RCLUNK tag 6
-tnpsrv: P9_TCLUNK tag 7 fid 3
-tnpsrv: P9_RCLUNK tag 7
-tnpsrv: P9_TCLUNK tag 8 fid 2
-tnpsrv: P9_RCLUNK tag 8
-tnpsrv: P9_TCLUNK tag 9 fid 1
-tnpsrv: P9_RCLUNK tag 9
-tnpsrv: P9_TCLUNK tag 10 fid 0
-tnpsrv: P9_RCLUNK tag 10
+tnpsrv: P9_RATTACH tag 0 qid (0000000000000001 0 'dt')
+tnpsrv: P9_TWALK tag 0 fid 1 newfid 2 nwname 1 'connections'
+tnpsrv: P9_RWALK tag 0 nwqid 1 (0000000000000009 0 't')
+tnpsrv: P9_TLOPEN tag 0 fid 2 flags 00
+tnpsrv: P9_RLOPEN tag 0 qid (0000000000000009 0 't') iounit 0
+tnpsrv: P9_TREAD tag 0 fid 2 offset 0 count 4095
+tnpsrv: P9_RREAD tag 0 count 11
+6c6f6f70 6261636b 20330a
+tnpsrv: P9_TREAD tag 0 fid 2 offset 11 count 4084
+tnpsrv: P9_RREAD tag 0 count 0
+tnpsrv: P9_TCLUNK tag 0 fid 2
+tnpsrv: P9_RCLUNK tag 0
+tnpsrv: P9_TATTACH tag 0 fid 2 afid -1 uname '' aname 'ctl' n_uname 1
+tnpsrv: P9_RATTACH tag 0 qid (0000000000000001 0 'dt')
+tnpsrv: P9_TWALK tag 0 fid 2 newfid 3 nwname 1 'null'
+tnpsrv: P9_RWALK tag 0 nwqid 1 (0000000000000005 0 't')
+tnpsrv: P9_TLOPEN tag 0 fid 3 flags 00
+tnpsrv: P9_RLOPEN tag 0 qid (0000000000000005 0 't') iounit 0
+tnpsrv: P9_TREAD tag 0 fid 3 offset 0 count 4095
+tnpsrv: P9_RREAD tag 0 count 0
+tnpsrv: P9_TCLUNK tag 0 fid 3
+tnpsrv: P9_RCLUNK tag 0
+tnpsrv: P9_TCLUNK tag 0 fid 0
+tnpsrv: P9_RCLUNK tag 0
+tnpsrv: P9_TCLUNK tag 0 fid 1
+tnpsrv: P9_RCLUNK tag 0
+tnpsrv: P9_TCLUNK tag 0 fid 2
+tnpsrv: P9_RCLUNK tag 0
