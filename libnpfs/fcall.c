@@ -323,9 +323,11 @@ np_walk(Npreq *req, Npfcall *tc)
 			if (!np_ctl_clone (fid, newfid))
 				goto done;
 		} else {
-			if (!conn->srv->clone)
+			if (!conn->srv->clone) {
+				np_uerror (ENOSYS);
 				goto done;
-			if (!(*conn->srv->clone)(fid, newfid))
+			}
+			else if (!(*conn->srv->clone)(fid, newfid))
 				goto done;
 		}
 		np_user_incref(fid->user);

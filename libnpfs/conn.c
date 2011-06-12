@@ -41,6 +41,7 @@
 static Npfcall *_alloc_npfcall(int msize);
 static void *np_conn_read_proc(void *);
 static void np_conn_flush (Npconn *conn);
+static void np_conn_destroy(Npconn *conn);
 
 Npconn*
 np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
@@ -54,6 +55,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	}
 	pthread_mutex_init(&conn->lock, NULL);
 	pthread_mutex_init(&conn->wlock, NULL);
+	pthread_cond_init(&conn->refcond, NULL);
 
 	conn->refcount = 0;
 	conn->srv = srv;
@@ -94,15 +96,18 @@ np_conn_incref(Npconn *conn)
 void
 np_conn_decref(Npconn *conn)
 {
-	int n;
-
 	xpthread_mutex_lock(&conn->lock);
 	assert(conn->refcount > 0);
-	n = --conn->refcount;
+	conn->refcount--;
 	xpthread_mutex_unlock(&conn->lock);
-	if (n > 0)
-		return;
+	xpthread_cond_signal(&conn->refcond);
+}
 
+static void
+np_conn_destroy(Npconn *conn)
+{
+	assert(conn != NULL);
+	assert(conn->refcount == 0);
 	if (conn->fidpool) {
 		np_fidpool_destroy(conn->fidpool);
 		conn->fidpool = NULL;
@@ -113,6 +118,8 @@ np_conn_decref(Npconn *conn)
 	}
 	pthread_mutex_destroy(&conn->lock);
 	pthread_mutex_destroy(&conn->wlock);
+	pthread_cond_destroy(&conn->refcond);
+
 	np_srv_remove_conn (conn->srv, conn);
 	free(conn);
 }
@@ -138,7 +145,6 @@ np_conn_read_proc(void *a)
 	Npfcall *fc, *fc1;
 
 	pthread_detach(pthread_self());
-	np_conn_incref(conn);
 	srv = conn->srv;
 	fc = _alloc_npfcall(conn->msize);
 	if (!fc)
@@ -165,9 +171,7 @@ again:
 			continue;
 
 		/* Corruption on the transport, unhandled op, etc.
-		 * is fatal to the connection.  We could consider returning
-		 * an error to the client here.   However, various kernels
-		 * may not handle that well, depending on where it happens.
+		 * is fatal to the connection.
 		 */
 		if (!np_deserialize(fc, fc->pkt)) {
 			_debug_trace (srv, fc);
@@ -234,7 +238,13 @@ again:
 		free (fc);
 
 	np_conn_flush (conn);
-	np_conn_decref(conn);
+
+	xpthread_mutex_lock(&conn->lock);
+	while (conn->refcount > 0)
+		xpthread_cond_wait(&conn->refcond, &conn->lock);
+	xpthread_mutex_unlock(&conn->lock);
+	np_conn_destroy(conn);
+
 	return NULL;
 }
 

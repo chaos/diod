@@ -148,6 +148,7 @@ struct Npfidpool {
 struct Npconn {
 	pthread_mutex_t	lock;
 	pthread_mutex_t	wlock;
+	pthread_cond_t  refcond;
 	int		refcount;
 
 	char		client_id[128];
