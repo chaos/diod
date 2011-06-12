@@ -75,9 +75,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 
 	err = pthread_create(&conn->rthread, NULL, np_conn_read_proc, conn);
 	if (err != 0) {
-		np_srv_remove_conn (srv, conn);
-		np_fidpool_destroy(conn->fidpool);
-		free (conn);
+		np_conn_destroy (conn);
 		errno = err;
 		return NULL;
 	}

@@ -22,8 +22,7 @@ t07   	Check for memory problems in libnpfs serialize/deserialize
 t08(@)	Check for memory problems in libdiod conf/log
 t09   	Check for memory problems in list package
 	Actually this was to run down a specific case, now fixed.
-t10	Check for memory problems in a skeletal libnpfs server
-t11	Check for memory problems in a skeletal libnpclient client
+t10	Check for memory problems in a skeletal libnpfs client/server
 
 (*) NOTRUN if not run as root
 (@) NOTRUN if lua is not installed

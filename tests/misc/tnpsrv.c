@@ -1,4 +1,4 @@
-/* tnpsrv.c - test skeleton libnpfs server (valgrind me) */
+/* tnpsrv.c - test simple client/server (valgrind me) */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -7,168 +7,80 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/socket.h>
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <assert.h>
-#include <pthread.h>
 
 #include "9p.h"
 #include "npfs.h"
+#include "npclient.h"
 
 #include "list.h"
 #include "diod_log.h"
 #include "diod_conf.h"
-
-#include "ttrans.h"
+#include "diod_sock.h"
 
 #define TEST_MSIZE 8192
-
-static Npfcall* myattach (Npfid *fid, Npfid *afid, Npstr *aname);
-static Npfcall *myclunk (Npfid *fid);
-
-static void _send_tversion (Nptrans *t);
-static void _send_tauth (Nptrans *t);
-static void _send_tattach (Nptrans *t, uid_t uid, int fid);
-static void _send_tclunk (Nptrans *t, int fid);
 
 int
 main (int argc, char *argv[])
 {
     Npsrv *srv;
-    Npconn *conn;
-    Nptrans *trans;
+    int s[2];
     int flags = SRV_FLAGS_DEBUG_9PTRACE | SRV_FLAGS_DEBUG_USER;
+    Npcfsys *fs;
+    Npcfid *root0, *root1, *root2;
+    char *str;
 
     diod_log_init (argv[0]);
     diod_conf_init ();
 
+    if (socketpair (AF_LOCAL, SOCK_STREAM, 0, s) < 0)
+        err_exit ("socketpair");
+
     if (!(srv = np_srv_create (16, flags)))
         errn_exit (np_rerror (), "out of memory");
     srv->logmsg = diod_log_msg;
+    diod_sock_startfd (srv, s[1], "loopback");
 
-    srv->attach = myattach;
-    srv->clunk = myclunk;
+    if (!(fs = npc_start (s[0], TEST_MSIZE, 0)))
+        errn_exit (np_rerror (), "npc_start");
 
-    /* create one connection */
-    if (!(trans = ttrans_create ()))
-        err_exit ("ttrans_create");
-    if (!(conn = np_conn_create (srv, trans, "loopback")))
-        msg_exit  ("np_conn_create failure");
+    if (!(root0 = npc_attach (fs, NULL, "ctl", 0)))
+        errn_exit (np_rerror (), "npc_attach");
+    if (!(str = npc_aget (root0, "tpools")))
+        errn_exit (np_rerror (), "npc_get tpools");
+    free (str);
 
-    _send_tversion (trans);
-    _send_tauth (trans);
-    _send_tattach (trans, 0, 0);
-    _send_tattach (trans, 0, 1);
-    _send_tattach (trans, 1, 2);
-    _send_tattach (trans, 1, 3);
-    _send_tattach (trans, 0, 4);
-    _send_tclunk (trans, 4);
-    _send_tclunk (trans, 3);
-    _send_tclunk (trans, 2);
-    _send_tclunk (trans, 1);
-    _send_tclunk (trans, 0);
-    ttrans_rpc (trans, NULL, NULL); /* signifies EOF to reader */
+    if (!(root1 = npc_attach (fs, NULL, "ctl", 1)))
+        errn_exit (np_rerror (), "npc_attach");
+    if (!(str = npc_aget (root1, "connections")))
+        errn_exit (np_rerror (), "npc_get connections");
+    free (str);
 
-    /* wait for exactly one connect/disconnect */
+    /* Same user (1) - user cache should be valid, so we won't see a message
+     * for this user lookup in the output.
+     */
+    if (!(root2 = npc_attach (fs, NULL, "ctl", 1)))
+        errn_exit (np_rerror (), "npc_attach");
+    if (!(str = npc_aget (root2, "null")))
+        errn_exit (np_rerror (), "npc_get null");
+    free (str);
+
+    npc_clunk (root0);
+    npc_clunk (root1);
+    npc_clunk (root2);
+
+    npc_finish (fs);
+
     np_srv_wait_conncount (srv, 1);
-    sleep(1); /* racy here - conn reader needs time to process EOF */
     np_srv_destroy (srv);
 
     diod_conf_fini ();
     diod_log_fini ();
     exit (0);
-}
-
-static Npfcall *
-myattach (Npfid *fid, Npfid *afid, Npstr *aname)
-{
-    Npqid qid = { 1, 2, 3};
-    Npfcall *ret = NULL;
-
-    if (!(ret = np_create_rattach(&qid))) {
-        np_uerror (ENOMEM);
-        return NULL;
-    }
-    np_fid_incref (fid);
-    return ret;
-}
-
-static Npfcall *
-myclunk (Npfid *fid)
-{
-    Npfcall *ret;
-
-    if (!(ret = np_create_rclunk ())) {
-        np_uerror (ENOMEM);
-        return NULL;
-    }
-    return ret;
-}
-
-static Npfcall *
-_alloc_rc (void)
-{
-    Npfcall *rc;
-
-    rc = malloc(sizeof (*rc) + TEST_MSIZE);
-    if (!rc)
-        msg_exit ("oom");
-    rc->pkt = (u8*)rc + sizeof(*rc);
-    return rc;
-}
-
-static void
-_send_tclunk (Nptrans *t, int fid)
-{
-    Npfcall *tc, *rc = _alloc_rc ();
-
-    tc = np_create_tclunk (fid);
-    if (!tc)
-        msg_exit ("oom");
-    ttrans_rpc (t, tc, rc);
-    free (tc);
-    free (rc);
-}
-
-static void
-_send_tattach (Nptrans *t, uid_t uid, int fid)
-{
-    Npfcall *tc, *rc = _alloc_rc ();
-
-    tc = np_create_tattach (fid, P9_NOFID, NULL, "/foo", uid);
-    if (!tc)
-        msg_exit ("oom");
-    ttrans_rpc (t, tc, rc);
-    free (tc);
-    free (rc);
-}
-
-
-static void
-_send_tauth (Nptrans *t)
-{
-    Npfcall *tc, *rc = _alloc_rc ();
-
-    tc = np_create_tauth (0, NULL, "/foo", 0);
-    if (!tc)
-        msg_exit ("oom");
-    ttrans_rpc (t, tc, rc);
-    free (tc);
-    free (rc);
-}
-
-static void 
-_send_tversion (Nptrans *t)
-{
-    Npfcall *tc, *rc = _alloc_rc ();
-
-    tc = np_create_tversion (TEST_MSIZE, "9P2000.L");
-    if (!tc)
-        msg_exit ("oom");
-    ttrans_rpc (t, tc, rc);
-    free (tc);
-    free (rc);
 }
 
 /*

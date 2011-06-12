@@ -9,10 +9,9 @@ check_PROGRAMS = \
 	tserialize \
 	tlist \
 	tnpsrv \
-	tnpcli \
 	tlua
 
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10
 # XFAIL_TESTS = t12
 
 CLEANFILES = *.out *.diff
@@ -36,8 +35,6 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
 common_sources = \
 	$(top_srcdir)/utils/opt.c \
 	$(top_srcdir)/utils/opt.h \
-	ttrans.c \
-	ttrans.h \
 	test.h
 
 tsetuid_SOURCES = tsetuid.c $(common_sources)
@@ -50,7 +47,6 @@ tconf_SOURCES = tconf.c $(common_sources)
 tserialize_SOURCES = tserialize.c $(common_sources) 
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources)
-tnpcli_SOURCES = tnpcli.c $(common_sources) 
 tlua_SOURCES = tlua.c $(common_sources) 
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf
