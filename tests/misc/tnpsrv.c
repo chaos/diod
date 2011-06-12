@@ -76,6 +76,14 @@ main (int argc, char *argv[])
     npc_finish (fs);
 
     np_srv_wait_conncount (srv, 1);
+
+    /* N.B. The conn reader thread runs detached and signals us as it is
+     * about to exit.  If we manage to wake up and exit first, valgrind
+     * reports the reader's tls as leaked.  Add the sleep to work around
+     * this race for now.
+     */
+    sleep (1);
+
     np_srv_destroy (srv);
 
     diod_conf_fini ();
