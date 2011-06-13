@@ -85,6 +85,7 @@ AC_CONFIG_FILES( \
   utils/diodmount.8 \
   utils/diodcat.8 \
   utils/dtop.8 \
+  utils/diodload.8 \
   etc/diod.conf.5 \
   scripts/Makefile \
   scripts/diod.init \

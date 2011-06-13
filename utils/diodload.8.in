@@ -1,0 +1,31 @@
+.TH diodload 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+diodload \- create artificial diod load
+.SH SYNOPSIS
+\fBdiodload\fR \fI[OPTIONS] [-h host]\fR
+.SH DESCRIPTION
+.B diodload
+connects to a \fBdiod\fR server and issues requests.
+Unless changed with \fI-g\fR, each thread copies from
+\fIctl:zero\fR to \fIctl:null\fR.
+.SH OPTIONS
+.TP
+.I "-h, --host HOST"
+Specify the host to connect to (default localhost).
+.TP
+.I "-p, --port PORT"
+Specify the port to connect to (default 564).
+.TP
+.I "-m, --msize SIZE"
+Specifiy the maximum size of a protocol unit (default 65536).
+.TP
+.I "-r, --runtime SECS"
+Specify the runtime in seconds (default 10).
+.TP
+.I "-n, --numthreads NUM"
+Specify the number of concurrent threads making requests (default 16).
+.TP
+.I "-g, --getattr"
+Issue a stream of getattrs on \fIctl:null\fR instead of the default load.
+.SH "SEE ALSO"
+diod (8)

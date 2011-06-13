@@ -35,11 +35,12 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
-sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT) dtop$(EXEEXT)
+sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT) dtop$(EXEEXT) \
+	diodload$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
-	$(srcdir)/diodcat.8.in $(srcdir)/diodmount.8.in \
-	$(srcdir)/dtop.8.in
+	$(srcdir)/diodcat.8.in $(srcdir)/diodload.8.in \
+	$(srcdir)/diodmount.8.in $(srcdir)/dtop.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/dbench.m4 \
@@ -53,7 +54,7 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodmount.8 diodcat.8 dtop.8
+CONFIG_CLEAN_FILES = diodmount.8 diodcat.8 dtop.8 diodload.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
@@ -68,6 +69,9 @@ am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 diodcat_DEPENDENCIES = $(am__DEPENDENCIES_2)
+am_diodload_OBJECTS = diodload.$(OBJEXT) $(am__objects_1)
+diodload_OBJECTS = $(am_diodload_OBJECTS)
+diodload_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodmount_OBJECTS = diodmount.$(OBJEXT) $(am__objects_1)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
 diodmount_DEPENDENCIES = $(am__DEPENDENCIES_2)
@@ -82,8 +86,10 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES) $(dtop_SOURCES)
-DIST_SOURCES = $(diodcat_SOURCES) $(diodmount_SOURCES) $(dtop_SOURCES)
+SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) $(diodmount_SOURCES) \
+	$(dtop_SOURCES)
+DIST_SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) \
+	$(diodmount_SOURCES) $(dtop_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -261,10 +267,13 @@ diodcat_LDADD = $(common_ldadd)
 diodcat_SOURCES = diodcat.c $(common_sources)
 dtop_LDADD = $(common_ldadd)
 dtop_SOURCES = dtop.c sample.c
+diodload_LDADD = $(common_ldadd)
+diodload_SOURCES = diodload.c $(common_sources)
 man8_MANS = \
-        diodmount.8 \
-        diodcat.8 \
-        dtop.8
+	diodmount.8 \
+	diodcat.8 \
+	dtop.8 \
+	diodload.8
 
 all: all-am
 
@@ -306,6 +315,8 @@ diodcat.8: $(top_builddir)/config.status $(srcdir)/diodcat.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 dtop.8: $(top_builddir)/config.status $(srcdir)/dtop.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodload.8: $(top_builddir)/config.status $(srcdir)/diodload.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-sbinPROGRAMS: $(sbin_PROGRAMS)
 	@$(NORMAL_INSTALL)
 	test -z "$(sbindir)" || $(MKDIR_P) "$(DESTDIR)$(sbindir)"
@@ -346,6 +357,9 @@ clean-sbinPROGRAMS:
 diodcat$(EXEEXT): $(diodcat_OBJECTS) $(diodcat_DEPENDENCIES) 
 	@rm -f diodcat$(EXEEXT)
 	$(LINK) $(diodcat_OBJECTS) $(diodcat_LDADD) $(LIBS)
+diodload$(EXEEXT): $(diodload_OBJECTS) $(diodload_DEPENDENCIES) 
+	@rm -f diodload$(EXEEXT)
+	$(LINK) $(diodload_OBJECTS) $(diodload_LDADD) $(LIBS)
 diodmount$(EXEEXT): $(diodmount_OBJECTS) $(diodmount_DEPENDENCIES) 
 	@rm -f diodmount$(EXEEXT)
 	$(LINK) $(diodmount_OBJECTS) $(diodmount_LDADD) $(LIBS)
@@ -360,6 +374,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodcat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodload.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dtop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
