@@ -57,9 +57,9 @@ npc_start (int fd, int msize, int flags)
 	Npfcall *tc = NULL, *rc = NULL;
 
 	if ((flags & NPC_MULTI_RPC))
-		fs = npc_create_mtfsys (fd, msize);
+		fs = npc_create_mtfsys (fd, msize, flags);
 	else 
-		fs = npc_create_fsys (fd, msize);
+		fs = npc_create_fsys (fd, msize, flags);
 	if (!fs)
 		goto done;
 	if (!(tc = np_create_tversion (msize, "9P2000.L"))) {
@@ -175,7 +175,7 @@ npc_mount (int fd, int msize, char *aname, AuthFun auth)
 	Npcfsys *fs;
 	Npcfid *afid, *fid;
 
-	if (!(fs = npc_start (fd, msize, 0)))
+	if (!(fs = npc_start (fd, msize, NPC_SHORTREAD_EOF)))
 		return NULL;
 	if (!(afid = npc_auth (fs, aname, geteuid (), auth)) && np_rerror ()) {
 		npc_finish (fs);

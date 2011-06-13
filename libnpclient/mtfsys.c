@@ -64,7 +64,7 @@ static int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
 static void npc_disconnect_fsys(Npcfsys *fs);
 
 Npcfsys *
-npc_create_mtfsys(int fd, int msize)
+npc_create_mtfsys(int fd, int msize, int flags)
 {
 	Npcfsys *fs;
 	int err;
@@ -93,6 +93,7 @@ npc_create_mtfsys(int fd, int msize)
 	fs->incref = npc_incref_fsys;
 	fs->decref = npc_decref_fsys;
 	fs->disconnect = npc_disconnect_fsys;
+	fs->flags = flags;
 
 	fs->trans = np_fdtrans_create(fd, fd);
 	if (!fs->trans)

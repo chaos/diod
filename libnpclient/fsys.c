@@ -50,7 +50,7 @@ static void npc_incref_fsys(Npcfsys *fs);
 static void npc_decref_fsys(Npcfsys *fs);
 
 Npcfsys *
-npc_create_fsys(int fd, int msize)
+npc_create_fsys(int fd, int msize, int flags)
 {
 	Npcfsys *fs;
 
@@ -71,6 +71,7 @@ npc_create_fsys(int fd, int msize)
 	fs->incref = npc_incref_fsys;
 	fs->decref = npc_decref_fsys;
 	fs->disconnect = NULL;
+	fs->flags = flags;
 
 	fs->trans = np_fdtrans_create(fd, fd);
 	if (!fs->trans)

@@ -82,22 +82,25 @@ npc_read(Npcfid *fid, void *buf, u32 count)
 int
 npc_get(Npcfid *root, char *path, void *buf, u32 count)
 {
-	int n, done = 0;
+	int n, len = 0;
 	Npcfid *fid;
 
 	if (!(fid = npc_open_bypath(root, path, O_RDONLY)))
 		return -1;
-	while (done < count) {
-		n = npc_read(fid, buf + done, count - done);
+	while (len < count) {
+		n = npc_read(fid, buf + len, count - len);
 		if (n < 0)
 			return -1;
 		if (n == 0)
 			break;
-		done += n;
+		len += n;
+		if ((fid->fsys->flags & NPC_SHORTREAD_EOF)
+					&& (len - n < count - len))
+			break;
 	}
 	if (npc_clunk (fid) < 0)
 		return -1;
-	return done;
+	return len;
 }
 
 #define AGET_CHUNK 4096
@@ -125,8 +128,12 @@ npc_aget(Npcfid *root, char *path)
 			goto error;
 		}
 		n = npc_read(fid, s + len, ssize - len - 1);
-		if (n > 0)
+		if (n > 0) {
 			len += n;
+			if ((fid->fsys->flags & NPC_SHORTREAD_EOF)
+						&& (len - n < ssize - len - 1))
+				break;
+		}
 	} while (n > 0);
 	if (n < 0)
 		goto error;

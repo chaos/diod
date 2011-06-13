@@ -56,6 +56,7 @@ struct Npcpool {
 struct Npcfsys {
         pthread_mutex_t lock;
 
+	int		flags;
 	u32		msize;
 	Nptrans*	trans;
 
@@ -81,8 +82,8 @@ struct Npcfsys {
 	int		fd;
 };
 
-Npcfsys *npc_create_fsys(int fd, int msize);
-Npcfsys *npc_create_mtfsys(int fd, int msize);
+Npcfsys *npc_create_fsys(int fd, int msize, int flags);
+Npcfsys *npc_create_mtfsys(int fd, int msize, int flags);
 
 Npcpool *npc_create_pool(u32 maxid);
 void npc_destroy_pool(Npcpool *p);

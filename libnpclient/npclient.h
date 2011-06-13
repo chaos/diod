@@ -37,7 +37,8 @@ struct Npcfid {
 typedef int (*AuthFun)(Npcfid *afid, u32 uid);
 
 enum {
-	NPC_MULTI_RPC=1,
+	NPC_MULTI_RPC=1,	/* use 'mtfsys'c' multi-threaded rpc engine */
+	NPC_SHORTREAD_EOF=2,	/* npc_aget, npc_get treat short read as eof */
 };
 
 /**
@@ -46,9 +47,6 @@ enum {
 
 /* Given a server already connected on fd, send a VERSION request
  * to negotiate 9P2000.L and an msize <= the one provided.
- * Set NPC_MULTI_RPC in 'flags' if you want to be able to have more
- * than one RPC outstanding at once at the cost of increased complexity
- * and spawning of a reader and writer thread for the connection.
  * Return fsys structure or NULL on error (retrieve with np_rerror ())
  */
 Npcfsys* npc_start (int fd, int msize, int flags);
@@ -170,12 +168,10 @@ int npc_read(Npcfid *fid, void *buf, u32 count);
  */
 int npc_get(Npcfid *root, char *path, void *buf, u32 count);
 
-
 /* Same as npc_get but result is a null terminated string that the caller
- * must free.  Returns NULL on error (retrieve wtih np_rerror ()).
+ * must free.  Returns NULL on error (retrieve with np_rerror ()).
  */
 char *npc_aget(Npcfid *root, char *path);
-
 
 /* npc_read_all() up to and including the next '\n' character, or until buffer
  * is exhausted, whichever comes first.

@@ -51,13 +51,13 @@ main (int argc, char *argv[])
     if (!(root0 = npc_attach (fs, NULL, "ctl", 0)))
         errn_exit (np_rerror (), "npc_attach");
     if (!(str = npc_aget (root0, "tpools")))
-        errn_exit (np_rerror (), "npc_get tpools");
+        errn_exit (np_rerror (), "npc_aget tpools");
     free (str);
 
     if (!(root1 = npc_attach (fs, NULL, "ctl", 1)))
         errn_exit (np_rerror (), "npc_attach");
     if (!(str = npc_aget (root1, "connections")))
-        errn_exit (np_rerror (), "npc_get connections");
+        errn_exit (np_rerror (), "npc_aget connections");
     free (str);
 
     /* Same user (1) - user cache should be valid, so we won't see a message
@@ -66,7 +66,7 @@ main (int argc, char *argv[])
     if (!(root2 = npc_attach (fs, NULL, "ctl", 1)))
         errn_exit (np_rerror (), "npc_attach");
     if (!(str = npc_aget (root2, "null")))
-        errn_exit (np_rerror (), "npc_get null");
+        errn_exit (np_rerror (), "npc_aget null");
     free (str);
 
     npc_clunk (root0);
