@@ -1,3 +1,10 @@
+1.0-pre41:
+	Add diodload utility for testing.
+	Reduce number of read requests needed to handle synthetic file get.
+	Careful which thread destroys conn (issue 52)
+	Better test coverage.
+	Improved logging of source of EIO errors.
+		
 1.0-pre40:
 	Handle flush expitiously on working requests (issue 49)
 	Parse new TRENAMEAT and TUNLINKAT ops.
