@@ -195,7 +195,7 @@ diod_sock_startfd (Npsrv *srv, int fd, char *client_id)
     conn = np_conn_create (srv, trans, client_id);
     if (!conn) {
         errn (np_rerror (), "error creating connection for %s", client_id);
-        np_trans_destroy (trans);
+	/* trans is destroyed in np_conn_create on failure */
         return;
     }
 }

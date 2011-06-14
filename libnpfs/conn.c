@@ -50,7 +50,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	int err;
 
 	if (!(conn = malloc(sizeof(*conn)))) {
-		errno = ENOMEM;
+		np_uerror(ENOMEM);
 		return NULL;
 	}
 	pthread_mutex_init(&conn->lock, NULL);
@@ -63,7 +63,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	conn->shutdown = 0;
 	if (!(conn->fidpool = np_fidpool_create())) {
 		free (conn);
-		errno = ENOMEM;
+		np_uerror(ENOMEM);
 		return NULL;
 	}
 	snprintf(conn->client_id, sizeof(conn->client_id), "%s", client_id);
@@ -76,7 +76,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	err = pthread_create(&conn->rthread, NULL, np_conn_read_proc, conn);
 	if (err != 0) {
 		np_conn_destroy (conn);
-		errno = err;
+		np_uerror (err);
 		return NULL;
 	}
 
