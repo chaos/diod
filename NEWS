@@ -1,3 +1,6 @@
+1.0-pre42:
+	Fix null deref on server conn create failure.
+
 1.0-pre41:
 	Add diodload utility for testing.
 	Reduce number of read requests needed to handle synthetic file get.
