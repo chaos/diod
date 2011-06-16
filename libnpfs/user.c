@@ -36,7 +36,9 @@
 #include <sys/fsuid.h>
 #include <pwd.h>
 #include <grp.h>
+#if HAVE_LIBPCAP
 #include <sys/capability.h>
+#endif
 #include <assert.h>
 
 #include "9p.h"
@@ -590,6 +592,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			wt->fsuid = u->uid;
 		}
 	}
+#if HAVE_LIBPCAP
 	if ((srv->flags & SRV_FLAGS_DAC_BYPASS) && wt->fsuid != 0) {
 		cap_t cap;
 		cap_flag_value_t val;
@@ -618,6 +621,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			goto done;
 		}	
 	}
+#endif
 	ret = 0;
 done:
 	return ret;
