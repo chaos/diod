@@ -64,7 +64,7 @@ conjoin_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 tattach_SOURCES = tattach.c
 tattach_OBJECTS = tattach.$(OBJEXT)
 tattach_LDADD = $(LDADD)
@@ -73,7 +73,7 @@ tattach_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tattachmt_OBJECTS = tattachmt.$(OBJEXT) $(am__objects_1)
 tattachmt_OBJECTS = $(am_tattachmt_OBJECTS)
 tattachmt_LDADD = $(LDADD)
@@ -82,7 +82,7 @@ tattachmt_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tcreate_OBJECTS = tcreate.$(OBJEXT) $(am__objects_1)
 tcreate_OBJECTS = $(am_tcreate_OBJECTS)
 tcreate_LDADD = $(LDADD)
@@ -91,7 +91,7 @@ tcreate_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tflush_OBJECTS = tflush.$(OBJEXT) $(am__objects_1)
 tflush_OBJECTS = $(am_tflush_OBJECTS)
 tflush_LDADD = $(LDADD)
@@ -100,7 +100,7 @@ tflush_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tmkdir_OBJECTS = tmkdir.$(OBJEXT) $(am__objects_1)
 tmkdir_OBJECTS = $(am_tmkdir_OBJECTS)
 tmkdir_LDADD = $(LDADD)
@@ -109,7 +109,7 @@ tmkdir_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tread_OBJECTS = tread.$(OBJEXT) $(am__objects_1)
 tread_OBJECTS = $(am_tread_OBJECTS)
 tread_LDADD = $(LDADD)
@@ -118,7 +118,7 @@ tread_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tstat_OBJECTS = tstat.$(OBJEXT) $(am__objects_1)
 tstat_OBJECTS = $(am_tstat_OBJECTS)
 tstat_LDADD = $(LDADD)
@@ -127,7 +127,7 @@ tstat_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_twrite_OBJECTS = twrite.$(OBJEXT) $(am__objects_1)
 twrite_OBJECTS = $(am_twrite_OBJECTS)
 twrite_LDADD = $(LDADD)
@@ -136,7 +136,7 @@ twrite_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -183,6 +183,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBCAP = @LIBCAP@
 LIBCURSES = @LIBCURSES@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
@@ -300,7 +301,7 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(top_builddir)/libnpclient/libnpclient.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
+        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP)
 
 common_sources = 
 conjoin_SOURCES = conjoin.c $(common_sources)

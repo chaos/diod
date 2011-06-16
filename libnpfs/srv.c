@@ -230,7 +230,6 @@ np_wthread_create(Nptpool *tp)
 	wt->tpool = tp;
 	wt->shutdown = 0;
 	wt->fsuid = geteuid ();
-	wt->sguid = P9_NONUNAME;
 	wt->fsgid = getegid ();
 	if ((err = pthread_create(&wt->thread, NULL, np_wthread_proc, wt))) {
 		np_uerror (err);

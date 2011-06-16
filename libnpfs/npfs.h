@@ -193,7 +193,6 @@ struct Npwthread {
 	int		shutdown;
 	pthread_t	thread;
 	u32		fsuid;
-	u32		sguid;
 	u32		fsgid;
 	Npwthread	*next;
 };
@@ -232,6 +231,7 @@ enum {
 	SRV_FLAGS_NOUSERDB	=0x00040000,
 	SRV_FLAGS_TPOOL_SINGLE	=0x00080000,
 	SRV_FLAGS_FLUSHSIG	=0x00100000,
+	SRV_FLAGS_DAC_BYPASS  	=0x00200000,
 };
 
 typedef char * (*SynGetF)(char *name, void *arg);

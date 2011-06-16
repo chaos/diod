@@ -37,7 +37,7 @@ target_triplet = @target@
 check_PROGRAMS = tfcntl$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsetuid$(EXEEXT) tsuppgrp$(EXEEXT) \
 	topt$(EXEEXT) tconf$(EXEEXT) tserialize$(EXEEXT) \
-	tlist$(EXEEXT) tnpsrv$(EXEEXT) tlua$(EXEEXT)
+	tlist$(EXEEXT) tnpsrv$(EXEEXT) tlua$(EXEEXT) tcap$(EXEEXT)
 subdir = tests/misc
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -56,16 +56,25 @@ CONFIG_HEADER = $(top_builddir)/config/config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__objects_1 = opt.$(OBJEXT)
+am_tcap_OBJECTS = tcap.$(OBJEXT) $(am__objects_1)
+tcap_OBJECTS = $(am_tcap_OBJECTS)
+tcap_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+tcap_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tconf_OBJECTS = tconf.$(OBJEXT) $(am__objects_1)
 tconf_OBJECTS = $(am_tconf_OBJECTS)
 tconf_LDADD = $(LDADD)
-am__DEPENDENCIES_1 =
 tconf_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tfcntl_OBJECTS = tfcntl.$(OBJEXT) $(am__objects_1)
 tfcntl_OBJECTS = $(am_tfcntl_OBJECTS)
 tfcntl_LDADD = $(LDADD)
@@ -74,7 +83,7 @@ tfcntl_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tlist_OBJECTS = tlist.$(OBJEXT) $(am__objects_1)
 tlist_OBJECTS = $(am_tlist_OBJECTS)
 tlist_LDADD = $(LDADD)
@@ -83,7 +92,7 @@ tlist_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tlua_OBJECTS = tlua.$(OBJEXT) $(am__objects_1)
 tlua_OBJECTS = $(am_tlua_OBJECTS)
 tlua_LDADD = $(LDADD)
@@ -92,7 +101,7 @@ tlua_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tnpsrv_OBJECTS = tnpsrv.$(OBJEXT) $(am__objects_1)
 tnpsrv_OBJECTS = $(am_tnpsrv_OBJECTS)
 tnpsrv_LDADD = $(LDADD)
@@ -101,7 +110,7 @@ tnpsrv_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_topt_OBJECTS = topt.$(OBJEXT) $(am__objects_1)
 topt_OBJECTS = $(am_topt_OBJECTS)
 topt_LDADD = $(LDADD)
@@ -110,7 +119,7 @@ topt_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tserialize_OBJECTS = tserialize.$(OBJEXT) $(am__objects_1)
 tserialize_OBJECTS = $(am_tserialize_OBJECTS)
 tserialize_LDADD = $(LDADD)
@@ -119,7 +128,7 @@ tserialize_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetfsuid_OBJECTS = tsetfsuid.$(OBJEXT) $(am__objects_1)
 tsetfsuid_OBJECTS = $(am_tsetfsuid_OBJECTS)
 tsetfsuid_LDADD = $(LDADD)
@@ -128,7 +137,7 @@ tsetfsuid_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetfsuidsupp_OBJECTS = tsetfsuidsupp.$(OBJEXT) $(am__objects_1)
 tsetfsuidsupp_OBJECTS = $(am_tsetfsuidsupp_OBJECTS)
 tsetfsuidsupp_LDADD = $(LDADD)
@@ -137,7 +146,7 @@ tsetfsuidsupp_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsetuid_OBJECTS = tsetuid.$(OBJEXT) $(am__objects_1)
 tsetuid_OBJECTS = $(am_tsetuid_OBJECTS)
 tsetuid_LDADD = $(LDADD)
@@ -146,7 +155,7 @@ tsetuid_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 am_tsuppgrp_OBJECTS = tsuppgrp.$(OBJEXT) $(am__objects_1)
 tsuppgrp_OBJECTS = $(am_tsuppgrp_OBJECTS)
 tsuppgrp_LDADD = $(LDADD)
@@ -155,7 +164,7 @@ tsuppgrp_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -164,14 +173,14 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(tlist_SOURCES) \
-	$(tlua_SOURCES) $(tnpsrv_SOURCES) $(topt_SOURCES) \
-	$(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
+SOURCES = $(tcap_SOURCES) $(tconf_SOURCES) $(tfcntl_SOURCES) \
+	$(tlist_SOURCES) $(tlua_SOURCES) $(tnpsrv_SOURCES) \
+	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
 	$(tsuppgrp_SOURCES)
-DIST_SOURCES = $(tconf_SOURCES) $(tfcntl_SOURCES) $(tlist_SOURCES) \
-	$(tlua_SOURCES) $(tnpsrv_SOURCES) $(topt_SOURCES) \
-	$(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
+DIST_SOURCES = $(tcap_SOURCES) $(tconf_SOURCES) $(tfcntl_SOURCES) \
+	$(tlist_SOURCES) $(tlua_SOURCES) $(tnpsrv_SOURCES) \
+	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
 	$(tsuppgrp_SOURCES)
 ETAGS = etags
@@ -206,6 +215,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBCAP = @LIBCAP@
 LIBCURSES = @LIBCURSES@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
@@ -308,7 +318,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
 # XFAIL_TESTS = t12
 CLEANFILES = *.out *.diff
 AM_CFLAGS = @GCCWARN@
@@ -323,7 +333,7 @@ LDADD = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE)
+        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP)
 
 common_sources = \
 	$(top_srcdir)/utils/opt.c \
@@ -341,6 +351,7 @@ tserialize_SOURCES = tserialize.c $(common_sources)
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources)
 tlua_SOURCES = tlua.c $(common_sources) 
+tcap_SOURCES = tcap.c $(common_sources) 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf
 all: all-am
 
@@ -379,6 +390,9 @@ $(am__aclocal_m4_deps):
 
 clean-checkPROGRAMS:
 	-test -z "$(check_PROGRAMS)" || rm -f $(check_PROGRAMS)
+tcap$(EXEEXT): $(tcap_OBJECTS) $(tcap_DEPENDENCIES) 
+	@rm -f tcap$(EXEEXT)
+	$(LINK) $(tcap_OBJECTS) $(tcap_LDADD) $(LIBS)
 tconf$(EXEEXT): $(tconf_OBJECTS) $(tconf_DEPENDENCIES) 
 	@rm -f tconf$(EXEEXT)
 	$(LINK) $(tconf_OBJECTS) $(tconf_LDADD) $(LIBS)
@@ -420,6 +434,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconf.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tfcntl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlist.Po@am__quote@

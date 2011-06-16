@@ -67,7 +67,8 @@ am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 diodcat_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodload_OBJECTS = diodload.$(OBJEXT) $(am__objects_1)
 diodload_OBJECTS = $(am_diodload_OBJECTS)
@@ -144,6 +145,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBCAP = @LIBCAP@
 LIBCURSES = @LIBCURSES@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
@@ -255,7 +257,7 @@ common_ldadd = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCURSES)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBCURSES)
 
 common_sources = \
 	opt.c \

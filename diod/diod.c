@@ -498,8 +498,10 @@ _service_run (srvmode_t mode)
     
     flags |= SRV_FLAGS_AUTHCONN;
     flags |= SRV_FLAGS_FLUSHSIG;
-    if (geteuid () == 0)
+    if (geteuid () == 0) {
         flags |= SRV_FLAGS_SETFSID;
+        flags |= SRV_FLAGS_DAC_BYPASS;
+    }
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */

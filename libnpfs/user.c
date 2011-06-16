@@ -36,6 +36,7 @@
 #include <sys/fsuid.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/capability.h>
 #include <assert.h>
 
 #include "9p.h"
@@ -519,6 +520,7 @@ done:
 
 /* Note: it is possible for setfsuid/setfsgid to fail silently,
  * e.g. if user doesn't have CAP_SETUID/CAP_SETGID.
+ * That should be checked at server startup.
  */
 int
 np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
@@ -527,10 +529,13 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	Npsrv *srv = req->conn->srv;
 	int i, ret = -1;
 	u32 gid;
+	uid_t authuid;
+
+	np_conn_get_authuser(req->conn, &authuid);
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		if (gid_override != -1 && u->uid != 0
-					&& !(srv->flags & SRV_FLAGS_NOUSERDB)) {
+				       && !(srv->flags & SRV_FLAGS_NOUSERDB)) {
 			for (i = 0; i < u->nsg; i++) {
 				if (u->sg[i] == gid_override)
 					break;
@@ -564,18 +569,6 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			}
 			wt->fsgid = gid;
 		}
-		/* Supplemental groups shouldn't matter for root.
-		 */
-		if (u->uid != 0 && wt->sguid != u->uid) {
-			if (setgroups (u->nsg, u->sg) < 0) {
-				np_uerror (errno);
-				np_logerr (srv, "setgroups(%s) nsg=%d failed",
-					   u->uname, u->nsg);
-				wt->sguid = P9_NONUNAME;
-				goto done;
-			}
-			wt->sguid = u->uid;
-		}
 		if (wt->fsuid != u->uid) {
 			int ret;
 
@@ -596,6 +589,34 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			}
 			wt->fsuid = u->uid;
 		}
+	}
+	if ((srv->flags & SRV_FLAGS_DAC_BYPASS) && wt->fsuid != 0) {
+		cap_t cap;
+		cap_flag_value_t val;
+		cap_flag_value_t wantval = (authuid == 0 ? CAP_SET : CAP_CLEAR);
+		cap_value_t capflag = CAP_DAC_OVERRIDE;
+
+		if (!(cap = cap_get_proc ())) {
+			np_uerror (errno);
+			np_logerr (srv, "cap_get_proc failed");
+			goto done;
+		}
+		if (cap_get_flag (cap, capflag, CAP_EFFECTIVE, &val) < 0) {
+			np_uerror (errno);
+			np_logerr (srv, "cap_get_flag failed");
+			goto done;
+		}
+		if (val != wantval && cap_set_flag (cap, CAP_EFFECTIVE,
+						    1, &capflag, wantval) < 0) {
+			np_uerror (errno);
+			np_logerr (srv, "cap_set_flag failed");
+			goto done;
+		}
+		if (cap_free (cap) < 0) {
+			np_uerror (errno);
+			np_logerr (srv, "cap_free failed");
+			goto done;
+		}	
 	}
 	ret = 0;
 done:

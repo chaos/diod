@@ -23,6 +23,7 @@ t08(@)	Check for memory problems in libdiod conf/log
 t09   	Check for memory problems in list package
 	Actually this was to run down a specific case, now fixed.
 t10	Check for memory problems in a skeletal libnpfs client/server
+t11(*)	Show that pthreads can independently set/clear CAP_DAC_OVERRIDE
 
 (*) NOTRUN if not run as root
 (@) NOTRUN if lua is not installed

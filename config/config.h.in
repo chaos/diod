@@ -112,6 +112,9 @@
 /* Define to 1 if you have the `lgetxattr' function. */
 #undef HAVE_LGETXATTR
 
+/* Define to 1 if you have the `cap' library (-lcap). */
+#undef HAVE_LIBCAP
+
 /* Define to 1 if you have the `munge' library (-lmunge). */
 #undef HAVE_LIBMUNGE
 
