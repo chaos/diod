@@ -1,3 +1,6 @@
+1.0-pre43:
+	Disable server DAC check and don't setgroups before handling requests.
+
 1.0-pre42:
 	Fix null deref on server conn create failure.
 
