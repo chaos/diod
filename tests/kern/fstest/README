@@ -1,31 +1,3 @@
-fstest modified for diod - distributed I/O daemon.
-
-fstest uncovered a problem with diod:  switching effective group id or
-supplemental groups and expecting that change to affect the result of
-an p9_lopen or p9_setattr call does not work.  A number of tests,
-documented in diod issue 37 on google code, expect this to work.
-It is a legitimate POSIX expectation.
-
-http://code.google.com/p/diod/issues/detail?id=37
-
-In the interest of making fstest a viable regression test for diod,
-this copy has been modified so the tests that had that particular
-expectation now pass.  Some remain effective tests, some are now rendered
-ineffective.
-
-To run fstest, "remount" an ext3 file system like say /tmp on /mnt
-with diod running with the --no-auth) and --no-userdb options, e.g.
-
-	# diod -N -n -e /tmp 
-	# mount -t diod localhost:/tmp /mnt
-	# cd /mnt
-	# prove -r /path/to/fstest
-
-Jim Garlick
-10 May 2011
-
----------
-
 $FreeBSD: src/tools/regression/fstest/README,v 1.1 2007/01/28 00:10:28 pjd Exp $
 
 Few notes on how to use fstest in short steps:

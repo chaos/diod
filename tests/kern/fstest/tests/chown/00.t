@@ -61,23 +61,10 @@ expect 0 unlink ${n1}
 expect 0 create ${n0} 0644
 expect 0 chown ${n0} 65534 65533
 expect 65534,65533 lstat ${n0} uid,gid
-# 34
-case "${fs}" in
-ext3-diod)
-	# group changes are not communicated to diod server for setattr
-	expect 0 -u 65534 -g 65534 -- chown ${n0} -1 65534
-	expect 65534,65534 lstat ${n0} uid,gid
-	expect 0 -u 65534 -g 65534 chown ${n0} 65534 65534
-	expect 65534,65534 lstat ${n0} uid,gid
-	;;
-*)
-	expect 0 -u 65534 -g 65532,65531 -- chown ${n0} -1 65532
-	expect 65534,65532 lstat ${n0} uid,gid
-	expect 0 -u 65534 -g 65532,65531 chown ${n0} 65534 65531
-	expect 65534,65531 lstat ${n0} uid,gid
-	;;
-esac
-# 38
+expect 0 -u 65534 -g 65532,65531 -- chown ${n0} -1 65532
+expect 65534,65532 lstat ${n0} uid,gid
+expect 0 -u 65534 -g 65532,65531 chown ${n0} 65534 65531
+expect 65534,65531 lstat ${n0} uid,gid
 expect 0 unlink ${n0}
 
 # chown(2) return 0 if user is not owner of a file, but chown(2) is called
@@ -143,39 +130,17 @@ expect 0 create ${n0} 0644
 expect 0 chown ${n0} 65534 65533
 expect 0 chmod ${n0} 06555
 expect 06555 lstat ${n0} mode
-# 68
-case "${fs}" in
-ext3-diod)
-	expect 0 -u 65534 -g 65534 chown ${n0} 65534 65534
-	expect 0555,65534,65534 lstat ${n0} mode,uid,gid
-	;;
-*)
-	expect 0 -u 65534 -g 65533,65532 chown ${n0} 65534 65532
-	expect 0555,65534,65532 lstat ${n0} mode,uid,gid
-	;;
-esac
+expect 0 -u 65534 -g 65533,65532 chown ${n0} 65534 65532
+expect 0555,65534,65532 lstat ${n0} mode,uid,gid
 expect 0 chmod ${n0} 06555
 expect 06555 lstat ${n0} mode
-# 72
-case "${fs}" in
-ext3-diod)
-	expect 0 -u 65534 -g 65534 -- chown ${n0} -1 65534
-	expect 0555,65534,65534 lstat ${n0} mode,uid,gid
-	;;
-*)
-	expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 65533
-	expect 0555,65534,65533 lstat ${n0} mode,uid,gid
-	;;
-esac
+expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 65533
+expect 0555,65534,65533 lstat ${n0} mode,uid,gid
 expect 0 chmod ${n0} 06555
 expect 06555 lstat ${n0} mode
 expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 -1
-# 77
-case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 0555,65534,65534 lstat ${n0} mode,uid,gid
-	;;
-Linux:*)
+case "${os}" in
+Linux)
 	expect 0555,65534,65533 lstat ${n0} mode,uid,gid
         ;;
 *)
@@ -189,45 +154,30 @@ expect 0 mkdir ${n0} 0755
 expect 0 chown ${n0} 65534 65533
 expect 0 chmod ${n0} 06555
 expect 06555 lstat ${n0} mode
-# 83
+expect 0 -u 65534 -g 65533,65532 chown ${n0} 65534 65532
 case "${os}:${fs}" in
-Linux:ext3|Linux:ntfs-3g|Linux:ZFS|Linux:ext3-diod)
-	expect 0 -u 65534 -g 65534 chown ${n0} 65534 65534
-	expect 06555,65534,65534 lstat ${n0} mode,uid,gid
+Linux:ext3|Linux:ntfs-3g|Linux:ZFS)
+	expect 06555,65534,65532 lstat ${n0} mode,uid,gid
         ;;
 *)
-	expect 0 -u 65534 -g 65533,65532 chown ${n0} 65534 65532
 	expect 0555,65534,65532 lstat ${n0} mode,uid,gid
         ;;
 esac
 expect 0 chmod ${n0} 06555
 expect 06555 lstat ${n0} mode
-# 87
+expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 65533
 case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 0 -u 65534 -g 65534 -- chown ${n0} -1 65534
-	expect 06555,65534,65534 lstat ${n0} mode,uid,gid
-	;;
 Linux:ext3|Linux:ntfs-3g|Linux:ZFS)
-	expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 65533
 	expect 06555,65534,65533 lstat ${n0} mode,uid,gid
         ;;
 *)
-	expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 65533
 	expect 0555,65534,65533 lstat ${n0} mode,uid,gid
         ;;
 esac
 expect 0 chmod ${n0} 06555
 expect 06555 lstat ${n0} mode
 expect 0 -u 65534 -g 65533,65532 -- chown ${n0} -1 -1
-# 92
-case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 06555,65534,65534 lstat ${n0} mode,uid,gid
-	;;
-*)
-	expect 06555,65534,65533 lstat ${n0} mode,uid,gid
-esac
+expect 06555,65534,65533 lstat ${n0} mode,uid,gid
 expect 0 rmdir ${n0}
 # 94
 if supported lchmod; then
@@ -249,7 +199,7 @@ if supported lchmod; then
 fi
 
 # successfull chown(2) call (except uid and gid equal to -1) updates ctime.
-# 109 / 94
+# 109
 expect 0 create ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
@@ -258,7 +208,7 @@ expect 65534,65533 lstat ${n0} uid,gid
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 unlink ${n0}
-# 114 / 99
+# 114
 expect 0 mkdir ${n0} 0755
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
@@ -267,7 +217,7 @@ expect 65534,65533 lstat ${n0} uid,gid
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 rmdir ${n0}
-# 119 / 104
+# 119
 expect 0 mkfifo ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
@@ -276,7 +226,7 @@ expect 65534,65533 lstat ${n0} uid,gid
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 unlink ${n0}
-# 124 / 109
+# 124
 expect 0 symlink ${n1} ${n0}
 ctime1=`${fstest} lstat ${n0} ctime`
 sleep 1
@@ -285,101 +235,55 @@ expect 65534,65533 lstat ${n0} uid,gid
 ctime2=`${fstest} lstat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 unlink ${n0}
-# 129 / 114
+# 129
 expect 0 create ${n0} 0644
-case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 0 chown ${n0} 65534 65534
-	ctime1=`${fstest} stat ${n0} ctime`
-	sleep 1
-	expect 0 -u 65534 -g 65534 chown ${n0} 65534 65534
-	expect 65534,65534 lstat ${n0} uid,gid
-	;;
-*)
-	expect 0 chown ${n0} 65534 65533
-	ctime1=`${fstest} stat ${n0} ctime`
-	sleep 1
-	expect 0 -u 65534 -g 65532 chown ${n0} 65534 65532
-	expect 65534,65532 lstat ${n0} uid,gid
-	;;
-esac
+expect 0 chown ${n0} 65534 65533
+ctime1=`${fstest} stat ${n0} ctime`
+sleep 1
+expect 0 -u 65534 -g 65532 chown ${n0} 65534 65532
+expect 65534,65532 lstat ${n0} uid,gid
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 unlink ${n0}
-# 135 / 120
+# 135
 expect 0 mkdir ${n0} 0755
-case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 0 chown ${n0} 65534 65534
-	ctime1=`${fstest} stat ${n0} ctime`
-	sleep 1
-	expect 0 -u 65534 -g 65534 chown ${n0} 65534 65534
-	expect 65534,65534 lstat ${n0} uid,gid
-	ctime2=`${fstest} stat ${n0} ctime`
-	test_check $ctime1 -lt $ctime2
-	;;
-*)
-	expect 0 chown ${n0} 65534 65533
-	ctime1=`${fstest} stat ${n0} ctime`
-	sleep 1
-	expect 0 -u 65534 -g 65532 chown ${n0} 65534 65532
-	expect 65534,65532 lstat ${n0} uid,gid
-	ctime2=`${fstest} stat ${n0} ctime`
-	;;
-esac
+expect 0 chown ${n0} 65534 65533
+ctime1=`${fstest} stat ${n0} ctime`
+sleep 1
+expect 0 -u 65534 -g 65532 chown ${n0} 65534 65532
+expect 65534,65532 lstat ${n0} uid,gid
+ctime2=`${fstest} stat ${n0} ctime`
+test_check $ctime1 -lt $ctime2
 expect 0 rmdir ${n0}
-# 141 / 126
+# 141
 expect 0 mkfifo ${n0} 0644
-case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 0 chown ${n0} 65534 65534
-	ctime1=`${fstest} stat ${n0} ctime`
-	sleep 1
-	expect 0 chown ${n0} 65534 65534
-	expect 0 -u 65534 -g 65534 chown ${n0} 65534 65534
-	expect 65534,65534 lstat ${n0} uid,gid
-	;;
-*)
-	expect 0 chown ${n0} 65534 65533
-	ctime1=`${fstest} stat ${n0} ctime`
-	sleep 1
-	expect 0 chown ${n0} 65534 65533
-	expect 0 -u 65534 -g 65532 chown ${n0} 65534 65532
-	expect 65534,65532 lstat ${n0} uid,gid
-	;;
-esac
+expect 0 chown ${n0} 65534 65533
+ctime1=`${fstest} stat ${n0} ctime`
+sleep 1
+expect 0 chown ${n0} 65534 65533
+expect 0 -u 65534 -g 65532 chown ${n0} 65534 65532
+expect 65534,65532 lstat ${n0} uid,gid
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 unlink ${n0}
-# 148 / 133
+# 148
 expect 0 symlink ${n1} ${n0}
-case "${os}:${fs}" in
-Linux:ext3-diod)
-	expect 0 lchown ${n0} 65534 65534
-	ctime1=`${fstest} lstat ${n0} ctime`
-	sleep 1
-	expect 0 -u 65534 -g 65534 lchown ${n0} 65534 65534
-	expect 65534,65534 lstat ${n0} uid,gid
-	;;
-*)
-	expect 0 lchown ${n0} 65534 65533
-	ctime1=`${fstest} lstat ${n0} ctime`
-	sleep 1
-	expect 0 -u 65534 -g 65532 lchown ${n0} 65534 65532
-	expect 65534,65532 lstat ${n0} uid,gid
-	;;
-esac
+expect 0 lchown ${n0} 65534 65533
+ctime1=`${fstest} lstat ${n0} ctime`
+sleep 1
+expect 0 -u 65534 -g 65532 lchown ${n0} 65534 65532
+expect 65534,65532 lstat ${n0} uid,gid
 ctime2=`${fstest} lstat ${n0} ctime`
 test_check $ctime1 -lt $ctime2
 expect 0 unlink ${n0}
-# 154 / 139
+# 154
 expect 0 create ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
 expect 0 -- chown ${n0} -1 -1
 ctime2=`${fstest} stat ${n0} ctime`
 case "${os}:${fs}" in
-Linux:ext3|Linux:ZFS|Linux:ext3-diod)
+Linux:ext3|Linux:ZFS)
 	test_check $ctime1 -lt $ctime2
         ;;
 *)
@@ -387,14 +291,14 @@ Linux:ext3|Linux:ZFS|Linux:ext3-diod)
         ;;
 esac
 expect 0 unlink ${n0}
-# 158 / 143
+# 158
 expect 0 mkdir ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
 expect 0 -- chown ${n0} -1 -1
 ctime2=`${fstest} stat ${n0} ctime`
 case "${os}:${fs}" in
-Linux:ext3|Linux:ZFS|Linux:ext3-diod)
+Linux:ext3|Linux:ZFS)
 	test_check $ctime1 -lt $ctime2
         ;;
 *)
@@ -402,14 +306,14 @@ Linux:ext3|Linux:ZFS|Linux:ext3-diod)
         ;;
 esac
 expect 0 rmdir ${n0}
-# 162 / 147
+# 162
 expect 0 mkfifo ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
 expect 0 -- chown ${n0} -1 -1
 ctime2=`${fstest} stat ${n0} ctime`
 case "${os}:${fs}" in
-Linux:ext3|Linux:ZFS|Linux:ext3-diod)
+Linux:ext3|Linux:ZFS)
 	test_check $ctime1 -lt $ctime2
         ;;
 *)
@@ -417,14 +321,14 @@ Linux:ext3|Linux:ZFS|Linux:ext3-diod)
         ;;
 esac
 expect 0 unlink ${n0}
-# 166 / 151
+# 166
 expect 0 symlink ${n1} ${n0}
 ctime1=`${fstest} lstat ${n0} ctime`
 sleep 1
 expect 0 -- lchown ${n0} -1 -1
 ctime2=`${fstest} lstat ${n0} ctime`
 case "${os}:${fs}" in
-Linux:ext3|Linux:ZFS|Linux:ext3-diod)
+Linux:ext3|Linux:ZFS)
 	test_check $ctime1 -lt $ctime2
         ;;
 *)
@@ -434,7 +338,7 @@ esac
 expect 0 unlink ${n0}
 
 # unsuccessful chown(2) does not update ctime.
-# 170 / 155
+# 170
 expect 0 create ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
@@ -442,7 +346,7 @@ expect EPERM -u 65534 -- chown ${n0} 65534 -1
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -eq $ctime2
 expect 0 unlink ${n0}
-# 174 / 159
+# 174
 expect 0 mkdir ${n0} 0755
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
@@ -450,7 +354,7 @@ expect EPERM -u 65534 -g 65534 -- chown ${n0} -1 65534
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -eq $ctime2
 expect 0 rmdir ${n0}
-# 178 / 163
+# 178
 expect 0 mkfifo ${n0} 0644
 ctime1=`${fstest} stat ${n0} ctime`
 sleep 1
@@ -458,7 +362,7 @@ expect EPERM -u 65534 -g 65534 chown ${n0} 65534 65534
 ctime2=`${fstest} stat ${n0} ctime`
 test_check $ctime1 -eq $ctime2
 expect 0 unlink ${n0}
-# 182 / 167
+# 182
 expect 0 symlink ${n1} ${n0}
 ctime1=`${fstest} lstat ${n0} ctime`
 sleep 1
@@ -467,6 +371,6 @@ ctime2=`${fstest} lstat ${n0} ctime`
 test_check $ctime1 -eq $ctime2
 expect 0 unlink ${n0}
 
-# 186 / 171
+# 186
 cd ${cdir}
 expect 0 rmdir ${n2}

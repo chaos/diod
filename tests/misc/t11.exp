@@ -1,21 +1,34 @@
 tcap: task0: cap is set
+tcap: task0: cap is set
 tcap: task0: setfsuid 1
+tcap: task0: cap is clear
 tcap: task0: cap is clear
 tcap: task0: setfsuid 0
 tcap: task0: cap is set
+tcap: task0: cap is set
 tcap: task0: setfsuid 1
+tcap: task0: cap is clear
 tcap: task0: cap is clear
 tcap: task0: set cap
 tcap: task0: cap is set
+tcap: task0: cap is set
 tcap: task0: setfsuid 2
+tcap: task0: cap is set
 tcap: task0: cap is set
 tcap: task0: clr cap
 tcap: task0: cap is clear
+tcap: task0: cap is clear
 tcap: task1: cap is clear
+tcap: task1: cap is clear
+tcap: task2: cap is clear
 tcap: task2: cap is clear
 tcap: task2: set cap
 tcap: task2: cap is set
+tcap: task2: cap is set
+tcap: task1: cap is clear
 tcap: task1: cap is clear
 tcap: task1: clr cap
 tcap: task2: cap is set
+tcap: task2: cap is set
+tcap: task0: cap is clear
 tcap: task0: cap is clear

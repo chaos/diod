@@ -4,11 +4,6 @@ the machine they are running on.
 t00(*)	Show that pthreads can independently setfsuid/setfsgid.
 	This is a strategy for handling the I/O of multiple users in
 	threaded work crew.
-t01(*)	Show that supplementary groups work as advertised when
-	setfsuid/setfsgid being used.
-t02(*)	Check that pthreads can independently setgroups.
-	This is a strategy for handling the I/O of multiple users in
-	a threaded work crew.
 t03(*)	Demonstrate that pthreads cannot independently seteuid/setegid.
 	This was the original npfs strategy for handing I/O of multiple
 	users in a threaded work crew.  Not valid post-linuxthreads.

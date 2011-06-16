@@ -22,23 +22,10 @@ expect 0 -u 65534 -g 65534 chmod ${n1} 0600
 expect 0 -u 65534 -g 65534 open ${n1} O_RDONLY
 expect 0 -u 65534 -g 65534 open ${n1} O_WRONLY
 expect 0 -u 65534 -g 65534 open ${n1} O_RDWR
-# 8
-case "${fs}" in
-ext3-diod)
-	${fstest} chown -- ${n1} -1 65533
-	expect 0 -u 65534 -g 65534 chmod ${n1} 0060
-	expect 0 -u 65533 -g 65533 open ${n1} O_RDONLY
-	expect 0 -u 65533 -g 65533 open ${n1} O_WRONLY
-	expect 0 -u 65533 -g 65533 open ${n1} O_RDWR
-	${fstest} chown -- ${n1} -1 65534
-	;;
-*)
-	expect 0 -u 65534 -g 65534 chmod ${n1} 0060
-	expect 0 -u 65533 -g 65534 open ${n1} O_RDONLY
-	expect 0 -u 65533 -g 65534 open ${n1} O_WRONLY
-	expect 0 -u 65533 -g 65534 open ${n1} O_RDWR
-	;;
-esac
+expect 0 -u 65534 -g 65534 chmod ${n1} 0060
+expect 0 -u 65533 -g 65534 open ${n1} O_RDONLY
+expect 0 -u 65533 -g 65534 open ${n1} O_WRONLY
+expect 0 -u 65533 -g 65534 open ${n1} O_RDWR
 expect 0 -u 65534 -g 65534 chmod ${n1} 0006
 expect 0 -u 65533 -g 65533 open ${n1} O_RDONLY
 expect 0 -u 65533 -g 65533 open ${n1} O_WRONLY

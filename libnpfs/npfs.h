@@ -194,6 +194,7 @@ struct Npwthread {
 	pthread_t	thread;
 	u32		fsuid;
 	u32		fsgid;
+	int		privcap;
 	Npwthread	*next;
 };
 

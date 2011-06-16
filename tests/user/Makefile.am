@@ -6,7 +6,6 @@ check_PROGRAMS = \
 	tread \
 	tstat \
 	twrite \
-	tcreate \
 	tflush
 
 TESTS_ENVIRONMENT = env
@@ -14,7 +13,7 @@ TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
 TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
 TESTS_ENVIRONMENT += "./runtest"
 
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14 t15
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15
 
 $(TESTS): exp.d
 
@@ -46,7 +45,6 @@ tmkdir_SOURCES = tmkdir.c $(common_sources)
 tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
-tcreate_SOURCES = tcreate.c $(common_sources)
 tflush_SOURCES = tflush.c $(common_sources)
 
 clean: clean-am

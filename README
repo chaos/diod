@@ -5,13 +5,17 @@
 To build all of diod's features, you need a few prerequisites:
 
     lua, lua-devel (version 5.1 or better) [on debian/ubuntu liblua5.1-dev]
-	For config file support.
+	For /etc/diod.conf config file support.
 
     munge, munge-libs, munge-devel
-	For authentication support.
+	For MUNGE authentication support.
 
     tcp_wrappers, tcp_wrappers-libs, tcp_wrappers-devel
 	For TCP wrapper support.
+
+    libcap, libcap-devel
+	Necessary for correct handling of supplemental groups when
+	server is running as root (DAC check is delegated to client).
 
 Note: on Debian/Ubuntu, LUA requires the following configure flags:
 

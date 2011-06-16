@@ -1,5 +1,8 @@
 /* tcap.c - check that pthreads can independently set capabilities */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/fsuid.h>
 #include <sys/types.h>
@@ -11,15 +14,14 @@
 #include <assert.h>
 #include <errno.h>
 #include <string.h>
+#if HAVE_LIBCAP
 #include <sys/capability.h>
+#endif
 #include <grp.h>
 
 #include "diod_log.h"
 
 #include "test.h"
-
-#define TEST_GID 100
-#define TEST_GID2 101
 
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
@@ -27,6 +29,7 @@ static state_t         state = S0;
 static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 
+#if HAVE_LIBCAP
 static void
 _prtcap (char *s, cap_value_t capflag)
 {
@@ -93,10 +96,12 @@ wait_state (state_t s)
 static void *proc1 (void *a)
 {
     _prtcap ("task1", CAP_DAC_OVERRIDE);
+    _prtcap ("task1", CAP_CHOWN);
     change_state (S1);
 
     wait_state (S2);
     _prtcap ("task1", CAP_DAC_OVERRIDE);
+    _prtcap ("task1", CAP_CHOWN);
 
     msg ("task1: clr cap");
     _clrcap ("task1", CAP_DAC_OVERRIDE);
@@ -110,17 +115,22 @@ static void *proc2 (void *a)
 {
     wait_state (S1);
     _prtcap ("task2", CAP_DAC_OVERRIDE);
+    _prtcap ("task2", CAP_CHOWN);
 
     msg ("task2: set cap");
     _setcap ("task2", CAP_DAC_OVERRIDE);
+    _setcap ("task2", CAP_CHOWN);
     _prtcap ("task2", CAP_DAC_OVERRIDE);
+    _prtcap ("task2", CAP_CHOWN);
     change_state (S2);
 
     wait_state (S3);
     _prtcap ("task2", CAP_DAC_OVERRIDE);
+    _prtcap ("task2", CAP_CHOWN);
     change_state (S4);
     return NULL;
 }
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -130,31 +140,41 @@ int main(int argc, char *argv[])
 
     assert (geteuid () == 0);
 
+#if HAVE_LIBCAP
     _prtcap ("task0", CAP_DAC_OVERRIDE); /* root, expect set */
+    _prtcap ("task0", CAP_CHOWN);
 
     msg ("task0: setfsuid 1");
     setfsuid (1); 
     _prtcap ("task0", CAP_DAC_OVERRIDE); /* non-root, expect clr */
+    _prtcap ("task0", CAP_CHOWN);
 
     msg ("task0: setfsuid 0");          /* root, expect set */
     setfsuid (0); 
     _prtcap ("task0", CAP_DAC_OVERRIDE);
+    _prtcap ("task0", CAP_CHOWN);
 
     msg ("task0: setfsuid 1");
     setfsuid (1); 
     _prtcap ("task0", CAP_DAC_OVERRIDE); /* non-root, expect clr */
+    _prtcap ("task0", CAP_CHOWN);
 
     msg ("task0: set cap");
     _setcap ("task0", CAP_DAC_OVERRIDE);
+    _setcap ("task0", CAP_CHOWN);
     _prtcap ("task0", CAP_DAC_OVERRIDE);
+    _prtcap ("task0", CAP_CHOWN);
 
     msg ("task0: setfsuid 2");
     setfsuid (2); 
     _prtcap ("task0", CAP_DAC_OVERRIDE);
+    _prtcap ("task0", CAP_CHOWN);
 
     msg ("task0: clr cap");
     _clrcap ("task0", CAP_DAC_OVERRIDE);
+    _clrcap ("task0", CAP_CHOWN);
     _prtcap ("task0", CAP_DAC_OVERRIDE);
+    _prtcap ("task0", CAP_CHOWN);
 
     _create (&t1, proc1, NULL);
     _create (&t2, proc2, NULL);
@@ -163,6 +183,10 @@ int main(int argc, char *argv[])
     _join (t1, NULL);
 
     _prtcap ("task0", CAP_DAC_OVERRIDE);
+    _prtcap ("task0", CAP_CHOWN);
+#else
+    msg_exit ("libcap unavailable");
+#endif
 
     exit (0);
 }

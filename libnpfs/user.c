@@ -36,7 +36,7 @@
 #include <sys/fsuid.h>
 #include <pwd.h>
 #include <grp.h>
-#if HAVE_LIBPCAP
+#if HAVE_LIBCAP
 #include <sys/capability.h>
 #endif
 #include <assert.h>
@@ -520,6 +520,58 @@ done:
 	return u;
 }
 
+#if HAVE_LIBCAP
+/* When handling requests on connections authenticated as root, we consider
+ * it safe to disable DAC checks on the server and presume the client is
+ * doing it.  This is done to fix a problem - no supplemental group eqiuvalent
+ * to setfsgid.  Punt supplemental group checks to the client.
+ * N.B. if not on a connection that is root-authenticated, DAC checks will be
+ * performed using the primary uid:gid only.
+ */
+static int
+_chg_privcap (Npsrv *srv, cap_flag_value_t val)
+{
+	cap_t cap;
+	cap_flag_value_t cur;
+	cap_value_t cf[] = { CAP_DAC_OVERRIDE, CAP_CHOWN };
+	int need_set = 0;
+	int i, ret = -1;
+
+	if (!(cap = cap_get_proc ())) {
+		np_uerror (errno);
+		np_logerr (srv, "cap_get_proc failed");
+		goto done;
+	}
+	for (i = 0; i < sizeof(cf) / sizeof(cf[0]); i++) {
+		if (cap_get_flag (cap, cf[i], CAP_EFFECTIVE, &cur) < 0) {
+			np_uerror (errno);
+			np_logerr (srv, "cap_get_flag failed");
+			goto done;
+		}
+		if (cur == val)
+			continue;
+		need_set = 1;
+		if (cap_set_flag (cap, CAP_EFFECTIVE, 1, &cf[i], val) < 0) {
+			np_uerror (errno);
+			np_logerr (srv, "cap_set_flag failed");
+			goto done;
+		}
+	}
+	if (need_set && cap_set_proc (cap) < 0) {
+		np_uerror (errno);
+		np_logerr (srv, "cap_set_proc failed");
+		goto done;
+	}
+	ret = 0;
+done:
+	if (cap != NULL && cap_free (cap) < 0) {
+		np_uerror (errno);
+		np_logerr (srv, "cap_free failed");
+	}	
+	return ret;
+}
+#endif
+
 /* Note: it is possible for setfsuid/setfsgid to fail silently,
  * e.g. if user doesn't have CAP_SETUID/CAP_SETGID.
  * That should be checked at server startup.
@@ -536,7 +588,10 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	np_conn_get_authuser(req->conn, &authuid);
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
-		if (gid_override != -1 && u->uid != 0
+		/* gid_override must be one of user's suppl. groups unless
+		 * connection was originally authed as root (trusted).
+		 */
+		if (gid_override != -1 && u->uid != 0 && authuid != 0
 				       && !(srv->flags & SRV_FLAGS_NOUSERDB)) {
 			for (i = 0; i < u->nsg; i++) {
 				if (u->sg[i] == gid_override)
@@ -589,37 +644,25 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				wt->fsuid = P9_NONUNAME;
 				goto done;
 			}
+			if (u->uid == 0)
+				wt->privcap = 1; /* transiton to 0 sets caps */
+			else if (u->uid != 0 && wt->fsuid == 0)
+				wt->privcap = 0; /* trans from 0 clears caps */
 			wt->fsuid = u->uid;
 		}
 	}
-#if HAVE_LIBPCAP
+#if HAVE_LIBCAP
 	if ((srv->flags & SRV_FLAGS_DAC_BYPASS) && wt->fsuid != 0) {
-		cap_t cap;
-		cap_flag_value_t val;
-		cap_flag_value_t wantval = (authuid == 0 ? CAP_SET : CAP_CLEAR);
-		cap_value_t capflag = CAP_DAC_OVERRIDE;
+		if (!wt->privcap && authuid == 0) {
+			if (_chg_privcap (srv, CAP_SET) < 0)
+				goto done;
+			wt->privcap = 1;
+		} else if (wt->privcap && authuid != 0) {
+			if (_chg_privcap (srv, CAP_CLEAR) < 0)
+				goto done;
+			wt->privcap = 0;
+		}
 
-		if (!(cap = cap_get_proc ())) {
-			np_uerror (errno);
-			np_logerr (srv, "cap_get_proc failed");
-			goto done;
-		}
-		if (cap_get_flag (cap, capflag, CAP_EFFECTIVE, &val) < 0) {
-			np_uerror (errno);
-			np_logerr (srv, "cap_get_flag failed");
-			goto done;
-		}
-		if (val != wantval && cap_set_flag (cap, CAP_EFFECTIVE,
-						    1, &capflag, wantval) < 0) {
-			np_uerror (errno);
-			np_logerr (srv, "cap_set_flag failed");
-			goto done;
-		}
-		if (cap_free (cap) < 0) {
-			np_uerror (errno);
-			np_logerr (srv, "cap_free failed");
-			goto done;
-		}	
 	}
 #endif
 	ret = 0;

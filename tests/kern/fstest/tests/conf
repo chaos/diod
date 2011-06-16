@@ -5,4 +5,4 @@
 os=`uname`
 
 # Known file systems: UFS, ZFS, ext3, ntfs-3g, xfs
-fs="ext3-diod"
+fs="ZFS"
