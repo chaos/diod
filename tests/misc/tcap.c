@@ -185,7 +185,8 @@ int main(int argc, char *argv[])
     _prtcap ("task0", CAP_DAC_OVERRIDE);
     _prtcap ("task0", CAP_CHOWN);
 #else
-    msg_exit ("libcap unavailable");
+    msg ("libcap unavailable");
+    exit (77);
 #endif
 
     exit (0);
