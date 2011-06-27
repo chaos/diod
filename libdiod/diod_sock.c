@@ -280,7 +280,7 @@ diod_sock_connect (char *host, char *port, int flags)
         }
     }
     if (fd < 0 && errmsg && !(flags & DIOD_SOCK_QUIET))
-        errn (errnum, "%s", errmsg);
+        errn (errnum, "%s %s", errmsg, host);
     if (res)
         freeaddrinfo (res);
 done:
