@@ -64,12 +64,13 @@
 int mvwprintw(WINDOW *win, int y, int x, const char *fmt, ...)
     __attribute__ ((format (printf, 4, 5)));
 
-#define OPTIONS "h:p:"
+#define OPTIONS "h:P:p:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"hostlist",   required_argument,      0, 'h'},
-    {"poll-period",required_argument,      0, 'p'},
+    {"poll-period",required_argument,      0, 'P'},
+    {"port",       required_argument,      0, 'p'},
     {0, 0, 0, 0},
 };
 #else
@@ -98,6 +99,7 @@ typedef struct {
 
 typedef struct {
     char *host;
+    char *port;
     double poll_sec;
     int fd;
     Npcfid *root;
@@ -121,7 +123,7 @@ static List tpools = NULL;
 static List servers = NULL;
 static pthread_mutex_t dtop_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static Server *_server_create (char *host, double poll_sec);
+static Server *_server_create (char *host, char *port, double poll_sec);
 static void _destroy_tpool (Tpool *tp);
 static void _curses_watcher (double update_secs);
 
@@ -133,7 +135,8 @@ usage (void)
     fprintf (stderr,
 "Usage: dtop [-p sec] -h hostlist\n"
 "   -h,--hostlist HOSTS   hostnames to monitor (default localhost)\n"
-"   -p,--poll-period SEC  polling period in seconds (default 1.0)\n"
+"   -P,--poll-period SEC  polling period in seconds (default 1.0)\n"
+"   -p,--port PORT        port (default 564)\n"
 );
     exit (1);
 }
@@ -144,7 +147,7 @@ main (int argc, char *argv[])
     hostlist_t hl = NULL;
     hostlist_iterator_t itr;
     double poll_sec = 1;
-    char *host;
+    char *host, *port = "564";
     int c;
     sigset_t sigs;
 
@@ -162,10 +165,13 @@ main (int argc, char *argv[])
                         err_exit ("failed to append to hostlist");
                 }
                 break;
-            case 'p':   /* --poll-period SEC */
+            case 'P':   /* --poll-period SEC */
                 poll_sec = strtod (optarg, NULL);
                 if (poll_sec <= 0.0)
                     msg_exit ("polling period should be positive");
+                break;
+            case 'p':   /* --port PORT */
+                port = optarg;
                 break;
             default:
                 usage ();
@@ -193,7 +199,7 @@ main (int argc, char *argv[])
     if (!(itr = hostlist_iterator_create (hl)))
         err_exit ("out of memory");
     while ((host = hostlist_next (itr))) {
-        if (!(list_append (servers, _server_create (host, poll_sec))))
+        if (!(list_append (servers, _server_create (host, port, poll_sec))))
             err_exit ("out of memory");
     }
     hostlist_iterator_destroy (itr);
@@ -644,7 +650,7 @@ _reader (void *arg)
 
     for (;;) {
         if (sp->fd == -1)
-            sp->fd = diod_sock_connect (sp->host, "564", DIOD_SOCK_QUIET);
+            sp->fd = diod_sock_connect (sp->host, sp->port, DIOD_SOCK_QUIET);
         if (sp->fd == -1)
             goto skip;
         if (sp->root == NULL)
@@ -669,7 +675,7 @@ skip:
 }
 
 static Server *
-_server_create (char *host, double poll_sec)
+_server_create (char *host, char *port, double poll_sec)
 {
     Server *sp;
     int err;
@@ -679,6 +685,8 @@ _server_create (char *host, double poll_sec)
     memset (sp, 0, sizeof (*sp));
     sp->poll_sec = poll_sec;
     if (!(sp->host = strdup (host)))
+        err_exit ("out of memory");
+    if (!(sp->port = strdup (port)))
         err_exit ("out of memory");
     sp->fd = -1;
     sp->root = NULL;

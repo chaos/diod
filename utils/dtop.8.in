@@ -14,8 +14,11 @@ Multiple hosts may be separated by commas, and host ranges may be included
 in the list, e.g. \fIx[1-3,42]\fR is equivalent to \fIx1,x2,x3,x42\fR.
 By default, \fBdtop\fR monitors \fIlocalhost\fR.
 .TP
-.I "-p, --poll-period SEC"
+.I "-P, --poll-period SEC"
 Set the polling period.  SEC may be a floating point number.
 The default is 1 second. 
+.TP
+.I "-p, --port PORT"
+Specify the server port number for all monitored servers (default 564).
 .SH "SEE ALSO"
 diod (8)
