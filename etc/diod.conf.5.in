@@ -23,16 +23,18 @@ The exports table can include two types of element, a string element (as above),
 or a table element of the form \fI{ path="/path", opts="ro" }\fR.
 The path attribute is mandatory, and the opts attribute is an optional,
 comma-separated list of export options.  Currently the only supported
-option is "ro" (export read-only).
+options are "ro" (export read-only) and "suppress" (no export).
 The two table element forms can be mixed in the exports table.
 Note that although \fBdiod\fR will not traverse file system boundaries
 for a given mount due to inode uniqueness constraints, subdirectories of 
-exported paths can be mounted.
+a file system can be separately exported.
 .TP
 .I "exportall = 1"
 Export all file systems listed in /proc/mounts.
 If new file systems are mounted after \fBdiod\fR
 has started, they will become immediately mountable.
+If there is a duplicate entry for a file system in the \fIexports\fR list,
+any options listed in the exports entry will apply.
 .TP
 .I "nwthreads = INTEGER"
 Sets the (fixed) number of worker threads created to handle 9P requests

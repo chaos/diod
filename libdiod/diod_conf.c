@@ -417,6 +417,8 @@ _parse_expopt (char *s, int *fp)
     while (item) {
         if (!strcmp (item, "ro"))
             flags |= XFLAGS_RO;
+        else if (!strcmp (item, "suppress"))
+            flags |= XFLAGS_SUPPRESS;
         else
             msg_exit ("unknown export option: %s", item);
         item = strtok_r (NULL, ",", &saveptr);

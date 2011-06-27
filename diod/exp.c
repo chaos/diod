@@ -173,10 +173,12 @@ diod_match_exports (char *path, Npconn *conn, Npuser *user, int *xfp)
     while (res == 0 && (x = list_next (itr))) {
         if (!_match_export_path (x, path))
             continue;
+        if ((x->oflags & XFLAGS_SUPPRESS))
+            goto done;
         if (!_match_export_hosts (x, conn))
-            continue;
+            goto done;
         if (!_match_export_users (x, user))
-            continue;
+            goto done;
         if (xfp)
             *xfp = x->oflags;
         res = 1;
@@ -271,13 +273,15 @@ diod_get_exports (char *name, void *a)
             np_uerror (ENOMEM);
             goto done;
         }
-        if (aspf (&s, &len, "%s %s %s %s\n",
-                  x->path,
-                  x->opts ? x->opts : "-",
-                  x->users ? x->users : "-",
-                  x->hosts ? x->hosts : "-") < 0) { 
-            np_uerror (ENOMEM);
-            goto done;
+        if (!(x->oflags & XFLAGS_SUPPRESS)) {
+            if (aspf (&s, &len, "%s %s %s %s\n",
+                      x->path,
+                      x->opts ? x->opts : "-",
+                      x->users ? x->users : "-",
+                      x->hosts ? x->hosts : "-") < 0) { 
+                np_uerror (ENOMEM);
+                goto done;
+            }
         }
     }
     if (diod_conf_get_exportall ())
