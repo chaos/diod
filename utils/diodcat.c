@@ -53,7 +53,7 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 
-#define OPTIONS "a:h:p:sm:u:"
+#define OPTIONS "a:h:p:sm:u:t:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -63,6 +63,7 @@ static const struct option longopts[] = {
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
     {"stdin",   no_argument,            0, 's'},
+    {"timeout", required_argument,      0, 't'},
     {0, 0, 0, 0},
 };
 #else
@@ -71,6 +72,7 @@ static const struct option longopts[] = {
 
 static int catfiles (int fd, uid_t uid, int msize, char *aname,
                      char **av, int ac);
+static void sigalarm (int arg);
 
 static void
 usage (void)
@@ -83,6 +85,7 @@ usage (void)
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -s,--stdin            inherit server on stdin (for testing)\n"
+"   -t,--timeout SECS     give up after specified seconds\n"
 );
     exit (1);
 }
@@ -96,6 +99,7 @@ main (int argc, char *argv[])
     int msize = 65536;
     uid_t uid = geteuid ();
     int sopt = 0;
+    int topt = 0;
     int fd, c;
 
     diod_log_init (argv[0]);
@@ -121,6 +125,9 @@ main (int argc, char *argv[])
             case 'u':   /* --uid UID */
                 uid = strtoul (optarg, NULL, 10);
                 break;
+            case 't':   /* --timeout SECS */
+                topt = strtoul (optarg, NULL, 10);
+                break;
             default:
                 usage ();
         }
@@ -128,6 +135,11 @@ main (int argc, char *argv[])
 
     if (signal (SIGPIPE, SIG_IGN) == SIG_ERR)
         err_exit ("signal");
+    if (signal (SIGALRM, sigalarm) == SIG_ERR)
+        err_exit ("signal");
+
+    if (topt > 0)
+        alarm (topt);
 
     if (sopt) {
         if (hostname)
@@ -150,6 +162,11 @@ main (int argc, char *argv[])
     diod_log_fini ();
 
     exit (0);
+}
+
+static void sigalarm (int arg)
+{
+    msg_exit ("timed out");
 }
 
 static int

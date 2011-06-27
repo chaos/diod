@@ -11,21 +11,24 @@ the specified files on stdout.
 .SH OPTIONS
 .TP
 .I "-a, --aname NAME"
-The file system name on the server.
+The file system name on the server (default ctl).
 .TP
 .I "-h, --hostname HOST"
-The hostname of the server.
+The hostname of the server (default localhost).
 .TP
 .I "-p, --port PORT"
 The port number of the server (default 564).
 .TP
 .I "-m, --msize SIZE"
-The maximum request size including 9P headers (defalut 65536).
+The maximum request size including 9P headers (default 65536).
 .TP
 .I "-u, --uid UID"
-Try to attach to the server as a user other than your effective uid.
+Try to attach to the server as the specified user (default your effective uid).
 .TP
 .I "-s, --stdin"
 Inherit the connected file descriptor of server on stdin (for testing).
+.TP
+.I "-t, --timeout SECS"
+Force timeout after specified number of seconds (default no timeout).
 .SH "SEE ALSO"
 diod (8)

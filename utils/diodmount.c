@@ -60,7 +60,6 @@
 #include "npfs.h"
 #include "npclient.h"
 #include "list.h"
-#include "hostlist.h"
 #include "diod_log.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
@@ -87,7 +86,7 @@ static void _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt,
 static void _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt);
 static void _verify_mountpoint (char *path);
 static void _parse_uname_access (Opt o);
-static hostlist_t _parse_spec (char *spec, Opt o);
+static char *_parse_spec (char *spec, Opt o);
 static void _mount (const char *source, const char *target,
                     unsigned long mountflags, const void *data);
 
@@ -108,13 +107,12 @@ int
 main (int argc, char *argv[])
 {
     char *dir = NULL;
-    char *spec;
+    char *spec, *host;
     int c, i;
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
     int sfd = -1;
-    hostlist_t hl = NULL;
     Opt o; 
 
     diod_log_init (argv[0]);
@@ -144,7 +142,7 @@ main (int argc, char *argv[])
         usage ();
     spec = argv[optind++];
     dir = argv[optind++];
-    hl = _parse_spec (spec, o);
+    host = _parse_spec (spec, o);
 
     if (geteuid () != 0)
         msg_exit ("you must be root");
@@ -209,22 +207,14 @@ main (int argc, char *argv[])
     /* Connect to server on IANA port (or user-spacfied) and host.
      */
     } else {
-        hostlist_iterator_t hi;
         char *port = opt_find (o, "port");
-        char *host;
 
         if (!port)
             port = "564";
-        if (!(hi = hostlist_iterator_create (hl)))
-            msg_exit ("out of memory");
-        while ((host = hostlist_next (hi)) && sfd < 0) {
-            if (vopt)
-                msg ("trying to connect to host %s port %s", host, port);
-            sfd = diod_sock_connect (host, port, 0);
-        }
-        hostlist_iterator_destroy (hi);
-        if (sfd < 0)
-            msg_exit ("could not contact diod server(s)");
+        if (vopt)
+            msg ("trying to connect to host %s port %s", host, port);
+        if ((sfd = diod_sock_connect (host, port, 0)) < 0)
+            msg_exit ("could not contact diod server on %s:%s", host, port);
         opt_delete (o, "port");
         opt_addf (o, "rfdno=%d", sfd);
         opt_addf (o, "wfdno=%d", sfd);
@@ -244,8 +234,6 @@ main (int argc, char *argv[])
     //(void)close (sfd);
 
 done:
-    if (hl)
-        hostlist_destroy (hl);
     opt_destroy (o);
     exit (0);
 }
@@ -260,11 +248,10 @@ _uname2uid (char *uname)
     return pw->pw_uid;
 }
 
-static hostlist_t
+static char *
 _parse_spec (char *spec, Opt o)
 {
     char *host, *aname;
-    hostlist_t hl;
 
     if (!(host = strdup (spec)))
         msg_exit ("out of memory");
@@ -276,11 +263,8 @@ _parse_spec (char *spec, Opt o)
         ; /* aname = opt_find (o, "aname"); */
     else if (!opt_addf (o, "aname=%s", aname))
         msg_exit ("you cannot have both -oaname and spec=host:aname");
-    if (!(hl = hostlist_create (host)))
-        msg_exit ("failed to parse hostlist");
-    free (host);
 
-    return hl;
+    return host;
 }
 
 /* Verify that directory exists, exiting on failure.
