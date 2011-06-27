@@ -6,8 +6,8 @@ nfile=$PATH_EXPDIR/bar
 echo creating file
 rm -f $PATH_EXPDIR/foo $PATH_EXPDIR/bar
 touch $PATH_EXPDIR/foo $PATH_EXPDIR/bar
-chown nobody:nobody $PATH_EXPDIR/foo
-chown root:root $PATH_EXPDIR/bar
+chown nobody $PATH_EXPDIR/foo
+chown root $PATH_EXPDIR/bar
 chmod 600 $PATH_EXPDIR/foo $PATH_EXPDIR/bar
 stat --printf "%U:%G (%a)\n" $PATH_EXPDIR/foo $PATH_EXPDIR/bar
 
