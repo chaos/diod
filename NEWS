@@ -1,3 +1,12 @@
+1.0-pre44:
+	Add "suppress" export option to filter exportall list (issue 59)
+	Add -p,--port option to dtop (former -p,--poll-period renamed to -P).
+	Suppress Ubuntu FORTIFY for postmark compilation (issue 56)
+	Fix kern/t30 to not need nobody group (issue 55)
+	Handle host[:port] in DIOD_SERVERS (issue 40)
+	Handle multiple DIOD_SERVERS entries (issue 48,57,58)
+	Skip capability regression test if libcap not installed
+	
 1.0-pre43:
 	Disable server DAC check and don't setgroups before handling requests.
 
