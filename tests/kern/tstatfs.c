@@ -1,6 +1,7 @@
 /* tstatfs.c - compare statfs results on two dirs */
 
 #include <sys/vfs.h>
+#include <sys/statvfs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,7 @@ int
 main (int argc, char *argv[])
 {
     struct statfs s1, s2;
+    struct statvfs v1, v2;
     int diff = 0;
 
     if (argc != 3 && argc != 4) {
@@ -30,7 +32,15 @@ main (int argc, char *argv[])
         perror (argv[1]);
         exit (1);
     }
+    if (statvfs (argv[1], &v1) < 0) {
+        perror (argv[1]);
+        exit (1);
+    }
     if (statfs (argv[2], &s2) < 0) {
+        perror (argv[2]);
+        exit (1);
+    }
+    if (statvfs (argv[2], &v2) < 0) {
         perror (argv[2]);
         exit (1);
     }
@@ -64,10 +74,21 @@ main (int argc, char *argv[])
         fprintf (stderr, "f_ffree differs\n");
         diff++;
     }
-    if (tfield ("fsid") && memcmp (&s1.f_fsid, &s2.f_fsid, sizeof (s1.f_fsid)) != 0) {
+#if 0
+    /* (memcmp (&s1.f_fsid, &s2.f_fsid, sizeof (s1.f_fsid)) != 0) */
+    if (tfield ("fsid") && (s1.f_fsid.__val[0] != s2.f_fsid.__val[0]
+                         || s1.f_fsid.__val[1] != s2.f_fsid.__val[1])) {
+        fprintf (stderr, "f_fsid differs (%d.%d != %d.%d)\n",
+                        s1.f_fsid.__val[0], s1.f_fsid.__val[1],
+                        s2.f_fsid.__val[0], s2.f_fsid.__val[1]);
+        diff++;
+    }
+#else
+    if (tfield ("fsid") && v1.f_fsid != v2.f_fsid) {
         fprintf (stderr, "f_fsid differs\n");
         diff++;
     }
+#endif
     if (tfield ("namelen") && s1.f_namelen != s2.f_namelen) {
         fprintf (stderr, "f_namelen differs\n");
         diff++;

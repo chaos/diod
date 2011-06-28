@@ -9,7 +9,7 @@ touch $PATH_EXPDIR/foo $PATH_EXPDIR/bar
 chown nobody $PATH_EXPDIR/foo
 chown root $PATH_EXPDIR/bar
 chmod 600 $PATH_EXPDIR/foo $PATH_EXPDIR/bar
-stat --printf "%U:%G (%a)\n" $PATH_EXPDIR/foo $PATH_EXPDIR/bar
+stat --printf "%U (%a)\n" $PATH_EXPDIR/foo $PATH_EXPDIR/bar
 
 echo reading foo - should succeed
 cat $PATH_MNTDIR/foo 2>/dev/null && echo foo OK || echo foo FAIL

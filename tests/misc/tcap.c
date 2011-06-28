@@ -23,13 +23,13 @@
 
 #include "test.h"
 
+#if HAVE_LIBCAP
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
 static state_t         state = S0;
 static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 
-#if HAVE_LIBCAP
 static void
 _prtcap (char *s, cap_value_t capflag)
 {
@@ -134,13 +134,12 @@ static void *proc2 (void *a)
 
 int main(int argc, char *argv[])
 {
+#if HAVE_LIBCAP
     pthread_t t1, t2;
-
-    diod_log_init (argv[0]);
 
     assert (geteuid () == 0);
 
-#if HAVE_LIBCAP
+    diod_log_init (argv[0]);
     _prtcap ("task0", CAP_DAC_OVERRIDE); /* root, expect set */
     _prtcap ("task0", CAP_CHOWN);
 
@@ -185,7 +184,7 @@ int main(int argc, char *argv[])
     _prtcap ("task0", CAP_DAC_OVERRIDE);
     _prtcap ("task0", CAP_CHOWN);
 #else
-    msg ("libcap unavailable");
+    fprintf (stderr, "libcap unavailable\n");
     exit (77);
 #endif
 
