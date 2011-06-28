@@ -99,7 +99,6 @@ typedef struct {
     int              fd;
     DIR             *dir;
     struct dirent   *dirent;
-    struct stat      stat;
     /* advisory locking */
     int              lock_type;
     /* export flags */
@@ -140,7 +139,6 @@ int          diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname,
                              Npstr *aname);
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 
-static int       _fidstat       (Fid *fid);
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
 static void      _fidfree       (Fid *f);
 
@@ -183,26 +181,6 @@ diod_register_ops (Npsrv *srv)
         return -1;
 
     return 0;
-}
-
-/* Update stat info contained in fid.
- * Set npfs error state on error.
- */
-static int
-_fidstat (Fid *fid)
-{
-    int n;
-    int fd;
-
-    if (fid->fd != -1)
-        n = fstat (fid->fd, &fid->stat);
-    else if (fid->dir != NULL && (fd = dirfd (fid->dir)) >= 0)
-        n = fstat (fd, &fid->stat);
-    else
-        n = lstat (fid->path, &fid->stat);
-    if (n < 0)
-        np_uerror (errno);
-    return n;
 }
 
 /* Allocate our local fid struct which becomes attached to Npfid->aux.
@@ -329,6 +307,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
     Npfcall* ret = NULL;
     Fid *f = NULL;
     Npqid qid;
+    struct stat sb;
 
     if (aname->len == 0 || *aname->str != '/') {
         np_uerror (EPERM);
@@ -346,9 +325,15 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
     }
     if (!diod_match_exports (f->path, fid->conn, fid->user, &f->xflags))
         goto error;
-    if (_fidstat (f) < 0)
+    if (stat (f->path, &sb) < 0) { /* OK to follow symbolic links */
+        np_uerror (errno);
         goto error;
-    _ustat2qid (&f->stat, &qid);
+    }
+    if (!S_ISDIR (sb.st_mode)) {
+        np_uerror (ENOTDIR);
+        goto error;
+    }
+    _ustat2qid (&sb, &qid);
     if ((ret = np_create_rattach (&qid)) == NULL) {
         np_uerror (ENOMEM);
         goto error;
@@ -397,14 +382,14 @@ int
 diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
 {
     Fid *f = fid->aux;
-    struct stat st;
+    struct stat sb, sb2;
     char *npath;
 
     if (!(npath = _mkpath (f->path, wname))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (lstat (npath, &st) < 0) {
+    if (lstat (npath, &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -414,15 +399,17 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
      * How does NFS make them appear as empty directories?  That would be
      * prettier.
      */
-    if (_fidstat (f) < 0)
+    if (lstat (f->path, &sb2) < 0) {
+        np_uerror (errno);
         goto error;
-    if (st.st_dev != f->stat.st_dev) { 
+    }
+    if (sb.st_dev != sb2.st_dev) { 
         np_uerror (EXDEV);
         goto error;
     }
     free (f->path);
     f->path = npath;
-    _ustat2qid (&st, wqid);
+    _ustat2qid (&sb, wqid);
     return 1;
 error:
     errn (np_rerror (), "diod_walk %s@%s:%s/%.*s",
@@ -585,7 +572,8 @@ diod_lopen (Npfid *fid, u32 flags)
     Fid *f = fid->aux;
     Npfcall *res = NULL;
     Npqid qid;
-    u32 iounit = 0; /* client will use msize-P9_IOHDRSZ */
+    u32 iounit = 0; /* if iounit is 0, v9fs will use msize-P9_IOHDRSZ */
+    struct stat sb;
 
     if ((f->xflags & XFLAGS_RO) && ((flags & O_WRONLY) || (flags & O_RDWR))) {
         np_uerror (EROFS);
@@ -594,10 +582,11 @@ diod_lopen (Npfid *fid, u32 flags)
     if ((flags & O_CREAT)) /* can't happen? */
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
-    if (_fidstat (f) < 0)
+    if (lstat (f->path, &sb) < 0) {
+        np_uerror (errno);
         goto error_quiet;
-
-    if (S_ISDIR (f->stat.st_mode)) {
+    }
+    if (S_ISDIR (sb.st_mode)) {
         f->dir = opendir (f->path);
         if (!f->dir) {
             np_uerror (errno);
@@ -610,10 +599,8 @@ diod_lopen (Npfid *fid, u32 flags)
             goto error_quiet;
         }
     }
-    if (_fidstat (f) < 0)
-        goto error; /* can't happen? */
-    _ustat2qid (&f->stat, &qid);
-    //iounit = f->stat.st_blksize;
+    _ustat2qid (&sb, &qid);
+    //iounit = sb.st_blksize;
     if (!(res = np_create_rlopen (&qid, iounit))) {
         np_uerror (ENOMEM);
         goto error;
@@ -884,25 +871,28 @@ diod_getattr(Npfid *fid, u64 request_mask)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     Npqid qid;
+    struct stat sb;
 
-    if (_fidstat (f) < 0)
+    if (lstat (f->path, &sb) < 0) {
+        np_uerror (errno);
         goto error_quiet;
-    _ustat2qid (&f->stat, &qid);
+    }
+    _ustat2qid (&sb, &qid);
     if (!(ret = np_create_rgetattr(request_mask, &qid,
-                                    f->stat.st_mode,
-                                    f->stat.st_uid,
-                                    f->stat.st_gid,
-                                    f->stat.st_nlink,
-                                    f->stat.st_rdev,
-                                    f->stat.st_size,
-                                    f->stat.st_blksize,
-                                    f->stat.st_blocks,
-                                    f->stat.st_atim.tv_sec,
-                                    f->stat.st_atim.tv_nsec,
-                                    f->stat.st_mtim.tv_sec,
-                                    f->stat.st_mtim.tv_nsec,
-                                    f->stat.st_ctim.tv_sec,
-                                    f->stat.st_ctim.tv_nsec,
+                                    sb.st_mode,
+                                    sb.st_uid,
+                                    sb.st_gid,
+                                    sb.st_nlink,
+                                    sb.st_rdev,
+                                    sb.st_size,
+                                    sb.st_blksize,
+                                    sb.st_blocks,
+                                    sb.st_atim.tv_sec,
+                                    sb.st_atim.tv_nsec,
+                                    sb.st_mtim.tv_sec,
+                                    sb.st_mtim.tv_nsec,
+                                    sb.st_ctim.tv_sec,
+                                    sb.st_ctim.tv_nsec,
                                     0, 0, 0, 0))) {
         np_uerror (ENOMEM);
         goto error;
@@ -923,7 +913,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 {
     Npfcall *ret = NULL;
     Fid *f = fid->aux;
-    int fidstat_updated = 0;
+    struct stat sb;
+    int sbvalid = 0;
     int ctime_updated = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
@@ -932,10 +923,12 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     }
 
     if ((valid & P9_SETATTR_MODE) || (valid & P9_SETATTR_SIZE)) {
-        if (_fidstat(f) < 0)
+        if (lstat (f->path, &sb) < 0) {
+            np_uerror (errno);
             goto error_quiet;
-        fidstat_updated = 1;
-        if (S_ISLNK(f->stat.st_mode)) {
+        }
+        sbvalid = 1;
+        if (S_ISLNK(sb.st_mode)) {
             msg ("diod_setattr: unhandled mode/size update on symlink");
             np_uerror(EINVAL);
             goto error;
@@ -1010,16 +1003,18 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
          && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
             tvp = NULL; /* set both to now */
         } else {
-            if (!fidstat_updated && _fidstat(f) < 0)
+            if (!sbvalid && lstat(f->path, &sb) < 0) {
+                np_uerror (errno);
                 goto error_quiet;
-            fidstat_updated = 1;
+            }
+            sbvalid = 1;
             if (gettimeofday (&now, NULL) < 0) {
                 np_uerror (errno);
                 goto error_quiet;
             }
             if (!(valid & P9_SETATTR_ATIME)) {
-                tv[0].tv_sec = f->stat.st_atim.tv_sec;
-                tv[0].tv_usec = f->stat.st_atim.tv_nsec / 1000;
+                tv[0].tv_sec = sb.st_atim.tv_sec;
+                tv[0].tv_usec = sb.st_atim.tv_nsec / 1000;
             } else if (!(valid & P9_SETATTR_ATIME_SET)) {
                 tv[0].tv_sec = now.tv_sec;
                 tv[0].tv_usec = now.tv_usec;
@@ -1029,8 +1024,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             }
 
             if (!(valid & P9_SETATTR_MTIME)) {
-                tv[1].tv_sec = f->stat.st_mtim.tv_sec;
-                tv[1].tv_usec = f->stat.st_mtim.tv_nsec / 1000;
+                tv[1].tv_sec = sb.st_mtim.tv_sec;
+                tv[1].tv_usec = sb.st_mtim.tv_nsec / 1000;
             } else if (!(valid & P9_SETATTR_MTIME_SET)) {
                 tv[1].tv_sec = now.tv_sec;
                 tv[1].tv_usec = now.tv_usec;
@@ -1185,6 +1180,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     u8 status = P9_LOCK_ERROR;
+    struct stat sb;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1194,8 +1190,10 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
         np_uerror (EINVAL);             /*  (which we ignore) */
         goto error;
     }
-    if (_fidstat(f) < 0)
+    if (fstat(f->fd, &sb) < 0) {
+        np_uerror (errno);
         goto error_quiet;
+    }
     switch (type) {
         case F_UNLCK:
             if (flock (f->fd, LOCK_UN) >= 0) {
@@ -1246,6 +1244,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
     char *cid = NULL;
+    struct stat sb;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1255,8 +1254,10 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         np_uerror (ENOMEM);
         goto error;
     }
-    if (_fidstat(f) < 0)
+    if (fstat(f->fd, &sb) < 0) {
+        np_uerror (errno);
         goto error_quiet;
+    }
     switch (type) {
         case F_RDLCK:
             switch (f->lock_type) {
