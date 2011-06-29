@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-PATH_POSTMARK=$(pwd)/postmark
+PATH_POSTMARK=$(pwd)/postmark/postmark
 (pushd $PATH_MNTDIR >/dev/null
 $PATH_POSTMARK <<EOT
 set size 10 100000

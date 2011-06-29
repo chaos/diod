@@ -9403,7 +9403,7 @@ _ACEOF
 ##
 # Epilogue
 ##
-ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile diod/diod.8 utils/diodmount.8 utils/diodcat.8 utils/dtop.8 utils/diodload.8 etc/diod.conf.5 scripts/Makefile scripts/diod.init scripts/auto.diod diod/Makefile utils/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/kern/fstest/Makefile tests/kern/dbench/Makefile tests/user/Makefile etc/Makefile"
+ac_config_files="$ac_config_files Makefile diod.spec libdiod/Makefile liblsd/Makefile libnpfs/Makefile libnpclient/Makefile diod/diod.8 utils/diodmount.8 utils/diodcat.8 utils/dtop.8 utils/diodload.8 etc/diod.conf.5 scripts/Makefile scripts/diod.init scripts/auto.diod diod/Makefile utils/Makefile tests/Makefile tests/misc/Makefile tests/kern/Makefile tests/kern/fstest/Makefile tests/kern/dbench/Makefile tests/kern/postmark/Makefile tests/user/Makefile etc/Makefile"
 
 
 cat >confcache <<\_ACEOF
@@ -10072,6 +10072,7 @@ do
     "tests/kern/Makefile") CONFIG_FILES="$CONFIG_FILES tests/kern/Makefile" ;;
     "tests/kern/fstest/Makefile") CONFIG_FILES="$CONFIG_FILES tests/kern/fstest/Makefile" ;;
     "tests/kern/dbench/Makefile") CONFIG_FILES="$CONFIG_FILES tests/kern/dbench/Makefile" ;;
+    "tests/kern/postmark/Makefile") CONFIG_FILES="$CONFIG_FILES tests/kern/postmark/Makefile" ;;
     "tests/user/Makefile") CONFIG_FILES="$CONFIG_FILES tests/user/Makefile" ;;
     "etc/Makefile") CONFIG_FILES="$CONFIG_FILES etc/Makefile" ;;
 

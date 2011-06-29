@@ -8,10 +8,9 @@ check_PROGRAMS = \
 	tflock2 \
 	tfcntl2 \
 	tfcntl3 \
-	tfsgid \
-	postmark
+	tfsgid
 
-SUBDIRS = fstest
+SUBDIRS = fstest postmark
 if DBENCH
 SUBDIRS += dbench
 endif
@@ -28,7 +27,7 @@ TESTS = t05 t06 t07 t13 t14 t15 t16 t17 t18 t19 t22 \
 
 CLEANFILES = *.out *.diff *.diod *.postmark *.dbench
 
-AM_CFLAGS = @GCCWARN@ -U_FORTIFY_SOURCE  # (see issue 56)
+AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \

@@ -98,6 +98,7 @@ AC_CONFIG_FILES( \
   tests/kern/Makefile \
   tests/kern/fstest/Makefile \
   tests/kern/dbench/Makefile \
+  tests/kern/postmark/Makefile \
   tests/user/Makefile \
   etc/Makefile \
 )
