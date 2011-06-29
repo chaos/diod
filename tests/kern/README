@@ -39,3 +39,4 @@ t32	Run dbench for one minute.
 t33	Run postmark (takes about a minute)
 t34	Run an svnadmin create, which uncovered a bug in fsync
 t35	Trigger a tflush by aborting a streaming write.
+t36	List a long directory that will be broken into multiple P9_READDIRs

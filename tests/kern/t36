@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo creating directory entries
+for i in `seq 1 1000`; do
+   touch $PATH_EXPDIR/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.$i
+done
+echo listing directory entries
+/bin/ls $PATH_MNTDIR
+
+exit 0

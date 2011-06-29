@@ -1143,34 +1143,24 @@ done:
     return ret;
 }
 
-#define DISTRUST_DIR_OFFSET 1
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
     int i, n = 0;
-#if DISTRUST_DIR_OFFSET
-    off_t saved_dir_pos;
-#endif
+
     if (offset == 0)
         rewinddir (f->dir);
     else
         seekdir (f->dir, offset);
     do {
-#if DISTRUST_DIR_OFFSET
-        saved_dir_pos = telldir (f->dir);
-#endif
         if (!(f->dirent = readdir (f->dir)))
             break;
         if (f->mountpt && strcmp (f->dirent->d_name, ".") 
                        && strcmp (f->dirent->d_name, ".."))
                 continue;
         i = _copy_dirent_linux (f, buf + n, count - n);
-        if (i == 0) {
-#if DISTRUST_DIR_OFFSET
-            seekdir (f->dir, saved_dir_pos);
-#endif
+        if (i == 0)
             break;
-        }
         n += i;
     } while (n < count);
     return n;
