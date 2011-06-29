@@ -70,7 +70,6 @@
 #include <sys/file.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
-#include <sys/statvfs.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/fsuid.h>
@@ -587,27 +586,23 @@ error_quiet:
 }
 
 /* Tstatfs - read file system information.
- * N.B. must call statfs() for f_type and statvfs() for unsigned long f_fsid
  */
 Npfcall*
 diod_statfs (Npfid *fid)
 {
     Fid *f = fid->aux;
     struct statfs sb;
-    struct statvfs svb;
     Npfcall *ret = NULL;
+    u64 fsid;
 
     if (statfs (f->path, &sb) < 0) {
         np_uerror (errno);
         goto error;
     }
-    if (statvfs (f->path, &svb) < 0) {
-        np_uerror (errno);
-        goto error;
-    }
+    fsid = sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
     if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
-                                  sb.f_ffree, (u64) svb.f_fsid,
+                                  sb.f_ffree, fsid,
                                   sb.f_namelen))) {
         np_uerror (ENOMEM);
         goto error;

@@ -75,20 +75,23 @@ main (int argc, char *argv[])
         diff++;
     }
 #if 0
-    /* (memcmp (&s1.f_fsid, &s2.f_fsid, sizeof (s1.f_fsid)) != 0) */
     if (tfield ("fsid") && (s1.f_fsid.__val[0] != s2.f_fsid.__val[0]
                          || s1.f_fsid.__val[1] != s2.f_fsid.__val[1])) {
-        fprintf (stderr, "f_fsid differs (%d.%d != %d.%d)\n",
+        fprintf (stderr, "statfs f_fsid differs (%d.%d != %d.%d)\n",
                         s1.f_fsid.__val[0], s1.f_fsid.__val[1],
                         s2.f_fsid.__val[0], s2.f_fsid.__val[1]);
         diff++;
     }
 #else
-    if (tfield ("fsid") && v1.f_fsid != v2.f_fsid) {
+    if (memcmp (&s1.f_fsid, &s2.f_fsid, sizeof (s1.f_fsid)) != 0) {
         fprintf (stderr, "f_fsid differs\n");
         diff++;
     }
 #endif
+    if (tfield ("fsid") && v1.f_fsid != v2.f_fsid) {
+        fprintf (stderr, "f_fsid differs (statvfs version)\n");
+        diff++;
+    }
     if (tfield ("namelen") && s1.f_namelen != s2.f_namelen) {
         fprintf (stderr, "f_namelen differs\n");
         diff++;
