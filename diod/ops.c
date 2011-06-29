@@ -103,6 +103,7 @@ typedef struct {
     int              lock_type;
     /* export flags */
     int              xflags;
+    int              mountpt; /* handle server-side mount point specially */
 } Fid;
 
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *aname);
@@ -198,6 +199,7 @@ _fidalloc (void)
         f->dirent = NULL;
         f->lock_type = LOCK_UN;
         f->xflags = 0;
+        f->mountpt = 0;
     }
   
     return f;
@@ -364,6 +366,7 @@ diod_clone (Npfid *fid, Npfid *newfid)
         goto error;
     }
     nf->xflags = f->xflags;
+    nf->mountpt = f->mountpt;
     newfid->aux = nf;
     return 1;
 error:
@@ -372,6 +375,59 @@ error:
     if (nf)
         _fidfree (nf);
     return 0;
+}
+
+/* Special stat for a mount point that fixes up st_dev and st_ino
+ * to be what should be "underneath" the mount.
+ */
+static int
+_statmnt (char *path, struct stat *sb)
+{
+    DIR *dir = NULL;
+    struct stat sbp;
+    struct dirent *dp;
+    char *ppath = NULL;
+    int plen = strlen (path) + 4;
+    char *name;
+
+    if (stat (path, sb) < 0) {
+        np_uerror (errno);
+        goto error;
+    }
+    if (!(ppath = malloc (plen))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    snprintf (ppath, plen, "%s/..", path);
+    if (stat (ppath, &sbp) < 0) {
+        np_uerror (errno);
+        goto error;
+    }
+    if (!(dir = opendir (ppath))) {
+        np_uerror (errno);
+        goto error;
+    }
+    name = strrchr (path, '/');
+    name = name ? name + 1 : path;
+    while ((dp = readdir (dir))) {
+        if (!strcmp (name, dp->d_name))
+            break;
+    } 
+    if (!dp) {
+        np_uerror (ENOENT);
+        goto error;
+    }
+    sb->st_dev = sbp.st_dev;
+    sb->st_ino = dp->d_ino;
+    (void)closedir (dir);
+    free (ppath);
+    return 0;
+error:
+    if (ppath)
+        free (ppath);
+    if (dir)
+        (void)closedir (dir);
+    return -1;
 }
 
 /* Twalk - walk a file path
@@ -383,8 +439,12 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
 {
     Fid *f = fid->aux;
     struct stat sb, sb2;
-    char *npath;
+    char *npath = NULL;
 
+    if (f->mountpt) {
+        np_uerror (ENOENT);
+        goto error_quiet;
+    }
     if (!(npath = _mkpath (f->path, wname))) {
         np_uerror (ENOMEM);
         goto error;
@@ -393,19 +453,14 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
         np_uerror (errno);
         goto error_quiet;
     }
-    /* N.B. inodes would not be unique if we could cross over to another
-     * file system.  But with the code below, ls -l returns ??? for mount
-     * point dirs, which would otherwise have a "foreign" inode number.
-     * How does NFS make them appear as empty directories?  That would be
-     * prettier.
-     */
     if (lstat (f->path, &sb2) < 0) {
         np_uerror (errno);
         goto error;
     }
-    if (sb.st_dev != sb2.st_dev) { 
-        np_uerror (EXDEV);
-        goto error;
+    if (sb.st_dev != sb2.st_dev) {
+        if (_statmnt (npath, &sb) < 0)
+            goto error;
+        f->mountpt = 1;
     }
     free (f->path);
     f->path = npath;
@@ -873,9 +928,16 @@ diod_getattr(Npfid *fid, u64 request_mask)
     Npqid qid;
     struct stat sb;
 
-    if (lstat (f->path, &sb) < 0) {
-        np_uerror (errno);
-        goto error_quiet;
+    if (f->mountpt) {
+        if (_statmnt (f->path, &sb) < 0) {
+            np_uerror (errno);
+            goto error_quiet;
+        }
+    } else {
+        if (lstat (f->path, &sb) < 0) {
+            np_uerror (errno);
+            goto error_quiet;
+        }
     }
     _ustat2qid (&sb, &qid);
     if (!(ret = np_create_rgetattr(request_mask, &qid,
@@ -1086,27 +1148,32 @@ done:
     return ret;
 }
 
-/* FIXME: seekdir(previous d_off) OK?
- * If not, substitute saved_dir_position for d_off in last returned.
- * If so, get rid of saved_dir_position and 2nd seekdir.
- */
+#define DISTRUST_DIR_OFFSET 1
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
     int i, n = 0;
+#if DISTRUST_DIR_OFFSET
     off_t saved_dir_pos;
-
+#endif
     if (offset == 0)
         rewinddir (f->dir);
     else
         seekdir (f->dir, offset);
     do {
+#if DISTRUST_DIR_OFFSET
         saved_dir_pos = telldir (f->dir);
-        if (!(f->dirent = readdir (f->dir))) /* FIXME: use readdir_r */
+#endif
+        if (!(f->dirent = readdir (f->dir)))
             break;
+        if (f->mountpt && strcmp (f->dirent->d_name, ".") 
+                       && strcmp (f->dirent->d_name, ".."))
+                continue;
         i = _copy_dirent_linux (f, buf + n, count - n);
         if (i == 0) {
+#if DISTRUST_DIR_OFFSET
             seekdir (f->dir, saved_dir_pos);
+#endif
             break;
         }
         n += i;
