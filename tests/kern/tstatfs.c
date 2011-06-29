@@ -1,7 +1,6 @@
 /* tstatfs.c - compare statfs results on two dirs */
 
 #include <sys/vfs.h>
-#include <sys/statvfs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +17,6 @@ int
 main (int argc, char *argv[])
 {
     struct statfs s1, s2;
-    struct statvfs v1, v2;
     int diff = 0;
 
     if (argc != 3 && argc != 4) {
@@ -32,24 +30,14 @@ main (int argc, char *argv[])
         perror (argv[1]);
         exit (1);
     }
-    if (statvfs (argv[1], &v1) < 0) {
-        perror (argv[1]);
-        exit (1);
-    }
     if (statfs (argv[2], &s2) < 0) {
         perror (argv[2]);
         exit (1);
     }
-    if (statvfs (argv[2], &v2) < 0) {
-        perror (argv[2]);
-        exit (1);
-    }
-#if 0
     if (tfield ("type") && s1.f_type != s2.f_type) {
         fprintf (stderr, "f_type differs\n");
         diff++;
     }
-#endif
     if (tfield ("bsize") && s1.f_bsize != s2.f_bsize ) {
         fprintf (stderr, "f_bsize differs\n");
         diff++;
@@ -88,10 +76,6 @@ main (int argc, char *argv[])
         diff++;
     }
 #endif
-    if (tfield ("fsid") && v1.f_fsid != v2.f_fsid) {
-        fprintf (stderr, "f_fsid differs (statvfs version)\n");
-        diff++;
-    }
     if (tfield ("namelen") && s1.f_namelen != s2.f_namelen) {
         fprintf (stderr, "f_namelen differs\n");
         diff++;
