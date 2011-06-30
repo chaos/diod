@@ -341,7 +341,7 @@ error:
 static Npuser *
 _real_lookup_byuid (Npsrv *srv, uid_t uid)
 {
-	Npuser *u = NULL;
+	Npuser *u;
 	int err, len;
 	struct passwd pw, *pwd;
 	char *buf = NULL; 
@@ -374,8 +374,6 @@ _real_lookup_byuid (Npsrv *srv, uid_t uid)
 	}
 	return u;
 error:
-	if (u)
-		_free_user (u);
 	if (buf)
 		free (buf);
 	return NULL;
@@ -384,7 +382,7 @@ error:
 static Npuser *
 _real_lookup_byname (Npsrv *srv, char *uname)
 {
-	Npuser *u = NULL; 
+	Npuser *u;
 	int err, len;
 	struct passwd pw, *pwd = NULL;
 	char *buf = NULL;
@@ -417,8 +415,6 @@ _real_lookup_byname (Npsrv *srv, char *uname)
 	}
 	return u;
 error:
-	if (u)
-		_free_user (u);
 	if (buf)
 		free (buf);
 	return NULL;

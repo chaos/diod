@@ -303,20 +303,19 @@ np_ctl_attach(Npfid *fid, Npfid *afid, char *aname)
 	assert (aname && !strcmp (aname, "ctl"));
 	if (!root)
 		goto error;
-	if (!(fid->aux = _alloc_fid (root)))
+	if (!(f = _alloc_fid (root)))
 		goto error;
 	if (!(rc = np_create_rattach (&root->qid))) {
 		np_uerror (ENOMEM);
 		goto error;
 	}
 	fid->type = root->qid.type;
+	fid->aux = f;
 	np_fid_incref (fid);
 	return rc;
 error:
 	if (f)
 		_free_fid (f);
-	if (rc)
-		free (rc);
 	return NULL;
 }
 

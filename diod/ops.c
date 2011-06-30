@@ -509,7 +509,7 @@ Npfcall*
 diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     ssize_t n;
 
     if ((f->xflags & XFLAGS_RO)) {
@@ -529,8 +529,6 @@ error:
     errn (np_rerror (), "diod_write %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -540,7 +538,7 @@ Npfcall*
 diod_clunk (Npfid *fid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
 
     if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
@@ -550,8 +548,6 @@ diod_clunk (Npfid *fid)
 error:
     errn (np_rerror (), "diod_clunk %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -561,7 +557,7 @@ Npfcall*
 diod_remove (Npfid *fid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -580,8 +576,6 @@ error:
     errn (np_rerror (), "diod_remove %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -592,7 +586,7 @@ diod_statfs (Npfid *fid)
 {
     Fid *f = fid->aux;
     struct statfs sb;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     u64 fsid;
 
     if (statfs (f->path, &sb) < 0) {
@@ -611,8 +605,6 @@ diod_statfs (Npfid *fid)
 error:
     errn (np_rerror (), "diod_statfs %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -620,7 +612,7 @@ Npfcall*
 diod_lopen (Npfid *fid, u32 flags)
 {
     Fid *f = fid->aux;
-    Npfcall *res = NULL;
+    Npfcall *res;
     Npqid qid;
     u32 iounit = 0; /* if iounit is 0, v9fs will use msize-P9_IOHDRSZ */
     struct stat sb;
@@ -668,8 +660,6 @@ error_quiet:
         (void)close (f->fd); 
         f->fd = -1;
     }
-    if (res)
-        free (res);
     return NULL;
 }
 
@@ -677,7 +667,7 @@ Npfcall*
 diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     char *npath = NULL;
     Npqid qid;
     int fd = -1;
@@ -729,8 +719,6 @@ error_quiet:
         (void)unlink (npath);
     if (npath)
         free (npath);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -738,7 +726,7 @@ Npfcall*
 diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     char *target = NULL, *npath = NULL;
     Npqid qid;
     struct stat sb;
@@ -787,15 +775,13 @@ error_quiet:
         free (npath);
     if (target)
         free (target);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
 Npfcall*
 diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
 {
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     Fid *f = fid->aux;
     char *npath = NULL;
     Npqid qid;
@@ -823,7 +809,7 @@ diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
         goto error; /* shouldn't happen? */
     }
     _ustat2qid (&sb, &qid);
-    if (!((ret = np_create_rsymlink (&qid)))) {
+    if (!((ret = np_create_rmknod (&qid)))) {
         np_uerror (ENOMEM);
         goto error;
     }
@@ -838,8 +824,6 @@ error_quiet:
         (void)unlink (npath);
     if (npath)
         free (npath);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -850,7 +834,7 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
 {
     Fid *f = fid->aux;
     Fid *d = dfid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     char *npath = NULL;
     int renamed = 0;
 
@@ -883,8 +867,6 @@ error_quiet:
         (void)rename (npath, f->path);
     if (npath)
         free (npath);
-    if (ret)
-        free (f);
     return NULL;
 }
 
@@ -892,7 +874,7 @@ Npfcall*
 diod_readlink(Npfid *fid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     char target[PATH_MAX + 1];
     int n;
 
@@ -910,8 +892,6 @@ error:
     errn (np_rerror (), "diod_readlink %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -919,7 +899,7 @@ Npfcall*
 diod_getattr(Npfid *fid, u64 request_mask)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     Npqid qid;
     struct stat sb;
 
@@ -959,8 +939,6 @@ error:
     errn (np_rerror (), "diod_getattr %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -968,7 +946,7 @@ Npfcall*
 diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
               u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
 {
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     Fid *f = fid->aux;
     struct stat sb;
     int sbvalid = 0;
@@ -1114,8 +1092,6 @@ error:
     errn (np_rerror (), "diod_setattr %s@%s:%s (valid=0x%x)",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path, valid);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -1171,7 +1147,7 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 {
     int n;
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
 
     if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
@@ -1187,8 +1163,6 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 error:
     errn (np_rerror (), "diod_readdir %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -1196,7 +1170,7 @@ Npfcall*
 diod_fsync (Npfid *fid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1215,8 +1189,6 @@ error:
     errn (np_rerror (), "diod_fsync %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -1230,7 +1202,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
            Npstr *client_id)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     u8 status = P9_LOCK_ERROR;
     struct stat sb;
 
@@ -1284,8 +1256,6 @@ error:
     errn (np_rerror (), "diod_lock %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -1294,7 +1264,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
              Npstr *client_id)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     char *cid = NULL;
     struct stat sb;
 
@@ -1363,8 +1333,6 @@ error:
     errn (np_rerror (), "diod_getlock %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (ret)
-        free (ret);
     if (cid)
         free (cid);
     return NULL;
@@ -1374,7 +1342,7 @@ Npfcall*
 diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     Fid *df = dfid->aux;
     char *npath = NULL;
     int created = 0;
@@ -1407,8 +1375,6 @@ error_quiet:
         (void)unlink (npath);
     if (npath)
         free (npath);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
@@ -1416,7 +1382,7 @@ Npfcall*
 diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
 {
     Fid *f = fid->aux;
-    Npfcall *ret = NULL;
+    Npfcall *ret;
     char *npath = NULL;
     Npqid qid;
     struct stat sb;
@@ -1458,8 +1424,6 @@ error_quiet:
         (void)rmdir(npath);
     if (npath)
         free (npath);
-    if (ret)
-        free (ret);
     return NULL;
 }
 
