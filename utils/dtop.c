@@ -52,6 +52,7 @@
 
 #include "9p.h"
 #include "npfs.h"
+#include "xpthread.h"
 #include "npclient.h"
 
 #include "list.h"
@@ -226,7 +227,7 @@ _update_display_topwin (WINDOW *win)
     ListIterator itr;
     Tpool *tp;
 
-    pthread_mutex_lock (&dtop_lock);
+    xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");    
     while ((tp = list_next (itr))) {
@@ -259,7 +260,7 @@ _update_display_topwin (WINDOW *win)
         wmbps    += sample_rate (tp->wbytes, now) / (1024*1024);
     }
     list_iterator_destroy (itr);
-    pthread_mutex_unlock (&dtop_lock);
+    xpthread_mutex_unlock (&dtop_lock);
 
     wclear (win);
     mvwprintw (win, y, 0, "%s", "DIOD - Distributed I/O Daemon");
@@ -306,7 +307,7 @@ _update_display_normal (WINDOW *win)
               "IOPS");
     wattroff (win, A_REVERSE);
 
-    pthread_mutex_lock (&dtop_lock);
+    xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");    
     while ((tp = list_next (itr))) {
@@ -323,7 +324,7 @@ _update_display_normal (WINDOW *win)
                     sample_rate (tp->iops, t));
     }
     list_iterator_destroy (itr);
-    pthread_mutex_unlock (&dtop_lock);
+    xpthread_mutex_unlock (&dtop_lock);
     wrefresh (win);
 }
 
@@ -534,7 +535,7 @@ _update (char *host, time_t t, char *s)
     snprintf (key.host, sizeof(key.host), "%s", host);
     snprintf (key.aname, sizeof(key.aname), "%s", stats.name);
 
-    pthread_mutex_lock (&dtop_lock);
+    xpthread_mutex_lock (&dtop_lock);
     if (!(tp = list_find_first (tpools, (ListFindF)_match_tpool, &key))) {
         tp = _create_tpool (&key);
         if (!list_append (tpools, tp))
@@ -549,7 +550,7 @@ _update (char *host, time_t t, char *s)
     sample_update (tp->totreqs, (double)_sum_nreqs(&stats), t);
     for (i = 0; i < sizeof(tp->nreqs)/sizeof(tp->nreqs[0]); i++)
         sample_update (tp->nreqs[i], (double)stats.nreqs[i], t);
-    pthread_mutex_unlock (&dtop_lock);
+    xpthread_mutex_unlock (&dtop_lock);
 
     if (stats.name)
         free (stats.name);

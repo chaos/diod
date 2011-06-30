@@ -41,6 +41,7 @@
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
+#include "xpthread.h"
 #include "npcimpl.h"
 
 static Npfcall *npc_fcall_alloc(u32 msize);
@@ -93,18 +94,18 @@ error:
 static void
 npc_incref_fsys(Npcfsys *fs)
 {
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	fs->refcount++;
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 }
 
 static void
 npc_decref_fsys(Npcfsys *fs)
 {
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	fs->refcount--;
 	if (fs->refcount) {
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 		return;
 	}
 	if (fs->trans) {
@@ -120,7 +121,7 @@ npc_decref_fsys(Npcfsys *fs)
 		npc_destroy_pool(fs->fidpool);
 		fs->fidpool = NULL;
 	}
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 	pthread_mutex_destroy(&fs->lock);
 	free(fs);
 }
@@ -190,21 +191,21 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 		tag = npc_get_id(fs->tagpool);
 	np_set_tag(tc, tag);
 
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	if (_write_request (fs, tc) < 0) {
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 		goto done;
 	}
 	if (!(rc = npc_fcall_alloc(fs->msize))) {
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 		np_uerror (ENOMEM);
 		goto done;
 	}
 	if (_read_response (fs, rc) < 0) {
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 		goto done;
 	}
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 
 	if (tc->tag != rc->tag) {
 		np_uerror (EIO); /* unmatched response */

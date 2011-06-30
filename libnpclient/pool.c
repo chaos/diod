@@ -33,10 +33,12 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
+#include "xpthread.h"
 #include "npcimpl.h"
 
 u8 m2id[] = {
@@ -116,7 +118,7 @@ npc_get_id(Npcpool *p)
 	u32 ret;
 	u8 *pt;
 
-	pthread_mutex_lock(&p->lock);
+	xpthread_mutex_lock(&p->lock);
 
 again:
 	for(i = 0; i < p->msize; i++)
@@ -146,15 +148,15 @@ again:
 	p->map[i] |= 1 << ret;
 	ret += i * 8;
 
-	pthread_mutex_unlock(&p->lock);
+	xpthread_mutex_unlock(&p->lock);
 	return ret;
 }
 
 void
 npc_put_id(Npcpool *p, u32 id)
 {
-	pthread_mutex_lock(&p->lock);
+	xpthread_mutex_lock(&p->lock);
 	p->map[id / 8] &= ~(1 << (id % 8));
-	pthread_mutex_unlock(&p->lock);
+	xpthread_mutex_unlock(&p->lock);
 	pthread_cond_broadcast(&p->cond);
 }

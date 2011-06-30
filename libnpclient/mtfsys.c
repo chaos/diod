@@ -41,6 +41,7 @@
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
+#include "xpthread.h"
 #include "npcimpl.h"
 
 typedef struct Npcrpc Npcrpc;
@@ -129,13 +130,13 @@ npc_disconnect_fsys(Npcfsys *fs)
 {
 	void *v;
 
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	if (fs->fd >= 0) {
 		shutdown(fs->fd, 2);
 		close(fs->fd);
 		fs->fd = -1;
 	}
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 
 	if (fs->readproc)
 		pthread_join(fs->readproc, &v);
@@ -144,29 +145,29 @@ npc_disconnect_fsys(Npcfsys *fs)
 	if (fs->writeproc)
 		pthread_join(fs->writeproc, &v);
 
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	if (fs->trans) {
 		np_trans_destroy(fs->trans);
 		fs->trans = NULL;
 	}
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 }
 
 static void
 npc_incref_fsys(Npcfsys *fs)
 {
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	fs->refcount++;
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 }
 
 static void
 npc_decref_fsys(Npcfsys *fs)
 {
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	fs->refcount--;
 	if (fs->refcount) {
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 		return;
 	}
 
@@ -180,7 +181,7 @@ npc_decref_fsys(Npcfsys *fs)
 		npc_destroy_pool(fs->fidpool);
 		fs->fidpool = NULL;
 	}
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 
 	pthread_mutex_destroy(&fs->lock);
 	pthread_cond_destroy(&fs->cond);
@@ -199,7 +200,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 	Npcreq *ureqs, *req, *req1, *preq;
 
 	fs = fid->fsys;
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	ureqs = NULL;
 	req = fs->unsent_first;
 	while (req != NULL) {
@@ -229,14 +230,14 @@ npc_cancel_fid_requests(Npcfid *fid)
 	ftags = malloc(n * sizeof(u16));
 	if (!ftags) {
 		np_uerror(ENOMEM);
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 		return -1;
 	}
 
 	for(n = 0, req = fs->pend_first; req != NULL; req = req->next)
 		if (req->tc->fid == fid->fid)
 			ftags[n++] = req->tag;
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 
 	/* report error on the unsent requests */
 	req = ureqs;
@@ -254,7 +255,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 		tc = np_create_tflush(ftags[i]);
 		if (npc_rpc(fs, tc, &rc) > 0) {
 			/* if the request didn't receive a response, reply */
-			pthread_mutex_lock(&fs->lock);
+			xpthread_mutex_lock(&fs->lock);
 			for(preq = NULL, req = fs->pend_first; req != NULL; preq = req, req = req->next) {
 				if (req->tag == ftags[i]) {
 					if (preq)
@@ -264,7 +265,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 					break;
 				}
 			}
-			pthread_mutex_unlock(&fs->lock);
+			xpthread_mutex_unlock(&fs->lock);
 
 			if (req) {
 				req->ecode = EIO;
@@ -320,7 +321,7 @@ again:
 			memmove(fc1->pkt, fc->pkt + size, n - size);
 		n -= size;
 
-		pthread_mutex_lock(&fs->lock);
+		xpthread_mutex_lock(&fs->lock);
 		for(preq = NULL, req = fs->pend_first;
 				req != NULL; preq = req, req = req->next) {
 			if (req->tag == fc->tag) {
@@ -329,7 +330,7 @@ again:
 				else
 					fs->pend_first = req->next;
 
-				pthread_mutex_unlock(&fs->lock);
+				xpthread_mutex_unlock(&fs->lock);
 				req->rc = fc;
 				if (fc->type == P9_RLERROR) {
 					req->ecode = fc->u.rlerror.ecode;
@@ -348,7 +349,7 @@ again:
 		}
 
 		if (!req) {
-			pthread_mutex_unlock(&fs->lock);
+			xpthread_mutex_unlock(&fs->lock);
 			free(fc);
 		}
 
@@ -359,7 +360,7 @@ again:
 	}
 
 	npc_fcall_free(fc);
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	unsent = fs->unsent_first;
 	fs->unsent_first = NULL;
 	pend = fs->pend_first;
@@ -367,7 +368,7 @@ again:
 	if (fs->trans)
 		np_trans_destroy(fs->trans);
 	fs->trans = NULL;
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 
 	req = unsent;
 	while (req != NULL) {
@@ -404,7 +405,7 @@ npc_write_proc(void *a)
 	Npcfsys *fs;
 
 	fs = a;
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	while (fs->trans) {
 		if (!fs->unsent_first) {
 			pthread_cond_wait(&fs->cond, &fs->lock);
@@ -423,23 +424,23 @@ npc_write_proc(void *a)
 			fs->pend_first->prev = req;
 
 		fs->pend_first = req;
-		pthread_mutex_unlock(&fs->lock);
+		xpthread_mutex_unlock(&fs->lock);
 
 		if (fs->trans) {
 			n = np_trans_write(fs->trans, req->tc->pkt, req->tc->size);
 			if (n < 0) {
-				pthread_mutex_lock(&fs->lock);
+				xpthread_mutex_lock(&fs->lock);
 				if (fs->trans)
 					np_trans_destroy(fs->trans);
 				fs->trans = NULL;
-				pthread_mutex_unlock(&fs->lock);
+				xpthread_mutex_unlock(&fs->lock);
 			}
 		}
 
-		pthread_mutex_lock(&fs->lock);
+		xpthread_mutex_lock(&fs->lock);
 	}
 
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 	return NULL;
 }
 
@@ -467,7 +468,7 @@ npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba)
 	req->cb = cb;
 	req->cba = cba;
 
-	pthread_mutex_lock(&fs->lock);
+	xpthread_mutex_lock(&fs->lock);
 	if (fs->unsent_last)
 		fs->unsent_last->next = req;
 	req->prev = fs->unsent_last;
@@ -477,7 +478,7 @@ npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba)
 		fs->unsent_first = req;
 
 	pthread_cond_broadcast(&fs->cond);
-	pthread_mutex_unlock(&fs->lock);
+	xpthread_mutex_unlock(&fs->lock);
 
 	return 0;
 }
@@ -488,11 +489,11 @@ npc_rpc_cb(Npcreq *req, void *cba)
 	Npcrpc *r;
 
 	r = cba;
-	pthread_mutex_lock(&r->lock);
+	xpthread_mutex_lock(&r->lock);
 	r->ecode = req->ecode;
 	r->rc = req->rc;
 	pthread_cond_broadcast(&r->cond);
-	pthread_mutex_unlock(&r->lock);
+	xpthread_mutex_unlock(&r->lock);
 }
 
 static int
@@ -514,10 +515,10 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc)
 	if (n < 0) 
 		return n;
 
-	pthread_mutex_lock(&r.lock);
+	xpthread_mutex_lock(&r.lock);
 	while (!r.ecode && !r.rc)
 		pthread_cond_wait(&r.cond, &r.lock);
-	pthread_mutex_unlock(&r.lock);
+	xpthread_mutex_unlock(&r.lock);
 
 	/* N.B. allow for auth returning error with ecode == 0 */
 	if (r.rc->type == P9_RLERROR || r.ecode) {
