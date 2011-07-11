@@ -520,10 +520,7 @@ done:
 #if HAVE_LIBCAP
 /* When handling requests on connections authenticated as root, we consider
  * it safe to disable DAC checks on the server and presume the client is
- * doing it.  This is done to fix a problem - no supplemental group eqiuvalent
- * to setfsgid.  Punt supplemental group checks to the client.
- * N.B. if not on a connection that is root-authenticated, DAC checks will be
- * performed using the primary uid:gid only.
+ * doing it.  This is only done if the server sets SRV_FLAGS_DAC_BYPASS.
  */
 static int
 _chg_privcap (Npsrv *srv, cap_flag_value_t val)
@@ -641,10 +638,25 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				wt->fsuid = P9_NONUNAME;
 				goto done;
 			}
-			if (u->uid == 0)
+			/* Track CAP side effects of setfsuid.
+			 */
+			if (u->uid == 0) {
 				wt->privcap = 1; /* transiton to 0 sets caps */
-			else if (u->uid != 0 && wt->fsuid == 0)
+			} else if (u->uid != 0 && wt->fsuid == 0) {
 				wt->privcap = 0; /* trans from 0 clears caps */
+			}
+			/* Supplementary groups need to be part of cred for
+			 * NFS forwarding even with DAC_BYPASS in effect.
+			 * FIXME: setgroups(2) may affect whole process on
+			 * some systems - tests/misc/t01.
+			 */
+			if ((ret = setgroups (u->nsg, u->sg)) < 0) {
+				np_uerror (errno);
+				np_logerr (srv, "setgroups(%s) nsg=%d failed",
+					   u->uname, u->nsg);
+				wt->fsuid = P9_NONUNAME;
+				goto done;
+			}
 			wt->fsuid = u->uid;
 		}
 	}

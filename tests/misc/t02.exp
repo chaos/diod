@@ -1,0 +1,11 @@
+tsuppgrp: task0: setgroups (NULL)
+tsuppgrp: task0: getgroups 
+tsuppgrp: task1: getgroups 
+tsuppgrp: task2: getgroups 
+tsuppgrp: task2: setgroups 100
+tsuppgrp: task2: getgroups 100 
+tsuppgrp: task1: getgroups 
+tsuppgrp: task1: setgroups 101
+tsuppgrp: task1: getgroups 101 
+tsuppgrp: task2: getgroups 100 
+tsuppgrp: task0: getgroups 
