@@ -575,7 +575,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
 	Npwthread *wt = req->wthread;
 	Npsrv *srv = req->conn->srv;
-	int i, ret = -1;
+	int i, n, ret = -1;
 	u32 gid;
 	uid_t authuid;
 
@@ -601,56 +601,51 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		}
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
-			int ret;
-
-			if ((ret = setfsgid (gid)) < 0) {
+			if ((n = setfsgid (gid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
 					   u->uname, gid);
 				wt->fsgid = P9_NONUNAME;
 				goto done;
 			}
-			if (ret != wt->fsgid) {
+			if (n != wt->fsgid) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed"
 					   "returned %d, expected %d",
-					   u->uname, gid, ret, wt->fsgid);
+					   u->uname, gid, n, wt->fsgid);
 				wt->fsgid = P9_NONUNAME;
 				goto done;
 			}
 			wt->fsgid = gid;
 		}
 		if (wt->fsuid != u->uid) {
-			int ret;
-
-			if ((ret = setfsuid (u->uid)) < 0) {
+			if ((n = setfsuid (u->uid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
 					   u->uname, u->uid);
 				wt->fsuid = P9_NONUNAME;
 				goto done;
 			}
-			if (ret != wt->fsuid) {
+			if (n != wt->fsuid) {
 				np_uerror (EPERM);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed: "
 					   "returned %d, expected %d",
-					   u->uname, u->uid, ret, wt->fsuid);
+					   u->uname, u->uid, n, wt->fsuid);
 				wt->fsuid = P9_NONUNAME;
 				goto done;
 			}
 			/* Track CAP side effects of setfsuid.
 			 */
-			if (u->uid == 0) {
+			if (u->uid == 0)
 				wt->privcap = 1; /* transiton to 0 sets caps */
-			} else if (u->uid != 0 && wt->fsuid == 0) {
+			else if (wt->fsuid == 0)
 				wt->privcap = 0; /* trans from 0 clears caps */
-			}
 			/* Supplementary groups need to be part of cred for
 			 * NFS forwarding even with DAC_BYPASS in effect.
 			 * FIXME: setgroups(2) may affect whole process on
 			 * some systems - tests/misc/t01.
 			 */
-			if ((ret = setgroups (u->nsg, u->sg)) < 0) {
+			if ((n = setgroups (u->nsg, u->sg)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setgroups(%s) nsg=%d failed",
 					   u->uname, u->nsg);
