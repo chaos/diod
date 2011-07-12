@@ -640,17 +640,19 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				wt->privcap = 1; /* transiton to 0 sets caps */
 			else if (wt->fsuid == 0)
 				wt->privcap = 0; /* trans from 0 clears caps */
-			/* Supplementary groups need to be part of cred for
-			 * NFS forwarding even with DAC_BYPASS in effect.
-			 * FIXME: setgroups(2) may affect whole process on
-			 * some systems - tests/misc/t01.
+
+			/* Suppl groups need to be part of cred for NFS
+			 * forwarding even with DAC_BYPASS.  However only
+			 * do it if kernel treats sg's per-thread not process.
 			 */
-			if ((n = setgroups (u->nsg, u->sg)) < 0) {
-				np_uerror (errno);
-				np_logerr (srv, "setgroups(%s) nsg=%d failed",
-					   u->uname, u->nsg);
-				wt->fsuid = P9_NONUNAME;
-				goto done;
+			if ((srv->flags & SRV_FLAGS_SETGROUPS)) {
+				if ((n = setgroups (u->nsg, u->sg)) < 0) {
+					np_uerror (errno);
+					np_logerr (srv, "setgroups(%s) nsg=%d failed",
+						   u->uname, u->nsg);
+					wt->fsuid = P9_NONUNAME;
+					goto done;
+				}
 			}
 			wt->fsuid = u->uid;
 		}

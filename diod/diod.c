@@ -437,6 +437,49 @@ _service_sigsetup (void)
         err_exit ("sigprocmask");
 }
 
+/* Test whether setgroups applies to thread or process.
+ * On RHEL6 (2.6.32 based) it applies to threads and we can use it.
+ * On Ubuntu 11 (2.6.38 based) it applies to the whole process and we can't.
+ */
+void *
+_test_setgroups_thread (void *arg)
+{
+    gid_t sg[] = { 42, 37, 63 };
+
+    if (setgroups (3, sg) < 0)
+        err_exit ("setgroups");
+    return NULL;
+}
+static int
+_test_setgroups (void)
+{
+    long ngroups_max = sysconf(_SC_NGROUPS_MAX);
+    gid_t *sg;
+    int nsg, n;
+    int rc = 0;
+    pthread_t t;
+    int err;
+
+    if (!(sg = malloc (ngroups_max * sizeof (gid_t))))
+        msg_exit ("out of memory");
+    if ((nsg = getgroups (ngroups_max, sg)) < 0)
+        err_exit ("getgroups");
+    if (setgroups (0, NULL) < 0)  /* clear groups */
+        err_exit ("setgroups");
+    if ((err = pthread_create (&t, NULL, _test_setgroups_thread, NULL)))
+        err_exit ("pthread_create"); 
+    if ((err = pthread_join (t, NULL)))
+        err_exit ("pthread_join");
+    if ((n = getgroups (ngroups_max, sg)) < 0)
+        err_exit ("getgroups");
+    if (n == 0)
+        rc = 1;
+    if (setgroups (nsg, sg) < 0)
+        err_exit ("setgroups");
+    free (sg);
+    return rc;
+}
+
 static void
 _service_run (srvmode_t mode)
 {
@@ -501,6 +544,10 @@ _service_run (srvmode_t mode)
     if (geteuid () == 0) {
         flags |= SRV_FLAGS_SETFSID;
         flags |= SRV_FLAGS_DAC_BYPASS;
+        if (_test_setgroups ())
+            flags |= SRV_FLAGS_SETGROUPS;
+        else
+            msg ("test_setgroups: groups are per-process (disabling)");
     }
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
