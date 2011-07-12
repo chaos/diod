@@ -125,10 +125,12 @@ static List servers = NULL;
 static pthread_mutex_t dtop_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static Server *_server_create (char *host, char *port, double poll_sec);
+static void _server_destroy (Server *sp);
 static void _destroy_tpool (Tpool *tp);
 static void _curses_watcher (double update_secs);
 
 static int stale_secs = 5;
+static int exiting = 0;
 
 static void
 usage (void)
@@ -151,6 +153,8 @@ main (int argc, char *argv[])
     char *host, *port = "564";
     int c;
     sigset_t sigs;
+    Server *sp;
+    ListIterator si;
 
     diod_log_init (argv[0]);
 
@@ -206,6 +210,12 @@ main (int argc, char *argv[])
     hostlist_iterator_destroy (itr);
 
     _curses_watcher (poll_sec/2);
+
+    if (!(si = list_iterator_create (servers)))
+        msg_exit ("out of memory");
+    while ((sp = list_next (si)))
+        _server_destroy (sp);
+    list_iterator_destroy (si);
 
     diod_log_fini ();
 
@@ -467,6 +477,7 @@ _curses_watcher (double update_secs)
                 break;
         }
     }
+    exiting = 1;
 }
 
 static int
@@ -649,7 +660,7 @@ _reader (void *arg)
 {
     Server *sp = (Server *)arg;
 
-    for (;;) {
+    while (!exiting) {
         if (sp->fd == -1)
             sp->fd = diod_sock_connect (sp->host, sp->port, DIOD_SOCK_QUIET);
         if (sp->fd == -1)
@@ -671,6 +682,14 @@ _reader (void *arg)
         sp->last_poll = time (NULL);
 skip:
         usleep ((useconds_t)(sp->poll_sec * 1E6));
+    }
+    if (sp->root) {
+        (void)npc_umount (sp->root);
+        sp->root = NULL;
+        sp->fd = -1;
+    } else {
+        (void)close (sp->fd);
+        sp->fd = -1;
     }
     return NULL;
 }
@@ -697,6 +716,21 @@ _server_create (char *host, char *port, double poll_sec)
     if ((err = pthread_create (&sp->thread, NULL, _reader, sp)))
         errn_exit (err, "pthread_create");
     return sp;
+}
+
+static void
+_server_destroy (Server *sp)
+{
+    int err;
+
+    if ((err = pthread_join (sp->thread, NULL)))
+        errn_exit (err, "pthread_join");
+    sample_destroy (sp->nfs_ops); 
+    sample_destroy (sp->mem_dirty); 
+    sample_destroy (sp->mem_cached); 
+    free (sp->port);
+    free (sp->host);
+    free (sp);
 }
 
 /*
