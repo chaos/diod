@@ -948,38 +948,19 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 {
     Npfcall *ret;
     Fid *f = fid->aux;
-    struct stat sb;
-    int sbvalid = 0;
     int ctime_updated = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
         goto error_quiet;
     }
-
-    if ((valid & P9_SETATTR_MODE) || (valid & P9_SETATTR_SIZE)) {
-        if (lstat (f->path, &sb) < 0) {
-            np_uerror (errno);
-            goto error_quiet;
-        }
-        sbvalid = 1;
-        if (S_ISLNK(sb.st_mode)) {
-            msg ("diod_setattr: unhandled mode/size update on symlink");
-            np_uerror(EINVAL);
-            goto error;
-        }
-    }
-
-    /* chmod (N.B. dereferences symlinks) */
-    if ((valid & P9_SETATTR_MODE)) {
+    if ((valid & P9_SETATTR_MODE)) { /* N.B. derefs symlinks */
         if (chmod (f->path, mode) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-
-    /* chown */
     if ((valid & P9_SETATTR_UID) || (valid & P9_SETATTR_GID)) {
         if (lchown (f->path, (valid & P9_SETATTR_UID) ? uid : -1,
                              (valid & P9_SETATTR_GID) ? gid : -1) < 0) {
@@ -988,8 +969,6 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         }
         ctime_updated = 1;
     }
-
-    /* truncate (N.B. dereferences symlinks) */
     if ((valid & P9_SETATTR_SIZE)) {
         if (truncate (f->path, size) < 0) {
             np_uerror(errno);
@@ -997,8 +976,6 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         }
         ctime_updated = 1;
     }
-
-    /* utimes */
     if ((valid & P9_SETATTR_ATIME) || (valid & P9_SETATTR_MTIME)) {
 #if HAVE_UTIMENSAT
         struct timespec ts[2];
@@ -1013,7 +990,6 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             ts[0].tv_sec = atime_sec;
             ts[0].tv_nsec = atime_nsec;
         }
-
         if (!(valid & P9_SETATTR_MTIME)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_OMIT;
@@ -1024,25 +1000,21 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             ts[1].tv_sec = mtime_sec;
             ts[1].tv_nsec = mtime_nsec;
         }
-
         if (utimensat(-1, f->path, ts, AT_SYMLINK_NOFOLLOW) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
-        ctime_updated = 1;
 #else /* HAVE_UTIMENSAT */
         struct timeval tv[2], now, *tvp;
-        /* N.B. this utimes () implementation loses atomicity and precision.
-         */
+        struct stat sb;
         if ((valid & P9_SETATTR_ATIME) && !(valid & P9_SETATTR_ATIME_SET)
          && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
             tvp = NULL; /* set both to now */
         } else {
-            if (!sbvalid && lstat(f->path, &sb) < 0) {
+            if (lstat(f->path, &sb) < 0) {
                 np_uerror (errno);
                 goto error_quiet;
             }
-            sbvalid = 1;
             if (gettimeofday (&now, NULL) < 0) {
                 np_uerror (errno);
                 goto error_quiet;
@@ -1074,8 +1046,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             np_uerror(errno);
             goto error_quiet;
         }
+#endif /* HAVE_UTIMENSAT */
         ctime_updated = 1;
-#endif
     }
     if ((valid & P9_SETATTR_CTIME) && !ctime_updated) {
         if (lchown (f->path, -1, -1) < 0) {
