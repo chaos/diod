@@ -1315,17 +1315,30 @@ np_peek_size(u8 *buf, int len)
 	return size;
 }
 
+Npfcall *
+np_alloc_fcall(int msize)
+{
+        Npfcall *fc;
+
+        if ((fc = malloc(sizeof(*fc) + msize))) {
+                fc->pkt = (u8*) fc + sizeof(*fc);
+		fc->size = msize;
+	}
+
+        return fc;
+}
+
 int
-np_deserialize(Npfcall *fc, u8 *data)
+np_deserialize(Npfcall *fc)
 {
 	int i;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
-	buf_init(bufp, data, 4);
+	buf_init(bufp, fc->pkt, 4);
 	fc->size = buf_get_int32(bufp);
 
-	buf_init(bufp, data + 4, fc->size - 4);
+	buf_init(bufp, fc->pkt + 4, fc->size - 4);
 	fc->type = buf_get_int8(bufp);
 	fc->tag = buf_get_int16(bufp);
 

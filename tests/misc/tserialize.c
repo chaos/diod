@@ -123,7 +123,7 @@ _rcv_buf (Npfcall *fc, int type, const char *fun)
 
     /* see conn.c::np_conn_read_proc */
     memcpy (fc2->pkt, fc->pkt, fc->size);
-    if (!np_deserialize (fc2, fc2->pkt))
+    if (!np_deserialize (fc2))
         msg_exit ("np_deserialize error in %s", fun);
 
     /* check a few things */

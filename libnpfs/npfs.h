@@ -134,8 +134,8 @@ struct Npbuf {
 
 struct Nptrans {
 	void*		aux;
-	int		(*read)(u8 *, u32, void *);
-	int		(*write)(u8 *, u32, void *);
+	int		(*recv)(Npfcall **, u32, void *);
+	int		(*send)(Npfcall *, void *);
 	void		(*destroy)(void *);
 };
 
@@ -353,11 +353,12 @@ void np_fid_incref(Npfid *);
 void np_fid_decref(Npfid *);
 
 /* trans.c */
-Nptrans *np_trans_create(void *aux, int (*read)(u8 *, u32, void *),
-	int (*write)(u8 *, u32, void *), void (*destroy)(void *));
+Nptrans *np_trans_create(void *aux, int (*recv)(Npfcall **, u32, void *),
+				    int (*send)(Npfcall *, void *),
+				    void (*destroy)(void *));
 void np_trans_destroy(Nptrans *);
-int np_trans_read(Nptrans *, u8 *, u32);
-int np_trans_write(Nptrans *, u8 *, u32);
+int np_trans_send(Nptrans *, Npfcall *);
+int np_trans_recv(Nptrans *, Npfcall **, u32);
 
 /* npstring.c */
 void np_strzero(Npstr *str);
@@ -374,7 +375,8 @@ int np_decode_tpools_str (char *s, Npstats *stats);
 
 /* np.c */
 int np_peek_size(u8 *buf, int len);
-int np_deserialize(Npfcall*, u8*);
+Npfcall *np_alloc_fcall(int msize);
+int np_deserialize(Npfcall*);
 int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,
                           int buflen);
 int np_deserialize_p9dirent(Npqid *qid, u64 *offset, u8 *type, char *name,

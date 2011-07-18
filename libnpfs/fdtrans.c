@@ -30,6 +30,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
+#include <assert.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -40,10 +41,12 @@ struct Fdtrans {
 	Nptrans*	trans;
 	int 		fdin;
 	int		fdout;
+	Npfcall		*fc;
+	int		fc_msize;
 };
 
-static int np_fdtrans_read(u8 *data, u32 count, void *a);
-static int np_fdtrans_write(u8 *data, u32 count, void *a);
+static int np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a);
+static int np_fdtrans_send(Npfcall *fc, void *a);
 static void np_fdtrans_destroy(void *a);
 
 Nptrans *
@@ -60,8 +63,11 @@ np_fdtrans_create(int fdin, int fdout)
 
 	fdt->fdin = fdin;
 	fdt->fdout = fdout;
-	npt = np_trans_create(fdt, np_fdtrans_read, np_fdtrans_write,
-			      np_fdtrans_destroy);
+	fdt->fc = NULL;
+	fdt->fc_msize = 0;
+	npt = np_trans_create(fdt, np_fdtrans_recv,
+				   np_fdtrans_send,
+				   np_fdtrans_destroy);
 	if (!npt) {
 		free(fdt);
 		return NULL;
@@ -74,34 +80,92 @@ np_fdtrans_create(int fdin, int fdout)
 static void
 np_fdtrans_destroy(void *a)
 {
-	Fdtrans *fdt;
+	Fdtrans *fdt = (Fdtrans *)a;
 
 	fdt = a;
 	if (fdt->fdin >= 0)
 		close(fdt->fdin);
-
 	if (fdt->fdout >= 0 && fdt->fdout != fdt->fdin)
 		close(fdt->fdout);
+	if (fdt->fc)
+		free(fdt->fc);
 
 	free(fdt);
 }
 
 static int
-np_fdtrans_read(u8 *data, u32 count, void *a)
+np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a)
 {
-	Fdtrans *fdt;
+	Fdtrans *fdt = (Fdtrans *)a;
+	Npfcall *fc = NULL;
+	int n, size, len;
 
-	fdt = a;
-	return read(fdt->fdin, data, count);
+	if (fdt->fc) {
+		assert (fdt->fc_msize >= msize);
+		fc = fdt->fc;
+		len = fdt->fc->size;
+		fdt->fc = NULL;
+		size = np_peek_size (fc->pkt, len);
+	} else {
+		if (!(fc = np_alloc_fcall (msize))) {
+			np_uerror (ENOMEM);
+			goto error;
+		}
+		len = 0;
+		size = 0;
+	}
+	while (len < size || len < 4) {
+		n = read(fdt->fdin, fc->pkt + len, msize - len);
+		if (n < 0) {
+			np_uerror (errno);
+			goto error;
+		}	
+		if (n == 0) {	/* EOF */
+			free (fc);
+			fc = NULL;
+			goto done;
+		}
+		len += n;
+		if (size == 0)
+			size = np_peek_size(fc->pkt, len);
+		if (size > msize) {
+			np_uerror(EPROTO);
+			goto error;
+		}
+	}
+	if (len > size) {
+		if (!(fdt->fc = np_alloc_fcall (msize))) {
+			np_uerror(ENOMEM);
+			goto error;
+		}
+		fdt->fc_msize = msize;
+		memcpy (fdt->fc->pkt, fc->pkt + size, len - size);
+		fdt->fc->size = len - size;
+	}
+	fc->size = size;
+done:
+	*fcp = fc;
+	return 0;
+error:
+	if (fc)
+		free (fc);
+	return -1;
 }
 
 static int
-np_fdtrans_write(u8 *data, u32 count, void *a)
+np_fdtrans_send(Npfcall *fc, void *a)
 {
-	Fdtrans *fdt;
-	int ret;
+	Fdtrans *fdt = (Fdtrans *)a;
+	int n, len = 0;
 
-	fdt = a;
-	ret = write(fdt->fdout, data, count);
-	return ret;
+	do {
+		n = write(fdt->fdout, fc->pkt + len, fc->size - len);
+		if (n < 0) {
+			np_uerror(errno);
+			return -1;
+		}
+		len += n;
+	} while (len < fc->size);
+
+	return len;		
 }	

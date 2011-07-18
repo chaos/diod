@@ -55,8 +55,6 @@ struct Npcrpc {
 
 static Npcreq *npc_reqalloc();
 static void npc_reqfree(Npcreq *req);
-static Npfcall *npc_fcall_alloc(u32 msize);
-static void npc_fcall_free(Npfcall *fc);
 static void *npc_read_proc(void *a);
 static void *npc_write_proc(void *a);
 static void npc_incref_fsys(Npcfsys *fs);
@@ -289,37 +287,15 @@ npc_cancel_fid_requests(Npcfid *fid)
 static void*
 npc_read_proc(void *a)
 {
-	int i, n, size, msize;
-	Npfcall *fc, *fc1;
+	Npcfsys *fs = (Npcfsys *)a;
+	Npfcall *fc = NULL;
 	Npcreq *req, *req1, *unsent, *pend, *preq;
-	Npcfsys *fs;
 
-	fs = a;
-	msize = fs->msize;
-	fc = npc_fcall_alloc(msize);
-	n = 0;
 	while (fs->trans) {
-		i = np_trans_read(fs->trans, fc->pkt + n, msize - n);
-		if (i <= 0)
+		if (np_trans_recv (fs->trans, &fc, fs->msize) < 0)
 			break;
-		n += i;
-again:
-		size = np_peek_size (fc->pkt, n);
-		if (size == 0 || n < size)
-			continue;
-		if (!np_deserialize(fc, fc->pkt)) {
-			np_uerror (EIO);
+		if (fc == NULL)
 			break;
-		}
-
-		fc1 = npc_fcall_alloc(msize);
-		if (!fc1) {
-			np_uerror (ENOMEM);
-			break;
-		}
-		if (n > size)
-			memmove(fc1->pkt, fc->pkt + size, n - size);
-		n -= size;
 
 		xpthread_mutex_lock(&fs->lock);
 		for(preq = NULL, req = fs->pend_first;
@@ -337,7 +313,7 @@ again:
 				} else if (fc->type != req->tc->type+1) {
 					req->ecode = EIO;
 				}
-
+				fc = NULL;
 				if (req->cb) 
 					(*req->cb)(req, req->cba);
 
@@ -351,15 +327,11 @@ again:
 		if (!req) {
 			xpthread_mutex_unlock(&fs->lock);
 			free(fc);
+			fc = NULL;
 		}
-
-		fc = fc1;
-		msize = fs->msize;
-		if (n > 0)
-			goto again;
 	}
-
-	npc_fcall_free(fc);
+	if (fc)
+		free(fc);
 	xpthread_mutex_lock(&fs->lock);
 	unsent = fs->unsent_first;
 	fs->unsent_first = NULL;
@@ -427,7 +399,7 @@ npc_write_proc(void *a)
 		xpthread_mutex_unlock(&fs->lock);
 
 		if (fs->trans) {
-			n = np_trans_write(fs->trans, req->tc->pkt, req->tc->size);
+			n = np_trans_send(fs->trans, req->tc);
 			if (n < 0) {
 				xpthread_mutex_lock(&fs->lock);
 				if (fs->trans)
@@ -564,25 +536,4 @@ static void
 npc_reqfree(Npcreq *req)
 {
 	free(req);
-}
-
-static Npfcall *
-npc_fcall_alloc(u32 msize)
-{
-	Npfcall *fc;
-
-	fc = malloc(sizeof(*fc) + msize);
-	if (!fc)
-		return NULL;
-
-	fc->pkt = (u8*) fc + sizeof(*fc);
-	fc->size = msize;
-
-	return fc;
-}
-
-static void
-npc_fcall_free(Npfcall *fc)
-{
-	free(fc);
 }

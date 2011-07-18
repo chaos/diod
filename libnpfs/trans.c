@@ -34,8 +34,10 @@
 #include "npfsimpl.h"
 
 Nptrans *
-np_trans_create(void *aux, int (*read)(u8 *, u32, void *), 
-	int (*write)(u8 *, u32, void *), void (*destroy)(void *))
+np_trans_create(void *aux,
+		int (*recv)(Npfcall **, u32, void *), 
+		int (*send)(Npfcall *, void *),
+		void (*destroy)(void *))
 {
 	Nptrans *trans;
 
@@ -46,8 +48,8 @@ np_trans_create(void *aux, int (*read)(u8 *, u32, void *),
 	}
 
 	trans->aux = aux;
-	trans->read = read;
-	trans->write = write;
+	trans->recv = recv;
+	trans->send = send;
 	trans->destroy = destroy;
 
 	return trans;
@@ -62,20 +64,24 @@ np_trans_destroy(Nptrans *trans)
 }
 
 int
-np_trans_write(Nptrans *trans, u8* data, u32 count)
+np_trans_send (Nptrans *trans, Npfcall *fc)
 {
-	if (trans->write)
-		return trans->write(data, count, trans->aux);
-	else
-		return -1;
+	return trans->send(fc, trans->aux);
 }
 
 int
-np_trans_read(Nptrans *trans, u8* data, u32 count)
+np_trans_recv (Nptrans *trans, Npfcall **fcp, u32 msize)
 {
-	if (trans->read)
-		return trans->read(data, count, trans->aux);
-	else
+	Npfcall *fc;
+
+	if (trans->recv (&fc, msize, trans->aux) < 0)
 		return -1;
+	if (fc && !np_deserialize(fc)) {
+		free (fc);
+		np_uerror (EPROTO);
+		return -1;
+	}
+	*fcp = fc;
+	return 0;
 }
 

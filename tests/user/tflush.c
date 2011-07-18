@@ -100,11 +100,9 @@ _flush_series (Npcfsys *fs, Npcfid *root)
             msg_exit ("out of memory");
         flushtag = tag = npc_get_id(fs->tagpool);
         np_set_tag(tc, tag);
-        n = np_trans_write(fs->trans, tc->pkt, tc->size);
+        n = np_trans_send(fs->trans, tc);
         if (n < 0)
             errn_exit (np_rerror (), "np_trans_write");
-        if (n != tc->size)
-            msg_exit ("np_trans_write came up unexpectedly short");
         //msg ("sent tversion tag %d", tc->tag);
         free(tc);
     }
@@ -115,11 +113,8 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         msg_exit ("out of memory");
     tag = npc_get_id(fs->tagpool);
     np_set_tag(ac, tag);
-    n = np_trans_write(fs->trans, ac->pkt, ac->size);
-    if (n < 0)
+    if (np_trans_send(fs->trans, ac) < 0)
         errn_exit (np_rerror (), "np_trans_write");
-    if (n != ac->size)
-        msg_exit ("np_trans_write came up unexpectedly short");
     //msg ("sent tflush tag %d (flushing tag %d)", ac->tag, flushtag);
     free (ac);
     msg ("sent 1 tflush");
@@ -131,20 +126,16 @@ _flush_series (Npcfsys *fs, Npcfid *root)
          */
         int size = sizeof(rc->size)+sizeof(rc->type)+sizeof(rc->tag);
         assert (size <= fs->msize);
-        if (!(rc = malloc(sizeof(*rc) + size)))
-            msg_exit ("out of memory");
-        rc->pkt = (u8*)rc + sizeof(*rc);
         alarm (1);
-        n = np_trans_read(fs->trans, rc->pkt, size);
-        if (n < 0) {
+        if (np_trans_recv (fs->trans, &rc, size) < 0) {
             if (errno == EINTR)
                 break;
             errn_exit (np_rerror (), "np_trans_read");
         }
         alarm (0);
-        if (n == 0)
+        if (rc == NULL)
             msg_exit ("np_trans_read: unexpected EOF");
-        if (!np_deserialize (rc, rc->pkt))
+        if (!np_deserialize (rc))
             msg_exit ("failed to deserialize response in one go");
         if (rc->type != P9_RFSYNC && rc->type != P9_RFLUSH)
             msg_exit ("received unexpected reply type (%d)", rc->type);

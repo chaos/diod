@@ -39,7 +39,6 @@
 #include "xpthread.h"
 #include "npfsimpl.h"
 
-static Npfcall *_alloc_npfcall(int msize);
 static void *np_conn_read_proc(void *);
 static void np_conn_flush (Npconn *conn);
 static void np_conn_destroy(Npconn *conn);
@@ -137,64 +136,25 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 static void *
 np_conn_read_proc(void *a)
 {
-	int i, n, size;
-	Npsrv *srv;
 	Npconn *conn = (Npconn *)a;
+	Npsrv *srv = conn->srv;
 	Npreq *req;
-	Npfcall *fc, *fc1;
+	Npfcall *fc;
 
 	pthread_detach(pthread_self());
-	srv = conn->srv;
-	fc = _alloc_npfcall(conn->msize);
-	if (!fc)
-		np_logmsg (srv, "out of memory in receive path - "
-				"dropping connection to '%s'", conn->client_id);
-	n = 0;
-	while (fc && conn->trans) {
-		i = np_trans_read(conn->trans, fc->pkt + n, conn->msize - n);
-		if (i < 0) {
-			np_uerror (errno);
-			np_logerr (srv, "read error - "
-				   "dropping connection to '%s'",
-				   conn->client_id);
-			break;
-		}
-		/* This is the normal exit path for umount.
-		 */
-		if (i == 0)
-			break;
-		n += i;
-again:
-		size = np_peek_size (fc->pkt, n);
-		if (size == 0 || n < size)
-			continue;
 
-		/* Corruption on the transport, unhandled op, etc.
-		 * is fatal to the connection.
-		 */
-		if (!np_deserialize(fc, fc->pkt)) {
-			_debug_trace (srv, fc);
-			np_logmsg (srv, "protocol error - "
+	while (conn->trans) {
+		if (np_trans_recv(conn->trans, &fc, conn->msize) < 0) {
+			np_uerror (errno);
+			np_logerr (srv, "recv error - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
 			break;
 		}
+		if (!fc)
+			break;
 		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
 			_debug_trace (srv, fc);
-
-		/* Replace fc, and copy any data past the current packet
-		 * to the replacement.
-		 */
-		fc1 = _alloc_npfcall(conn->msize);
-		if (!fc1) {
-			np_logmsg (srv, "out of memory in receive path - "
-				   "dropping connection to '%s'",
-				   conn->client_id);
-			break;
-		}
-		if (n > size)
-			memmove(fc1->pkt, fc->pkt + size, n - size);
-		n -= size;
 
 		/* Encapsulate fc in a request and hand to srv worker threads.
 		 * In np_req_alloc, req->fid is looked up/initialized.
@@ -204,6 +164,7 @@ again:
 			np_logmsg (srv, "out of memory in receive path - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
+			free (fc);
 			break;
 		}
 
@@ -224,17 +185,10 @@ again:
 			np_srv_add_req(srv, req);
 			xpthread_mutex_unlock(&srv->lock);	
 		}
-		
-		fc = fc1;
-		if (n > 0)
-			goto again;
-
 	}
 	/* Just got EOF on read, or some other fatal error for the
 	 * connection like out of memory.
 	 */
-	if (fc)
-		free (fc);
 
 	np_conn_flush (conn);
 
@@ -276,7 +230,7 @@ np_conn_flush (Npconn *conn)
 void
 np_conn_respond(Npreq *req)
 {
-	int n, len;
+	int n;
 	Npconn *conn = req->conn;
 	Npsrv *srv = conn->srv;
 	Npfcall *rc = req->rcall;
@@ -284,28 +238,12 @@ np_conn_respond(Npreq *req)
 	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
 		_debug_trace (srv, rc);
 	xpthread_mutex_lock(&conn->wlock);
-	len = 0;
-	do {
-		n = np_trans_write(conn->trans, rc->pkt + len, rc->size - len);
-		if (n > 0)
-			len += n;
-	} while (n > 0 && len < rc->size);
+	n = np_trans_send(conn->trans, rc);
 	xpthread_mutex_unlock(&conn->wlock);
-	if (n <= 0) {
+	if (n < 0) {
 		np_uerror (errno);
-		np_logerr (srv, "write to '%s'", conn->client_id);
+		np_logerr (srv, "send to '%s'", conn->client_id);
 	}
-}
-
-static Npfcall *
-_alloc_npfcall(int msize)
-{
-	Npfcall *fc;
-
-	if ((fc = malloc(sizeof(*fc) + msize)))
-		fc->pkt = (u8*) fc + sizeof(*fc);
-
-	return fc;
 }
 
 char *

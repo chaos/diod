@@ -44,8 +44,6 @@
 #include "xpthread.h"
 #include "npcimpl.h"
 
-static Npfcall *npc_fcall_alloc(u32 msize);
-static void npc_fcall_free(Npfcall *fc);
 static int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp);
 static void npc_incref_fsys(Npcfsys *fs);
 static void npc_decref_fsys(Npcfsys *fs);
@@ -127,61 +125,11 @@ npc_decref_fsys(Npcfsys *fs)
 }
 
 static int
-_write_request (Npcfsys *fs, Npfcall *tc)
-{
-	int i, n = 0;
-	int ret = -1;
-
-	do {
-		i = np_trans_write(fs->trans, tc->pkt + n, tc->size - n);
-		if (i < 0) {
-			np_uerror (errno);
-			goto done;
-		}
-		n += i;
-	} while (n < tc->size);
-	ret = 0;
-done:
-	return ret;	
-}
-
-static int
-_read_response (Npcfsys *fs, Npfcall *rc)
-{
-	int i, n = 0;
-	int size;
-	int ret = -1;
-
-	while ((i = np_trans_read(fs->trans, rc->pkt + n, fs->msize - n)) > 0) {
-		n += i;
-		size = np_peek_size (rc->pkt, n);
-		if (size == 0 || n < size)
-			continue;
-		if (!np_deserialize(rc, rc->pkt)) {
-			np_uerror (EIO); /* failed to parse */
-			break;
-		}
-		ret = 0;
-		break;
-	}
-	if (i < 0) {
-		np_uerror (errno);
-		goto done;
-	}
-	if (i == 0) {
-		np_uerror (EIO);
-		goto done;
-	}
-done:
-	return ret;
-}
-
-static int
 npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 {
 	Npfcall *rc = NULL;
 	u16 tag = P9_NOTAG;
-	int ret = -1;
+	int n, ret = -1;
 
 	if (!fs->trans) {
 		np_uerror(ECONNABORTED);
@@ -192,23 +140,20 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 	np_set_tag(tc, tag);
 
 	xpthread_mutex_lock(&fs->lock);
-	if (_write_request (fs, tc) < 0) {
+	if (np_trans_send (fs->trans, tc) < 0) {
 		xpthread_mutex_unlock(&fs->lock);
 		goto done;
 	}
-	if (!(rc = npc_fcall_alloc(fs->msize))) {
-		xpthread_mutex_unlock(&fs->lock);
-		np_uerror (ENOMEM);
-		goto done;
-	}
-	if (_read_response (fs, rc) < 0) {
-		xpthread_mutex_unlock(&fs->lock);
-		goto done;
-	}
+	n = np_trans_recv(fs->trans, &rc, fs->msize);
 	xpthread_mutex_unlock(&fs->lock);
-
+	if (n < 0)
+		goto done;
+	if (rc == NULL) {
+		np_uerror (EPROTO); /* premature EOF */
+		goto done;
+	}
 	if (tc->tag != rc->tag) {
-		np_uerror (EIO); /* unmatched response */
+		np_uerror (EPROTO); /* unmatched response */
 		goto done;
 	}
 	if (rc->type == P9_RLERROR) {
@@ -221,27 +166,6 @@ done:
 	if (tag != P9_NOTAG)
 		npc_put_id(fs->tagpool, tag);
 	if (ret < 0 && rc != NULL)
-		npc_fcall_free (rc);
+		free (rc);
 	return ret;
-}
-
-static Npfcall *
-npc_fcall_alloc(u32 msize)
-{
-	Npfcall *fc;
-
-	fc = malloc(sizeof(*fc) + msize);
-	if (!fc)
-		return NULL;
-
-	fc->pkt = (u8*) fc + sizeof(*fc);
-	fc->size = msize;
-
-	return fc;
-}
-
-static void
-npc_fcall_free(Npfcall *fc)
-{
-	free(fc);
 }
