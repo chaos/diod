@@ -60,6 +60,7 @@
 #include "npfs.h"
 #include "npclient.h"
 #include "list.h"
+#include "hostlist.h"
 #include "diod_log.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
@@ -108,6 +109,7 @@ main (int argc, char *argv[])
 {
     char *dir = NULL;
     char *spec, *host;
+    char *nspec = NULL;
     int c, i;
     int nopt = 0;
     int vopt = 0;
@@ -208,13 +210,33 @@ main (int argc, char *argv[])
      */
     } else {
         char *port = opt_find (o, "port");
+        hostlist_iterator_t hi;
+        hostlist_t hl; 
+        char *h;
 
         if (!port)
             port = "564";
-        if (vopt)
-            msg ("trying to connect to host %s port %s", host, port);
-        if ((sfd = diod_sock_connect (host, port, 0)) < 0)
-            msg_exit ("could not contact diod server on %s:%s", host, port);
+        if (!(hl = hostlist_create (host)))
+            msg_exit ("error parsing host string: %s", host);
+        if (!(hi = hostlist_iterator_create (hl)))
+            msg_exit ("out of memory");
+        while ((h = hostlist_next (hi))) {
+            if (vopt)
+                msg ("trying to connect to %s:%s", h, port);
+            if ((sfd = diod_sock_connect (h, port, DIOD_SOCK_QUIET)) >= 0)
+                break;
+        }
+        if (h) { /* create new 'spec' string identifying successful host */
+            char *p = strchr (spec , ':');
+
+            if (!(nspec = malloc (strlen (h) + p ? strlen (p) : 0 + 1)))
+                msg_exit ("out of memory");
+            sprintf (nspec, "%s%s", h, p ? p : "");
+        }
+        hostlist_destroy (hl);
+        if (sfd < 0)
+            msg_exit ("could not connect to server(s), giving up");
+        
         opt_delete (o, "port");
         opt_addf (o, "rfdno=%d", sfd);
         opt_addf (o, "wfdno=%d", sfd);
@@ -230,7 +252,7 @@ main (int argc, char *argv[])
 
     assert (!opt_find (o, "port"));
 
-    _diod_mount (o, sfd, spec, dir, vopt, fopt, nopt);
+    _diod_mount (o, sfd, nspec ? nspec : spec, dir, vopt, fopt, nopt);
     //(void)close (sfd);
 
 done:
