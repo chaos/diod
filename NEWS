@@ -1,3 +1,10 @@
+1.0-pre46:
+	Support hostlist:aname mount syntax (issue 66)
+	Fix transport abstraction to handle whole messages (issue 67)
+	Don't call setgroups if it affects entire process (issue 53)
+	Unmount servers on dtop shutdown (issue 63)
+	Drop an extra stat in setattr implementation and avoid potential race.
+
 1.0-pre45:
 	Call setgroups to get supplemental groups in cred (issue 64)
 	Make mount points appear empty (issue 62)
