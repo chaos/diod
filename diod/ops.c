@@ -210,10 +210,10 @@ static void
 _fidfree (Fid *f)
 {
     if (f) {
-        if (f->fd != -1)
-            close (f->fd);
         if (f->dir) 
-            closedir(f->dir);
+            (void)closedir(f->dir);
+        else if (f->fd != -1)
+            (void)close (f->fd);
         if (f->path)
             free(f->path);
         free(f);
@@ -624,22 +624,19 @@ diod_lopen (Npfid *fid, u32 flags)
     if ((flags & O_CREAT)) /* can't happen? */
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
-    if (lstat (f->path, &sb) < 0) {
+    f->fd = open (f->path, flags);
+    if (f->fd < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    if (S_ISDIR (sb.st_mode)) {
-        f->dir = opendir (f->path);
-        if (!f->dir) {
-            np_uerror (errno);
-            goto error_quiet;
-        }
-    } else {
-        f->fd = open (f->path, flags);
-        if (f->fd < 0) {
-            np_uerror (errno);
-            goto error_quiet;
-        }
+    f->dir = fdopendir (f->fd);
+    if (!f->dir && errno != ENOTDIR) {
+        np_uerror (errno);
+        goto error_quiet;
+    }
+    if (fstat (f->fd, &sb) < 0) {
+        np_uerror (errno);
+        goto error_quiet;
     }
     _ustat2qid (&sb, &qid);
     //iounit = sb.st_blksize;
@@ -652,14 +649,12 @@ error:
     errn (np_rerror (), "diod_lopen %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (f->dir) {
+    if (f->dir)
         (void)closedir (f->dir);
-        f->dir = NULL;
-    }
-    if (f->fd != -1) {
+    else if (f->fd != -1)
         (void)close (f->fd); 
-        f->fd = -1;
-    }
+    f->dir = NULL;
+    f->fd = -1;
     return NULL;
 }
 
@@ -1148,7 +1143,7 @@ diod_fsync (Npfid *fid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (fsync(f->dir ? dirfd (f->dir) : f->fd) < 0) {
+    if (fsync(f->fd) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
