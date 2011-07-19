@@ -479,6 +479,10 @@ void np_usercache_destroy (Npsrv *srv);
 /* fdtrans.c */
 Nptrans *np_fdtrans_create(int, int);
 
+/* rdmatrans.c */
+struct rdma_cm_id;
+Nptrans *np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize);
+
 /* error.c */
 unsigned long np_rerror(void);
 void np_uerror(unsigned long ecode);

@@ -39,6 +39,8 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS( \
   getopt.h \
   pthread.h \
+  infiniband/verbs.h \
+  rdma/rdma_cma.h \
 )
 
 ##
@@ -61,6 +63,8 @@ X_AC_WRAP
 X_AC_CURSES
 X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 X_AC_CHECK_COND_LIB(cap, cap_get_proc)
+X_AC_CHECK_COND_LIB(rdmacm, rdma_accept)
+X_AC_CHECK_COND_LIB(ibverbs, ibv_alloc_pd)
 AX_LUA_HEADERS
 AX_LUA_HEADERS(501)
 AX_LUA_LIBS

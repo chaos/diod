@@ -61,7 +61,7 @@ libnpfs_a_LIBADD =
 am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
 	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) fmt.$(OBJEXT) np.$(OBJEXT) \
 	srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) \
-	npstring.$(OBJEXT) ctl.$(OBJEXT)
+	npstring.$(OBJEXT) ctl.$(OBJEXT) rdmatrans.$(OBJEXT)
 libnpfs_a_OBJECTS = $(am_libnpfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -105,11 +105,13 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBCAP = @LIBCAP@
 LIBCURSES = @LIBCURSES@
+LIBIBVERBS = @LIBIBVERBS@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
 LIBOBJS = @LIBOBJS@
 LIBPOPT = @LIBPOPT@
 LIBPTHREAD = @LIBPTHREAD@
+LIBRDMACM = @LIBRDMACM@
 LIBS = @LIBS@
 LIBWRAP = @LIBWRAP@
 LTLIBOBJS = @LTLIBOBJS@
@@ -224,7 +226,8 @@ libnpfs_a_SOURCES = \
 	npfs.h \
 	npfsimpl.h \
 	9p.h \
-	ctl.c
+	ctl.c \
+	rdmatrans.c
 
 all: all-am
 
@@ -283,6 +286,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fmt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/np.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/npstring.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rdmatrans.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/srv.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trans.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/user.Po@am__quote@

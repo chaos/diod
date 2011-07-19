@@ -10,7 +10,8 @@ diod_LDADD = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) \
+	$(LIBIBVERBS) $(LIBRDMACM)
 
 diod_SOURCES = \
 	diod.c \

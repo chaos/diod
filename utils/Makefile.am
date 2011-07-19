@@ -10,7 +10,8 @@ common_ldadd = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBCURSES)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBCURSES) \
+	$(LIBIBVERBS) $(LIBRDMACM)
 
 common_sources = \
 	opt.c \

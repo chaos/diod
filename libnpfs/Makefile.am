@@ -19,4 +19,5 @@ libnpfs_a_SOURCES = \
 	npfs.h \
 	npfsimpl.h \
 	9p.h \
-	ctl.c
+	ctl.c \
+	rdmatrans.c

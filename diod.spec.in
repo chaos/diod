@@ -14,6 +14,7 @@ BuildRequires: lua-devel
 BuildRequires: munge-devel
 BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
+BuildRequires: libibverbs-devel librdmacm-devel
 
 %description
 diod is a 9P server used in combination with the kernel v9fs file

@@ -64,6 +64,7 @@ diod_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -131,11 +132,13 @@ INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
 LIBCAP = @LIBCAP@
 LIBCURSES = @LIBCURSES@
+LIBIBVERBS = @LIBIBVERBS@
 LIBLUA = @LIBLUA@
 LIBMUNGE = @LIBMUNGE@
 LIBOBJS = @LIBOBJS@
 LIBPOPT = @LIBPOPT@
 LIBPTHREAD = @LIBPTHREAD@
+LIBRDMACM = @LIBRDMACM@
 LIBS = @LIBS@
 LIBWRAP = @LIBWRAP@
 LTLIBOBJS = @LTLIBOBJS@
@@ -241,7 +244,8 @@ diod_LDADD = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) \
+	$(LIBIBVERBS) $(LIBRDMACM)
 
 diod_SOURCES = \
 	diod.c \
