@@ -228,10 +228,11 @@ main (int argc, char *argv[])
         }
         if (h) { /* create new 'spec' string identifying successful host */
             char *p = strchr (spec , ':');
+            int len = strlen (h) + (p ? strlen (p) : 0) + 1;
 
-            if (!(nspec = malloc (strlen (h) + p ? strlen (p) : 0 + 1)))
+            if (!(nspec = malloc (len)))
                 msg_exit ("out of memory");
-            sprintf (nspec, "%s%s", h, p ? p : "");
+            snprintf (nspec, len, "%s%s", h, p ? p : "");
         }
         hostlist_destroy (hl);
         if (sfd < 0)

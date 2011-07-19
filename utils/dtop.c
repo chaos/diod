@@ -687,7 +687,7 @@ skip:
         (void)npc_umount (sp->root);
         sp->root = NULL;
         sp->fd = -1;
-    } else {
+    } else if (sp->fd >= 0) {
         (void)close (sp->fd);
         sp->fd = -1;
     }

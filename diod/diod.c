@@ -313,17 +313,12 @@ static void
 _daemonize (void)
 {
     char rdir[PATH_MAX];
-    struct stat sb;
 
     snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
-    if (stat (rdir, &sb) < 0) {
-        if (mkdir (rdir, 0755) < 0) {
-            msg ("failed to find/create %s, running out of /tmp", rdir);
-            snprintf (rdir, sizeof(rdir), "/tmp");
-        }
-    } else if (!S_ISDIR (sb.st_mode))
-        msg_exit ("%s is not a directory", rdir);
-
+    if (mkdir (rdir, 0755) < 0 && errno != EEXIST) {
+        msg ("failed to find/create %s, running out of /tmp", rdir);
+        snprintf (rdir, sizeof(rdir), "/tmp");
+    }
     if (chdir (rdir) < 0)
         err_exit ("chdir %s", rdir);
     if (daemon (1, 0) < 0)
@@ -460,6 +455,8 @@ _test_setgroups (void)
     pthread_t t;
     int err;
 
+    if (ngroups_max < 0)
+        ngroups_max = 64;
     if (!(sg = malloc (ngroups_max * sizeof (gid_t))))
         msg_exit ("out of memory");
     if ((nsg = getgroups (ngroups_max, sg)) < 0)
