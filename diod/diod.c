@@ -55,7 +55,7 @@
 #include "diod_log.h"
 #include "diod_conf.h"
 #include "diod_sock.h"
-#if HAVE_RDMATRANS
+#if WITH_RDMATRANS
 #include "diod_rdma.h"
 #endif
 
@@ -339,6 +339,10 @@ struct svc_struct {
     pthread_t t;
     int shutdown;
     int reload;
+#if WITH_RDMATRANS
+    diod_rdma_t rdma;
+    pthread_t rdma_t;
+#endif
 };
 static struct svc_struct ss;
 
@@ -403,6 +407,18 @@ _service_loop (void *arg)
     }
     return NULL;
 }
+
+#if WITH_RDMATRANS
+static void *
+_service_loop_rdma (void *arg)
+{
+    while (!ss.shutdown) {
+        msg ("waiting on rdma connection");
+        diod_rdma_accept_one (ss.srv, ss.rdma);
+    }
+    return NULL;
+}
+#endif
 
 /* Set up signal handlers for SIGHUP and SIGTERM and block them.
  * Threads will inherit this signal mask; _service_loop () will unblock.
@@ -501,6 +517,10 @@ _service_run (srvmode_t mode)
         case SRV_NORMAL:
             if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL))
                 msg_exit ("failed to set up listen ports");
+#if WITH_RDMATRANS
+            ss.rdma = diod_rdma_create ();
+            diod_rdma_listen (ss.rdma);
+#endif
             break;
     }
 
@@ -558,7 +578,10 @@ _service_run (srvmode_t mode)
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL)))
         errn_exit (n, "pthread_create _service_loop");
-
+#if WITH_RDMATRANS
+    if ((n = pthread_create (&ss.rdma_t, NULL, _service_loop_rdma, NULL)))
+        errn_exit (n, "pthread_create _service_loop_rdma");
+#endif
     switch (mode) {
         case SRV_STDIN:
             np_srv_wait_conncount (ss.srv, 1);
@@ -569,6 +592,10 @@ _service_run (srvmode_t mode)
     }
     if ((n = pthread_join (ss.t, NULL)))
         errn_exit (n, "pthread_join _service_loop");
+#if WITH_RDMATRANS
+    if ((n = pthread_join (ss.rdma_t, NULL)))
+        errn_exit (n, "pthread_join _service_loop_rdma");
+#endif
 
     np_srv_destroy (ss.srv);
 }

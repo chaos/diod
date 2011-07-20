@@ -55,172 +55,124 @@
 #include "diod_log.h"
 #include "diod_rdma.h"
 
-/* np_rdmatrans_create () wants a (struct rdma_cm_id *)
- */
+const uint16_t rdma_port = 564;
+const int rdma_qdepth = 64;
+const int rdma_maxmsize = 655536;
 
-#if 0
-typedef struct Rdmasrv Rdmasrv;
-struct Rdmasrv {
+struct diod_rdma_struct {
 	struct rdma_cm_id *listen_id;
 	struct rdma_event_channel *event_channel;
 	struct sockaddr_in addr;
-	int shutdown;
-	pthread_t thread;
 };
 
-extern Nptrans *np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize);
-
-static void rdmasrv_start(Npsrv *srv);
-static void rdmasrv_shutdown(Npsrv *srv);
-static void rdmasrv_destroy(Npsrv *srv);
-static void *rdmasrv_listenproc(void *a);
-
-Npsrv*
-np_rdmasrv_create(int nwthreads, int *port)
+diod_rdma_t
+diod_rdma_create (void)
 {
-	Npsrv *srv;
-	Rdmasrv *rdma;
-	int ret;
+    int n;
+	diod_rdma_t rdma;
 
-	rdma = malloc(sizeof(struct Rdmasrv));
+    rdma = malloc (sizeof (*rdma));
 	if (!rdma)
-		return NULL;
+        msg_exit ("out of memory");
 
 	rdma->event_channel = rdma_create_event_channel();
-	if (!rdma->event_channel) {
-		np_uerror(EIO);
-		goto error;
-	}
+	if (!rdma->event_channel)
+        msg_exit ("rdma_create_event_channel failed");
 
-	ret = rdma_create_id(rdma->event_channel, &rdma->listen_id,
+	n = rdma_create_id(rdma->event_channel, &rdma->listen_id,
 			     NULL, RDMA_PS_TCP);
-	if (ret) {
-		np_uerror(ret);
-		goto error;
-	}
+	if (n)
+        errn_exit (n, "rdma_create_id");
+
+    return rdma;
+}
+
+void
+diod_rdma_destroy (diod_rdma_t rdma)
+{
+	if (rdma->listen_id) {
+		rdma_destroy_id(rdma->listen_id);
+	    rdma->listen_id = NULL;
+    }
+    if (rdma->event_channel) {
+        rdma_destroy_event_channel (rdma->event_channel);
+        rdma->event_channel = NULL;
+    }
+    free (rdma);
+}
+
+int
+diod_rdma_listen (diod_rdma_t rdma)
+{
+    int n;
 	
 	rdma->addr.sin_family = AF_INET;
-	rdma->addr.sin_port = htons(*port);
+	rdma->addr.sin_port = htons(rdma_port);
 	rdma->addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	ret = rdma_bind_addr(rdma->listen_id, (struct sockaddr *)&rdma->addr);
-	if (ret) {
-		np_uerror(ret);
-		goto error;
-	}
-
-	srv = np_srv_create(nwthreads);
-	srv->srvaux = rdma;
-	srv->start = rdmasrv_start;
-	srv->shutdown = rdmasrv_shutdown;
-	srv->destroy = rdmasrv_destroy;
-
-	return srv;
-
- error:
-	free(rdma);
-	return NULL;
-}
-
-static void
-rdmasrv_start(Npsrv *srv)
-{
-	int n;
-	Rdmasrv *rdma;
-
-	rdma = srv->srvaux;
-	n = rdma_listen(rdma->listen_id, 1);
-	if (n < 0) {
-		np_uerror(n);
-		return;
-	}
-
-	n = pthread_create(&rdma->thread, NULL, rdmasrv_listenproc, srv);
+	n = rdma_bind_addr(rdma->listen_id, (struct sockaddr *)&rdma->addr);
 	if (n)
-		np_uerror(n);
+		errn_exit (n, "rdma_bind_addr");
+
+	n = rdma_listen(rdma->listen_id, 1);
+    if (n)
+        errn (n, "rdma_listen");
+  
+    return 0;
 }
 
-static void
-rdmasrv_shutdown(Npsrv *srv)
+void
+diod_rdma_shutdown (diod_rdma_t rdma)
 {
-	Rdmasrv *rdma;
-
-	rdma = srv->srvaux;
-	rdma->shutdown = 1;
 	if (rdma->listen_id)
 		rdma_destroy_id(rdma->listen_id);
-
 	rdma->listen_id = NULL;
 }
 
-static void
-rdmasrv_destroy(Npsrv *srv)
+void
+diod_rdma_accept_one (Npsrv *srv, diod_rdma_t rdma)
 {
-	Rdmasrv *rdma;
-	void *ret;
-
-	rdma = srv->srvaux;
-	rdmasrv_shutdown(srv);
-	pthread_join(rdma->thread, &ret);
-	free(rdma);
-	srv->srvaux = NULL;
-}
-
-static void *
-rdmasrv_listenproc(void *a)
-{
-	int ret;
-	Npsrv *srv;
 	Npconn *conn;
 	Nptrans *trans;
-	Rdmasrv *rdma;
 	struct rdma_cm_event *event;
 	struct rdma_cm_id *cmid;
 	enum rdma_cm_event_type etype;
+    int n;
 
-	srv = a;
-	rdma = srv->srvaux;
-	while (!rdma->shutdown) {
-		ret = rdma_get_cm_event(rdma->event_channel, &event);
-		if (ret)
-			goto error;
+	n = rdma_get_cm_event(rdma->event_channel, &event);
+	if (n)
+        errn_exit (n, "rdma_get_cm_event");
 
-		cmid = (struct rdma_cm_id *)event->id;
-		etype = event->event;
-		rdma_ack_cm_event(event);
+	cmid = (struct rdma_cm_id *)event->id;
+	etype = event->event;
+	rdma_ack_cm_event(event);
 
-		switch (etype) {
-		case RDMA_CM_EVENT_CONNECT_REQUEST:
-			printf("Connection request\n");
-			trans = np_rdmatrans_create(cmid, srv->nwthread, srv->msize);
-			if (trans) {
-				conn = np_conn_create(srv, trans);
-				cmid->context = conn;
-				np_srv_add_conn(srv, conn);
-			}
-			break;
+	switch (etype) {
+	case RDMA_CM_EVENT_CONNECT_REQUEST:
+		msg ("rdma: connection request");
+		trans = np_rdmatrans_create(cmid, rdma_qdepth, rdma_maxmsize);
+		if (trans) {
+            conn = np_conn_create(srv, trans, "rdma");
+            cmid->context = conn;
+            np_srv_add_conn(srv, conn);
+        } else
+            errn (np_rerror (), "np_rdmatrns_create failed");
+        break;
 
-		case RDMA_CM_EVENT_ESTABLISHED:
-			printf("Connection established\n");
-			break;
+    case RDMA_CM_EVENT_ESTABLISHED:
+        msg ("rdma: connection established");
+        break;
 
-		case RDMA_CM_EVENT_DISCONNECTED:
-			printf("Connection shutting down\n");
-			conn = cmid->context;
-			np_conn_shutdown(conn);
-			break;
+    case RDMA_CM_EVENT_DISCONNECTED:
+        msg ("rdma: connection shutting down");
+        conn = cmid->context;
+        //np_conn_shutdown(conn);
+        /* FIXME: clean up properly */
+        break;
 
-		default:
-			fprintf(stderr, "event %d received waiting for a connect request\n",
-				etype);
-		}
-	}
-	return NULL;
-
- error:
-	fprintf(stderr, "shutting down the server with error %d\n", ret);
-	return 0;
+    default:
+        msg ("rdma: event %d received waiting for a connect request\n", etype);
+    }
 }
-#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
