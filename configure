@@ -778,6 +778,7 @@ enable_maintainer_mode
 enable_dependency_tracking
 with_ncurses
 with_lua_suffix
+enable_rdmatrans
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1423,6 +1424,7 @@ Optional Features:
 			  (and sometimes confusing) to the casual installer
   --disable-dependency-tracking  speeds up one-time build
   --enable-dependency-tracking   do not reject slow dependency extractors
+  --enable-rdmatrans      build Infiniband RDMA transport
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -9386,7 +9388,16 @@ fi
 
 
 
-enable_rdmatrans=no
+got_rdmatrans=no
+# Check whether --enable-rdmatrans was given.
+if test "${enable_rdmatrans+set}" = set; then
+  enableval=$enable_rdmatrans; want_rdmatrans=yes
+else
+  want_rdmatrans=no
+fi
+
+
+if test x$want_rdmatrans == xyes; then
 
   { $as_echo "$as_me:$LINENO: checking for rdma_accept in default libs" >&5
 $as_echo_n "checking for rdma_accept in default libs... " >&6; }
@@ -9687,7 +9698,7 @@ fi
 fi
 
 
-if test "${ac_cv_header_infiniband_verbs_h+set}" = set; then
+  if test "${ac_cv_header_infiniband_verbs_h+set}" = set; then
   { $as_echo "$as_me:$LINENO: checking for infiniband/verbs.h" >&5
 $as_echo_n "checking for infiniband/verbs.h... " >&6; }
 if test "${ac_cv_header_infiniband_verbs_h+set}" = set; then
@@ -9816,7 +9827,7 @@ $as_echo "$ac_cv_header_infiniband_verbs_h" >&6; }
 fi
 
 
-if test "${ac_cv_header_rdma_rdma_cma_h+set}" = set; then
+  if test "${ac_cv_header_rdma_rdma_cma_h+set}" = set; then
   { $as_echo "$as_me:$LINENO: checking for rdma/rdma_cma.h" >&5
 $as_echo_n "checking for rdma/rdma_cma.h... " >&6; }
 if test "${ac_cv_header_rdma_rdma_cma_h+set}" = set; then
@@ -9945,27 +9956,30 @@ $as_echo "$ac_cv_header_rdma_rdma_cma_h" >&6; }
 fi
 
 
-if test x$ac_cv_lib_rdmacm_rdma_accept == xyes -a \
-        x$ac_cv_lib_ibverbs_ibv_alloc_pd == xyes -a \
-        x$ac_cv_header_infiniband_verbs_h == xyes -a \
-        x$ac_cv_header_rdma_rdma_cma_h == xyes; then
-  enable_rdmatrans=yes
+  if test x$ac_cv_lib_rdmacm_rdma_accept == xyes -a \
+      x$ac_cv_lib_ibverbs_ibv_alloc_pd == xyes -a \
+      x$ac_cv_header_infiniband_verbs_h == xyes -a \
+      x$ac_cv_header_rdma_rdma_cma_h == xyes; then
+    got_rdmatrans=yes
 
 cat >>confdefs.h <<\_ACEOF
 #define WITH_RDMATRANS 1
 _ACEOF
 
-else
-  { $as_echo "$as_me:$LINENO: WARNING: omitting support for infiniband RDMA transport" >&5
+  else
+    { $as_echo "$as_me:$LINENO: WARNING: omitting support for infiniband RDMA transport" >&5
 $as_echo "$as_me: WARNING: omitting support for infiniband RDMA transport" >&2;}
+  fi
 fi
- if test "x$enable_rdmatrans" != xno; then
+
+ if test "x$got_rdmatrans" != xno; then
   RDMATRANS_TRUE=
   RDMATRANS_FALSE='#'
 else
   RDMATRANS_TRUE='#'
   RDMATRANS_FALSE=
 fi
+
 
 
 
