@@ -84,9 +84,9 @@ np_fdtrans_destroy(void *a)
 
 	fdt = a;
 	if (fdt->fdin >= 0)
-		close(fdt->fdin);
+		(void)close(fdt->fdin);
 	if (fdt->fdout >= 0 && fdt->fdout != fdt->fdin)
-		close(fdt->fdout);
+		(void)close(fdt->fdout);
 	if (fdt->fc)
 		free(fdt->fc);
 

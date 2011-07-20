@@ -639,9 +639,11 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
-LIBLUA
+RDMATRANS_FALSE
+RDMATRANS_TRUE
 LIBIBVERBS
 LIBRDMACM
+LIBLUA
 LIBCAP
 LIBMUNGE
 LIBCURSES
@@ -7453,13 +7455,9 @@ fi
 
 
 
-
-
 for ac_header in \
   getopt.h \
   pthread.h \
-  infiniband/verbs.h \
-  rdma/rdma_cma.h \
 
 do
 as_ac_Header=`$as_echo "ac_cv_header_$ac_header" | $as_tr_sh`
@@ -8856,306 +8854,6 @@ fi
 
 
 
-  { $as_echo "$as_me:$LINENO: checking for rdma_accept in default libs" >&5
-$as_echo_n "checking for rdma_accept in default libs... " >&6; }
-if test "${x_ac_cv_lib_none_rdma_accept+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-
-    cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char rdma_accept ();
-int
-main ()
-{
-return rdma_accept ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  x_ac_cv_lib_none_rdma_accept=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	x_ac_cv_lib_none_rdma_accept=no
-
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-
-fi
-{ $as_echo "$as_me:$LINENO: result: $x_ac_cv_lib_none_rdma_accept" >&5
-$as_echo "$x_ac_cv_lib_none_rdma_accept" >&6; }
-  if test $x_ac_cv_lib_none_rdma_accept = no; then
-  { $as_echo "$as_me:$LINENO: checking for rdma_accept in -lrdmacm" >&5
-$as_echo_n "checking for rdma_accept in -lrdmacm... " >&6; }
-if test "${ac_cv_lib_rdmacm_rdma_accept+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lrdmacm  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char rdma_accept ();
-int
-main ()
-{
-return rdma_accept ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  ac_cv_lib_rdmacm_rdma_accept=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_rdmacm_rdma_accept=no
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_rdmacm_rdma_accept" >&5
-$as_echo "$ac_cv_lib_rdmacm_rdma_accept" >&6; }
-if test "x$ac_cv_lib_rdmacm_rdma_accept" = x""yes; then
-
-
-
-        LIBRDMACM="-lrdmacm";
-
-        cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBRDMACM 1
-_ACEOF
-
-
-
-fi
-
-
-fi
-
-
-
-  { $as_echo "$as_me:$LINENO: checking for ibv_alloc_pd in default libs" >&5
-$as_echo_n "checking for ibv_alloc_pd in default libs... " >&6; }
-if test "${x_ac_cv_lib_none_ibv_alloc_pd+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-
-    cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ibv_alloc_pd ();
-int
-main ()
-{
-return ibv_alloc_pd ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  x_ac_cv_lib_none_ibv_alloc_pd=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	x_ac_cv_lib_none_ibv_alloc_pd=no
-
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-
-fi
-{ $as_echo "$as_me:$LINENO: result: $x_ac_cv_lib_none_ibv_alloc_pd" >&5
-$as_echo "$x_ac_cv_lib_none_ibv_alloc_pd" >&6; }
-  if test $x_ac_cv_lib_none_ibv_alloc_pd = no; then
-  { $as_echo "$as_me:$LINENO: checking for ibv_alloc_pd in -libverbs" >&5
-$as_echo_n "checking for ibv_alloc_pd in -libverbs... " >&6; }
-if test "${ac_cv_lib_ibverbs_ibv_alloc_pd+set}" = set; then
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-libverbs  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char ibv_alloc_pd ();
-int
-main ()
-{
-return ibv_alloc_pd ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
-$as_echo "$ac_try_echo") >&5
-  (eval "$ac_link") 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } && {
-	 test -z "$ac_c_werror_flag" ||
-	 test ! -s conftest.err
-       } && test -s conftest$ac_exeext && {
-	 test "$cross_compiling" = yes ||
-	 $as_test_x conftest$ac_exeext
-       }; then
-  ac_cv_lib_ibverbs_ibv_alloc_pd=yes
-else
-  $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-	ac_cv_lib_ibverbs_ibv_alloc_pd=no
-fi
-
-rm -rf conftest.dSYM
-rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_ibverbs_ibv_alloc_pd" >&5
-$as_echo "$ac_cv_lib_ibverbs_ibv_alloc_pd" >&6; }
-if test "x$ac_cv_lib_ibverbs_ibv_alloc_pd" = x""yes; then
-
-
-
-        LIBIBVERBS="-libverbs";
-
-        cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBIBVERBS 1
-_ACEOF
-
-
-
-fi
-
-
-fi
-
-
-
 # Check whether --with-lua-suffix was given.
 if test "${with_lua_suffix+set}" = set; then
   withval=$with_lua_suffix;
@@ -9687,6 +9385,590 @@ fi
 
 
 
+
+enable_rdmatrans=no
+
+  { $as_echo "$as_me:$LINENO: checking for rdma_accept in default libs" >&5
+$as_echo_n "checking for rdma_accept in default libs... " >&6; }
+if test "${x_ac_cv_lib_none_rdma_accept+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rdma_accept ();
+int
+main ()
+{
+return rdma_accept ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  x_ac_cv_lib_none_rdma_accept=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	x_ac_cv_lib_none_rdma_accept=no
+
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:$LINENO: result: $x_ac_cv_lib_none_rdma_accept" >&5
+$as_echo "$x_ac_cv_lib_none_rdma_accept" >&6; }
+  if test $x_ac_cv_lib_none_rdma_accept = no; then
+  { $as_echo "$as_me:$LINENO: checking for rdma_accept in -lrdmacm" >&5
+$as_echo_n "checking for rdma_accept in -lrdmacm... " >&6; }
+if test "${ac_cv_lib_rdmacm_rdma_accept+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lrdmacm  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char rdma_accept ();
+int
+main ()
+{
+return rdma_accept ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_lib_rdmacm_rdma_accept=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_rdmacm_rdma_accept=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_rdmacm_rdma_accept" >&5
+$as_echo "$ac_cv_lib_rdmacm_rdma_accept" >&6; }
+if test "x$ac_cv_lib_rdmacm_rdma_accept" = x""yes; then
+
+
+
+        LIBRDMACM="-lrdmacm";
+
+        cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBRDMACM 1
+_ACEOF
+
+
+
+fi
+
+
+fi
+
+
+
+  { $as_echo "$as_me:$LINENO: checking for ibv_alloc_pd in default libs" >&5
+$as_echo_n "checking for ibv_alloc_pd in default libs... " >&6; }
+if test "${x_ac_cv_lib_none_ibv_alloc_pd+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+
+    cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ibv_alloc_pd ();
+int
+main ()
+{
+return ibv_alloc_pd ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  x_ac_cv_lib_none_ibv_alloc_pd=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	x_ac_cv_lib_none_ibv_alloc_pd=no
+
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+
+fi
+{ $as_echo "$as_me:$LINENO: result: $x_ac_cv_lib_none_ibv_alloc_pd" >&5
+$as_echo "$x_ac_cv_lib_none_ibv_alloc_pd" >&6; }
+  if test $x_ac_cv_lib_none_ibv_alloc_pd = no; then
+  { $as_echo "$as_me:$LINENO: checking for ibv_alloc_pd in -libverbs" >&5
+$as_echo_n "checking for ibv_alloc_pd in -libverbs... " >&6; }
+if test "${ac_cv_lib_ibverbs_ibv_alloc_pd+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-libverbs  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char ibv_alloc_pd ();
+int
+main ()
+{
+return ibv_alloc_pd ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_lib_ibverbs_ibv_alloc_pd=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_ibverbs_ibv_alloc_pd=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_ibverbs_ibv_alloc_pd" >&5
+$as_echo "$ac_cv_lib_ibverbs_ibv_alloc_pd" >&6; }
+if test "x$ac_cv_lib_ibverbs_ibv_alloc_pd" = x""yes; then
+
+
+
+        LIBIBVERBS="-libverbs";
+
+        cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBIBVERBS 1
+_ACEOF
+
+
+
+fi
+
+
+fi
+
+
+if test "${ac_cv_header_infiniband_verbs_h+set}" = set; then
+  { $as_echo "$as_me:$LINENO: checking for infiniband/verbs.h" >&5
+$as_echo_n "checking for infiniband/verbs.h... " >&6; }
+if test "${ac_cv_header_infiniband_verbs_h+set}" = set; then
+  $as_echo_n "(cached) " >&6
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_header_infiniband_verbs_h" >&5
+$as_echo "$ac_cv_header_infiniband_verbs_h" >&6; }
+else
+  # Is the header compilable?
+{ $as_echo "$as_me:$LINENO: checking infiniband/verbs.h usability" >&5
+$as_echo_n "checking infiniband/verbs.h usability... " >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <infiniband/verbs.h>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_header_compiler=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_header_compiler=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+$as_echo "$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ $as_echo "$as_me:$LINENO: checking infiniband/verbs.h presence" >&5
+$as_echo_n "checking infiniband/verbs.h presence... " >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <infiniband/verbs.h>
+_ACEOF
+if { (ac_try="$ac_cpp conftest.$ac_ext"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_cpp conftest.$ac_ext") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null && {
+	 test -z "$ac_c_preproc_warn_flag$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       }; then
+  ac_header_preproc=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+
+rm -f conftest.err conftest.$ac_ext
+{ $as_echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+$as_echo "$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h: accepted by the compiler, rejected by the preprocessor!" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h: proceeding with the compiler's result" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h: present but cannot be compiled" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h: present but cannot be compiled" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h:     check for missing prerequisite headers?" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h:     check for missing prerequisite headers?" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h: see the Autoconf documentation" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h: see the Autoconf documentation" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h:     section \"Present But Cannot Be Compiled\"" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h: proceeding with the preprocessor's result" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h: proceeding with the preprocessor's result" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: infiniband/verbs.h: in the future, the compiler will take precedence" >&5
+$as_echo "$as_me: WARNING: infiniband/verbs.h: in the future, the compiler will take precedence" >&2;}
+
+    ;;
+esac
+{ $as_echo "$as_me:$LINENO: checking for infiniband/verbs.h" >&5
+$as_echo_n "checking for infiniband/verbs.h... " >&6; }
+if test "${ac_cv_header_infiniband_verbs_h+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_cv_header_infiniband_verbs_h=$ac_header_preproc
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_header_infiniband_verbs_h" >&5
+$as_echo "$ac_cv_header_infiniband_verbs_h" >&6; }
+
+fi
+
+
+if test "${ac_cv_header_rdma_rdma_cma_h+set}" = set; then
+  { $as_echo "$as_me:$LINENO: checking for rdma/rdma_cma.h" >&5
+$as_echo_n "checking for rdma/rdma_cma.h... " >&6; }
+if test "${ac_cv_header_rdma_rdma_cma_h+set}" = set; then
+  $as_echo_n "(cached) " >&6
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_header_rdma_rdma_cma_h" >&5
+$as_echo "$ac_cv_header_rdma_rdma_cma_h" >&6; }
+else
+  # Is the header compilable?
+{ $as_echo "$as_me:$LINENO: checking rdma/rdma_cma.h usability" >&5
+$as_echo_n "checking rdma/rdma_cma.h usability... " >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+$ac_includes_default
+#include <rdma/rdma_cma.h>
+_ACEOF
+rm -f conftest.$ac_objext
+if { (ac_try="$ac_compile"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_compile") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest.$ac_objext; then
+  ac_header_compiler=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_header_compiler=no
+fi
+
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
+$as_echo "$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ $as_echo "$as_me:$LINENO: checking rdma/rdma_cma.h presence" >&5
+$as_echo_n "checking rdma/rdma_cma.h presence... " >&6; }
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+#include <rdma/rdma_cma.h>
+_ACEOF
+if { (ac_try="$ac_cpp conftest.$ac_ext"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_cpp conftest.$ac_ext") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } >/dev/null && {
+	 test -z "$ac_c_preproc_warn_flag$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       }; then
+  ac_header_preproc=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+  ac_header_preproc=no
+fi
+
+rm -f conftest.err conftest.$ac_ext
+{ $as_echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
+$as_echo "$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in
+  yes:no: )
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h: accepted by the compiler, rejected by the preprocessor!" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h: proceeding with the compiler's result" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h: proceeding with the compiler's result" >&2;}
+    ac_header_preproc=yes
+    ;;
+  no:yes:* )
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h: present but cannot be compiled" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h: present but cannot be compiled" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h:     check for missing prerequisite headers?" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h:     check for missing prerequisite headers?" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h: see the Autoconf documentation" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h: see the Autoconf documentation" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h:     section \"Present But Cannot Be Compiled\"" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h: proceeding with the preprocessor's result" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h: proceeding with the preprocessor's result" >&2;}
+    { $as_echo "$as_me:$LINENO: WARNING: rdma/rdma_cma.h: in the future, the compiler will take precedence" >&5
+$as_echo "$as_me: WARNING: rdma/rdma_cma.h: in the future, the compiler will take precedence" >&2;}
+
+    ;;
+esac
+{ $as_echo "$as_me:$LINENO: checking for rdma/rdma_cma.h" >&5
+$as_echo_n "checking for rdma/rdma_cma.h... " >&6; }
+if test "${ac_cv_header_rdma_rdma_cma_h+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_cv_header_rdma_rdma_cma_h=$ac_header_preproc
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_header_rdma_rdma_cma_h" >&5
+$as_echo "$ac_cv_header_rdma_rdma_cma_h" >&6; }
+
+fi
+
+
+if test x$ac_cv_lib_rdmacm_rdma_accept == xyes -a \
+        x$ac_cv_lib_ibverbs_ibv_alloc_pd == xyes -a \
+        x$ac_cv_header_infiniband_verbs_h == xyes -a \
+        x$ac_cv_header_rdma_rdma_cma_h == xyes; then
+  enable_rdmatrans=yes
+
+cat >>confdefs.h <<\_ACEOF
+#define WITH_RDMATRANS 1
+_ACEOF
+
+else
+  { $as_echo "$as_me:$LINENO: WARNING: omitting support for infiniband RDMA transport" >&5
+$as_echo "$as_me: WARNING: omitting support for infiniband RDMA transport" >&2;}
+fi
+ if test "x$enable_rdmatrans" != xno; then
+  RDMATRANS_TRUE=
+  RDMATRANS_FALSE='#'
+else
+  RDMATRANS_TRUE='#'
+  RDMATRANS_FALSE=
+fi
+
+
+
 ##
 # For list.c, hostlist.c, hash.c
 ##
@@ -9846,6 +10128,13 @@ Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+if test -z "${RDMATRANS_TRUE}" && test -z "${RDMATRANS_FALSE}"; then
+  { { $as_echo "$as_me:$LINENO: error: conditional \"RDMATRANS\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+$as_echo "$as_me: error: conditional \"RDMATRANS\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
 
 : ${CONFIG_STATUS=./config.status}
 ac_write_fail=0

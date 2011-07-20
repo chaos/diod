@@ -6,7 +6,6 @@
 #include "config.h"
 #endif
 
-#if HAVE_LIBIBVERBS
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -389,4 +388,3 @@ rdma_post_recv(struct Rdmatrans *rdma, Rdmactx *rctx)
 		//fprintf(stderr, "Error %d posting recv\n", n);
 	}
 }
-#endif /* HAVE_LIBIBVERBS */

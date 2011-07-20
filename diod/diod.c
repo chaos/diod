@@ -55,6 +55,9 @@
 #include "diod_log.h"
 #include "diod_conf.h"
 #include "diod_sock.h"
+#if HAVE_RDMATRANS
+#include "diod_rdma.h"
+#endif
 
 #include "ops.h"
 

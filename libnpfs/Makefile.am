@@ -19,5 +19,8 @@ libnpfs_a_SOURCES = \
 	npfs.h \
 	npfsimpl.h \
 	9p.h \
-	ctl.c \
-	rdmatrans.c
+	ctl.c
+
+if RDMATRANS
+libnpfs_a_SOURCES += rdmatrans.c
+endif

@@ -35,6 +35,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
+@RDMATRANS_TRUE@am__append_1 = rdmatrans.c
 subdir = libnpfs
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in AUTHORS \
 	COPYING
@@ -46,6 +47,7 @@ am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/x_ac_curses.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
+	$(top_srcdir)/config/x_ac_rdmatrans.m4 \
 	$(top_srcdir)/config/x_ac_wrap.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -58,10 +60,14 @@ AR = ar
 ARFLAGS = cru
 libnpfs_a_AR = $(AR) $(ARFLAGS)
 libnpfs_a_LIBADD =
+am__libnpfs_a_SOURCES_DIST = conn.c error.c fcall.c fdtrans.c \
+	fidpool.c fmt.c np.c srv.c trans.c user.c npstring.c npfs.h \
+	npfsimpl.h 9p.h ctl.c rdmatrans.c
+@RDMATRANS_TRUE@am__objects_1 = rdmatrans.$(OBJEXT)
 am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
 	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) fmt.$(OBJEXT) np.$(OBJEXT) \
 	srv.$(OBJEXT) trans.$(OBJEXT) user.$(OBJEXT) \
-	npstring.$(OBJEXT) ctl.$(OBJEXT) rdmatrans.$(OBJEXT)
+	npstring.$(OBJEXT) ctl.$(OBJEXT) $(am__objects_1)
 libnpfs_a_OBJECTS = $(am_libnpfs_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -72,7 +78,7 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libnpfs_a_SOURCES)
-DIST_SOURCES = $(libnpfs_a_SOURCES)
+DIST_SOURCES = $(am__libnpfs_a_SOURCES_DIST)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -211,24 +217,9 @@ top_srcdir = @top_srcdir@
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = 
 noinst_LIBRARIES = libnpfs.a
-libnpfs_a_SOURCES = \
-	conn.c \
-	error.c \
-	fcall.c \
-	fdtrans.c \
-	fidpool.c \
-	fmt.c \
-	np.c \
-	srv.c \
-	trans.c \
-	user.c \
-	npstring.c \
-	npfs.h \
-	npfsimpl.h \
-	9p.h \
-	ctl.c \
-	rdmatrans.c
-
+libnpfs_a_SOURCES = conn.c error.c fcall.c fdtrans.c fidpool.c fmt.c \
+	np.c srv.c trans.c user.c npstring.c npfs.h npfsimpl.h 9p.h \
+	ctl.c $(am__append_1)
 all: all-am
 
 .SUFFIXES:
