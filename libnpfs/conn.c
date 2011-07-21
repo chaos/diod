@@ -145,7 +145,6 @@ np_conn_read_proc(void *a)
 
 	while (conn->trans) {
 		if (np_trans_recv(conn->trans, &fc, conn->msize) < 0) {
-			np_uerror (errno);
 			np_logerr (srv, "recv error - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
@@ -240,10 +239,8 @@ np_conn_respond(Npreq *req)
 	xpthread_mutex_lock(&conn->wlock);
 	n = np_trans_send(conn->trans, rc);
 	xpthread_mutex_unlock(&conn->wlock);
-	if (n < 0) {
-		np_uerror (errno);
+	if (n < 0)
 		np_logerr (srv, "send to '%s'", conn->client_id);
-	}
 }
 
 char *
