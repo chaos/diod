@@ -23,6 +23,8 @@
 
 /* diod_rdma.c - distributed I/O daemon infiniband rdma operations */
 
+/* based on code in libnpfs/rdmasrv.c by Tom Tucker et al */
+
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -57,31 +59,31 @@
 
 const uint16_t rdma_port = 564;
 const int rdma_qdepth = 64;
-const int rdma_maxmsize = 655536;
+const int rdma_maxmsize = 65536;
 
 struct diod_rdma_struct {
-	struct rdma_cm_id *listen_id;
-	struct rdma_event_channel *event_channel;
-	struct sockaddr_in addr;
+    struct rdma_cm_id *listen_id;
+    struct rdma_event_channel *event_channel;
+    struct sockaddr_in addr;
 };
 
 diod_rdma_t
 diod_rdma_create (void)
 {
     int n;
-	diod_rdma_t rdma;
+    diod_rdma_t rdma;
 
     rdma = malloc (sizeof (*rdma));
-	if (!rdma)
+    if (!rdma)
         msg_exit ("out of memory");
 
-	rdma->event_channel = rdma_create_event_channel();
-	if (!rdma->event_channel)
+    rdma->event_channel = rdma_create_event_channel();
+    if (!rdma->event_channel)
         msg_exit ("rdma_create_event_channel failed");
 
-	n = rdma_create_id(rdma->event_channel, &rdma->listen_id,
-			     NULL, RDMA_PS_TCP);
-	if (n)
+    n = rdma_create_id(rdma->event_channel, &rdma->listen_id,
+                       NULL, RDMA_PS_TCP);
+    if (n)
         errn_exit (n, "rdma_create_id");
 
     return rdma;
@@ -90,9 +92,9 @@ diod_rdma_create (void)
 void
 diod_rdma_destroy (diod_rdma_t rdma)
 {
-	if (rdma->listen_id) {
-		rdma_destroy_id(rdma->listen_id);
-	    rdma->listen_id = NULL;
+    if (rdma->listen_id) {
+        rdma_destroy_id(rdma->listen_id);
+        rdma->listen_id = NULL;
     }
     if (rdma->event_channel) {
         rdma_destroy_event_channel (rdma->event_channel);
@@ -105,15 +107,15 @@ int
 diod_rdma_listen (diod_rdma_t rdma)
 {
     int n;
-	
-	rdma->addr.sin_family = AF_INET;
-	rdma->addr.sin_port = htons(rdma_port);
-	rdma->addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	n = rdma_bind_addr(rdma->listen_id, (struct sockaddr *)&rdma->addr);
-	if (n)
-		errn_exit (n, "rdma_bind_addr");
+    
+    rdma->addr.sin_family = AF_INET;
+    rdma->addr.sin_port = htons(rdma_port);
+    rdma->addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    n = rdma_bind_addr(rdma->listen_id, (struct sockaddr *)&rdma->addr);
+    if (n)
+        errn_exit (n, "rdma_bind_addr");
 
-	n = rdma_listen(rdma->listen_id, 1);
+    n = rdma_listen(rdma->listen_id, 1);
     if (n)
         errn (n, "rdma_listen");
   
@@ -123,54 +125,55 @@ diod_rdma_listen (diod_rdma_t rdma)
 void
 diod_rdma_shutdown (diod_rdma_t rdma)
 {
-	if (rdma->listen_id)
-		rdma_destroy_id(rdma->listen_id);
-	rdma->listen_id = NULL;
+    if (rdma->listen_id)
+        rdma_destroy_id(rdma->listen_id);
+    rdma->listen_id = NULL;
 }
 
 void
 diod_rdma_accept_one (Npsrv *srv, diod_rdma_t rdma)
 {
-	Npconn *conn;
-	Nptrans *trans;
-	struct rdma_cm_event *event;
-	struct rdma_cm_id *cmid;
-	enum rdma_cm_event_type etype;
+    Npconn *conn;
+    Nptrans *trans;
+    struct rdma_cm_event *event;
+    struct rdma_cm_id *cmid;
+    enum rdma_cm_event_type etype;
     int n;
 
-	n = rdma_get_cm_event(rdma->event_channel, &event);
-	if (n)
+    n = rdma_get_cm_event(rdma->event_channel, &event);
+    if (n)
         errn_exit (n, "rdma_get_cm_event");
 
-	cmid = (struct rdma_cm_id *)event->id;
-	etype = event->event;
-	rdma_ack_cm_event(event);
+    cmid = (struct rdma_cm_id *)event->id;
+    etype = event->event;
+    rdma_ack_cm_event(event);
 
-	switch (etype) {
-	case RDMA_CM_EVENT_CONNECT_REQUEST:
-		msg ("rdma: connection request");
-		trans = np_rdmatrans_create(cmid, rdma_qdepth, rdma_maxmsize);
-		if (trans) {
-            conn = np_conn_create(srv, trans, "rdma");
-            cmid->context = conn;
-            np_srv_add_conn(srv, conn);
-        } else
-            errn (np_rerror (), "np_rdmatrns_create failed");
-        break;
+    switch (etype) {
+        case RDMA_CM_EVENT_CONNECT_REQUEST:
+            msg ("rdma: connection request");
+            trans = np_rdmatrans_create(cmid, rdma_qdepth, rdma_maxmsize);
+            if (trans) {
+                conn = np_conn_create(srv, trans, "rdma");
+                cmid->context = conn;
+                np_srv_add_conn(srv, conn);
+            } else
+                errn (np_rerror (), "np_rdmatrns_create failed");
+            break;
 
-    case RDMA_CM_EVENT_ESTABLISHED:
-        msg ("rdma: connection established");
-        break;
+        case RDMA_CM_EVENT_ESTABLISHED:
+            msg ("rdma: connection established");
+            break;
 
-    case RDMA_CM_EVENT_DISCONNECTED:
-        msg ("rdma: connection shutting down");
-        conn = cmid->context;
-        //np_conn_shutdown(conn);
-        /* FIXME: clean up properly */
-        break;
+        case RDMA_CM_EVENT_DISCONNECTED:
+            msg ("rdma: connection shutting down");
+            conn = cmid->context;
+            //np_conn_shutdown(conn);
+            /* FIXME: clean up properly */
+            break;
 
-    default:
-        msg ("rdma: event %d received waiting for a connect request\n", etype);
+        default:
+            msg ("rdma: event %d received waiting for a connect request\n",
+                 etype);
     }
 }
 
