@@ -22,6 +22,10 @@ case $(basename $TEST) in
         fi
         ;;
     t11|t13|t14)
+        if [ -n "$FAKEROOTEKEY" ]; then
+            echo "cannot use fakeroot" >$TEST.out
+            exit 77
+        fi
         if [ $(id -u) != 0 ]; then
             echo "requires root" >$TEST.out
             exit 77

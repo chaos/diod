@@ -17,6 +17,11 @@ if [ -z "$PATH_DIOD" ]; then
     exit 1
 fi
 
+if test -n "$FAKEROOTKEY"; then
+    echo "using fakeroot - skipping" >$TEST.out
+    exit 77
+fi
+
 if test $(id -u) != 0; then
     echo "not root - skipping" >$TEST.out
     exit 77

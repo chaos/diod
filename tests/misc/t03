@@ -1,6 +1,7 @@
 #!/bin/bash -e
 
 TEST=$(basename $0 | cut -d- -f1)
+test -n "$FAKEROOTKEY" && exit 77 #skip if under fakeroot
 test $(id -u) == 0 || exit 77 #skip if not root
 ./tsetuid >$TEST.out 2>&1
 diff $TEST.exp $TEST.out >$TEST.diff
