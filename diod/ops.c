@@ -210,10 +210,6 @@ static void
 _fidfree (Fid *f)
 {
     if (f) {
-        if (f->dir) 
-            (void)closedir(f->dir);
-        else if (f->fd != -1)
-            (void)close (f->fd);
         if (f->path)
             free(f->path);
         free(f);
@@ -540,6 +536,17 @@ diod_clunk (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret;
 
+    if (f->dir) {
+        if (closedir(f->dir) < 0) {
+            np_uerror (errno);
+            goto error_quiet;
+        }
+    } else if (f->fd != -1) {
+        if (close (f->fd) < 0) {
+            np_uerror (errno);
+            goto error_quiet;
+        }
+    }
     if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
         goto error;
@@ -548,6 +555,7 @@ diod_clunk (Npfid *fid)
 error:
     errn (np_rerror (), "diod_clunk %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
+error_quiet:
     return NULL;
 }
 

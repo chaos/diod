@@ -528,7 +528,10 @@ np_clunk(Npreq *req, Npfcall *tc)
 		rc = (*req->conn->srv->clunk)(fid);
 	}
 done:
-	if (rc && rc->type == P9_RCLUNK)
+	/* From clunk(5):
+	 * even if the clunk returns an error, the fid is no longer valid.
+	 */
+	if (fid)
 		np_fid_decref(fid);
 
 	return rc;
