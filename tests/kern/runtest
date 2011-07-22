@@ -76,8 +76,8 @@ export PATH_MNTDIR
 export MALLOC_CHECK_=3
 
 ./kconjoin \
-    "$PATH_DIOD $opt -r0 -w0 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n -owfdno=0,rfdno=0 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_DIOD $opt -r80 -w81 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
+    "$PATH_DIODMOUNT -n -owfdno=81,rfdno=80 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST" \
     >$TEST.out 2>&1
 rc=$?

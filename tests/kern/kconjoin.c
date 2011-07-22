@@ -43,6 +43,9 @@
 #define PATH_MAX 1024
 #endif
 
+#define RFDNO   80
+#define WFDNO   81
+
 static void
 usage (void)
 {
@@ -81,10 +84,18 @@ _interpret_status (int s, char *cmd)
     return rc;
 }
 
+static void
+_movefd (int fd1, int fd2)
+{
+    if (dup2 (fd1, fd2) < 0)
+        err_exit ("dup2");
+    (void)close (fd1);
+}
+
 int
 main (int argc, char *argv[])
 {
-    int cs = -1, s[2];
+    int cs = -1, tosrv[2], fromsrv[2];
     char *srvcmd, *mntcmd, *tstcmd;
     pid_t pid;
 
@@ -96,42 +107,48 @@ main (int argc, char *argv[])
 
     diod_log_init (argv[0]);
 
-    if (socketpair (AF_LOCAL, SOCK_STREAM, 0, s) < 0)
-        err_exit ("socketpair");
+    /* We were using a socketpair like ../user/conjoin.c.
+     * However it is maybe useful to test on a pair of pipes too (issue 68)
+     * so we do that here.
+     */
+    if (pipe (tosrv) < 0)
+        err_exit ("pipe");
+    if (pipe (fromsrv) < 0)
+        err_exit ("pipe");
 
     switch ((pid = fork ())) {
         case -1:
             err_exit ("fork");
             /*NOTREACHED*/
         case 0:    /* child (mnt-cmd, tst-cmd) */
-            close (s[1]);
-            if (dup2 (s[0], 0) < 0)
-                err_exit ("dup2 for %s leg", _cmd (mntcmd));
-            close (s[0]);
+            close (tosrv[0]);
+            close (fromsrv[1]);
+            _movefd (tosrv[1], WFDNO);
+            _movefd (fromsrv[0], RFDNO);
             if (unshare (CLONE_NEWNS) < 0)
                 err_exit ("unshare");
             if ((cs = system (mntcmd)) == -1)
                 err_exit ("failed to run %s", _cmd (mntcmd));
             if (_interpret_status (cs, _cmd (mntcmd)))
                 exit (1);
-            close (0);
+            close (RFDNO);
+            close (WFDNO);
             if ((cs = system (tstcmd)) == -1)
                 err_exit ("fork for %s leg", _cmd (tstcmd));
             _interpret_status (cs, _cmd (tstcmd));
             exit (0);
             /*NOTREACHED*/
         default:     /* parent (srv-cmd) */
-            close (s[0]);
-            if (dup2 (s[1], 0) < 0) {
-                err ("dup2 for %s leg", _cmd (srvcmd));
-                break;
-            }
-            close (s[1]);
+            close (tosrv[1]);
+            close (fromsrv[0]);
+            _movefd (tosrv[0], RFDNO);
+            _movefd (fromsrv[1], WFDNO);
             if ((cs = system (srvcmd)) == -1) {
                 err ("fork for %s leg", _cmd (srvcmd));
                 break;
             }
-            close (0);
+            close (RFDNO);
+            close (WFDNO);
             break;
     }
 
