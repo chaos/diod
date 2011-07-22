@@ -49,7 +49,7 @@ static void npc_incref_fsys(Npcfsys *fs);
 static void npc_decref_fsys(Npcfsys *fs);
 
 Npcfsys *
-npc_create_fsys(int fd, int msize, int flags)
+npc_create_fsys(int rfd, int wfd, int msize, int flags)
 {
 	Npcfsys *fs;
 
@@ -72,7 +72,7 @@ npc_create_fsys(int fd, int msize, int flags)
 	fs->disconnect = NULL;
 	fs->flags = flags;
 
-	fs->trans = np_fdtrans_create(fd, fd);
+	fs->trans = np_fdtrans_create(rfd, wfd);
 	if (!fs->trans)
 		goto error;
 	fs->tagpool = npc_create_pool(P9_NOTAG);
@@ -84,8 +84,10 @@ npc_create_fsys(int fd, int msize, int flags)
 	return fs;
 
 error:
-	npc_decref_fsys(fs); /* will close fd if trans successfully created */
-        (void)close (fd);    /* close it here anyway for consistency */
+	npc_decref_fsys(fs); /* will close fds if trans successfully created */
+	(void)close (rfd);   /* close here anyway for consistancy */
+	if (rfd != wfd)
+		(void)close (wfd);
 	return NULL;
 }
 
@@ -107,7 +109,7 @@ npc_decref_fsys(Npcfsys *fs)
 		return;
 	}
 	if (fs->trans) {
-		np_trans_destroy(fs->trans); /* closes fd */
+		np_trans_destroy(fs->trans); /* closes fds */
 		fs->trans = NULL;
 	}
 	if (fs->tagpool) {
@@ -140,11 +142,9 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 	np_set_tag(tc, tag);
 
 	xpthread_mutex_lock(&fs->lock);
-	if (np_trans_send (fs->trans, tc) < 0) {
-		xpthread_mutex_unlock(&fs->lock);
-		goto done;
-	}
-	n = np_trans_recv(fs->trans, &rc, fs->msize);
+	n = np_trans_send (fs->trans, tc);
+	if (n >= 0)
+		n = np_trans_recv(fs->trans, &rc, fs->msize);
 	xpthread_mutex_unlock(&fs->lock);
 	if (n < 0)
 		goto done;

@@ -82,8 +82,8 @@ static const struct option longopts[] = {
 
 #define DIOD_DEFAULT_MSIZE 65536
 static uid_t _uname2uid (char *uname);
-static void _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt,
-                         int fopt, int nopt);
+static void _diod_mount (Opt o, int rfd, int wfd, char *spec, char *dir,
+                         int vopt, int fopt, int nopt);
 static void _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt);
 static void _verify_mountpoint (char *path);
 static void _parse_uname_access (Opt o);
@@ -114,7 +114,7 @@ main (int argc, char *argv[])
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
-    int sfd = -1;
+    int rfd = -1, wfd = -1;
     Opt o; 
 
     diod_log_init (argv[0]);
@@ -197,16 +197,11 @@ main (int argc, char *argv[])
      * For testing, we start server on a socketpair duped to fd 0.
      */
     if (opt_find (o, "rfdno") || opt_find (o, "wfdno")) {
-        int rfd, wfd;
-
-        if (!opt_scanf (o, "rfdno=%d", &rfd) || !opt_scanf (o, "wfdno=%d", &wfd))
+        if (!opt_scanf (o, "rfdno=%d", &rfd) || !opt_scanf (o, "wfdno=%d",&wfd))
             msg_exit ("-orfdno,wfdno must be used together");
-        if (rfd != wfd)    
-            msg_exit ("-orfdno,wfdno must have same value");
-        sfd = rfd;
         nopt = 1; /* force no mtab */
 
-    /* Connect to server on IANA port (or user-spacfied) and host.
+    /* Connect to server on IANA port (or user-specified) and host.
      */
     } else {
         char *port = opt_find (o, "port");
@@ -223,7 +218,7 @@ main (int argc, char *argv[])
         while ((h = hostlist_next (hi))) {
             if (vopt)
                 msg ("trying to connect to %s:%s", h, port);
-            if ((sfd = diod_sock_connect (h, port, DIOD_SOCK_QUIET)) >= 0)
+            if ((rfd = diod_sock_connect (h, port, DIOD_SOCK_QUIET)) >= 0)
                 break;
         }
         if (h) { /* create new 'spec' string identifying successful host */
@@ -235,12 +230,13 @@ main (int argc, char *argv[])
             snprintf (nspec, len, "%s%s", h, p ? p : "");
         }
         hostlist_destroy (hl);
-        if (sfd < 0)
+        if (rfd < 0)
             msg_exit ("could not connect to server(s), giving up");
+        wfd = rfd;
         
         opt_delete (o, "port");
-        opt_addf (o, "rfdno=%d", sfd);
-        opt_addf (o, "wfdno=%d", sfd);
+        opt_addf (o, "rfdno=%d", rfd);
+        opt_addf (o, "wfdno=%d", wfd);
     }
 
     assert (opt_find (o, "trans=fd"));
@@ -253,8 +249,7 @@ main (int argc, char *argv[])
 
     assert (!opt_find (o, "port"));
 
-    _diod_mount (o, sfd, nspec ? nspec : spec, dir, vopt, fopt, nopt);
-    //(void)close (sfd);
+    _diod_mount (o, rfd, wfd, nspec ? nspec : spec, dir, vopt, fopt, nopt);
 
 done:
     opt_destroy (o);
@@ -459,7 +454,8 @@ done:
 }
 
 static void
-_diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
+_diod_mount (Opt o, int rfd, int wfd, char *spec, char *dir, int vopt,
+             int fopt, int nopt)
 {
     char *options, *options9p, *aname, *uname;
     uid_t uid;
@@ -481,8 +477,8 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
 
     if (vopt)
         msg ("pre-authenticating connection to server");
-    if (!(fs = npc_start (fd, msize, 0)))
-	errn_exit (np_rerror (), "version");
+    if (!(fs = npc_start (rfd, wfd, msize, 0)))
+        errn_exit (np_rerror (), "version");
     if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0)
         errn_exit (np_rerror (), "auth");
     if (!(root = npc_attach (fs, afid, aname, uid))) {
@@ -498,8 +494,11 @@ _diod_mount (Opt o, int fd, char *spec, char *dir, int vopt, int fopt, int nopt)
     if (vopt)
         msg ("mount -t 9p %s %s -o%s", spec, dir, options);
     if (!fopt) {
-        if (fcntl (fd, F_SETFL, O_NONBLOCK) < 0)
-            err_exit ("setting O_NONBLOCK flag");
+        /* kernel wants non-blocking */
+        if (fcntl (rfd, F_SETFL, O_NONBLOCK) < 0)
+            err_exit ("setting O_NONBLOCK flag on rfd=%d", rfd);
+        if (fcntl (wfd, F_SETFL, O_NONBLOCK) < 0)
+            err_exit ("setting O_NONBLOCK flag on wfd=%d", wfd);
         _mount (spec, dir, mountflags, options9p);
     }
     npc_finish (fs); /* closes fd */

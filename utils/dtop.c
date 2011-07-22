@@ -666,7 +666,7 @@ _reader (void *arg)
         if (sp->fd == -1)
             goto skip;
         if (sp->root == NULL)
-            sp->root = npc_mount (sp->fd, 65536, "ctl", diod_auth);
+            sp->root = npc_mount (sp->fd, sp->fd, 65536, "ctl", diod_auth);
         if (sp->root == NULL) {
             (void)close (sp->fd);
             sp->fd = -1;

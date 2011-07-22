@@ -18,16 +18,19 @@ Do not change working directory to @X_LOCALSTATEDIR@/run,
 drop the controlling terminal, or run in the background.
 Send logs to stderr not syslog, unless sent somewhere else by \fI\-L\fR.
 .TP
-.I "-s, --stdin"
-Serve a connected client inherited on stdin.
-This option is mainly used in testing.
+.I "-r, --rfdno INT"
+.TP
+.I "-w, --wfdno INT"
+Serve a connected client inherited on the specified read and write
+file descriptors.  For file descriptors connected bidirectionally,
+the two options may be set to the same value.
 .TP
 .I "-l, --listen IP:PORT"
 Set the listen address (default 0.0.0.0:564).
 This option may be specified more than once.
 It overrides the \fIlisten\fR config file setting.
 .TP
-.I "-w, --nwthreads INT"
+.I "-t, --nwthreads INT"
 Set the number of worker threads to spawn to handle 9P operations
 for each unique aname.
 This option overrides the \fInwthreads\fR setting in diod.conf (5).

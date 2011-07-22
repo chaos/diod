@@ -63,7 +63,7 @@ static int npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
 static void npc_disconnect_fsys(Npcfsys *fs);
 
 Npcfsys *
-npc_create_mtfsys(int fd, int msize, int flags)
+npc_create_mtfsys(int rfd, int wfd, int msize, int flags)
 {
 	Npcfsys *fs;
 	int err;
@@ -87,14 +87,15 @@ npc_create_mtfsys(int fd, int msize, int flags)
 	fs->readproc = 0;
 	fs->writeproc = 0;
 	fs->refcount = 1;
-	fs->fd = fd;
+	fs->rfd = rfd;
+	fs->wfd = wfd;
 	fs->rpc = npc_rpc;
 	fs->incref = npc_incref_fsys;
 	fs->decref = npc_decref_fsys;
 	fs->disconnect = npc_disconnect_fsys;
 	fs->flags = flags;
 
-	fs->trans = np_fdtrans_create(fd, fd);
+	fs->trans = np_fdtrans_create(rfd, wfd);
 	if (!fs->trans)
 		goto error;
 	fs->tagpool = npc_create_pool(P9_NOTAG);
@@ -129,10 +130,10 @@ npc_disconnect_fsys(Npcfsys *fs)
 	void *v;
 
 	xpthread_mutex_lock(&fs->lock);
-	if (fs->fd >= 0) {
-		shutdown(fs->fd, 2);
-		close(fs->fd);
-		fs->fd = -1;
+	if (fs->wfd >= 0) {
+		shutdown(fs->wfd, 2);
+		close(fs->wfd);
+		fs->wfd = -1;
 	}
 	xpthread_mutex_unlock(&fs->lock);
 
@@ -169,7 +170,7 @@ npc_decref_fsys(Npcfsys *fs)
 		return;
 	}
 
-	assert(fs->fd<0 && fs->trans==NULL);
+	assert(fs->wfd<0 && fs->trans==NULL);
 	if (fs->tagpool) {
 		npc_destroy_pool(fs->tagpool);
 		fs->tagpool = NULL;

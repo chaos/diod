@@ -61,27 +61,28 @@
 
 #include "ops.h"
 
-typedef enum { SRV_STDIN, SRV_NORMAL } srvmode_t;
+typedef enum { SRV_FILEDES, SRV_NORMAL } srvmode_t;
 
 static void          _daemonize (void);
 static void          _setrlimit (void);
 static void          _become_user (char *name, uid_t uid, int realtoo);
-static void          _service_run (srvmode_t mode);
+static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 
 #ifndef NR_OPEN
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fsd:l:w:e:Eu:SL:nc:NU:"
+#define OPTIONS "fr:w:d:l:t:e:Eu:SL:nc:NU:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"foreground",      no_argument,        0, 'f'},
-    {"stdin",           no_argument,        0, 's'},
+    {"rfdno",           required_argument,  0, 'r'},
+    {"wfdno",           required_argument,  0, 'w'},
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
-    {"nwthreads",       required_argument,  0, 'w'},
+    {"nwthreads",       required_argument,  0, 't'},
     {"export",          required_argument,  0, 'e'},
     {"export-all",      no_argument,        0, 'E'},
     {"no-auth",         no_argument,        0, 'n'},
@@ -103,7 +104,8 @@ usage()
     fprintf (stderr, 
 "Usage: diod [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
-"   -s,--stdin             service connected client on stdin\n"
+"   -r,--rfdno             service connected client on read file descriptor\n"
+"   -w,--wfdno             service connected client on write file descriptor\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
@@ -126,6 +128,7 @@ main(int argc, char **argv)
     int c;
     char *copt = NULL;
     srvmode_t mode = SRV_NORMAL;
+    int rfdno = -1, wfdno = -1;
    
     diod_log_init (argv[0]); 
     diod_conf_init ();
@@ -152,8 +155,13 @@ main(int argc, char **argv)
             case 'f':   /* --foreground */
                 diod_conf_set_foreground (1);
                 break;
-            case 's':   /* --stdin */
-                mode = SRV_STDIN;
+            case 'r':   /* --rfdno */
+                mode = SRV_FILEDES;
+                rfdno = strtoul (optarg, NULL, 10);
+                break;
+            case 'w':   /* --wfdno */
+                mode = SRV_FILEDES;
+                wfdno = strtoul (optarg, NULL, 10);
                 break;
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
@@ -165,7 +173,7 @@ main(int argc, char **argv)
                     usage ();
                 diod_conf_add_listen (optarg);
                 break;
-            case 'w':   /* --nwthreads INT */
+            case 't':   /* --nwthreads INT */
                 diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
                 break;
             case 'c':   /* --config-file PATH */
@@ -213,16 +221,17 @@ main(int argc, char **argv)
     }
     if (optind < argc)
         usage();
-
     if (diod_conf_opt_runasuid () && diod_conf_get_allsquash ())
-        err_exit ("--runas-uid and allsquash cannot be used together");
+        msg_exit ("--runas-uid and allsquash cannot be used together");
+    if (mode == SRV_FILEDES && (rfdno == -1 || wfdno == -1))
+        msg_exit ("--rfdno,wfdno must be used together");
 
     diod_conf_validate_exports ();
 
     if (geteuid () == 0)
         _setrlimit ();
 
-    _service_run (mode);
+    _service_run (mode, rfdno, wfdno);
 
     diod_conf_fini ();
     diod_log_fini ();
@@ -333,6 +342,9 @@ _daemonize (void)
  **/
 
 struct svc_struct {
+    srvmode_t mode;
+    int rfdno;
+    int wfdno;
     Npsrv *srv;
     struct pollfd *fds;
     int nfds;
@@ -382,8 +394,13 @@ _service_loop (void *arg)
     sigdelset (&sigs, SIGTERM);
     sigdelset (&sigs, SIGUSR1);
 
-    if (ss.nfds == 0)
-        diod_sock_startfd (ss.srv, 0, "stdin");
+    switch (ss.mode) {
+        case SRV_FILEDES:
+            diod_sock_startfd (ss.srv, ss.rfdno, ss.wfdno, "stdin");
+            break;
+        case SRV_NORMAL:
+            break;
+    }
     while (!ss.shutdown) {
         if (ss.reload) {
             diod_conf_init_config_file (NULL);
@@ -497,7 +514,7 @@ _test_setgroups (void)
 }
 
 static void
-_service_run (srvmode_t mode)
+_service_run (srvmode_t mode, int rfdno, int wfdno)
 {
     List l = diod_conf_get_listen ();
     int nwthreads = diod_conf_get_nwthreads ();
@@ -505,6 +522,9 @@ _service_run (srvmode_t mode)
     uid_t euid = geteuid ();
     int n;
 
+    ss.mode = mode;
+    ss.rfdno = rfdno;
+    ss.wfdno = wfdno;
     ss.shutdown = 0;
     ss.reload = 0;
     _service_sigsetup ();
@@ -512,7 +532,7 @@ _service_run (srvmode_t mode)
     ss.fds = NULL;
     ss.nfds = 0;
     switch (mode) {
-        case SRV_STDIN:
+        case SRV_FILEDES:
             break;
         case SRV_NORMAL:
             if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL))
@@ -548,7 +568,7 @@ _service_run (srvmode_t mode)
         
     if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
         _daemonize (); /* implicit fork - no pthreads before this */
-    if (!diod_conf_get_foreground () && mode != SRV_STDIN) 
+    if (!diod_conf_get_foreground () && mode != SRV_FILEDES)
         diod_log_set_dest (diod_conf_get_logdest ());
 
     /* drop root */
@@ -583,7 +603,7 @@ _service_run (srvmode_t mode)
         errn_exit (n, "pthread_create _service_loop_rdma");
 #endif
     switch (mode) {
-        case SRV_STDIN:
+        case SRV_FILEDES:
             np_srv_wait_conncount (ss.srv, 1);
             pthread_kill (ss.t, SIGUSR1);
             break;

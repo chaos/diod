@@ -45,11 +45,11 @@ enum {
  ** Basic functions
  **/
 
-/* Given a server already connected on fd, send a VERSION request
+/* Given a server already connected on rfd,wfd, send a VERSION request
  * to negotiate 9P2000.L and an msize <= the one provided.
  * Return fsys structure or NULL on error (retrieve with np_rerror ())
  */
-Npcfsys* npc_start (int fd, int msize, int flags);
+Npcfsys* npc_start (int rfd, int wfd, int msize, int flags);
 
 /* Close fd and deallocate file system structure.
  */
@@ -141,7 +141,7 @@ int npc_getattr (Npcfid *fid, struct stat *sb);
  * Employs simple fsys implementation that only allows one outstanding RPC.
  * Returns a fid for the attach or NULL on error (retrieve with np_rerror ()).
  */
-Npcfid *npc_mount (int fd, int msize, char *aname, AuthFun auth);
+Npcfid *npc_mount (int rfd, int wfd, int msize, char *aname, AuthFun auth);
 
 /* Shorthand for clunk/finish.  Always succeeds.
  */

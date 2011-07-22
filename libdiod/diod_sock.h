@@ -2,7 +2,7 @@ struct pollfd;
 
 void diod_sock_accept_one (Npsrv *srv, int fd);
 
-void diod_sock_startfd (Npsrv *srv, int fd, char *client_id);
+void diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id);
 
 int  diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
                                      char *nport);

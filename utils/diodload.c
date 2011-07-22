@@ -204,7 +204,7 @@ loadgen (void *arg)
 
     if ((t->fd = diod_sock_connect (t->host, t->port, 0)) < 0)
         goto done;
-    if (!(t->fs = npc_start (t->fd, t->msize, 0))) {
+    if (!(t->fs = npc_start (t->fd, t->fd, t->msize, 0))) {
         errn (np_rerror (), "error negotiating protocol with server");
         goto done;
     }

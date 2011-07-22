@@ -69,7 +69,7 @@ main (int argc, char *argv[])
     if ((fd = open (infile, O_RDONLY)) < 0)
         err_exit ("open");
 
-    if (!(root = npc_mount (0, 65536+24, aname, diod_auth)))
+    if (!(root = npc_mount (0, 0, 65536+24, aname, diod_auth)))
         errn_exit (np_rerror (), "npc_mount");
     if ((fid = npc_create_bypath (root, outfile, O_WRONLY, 0644, getegid()))) {
         _copy_to9 (fd, fid);

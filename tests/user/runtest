@@ -40,7 +40,7 @@ export PATH_EXPDIR
 export MALLOC_CHECK_=3
 
 ./conjoin \
-    "$PATH_DIOD -s -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
+    "$PATH_DIOD -r0 -w0 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
     "$TEST $PATH_EXPDIR" \
     >$TEST.out 2>&1
 rc=$?

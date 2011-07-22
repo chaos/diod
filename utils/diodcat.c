@@ -53,7 +53,7 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 
-#define OPTIONS "a:h:p:sm:u:t:"
+#define OPTIONS "a:h:p:m:u:t:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -62,7 +62,6 @@ static const struct option longopts[] = {
     {"port",    required_argument,      0, 'p'},
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
-    {"stdin",   no_argument,            0, 's'},
     {"timeout", required_argument,      0, 't'},
     {0, 0, 0, 0},
 };
@@ -84,7 +83,6 @@ usage (void)
 "   -p,--port PORT        port (default 564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
-"   -s,--stdin            inherit server on stdin (for testing)\n"
 "   -t,--timeout SECS     give up after specified seconds\n"
 );
     exit (1);
@@ -98,7 +96,6 @@ main (int argc, char *argv[])
     char *port = "564";
     int msize = 65536;
     uid_t uid = geteuid ();
-    int sopt = 0;
     int topt = 0;
     int fd, c;
 
@@ -115,9 +112,6 @@ main (int argc, char *argv[])
                 break;
             case 'p':   /* --port PORT */
                 port = optarg;
-                break;
-            case 's':   /* --stdin */
-                sopt = 1;
                 break;
             case 'm':   /* --msize SIZE */
                 msize = strtoul (optarg, NULL, 10);
@@ -141,16 +135,10 @@ main (int argc, char *argv[])
     if (topt > 0)
         alarm (topt);
 
-    if (sopt) {
-        if (hostname)
-            usage ();
-        fd = 0;
-    } else {
-        if (!hostname) 
-            hostname = "localhost";
-        if ((fd = diod_sock_connect (hostname, port, 0)) < 0)
-            exit (1);
-    }
+    if (!hostname) 
+        hostname = "localhost";
+    if ((fd = diod_sock_connect (hostname, port, 0)) < 0)
+        exit (1);
     if (!aname)
         aname = "ctl";
 
@@ -217,7 +205,7 @@ catfiles (int fd, uid_t uid, int msize, char *aname, char **av, int ac)
     Npcfid *afid = NULL, *root = NULL;
     int i, ret = -1;
 
-    if (!(fs = npc_start (fd, msize, 0))) {
+    if (!(fs = npc_start (fd, fd, msize, 0))) {
         errn (np_rerror (), "error negotiating protocol with server");
         goto done;
     }

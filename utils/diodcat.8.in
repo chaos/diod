@@ -25,9 +25,6 @@ The maximum request size including 9P headers (default 65536).
 .I "-u, --uid UID"
 Try to attach to the server as the specified user (default your effective uid).
 .TP
-.I "-s, --stdin"
-Inherit the connected file descriptor of server on stdin (for testing).
-.TP
 .I "-t, --timeout SECS"
 Force timeout after specified number of seconds (default no timeout).
 .SH "SEE ALSO"

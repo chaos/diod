@@ -180,15 +180,17 @@ done:
 }
 
 void
-diod_sock_startfd (Npsrv *srv, int fd, char *client_id)
+diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id)
 {
     Npconn *conn;
     Nptrans *trans;
 
-    trans = np_fdtrans_create (fd, fd);
+    trans = np_fdtrans_create (fdin, fdout);
     if (!trans) {
         errn (np_rerror (), "error creating transport for %s", client_id);
-        close (fd);
+        (void)close (fdin);
+        if (fdin != fdout)
+            (void)close (fdout);
         return;
     }
                  
@@ -238,7 +240,7 @@ diod_sock_accept_one (Npsrv *srv, int fd)
         return;
     }
 #endif
-    diod_sock_startfd (srv, fd, strlen(host) > 0 ? host : ip);
+    diod_sock_startfd (srv, fd, fd, strlen(host) > 0 ? host : ip);
 }
  
 /* Connect to host:port.

@@ -114,7 +114,7 @@ main (int argc, char *argv[])
         msg_exit ("numusers must be >= 1"); 
     }
     
-    if (!(fs = npc_start (fd, 8192+24, NPC_MULTI_RPC)))
+    if (!(fs = npc_start (fd, fd, 8192+24, NPC_MULTI_RPC)))
         errn_exit (np_rerror (), "npc_start");
 
     for (i = 0; i < numthreads; i++) {

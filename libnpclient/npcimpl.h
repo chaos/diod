@@ -79,11 +79,12 @@ struct Npcfsys {
         pthread_t       readproc;
         pthread_t       writeproc;
 
-	int		fd;
+	int		rfd;
+	int		wfd;
 };
 
-Npcfsys *npc_create_fsys(int fd, int msize, int flags);
-Npcfsys *npc_create_mtfsys(int fd, int msize, int flags);
+Npcfsys *npc_create_fsys(int rfd, int wfd, int msize, int flags);
+Npcfsys *npc_create_mtfsys(int rfd, int wfd, int msize, int flags);
 
 Npcpool *npc_create_pool(u32 maxid);
 void npc_destroy_pool(Npcpool *p);
