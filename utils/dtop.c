@@ -637,13 +637,11 @@ _read_ctl_nfsops (Server *sp)
 static int
 _read_ctl_connections (Server *sp)
 {
-    time_t now;
     char *buf, *s, *p;
     int count = 0;
 
     if (!(buf = npc_aget (sp->root, "connections")))
         return -1;
-    now = time (NULL);
     for (s = buf; s && *s; s = p) {
         p = strchr (s, '\n');
         if (p)

@@ -154,7 +154,8 @@ buf_put_str(struct cbuf *buf, char *s, Npstr *ps)
 		ps->len = slen;
 		buf_put_int16(buf, slen, NULL);
 		ps->str = buf_alloc(buf, slen);
-		memmove(ps->str, s, slen);
+		if (s)
+			memmove(ps->str, s, slen);
 	}
 }
 

@@ -681,7 +681,7 @@ list_node_create (List l, ListNode *pp, void *x)
             i->prev = &p->next;
         else if (i->pos == p->next)
             i->pos = p;
-        assert((i->pos == *i->prev) || (i->pos == (*i->prev)->next));
+        //assert((i->pos == *i->prev) || (i->pos == (*i->prev)->next));
     }
     return(x);
 }
