@@ -1,6 +1,7 @@
 /* tsetfsuidsupp.c - do suppl. groups work as expected with fsuid/fsgid? */
 
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

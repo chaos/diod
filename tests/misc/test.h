@@ -75,8 +75,13 @@ _fchmod (int fd, mode_t m)
 static inline void
 _setgroups (size_t s, gid_t *g)
 {
+#if 0
     if (setgroups (s, g) < 0)
+#else
+    if (syscall(SYS_setgroups, s, g) < 0)
+#endif
         err_exit ("_setgroups");
+    
 }
 static inline int
 _getgroups (size_t s, gid_t *g)

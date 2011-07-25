@@ -644,9 +644,11 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			/* Suppl groups need to be part of cred for NFS
 			 * forwarding even with DAC_BYPASS.  However only
 			 * do it if kernel treats sg's per-thread not process.
+			 * Addendum: late model glibc attempts to make this
+			 * per-process, so for now bypass glibc. See issue 53.
 			 */
 			if ((srv->flags & SRV_FLAGS_SETGROUPS)) {
-				if ((n = setgroups (u->nsg, u->sg)) < 0) {
+				if (syscall(SYS_setgroups, u->nsg, u->sg) < 0) {
 					np_uerror (errno);
 					np_logerr (srv, "setgroups(%s) nsg=%d failed",
 						   u->uname, u->nsg);

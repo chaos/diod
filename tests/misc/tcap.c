@@ -4,6 +4,7 @@
 #include "config.h"
 #endif
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <sys/fsuid.h>
 #include <sys/types.h>
 #include <sys/stat.h>

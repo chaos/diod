@@ -6,6 +6,7 @@
  */
 
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <pthread.h>
 #include <stdlib.h>

@@ -1,6 +1,7 @@
 /* tfcntl.c - pthreads contending for fcntl locks are like one process */
 
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>

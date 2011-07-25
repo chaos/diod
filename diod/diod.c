@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
@@ -277,7 +278,7 @@ _become_user (char *name, uid_t uid, int realtoo)
     nsg = sizeof (sg) / sizeof(sg[0]);
     if (getgrouplist(pwd->pw_name, pwd->pw_gid, sg, &nsg) == -1)
         err_exit ("user is in too many groups");
-    if (setgroups (nsg, sg) < 0)
+    if (syscall(SYS_setgroups, nsg, sg) < 0)
         err_exit ("setgroups");
     if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
         err_exit ("setreuid");
