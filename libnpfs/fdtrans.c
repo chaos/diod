@@ -156,16 +156,17 @@ static int
 np_fdtrans_send(Npfcall *fc, void *a)
 {
 	Fdtrans *fdt = (Fdtrans *)a;
-	int n, len = 0;
+	int n, len = 0, size = fc->size;
 
+	/* N.B. The copy of fc->size to size avoids a race, see issue 27 */
 	do {
-		n = write(fdt->fdout, fc->pkt + len, fc->size - len);
+		n = write(fdt->fdout, fc->pkt + len, size - len);
 		if (n < 0) {
 			np_uerror(errno);
 			return -1;
 		}
 		len += n;
-	} while (len < fc->size);
+	} while (len < size);
 
 	return len;		
 }	
