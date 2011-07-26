@@ -493,8 +493,13 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc)
 		pthread_cond_wait(&r.cond, &r.lock);
 	xpthread_mutex_unlock(&r.lock);
 
+	if (r.rc == NULL) {
+		np_uerror (EPROTO); /* premature EOF */
+		return -1;
+	}
+
 	/* N.B. allow for auth returning error with ecode == 0 */
-	if (r.rc->type == P9_RLERROR || r.ecode) {
+	if (r.ecode || r.rc->type == P9_RLERROR) {
 		np_uerror(r.ecode);
 		free(r.rc);
 		return -1;
