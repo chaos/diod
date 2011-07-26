@@ -1,3 +1,15 @@
+1.0-pre47:
+	Don't mask close errors (issue 71)
+	Implement diod --rfdno,wfdno options to match v9fs (issue 68)
+	Fix transport read/write error logging.
+	Change transport internal interface to message-oriented.
+	Don't hardwire .L lock/getlock bits in test (issue 69)	
+	Make setgroups() system call directly to kernel (issue 53).
+	Misc. llvm fixes [E. Meshcheryakov]
+	Make unit tests work in fakeroot environment [E. Meshcheryakov]
+	Prep for Infiniband RDMA transport work.
+	Misc. coverity fixes.
+
 1.0-pre46:
 	Support hostlist:aname mount syntax (issue 66)
 	Fix transport abstraction to handle whole messages (issue 67)

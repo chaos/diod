@@ -158,7 +158,9 @@ np_fdtrans_send(Npfcall *fc, void *a)
 	Fdtrans *fdt = (Fdtrans *)a;
 	int n, len = 0, size = fc->size;
 
-	/* N.B. The copy of fc->size to size avoids a race, see issue 27 */
+	/* N.B. Caching fc->size avoids a race with mtfsys.c where fc
+  	 * is replaced under us before the do conditional - see issue 72.
+	 */
 	do {
 		n = write(fdt->fdout, fc->pkt + len, size - len);
 		if (n < 0) {
