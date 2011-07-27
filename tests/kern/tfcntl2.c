@@ -1,5 +1,8 @@
 /* tfcntl2.c - test POSIX adsvisory record locks with multiple processes */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>

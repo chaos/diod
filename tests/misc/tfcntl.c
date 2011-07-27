@@ -1,5 +1,8 @@
 /* tfcntl.c - pthreads contending for fcntl locks are like one process */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>

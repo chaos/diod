@@ -360,8 +360,14 @@
 /* Expansion of the "sysconfdir" installation directory. */
 #undef X_SYSCONFDIR
 
+/* Number of bits in a file offset, on hosts where this is settable. */
+#undef _FILE_OFFSET_BITS
+
 /* Define _GNU_SOURCE so that we get all necessary prototypes */
 #undef _GNU_SOURCE
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* Define to 1 if you plan to link against multithreaded code. */
 #undef _REENTRANT

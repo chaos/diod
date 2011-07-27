@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+cp fsstress/fsstress $PATH_EXPDIR
+$PATH_MNTDIR/fsstress -d $PATH_EXPDIR -n 1 -p 1 -l 1

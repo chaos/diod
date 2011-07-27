@@ -7,6 +7,9 @@
  * However, they can silently fail, e.g. if process doesn't have CAP_SETUID.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>

@@ -1,5 +1,8 @@
 /* tsuppgrp.c - check that pthreads can independently setgroups */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>

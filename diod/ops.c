@@ -601,7 +601,7 @@ diod_statfs (Npfid *fid)
         np_uerror (errno);
         goto error;
     }
-    fsid = sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
+    fsid = (u64)sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
     if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
                                   sb.f_ffree, fsid,

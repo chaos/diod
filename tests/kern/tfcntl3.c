@@ -1,5 +1,8 @@
 /* tfcntl3.c - test POSIX advisory record locks within one process */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>

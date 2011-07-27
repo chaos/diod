@@ -1,5 +1,8 @@
 /* tsetfsuidsupp.c - do suppl. groups work as expected with fsuid/fsgid? */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>

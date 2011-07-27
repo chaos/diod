@@ -5,6 +5,9 @@
  * and in case anything changes in this area we might want to flag it.
  */
 
+#if HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
