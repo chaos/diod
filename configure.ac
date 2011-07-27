@@ -101,6 +101,7 @@ AC_CONFIG_FILES( \
   tests/kern/dbench/Makefile \
   tests/kern/postmark/Makefile \
   tests/kern/fsx/Makefile \
+  tests/kern/fsstress/Makefile \
   tests/user/Makefile \
   etc/Makefile \
 )
