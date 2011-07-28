@@ -55,13 +55,13 @@ P9_TFSYNC tag 42 fid 1
 test_rfsync(51): 7
 P9_RFSYNC tag 42
 test_tlock(52): 41
-P9_TLOCK tag 42 fid 1 type F_UNLCK flags 3 start 4 length 5 proc_id 6 client_id 'xyz'
+P9_TLOCK tag 42 fid 1 type P9_LOCK_TYPE_UNLCK flags 3 start 4 length 5 proc_id 6 client_id 'xyz'
 test_rlock(53): 8
 P9_RLOCK tag 42 status P9_LOCK_BLOCKED
 test_tgetlock(54): 37
-P9_TGETLOCK tag 42 fid 1 type F_UNLCK start 3 length 4 proc_id 5 client_id 'xyz'
+P9_TGETLOCK tag 42 fid 1 type P9_LOCK_TYPE_UNLCK start 3 length 4 proc_id 5 client_id 'xyz'
 test_rgetlock(55): 33
-P9_RGETLOCK tag 42 type F_WRLCK start 2 length 3 proc_id 4 client_id 'xyz'
+P9_RGETLOCK tag 42 type P9_LOCK_TYPE_WRLCK start 2 length 3 proc_id 4 client_id 'xyz'
 test_tlink(70): 20
 P9_TLINK tag 42 dfid 1 fid 2 name 'xyz'
 test_rlink(71): 7
