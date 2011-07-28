@@ -210,6 +210,7 @@ struct Nptpool {
 	Npreq*		reqs_first;
 	Npreq*		reqs_last;
 	Npreq*		workreqs;
+	Npreq*		donereqs;
 	Npstats		stats;
 	pthread_cond_t	reqcond;
 	Nptpool		*next;

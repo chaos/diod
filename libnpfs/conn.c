@@ -175,6 +175,7 @@ np_conn_read_proc(void *a)
 
 			rc = np_flush (req, fc);
 			np_req_respond (req, rc);
+			np_req_unref(req);
 
 			xpthread_mutex_lock (&srv->lock);
 			srv->tpool->stats.nreqs[P9_TFLUSH]++;

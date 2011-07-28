@@ -52,6 +52,8 @@ static void np_tpool_cleanup (Npsrv *srv);
 static void *np_wthread_proc(void *a);
 static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
+static void np_srv_remove_donereq(Nptpool *tp, Npreq *req);
+static void np_srv_add_donereq(Nptpool *tp, Npreq *req);
 static void np_tpool_incref_nolock (Nptpool *tp);
 
 static char *_ctl_get_conns (char *name, void *a);
@@ -212,6 +214,29 @@ np_srv_remove_workreq(Nptpool *tp, Npreq *req)
 		req->prev->next = req->next;
 	else
 		tp->workreqs = req->next;
+	if (req->next)
+		req->next->prev = req->prev;
+}
+
+static void
+np_srv_add_donereq(Nptpool *tp, Npreq *req)
+{
+	/* assert: srv->lock held */
+	if (tp->donereqs)
+		tp->donereqs->prev = req;
+	req->next = tp->donereqs;
+	tp->donereqs = req;
+	req->prev = NULL;
+}
+
+static void
+np_srv_remove_donereq(Nptpool *tp, Npreq *req)
+{
+	/* assert: srv->lock held */
+	if (req->prev)
+		req->prev->next = req->next;
+	else
+		tp->donereqs = req->next;
 	if (req->next)
 		req->next->prev = req->prev;
 }
@@ -667,11 +692,14 @@ np_wthread_proc(void *a)
 
 		xpthread_mutex_lock(&tp->srv->lock);
 		np_srv_remove_workreq(tp, req);
+		np_srv_add_donereq(tp, req);
 		xpthread_mutex_unlock(&tp->srv->lock);
 
 		np_req_respond(req, rc);
 			
 		xpthread_mutex_lock(&tp->srv->lock);
+		np_srv_remove_donereq(tp, req);
+		np_req_unref(req);
 	}
 	xpthread_mutex_unlock (&tp->srv->lock);
 
@@ -692,7 +720,6 @@ np_req_respond(Npreq *req, Npfcall *rc)
 		np_conn_respond(req);		
 	}
 	xpthread_mutex_unlock(&req->lock);
-	np_req_unref(req);
 }
 
 Npreq *
@@ -876,16 +903,16 @@ error_unlock:
 }
 
 static char *
-_get_one_request (char **sp, int *lp, Npreq *req)
+_get_one_request (char **sp, int *lp, char state, Npreq *req)
 {
 	char *uname = req->fid ? req->fid->user->uname : "-";
 	char *aname = req->fid && req->fid->aname ? req->fid->aname : "-";
 	char reqstr[40];
 
 	np_snprintfcall (reqstr, sizeof (reqstr), req->tcall);
-	if (aspf (sp, lp, "%-10.10s %-10.10s %-10.10s %s...\n",
+	if (aspf (sp, lp, "%-10.10s %-10.10s %-10.10s %c %s...\n",
 		 			np_conn_get_client_id (req->conn),
-					aname, uname, reqstr) < 0) {
+					aname, uname, state, reqstr) < 0) {
 		np_uerror (ENOMEM);
 		return NULL;
 	}
@@ -903,11 +930,14 @@ _ctl_get_requests(char *name, void *a)
 
 	xpthread_mutex_lock(&srv->lock);
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		for (req = tp->workreqs; req != NULL; req = req->next)
-			if (!(_get_one_request (&s, &len, req)))
-				goto error_unlock;
 		for (req = tp->reqs_first; req != NULL; req = req->next)
-			if (!(_get_one_request (&s, &len, req)))
+			if (!(_get_one_request (&s, &len, 'W', req)))
+				goto error_unlock;
+		for (req = tp->workreqs; req != NULL; req = req->next)
+			if (!(_get_one_request (&s, &len, 'R', req)))
+				goto error_unlock;
+		for (req = tp->donereqs; req != NULL; req = req->next)
+			if (!(_get_one_request (&s, &len, 'D', req)))
 				goto error_unlock;
 	}
 	xpthread_mutex_unlock(&srv->lock);
