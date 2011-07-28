@@ -1,3 +1,9 @@
+1.0-pre48:
+	Add request age and status to ctl:requests synthetic file.
+	Decode new lock/getlock type values (issue 69).
+	Add dtop screen for monitoring I/O read/write sizes.
+	Add fsstress and fsx to internal test suite.
+
 1.0-pre47:
 	Don't mask close errors (issue 71)
 	Implement diod --rfdno,wfdno options to match v9fs (issue 68)
