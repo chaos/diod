@@ -96,6 +96,8 @@ typedef struct {
     sample_t numreqs;
     sample_t totreqs;
     sample_t nreqs[P9_RWSTAT + 1];
+    sample_t rcount[NPSTATS_RWCOUNT_BINS];
+    sample_t wcount[NPSTATS_RWCOUNT_BINS];
 } Tpool;
 
 typedef struct {
@@ -338,6 +340,54 @@ _update_display_normal (WINDOW *win)
     wrefresh (win);
 }
 
+static void
+_update_display_rwcount (WINDOW *win)
+{
+    ListIterator itr;
+    Tpool *tp;
+    int y = 0;
+    time_t t = time(NULL);
+
+    wclear (win);
+    wmove (win, y++, 0);
+
+    wattron (win, A_REVERSE);
+    wprintw (win, 
+             "%9.9s %10.10s "
+             "%5.5s %5.5s %5.5s %5.5s %5.5s "
+             "%5.5s %5.5s %5.5s %5.5s %5.5s",
+             "server", "aname",
+             "r<4K", "r<8K", "r<16K", "r<32K", "r<64K",
+             "w<4K", "w<8K", "w<16K", "w<32K", "w<64K");
+    wattroff (win, A_REVERSE);
+
+    xpthread_mutex_lock (&dtop_lock);
+    if (!(itr = list_iterator_create (tpools)))
+        msg_exit ("out of memory");    
+    while ((tp = list_next (itr))) {
+        if (sample_val (tp->numfids, t) == 0)
+            continue;
+        mvwprintw (win, y++, 0,
+             "%9.9s %10.10s "
+             "%5.0f %5.0f %5.0f %5.0f %5.0f "
+             "%5.0f %5.0f %5.0f %5.0f %5.0f",
+                    tp->key.host, tp->key.aname,
+                    sample_rate (tp->rcount[0], t),
+                    sample_rate (tp->rcount[1], t),
+                    sample_rate (tp->rcount[2], t),
+                    sample_rate (tp->rcount[3], t),
+                    sample_rate (tp->rcount[4], t),
+                    sample_rate (tp->wcount[0], t),
+                    sample_rate (tp->wcount[1], t),
+                    sample_rate (tp->wcount[2], t),
+                    sample_rate (tp->wcount[3], t),
+                    sample_rate (tp->wcount[4], t));
+    }
+    list_iterator_destroy (itr);
+    xpthread_mutex_unlock (&dtop_lock);
+    wrefresh (win);
+}
+
 static int
 _match_serverhost (Server *sp, char *host)
 {
@@ -425,7 +475,7 @@ _update_display_aname (WINDOW *win)
     wrefresh (win);
 }
 
-typedef enum {VIEW_NORMAL, VIEW_SERVER, VIEW_ANAME} view_t;
+typedef enum {VIEW_NORMAL, VIEW_SERVER, VIEW_ANAME, VIEW_RWCOUNT} view_t;
 static void
 _curses_watcher (double update_secs)
 {
@@ -457,6 +507,9 @@ _curses_watcher (double update_secs)
             case VIEW_SERVER:
                 _update_display_server (subwin);
                 break;
+            case VIEW_RWCOUNT:
+                _update_display_rwcount (subwin);
+                break;
         }
         switch ((c = getch ())) {
             case 'q':
@@ -472,6 +525,9 @@ _curses_watcher (double update_secs)
                 break;
             case 'n': /* normal view */
                 view = VIEW_NORMAL;
+                break;
+            case 'c': /* rwcount view */
+                view = VIEW_RWCOUNT;
                 break;
             case ERR: /* timeout */
                 break;
@@ -507,6 +563,10 @@ _create_tpool (Tpoolkey *key)
     tp->numreqs = sample_create (stale_secs); /* in queue */
     for (i = 0; i < sizeof(tp->nreqs)/sizeof(tp->nreqs[0]); i++)
         tp->nreqs[i] = sample_create (stale_secs);
+    for (i = 0; i < NPSTATS_RWCOUNT_BINS; i++) {
+        tp->rcount[i] = sample_create (stale_secs);
+        tp->wcount[i] = sample_create (stale_secs);
+    }
 
     return tp;
 }
@@ -516,8 +576,18 @@ _destroy_tpool (Tpool *tp)
 {
     int i;
 
+    for (i = 0; i < NPSTATS_RWCOUNT_BINS; i++) {
+        sample_destroy (tp->rcount[i]);
+        sample_destroy (tp->wcount[i]);
+    }
     for (i = 0; i < sizeof(tp->nreqs)/sizeof(tp->nreqs[0]); i++)
         sample_destroy (tp->nreqs[i]);
+    sample_destroy (tp->numreqs);
+    sample_destroy (tp->totreqs);
+    sample_destroy (tp->numfids);
+    sample_destroy (tp->iops);
+    sample_destroy (tp->wbytes);
+    sample_destroy (tp->wbytes);
     free (tp);
 }
 
@@ -561,6 +631,11 @@ _update (char *host, time_t t, char *s)
     sample_update (tp->totreqs, (double)_sum_nreqs(&stats), t);
     for (i = 0; i < sizeof(tp->nreqs)/sizeof(tp->nreqs[0]); i++)
         sample_update (tp->nreqs[i], (double)stats.nreqs[i], t);
+    for (i = 0; i < NPSTATS_RWCOUNT_BINS; i++) {
+        sample_update (tp->rcount[i], (double)stats.rcount[i], t);
+        sample_update (tp->wcount[i], (double)stats.wcount[i], t);
+    }
+        
     xpthread_mutex_unlock (&dtop_lock);
 
     if (stats.name)

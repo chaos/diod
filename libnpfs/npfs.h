@@ -179,6 +179,7 @@ struct Npreq {
 	Npwthread*	wthread;/* for requests that are worked on */
 };
 
+#define NPSTATS_RWCOUNT_BINS 12
 struct Npstats {
 	char		*name;	
 	int		numfids;
@@ -186,6 +187,8 @@ struct Npstats {
 	u64		nreqs[P9_RWSTAT+1];
 	u64		rbytes;
 	u64		wbytes;
+	u64		rcount[NPSTATS_RWCOUNT_BINS];
+	u64		wcount[NPSTATS_RWCOUNT_BINS];
 };
 
 struct Npwthread {

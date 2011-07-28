@@ -8,10 +8,10 @@ tnpsrv: P9_RWALK tag 0 nwqid 1 (000000000000000a 0 't')
 tnpsrv: P9_TLOPEN tag 0 fid 1 flags 00
 tnpsrv: P9_RLOPEN tag 0 qid (000000000000000a 0 't') iounit 0
 tnpsrv: P9_TREAD tag 0 fid 1 offset 0 count 4095
-tnpsrv: P9_RREAD tag 0 count 68
+tnpsrv: P9_RREAD tag 0 count 117
 64656661 756c7420 31203320 30203020 30203120 30203020 30203020 30203020 
 30203020 30203020 30203020 30203020 30203120 30203120 30203120 30203020 
-tnpsrv: P9_TREAD tag 0 fid 1 offset 68 count 4027
+tnpsrv: P9_TREAD tag 0 fid 1 offset 117 count 3978
 tnpsrv: P9_RREAD tag 0 count 0
 tnpsrv: P9_TCLUNK tag 0 fid 1
 tnpsrv: P9_RCLUNK tag 0

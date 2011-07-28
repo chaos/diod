@@ -631,6 +631,10 @@ np_process_request(Npreq *req, Nptpool *tp)
 	if (valid_op) {
 		xpthread_mutex_lock (&tp->srv->lock);
 		tp->stats.rbytes += rbytes;
+		if (rbytes > 0 && rbytes/4096 < NPSTATS_RWCOUNT_BINS)
+			tp->stats.rcount[rbytes/4096]++;
+		if (wbytes > 0 && wbytes/4096 < NPSTATS_RWCOUNT_BINS)
+			tp->stats.wcount[wbytes/4096]++;
 		tp->stats.wbytes += wbytes;
 		tp->stats.nreqs[tc->type]++;
 		xpthread_mutex_unlock (&tp->srv->lock);

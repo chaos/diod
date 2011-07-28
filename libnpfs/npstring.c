@@ -150,6 +150,10 @@ spf (char *s, int len, const char *fmt, ...)
         va_end (ap);
 }
 
+#if NPSTATS_RWCOUNT_BINS != 12
+#error fix hardwired rwcount bins in np_[en,de]code_tpools_str
+#endif
+
 int
 np_decode_tpools_str (char *s, Npstats *stats)
 {
@@ -160,7 +164,11 @@ np_decode_tpools_str (char *s, Npstats *stats)
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
-		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64,
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64,
 			&stats->name, &stats->numreqs, &stats->numfids,
 			&stats->rbytes, &stats->wbytes,
 			&stats->nreqs[P9_TSTATFS],
@@ -188,8 +196,32 @@ np_decode_tpools_str (char *s, Npstats *stats)
 			&stats->nreqs[P9_TREAD],
 			&stats->nreqs[P9_TWRITE],
 			&stats->nreqs[P9_TCLUNK],
-			&stats->nreqs[P9_TREMOVE]);
-	if (n != 31) {
+			&stats->nreqs[P9_TREMOVE],
+			&stats->rcount[0],
+			&stats->rcount[1],
+			&stats->rcount[2],
+			&stats->rcount[3],
+			&stats->rcount[4],
+			&stats->rcount[5],
+			&stats->rcount[6],
+			&stats->rcount[7],
+			&stats->rcount[8],
+			&stats->rcount[9],
+			&stats->rcount[10],
+			&stats->rcount[11],
+			&stats->wcount[0],
+			&stats->wcount[1],
+			&stats->wcount[2],
+			&stats->wcount[3],
+			&stats->wcount[4],
+			&stats->wcount[5],
+			&stats->wcount[6],
+			&stats->wcount[7],
+			&stats->wcount[8],
+			&stats->wcount[9],
+			&stats->wcount[10],
+			&stats->wcount[11]);
+	if (n != 55) {
 		if (stats->name) {
 			free (stats->name);
 			stats->name = NULL;
@@ -207,7 +239,12 @@ np_encode_tpools_str (char **s, int *len, Npstats *stats)
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
-		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64"\n",
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
+		"\n",
 			stats->name, stats->numreqs, stats->numfids,
 			stats->rbytes, stats->wbytes,
 			stats->nreqs[P9_TSTATFS],
@@ -235,5 +272,29 @@ np_encode_tpools_str (char **s, int *len, Npstats *stats)
 			stats->nreqs[P9_TREAD],
 			stats->nreqs[P9_TWRITE],
 			stats->nreqs[P9_TCLUNK],
-			stats->nreqs[P9_TREMOVE]);
+			stats->nreqs[P9_TREMOVE],
+			stats->rcount[0],
+			stats->rcount[1],
+			stats->rcount[2],
+			stats->rcount[3],
+			stats->rcount[4],
+			stats->rcount[5],
+			stats->rcount[6],
+			stats->rcount[7],
+			stats->rcount[8],
+			stats->rcount[9],
+			stats->rcount[10],
+			stats->rcount[11],
+			stats->wcount[0],
+			stats->wcount[1],
+			stats->wcount[2],
+			stats->wcount[3],
+			stats->wcount[4],
+			stats->wcount[5],
+			stats->wcount[6],
+			stats->wcount[7],
+			stats->wcount[8],
+			stats->wcount[9],
+			stats->wcount[10],
+			stats->wcount[11]);
 }
