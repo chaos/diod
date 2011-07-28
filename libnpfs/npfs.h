@@ -173,6 +173,7 @@ struct Npreq {
 	Npfcall*	tcall;
 	Npfcall*	rcall;
 	Npfid*		fid;
+	time_t		birth;	
 
 	Npreq*		next;	/* list of all outstanding requests */
 	Npreq*		prev;	/* used for requests that are worked on */
