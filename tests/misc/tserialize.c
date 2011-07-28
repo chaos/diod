@@ -650,7 +650,7 @@ test_tlock (void)
 {
     Npfcall *fc, *fc2;
 
-    if (!(fc = np_create_tlock (1, F_UNLCK, 3, 4, 5, 6, "xyz")))
+    if (!(fc = np_create_tlock (1, P9_LOCK_TYPE_UNLCK, 3, 4, 5, 6, "xyz")))
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TLOCK,  __FUNCTION__);
 
@@ -685,7 +685,7 @@ test_tgetlock (void)
 {
     Npfcall *fc, *fc2;
 
-    if (!(fc = np_create_tgetlock (1, F_UNLCK, 3, 4, 5, "xyz")))
+    if (!(fc = np_create_tgetlock (1, P9_LOCK_TYPE_UNLCK, 3, 4, 5, "xyz")))
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TGETLOCK,  __FUNCTION__);
 
@@ -705,7 +705,7 @@ test_rgetlock (void)
 {
     Npfcall *fc, *fc2;
 
-    if (!(fc = np_create_rgetlock (F_WRLCK, 2, 3, 4, "xyz")))
+    if (!(fc = np_create_rgetlock (P9_LOCK_TYPE_WRLCK, 2, 3, 4, "xyz")))
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_RGETLOCK,  __FUNCTION__);
 

@@ -289,6 +289,12 @@ struct p9_qid {
 #define P9_LOCK_FLAGS_BLOCK 1
 #define P9_LOCK_FLAGS_RECLAIM 2
 
+/* Bit values for lock type
+ */
+#define P9_LOCK_TYPE_RDLCK 97
+#define P9_LOCK_TYPE_WRLCK 98
+#define P9_LOCK_TYPE_UNLCK 99
+
 /* Structures for Protocol Operations */
 struct p9_rlerror {
 	u32 ecode;

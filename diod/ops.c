@@ -1194,6 +1194,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
         goto error_quiet;
     }
     switch (type) {
+        case P9_LOCK_TYPE_UNLCK:
         case F_UNLCK:
             if (flock (f->fd, LOCK_UN) >= 0) {
                 status = P9_LOCK_SUCCESS;
@@ -1201,6 +1202,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
             } else
                 status = P9_LOCK_ERROR;
             break;
+        case P9_LOCK_TYPE_RDLCK:
         case F_RDLCK:
             if (flock (f->fd, LOCK_SH | LOCK_NB) >= 0) {
                 status = P9_LOCK_SUCCESS;
@@ -1210,6 +1212,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
             } else
                 status = P9_LOCK_ERROR;
             break;
+        case P9_LOCK_TYPE_WRLCK:
         case F_WRLCK:
             if (flock (f->fd, LOCK_EX | LOCK_NB) >= 0) {
                 status = P9_LOCK_SUCCESS;
@@ -1242,6 +1245,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     Npfcall *ret;
     char *cid = NULL;
     struct stat sb;
+    int newtype = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1256,46 +1260,50 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         goto error_quiet;
     }
     switch (type) {
+        case P9_LOCK_TYPE_RDLCK:
+            newtype = 1;
         case F_RDLCK:
             switch (f->lock_type) {
                 case LOCK_EX:
                 case LOCK_SH:
-                    type = LOCK_UN;
+                    type = newtype ? P9_LOCK_TYPE_UNLCK : F_UNLCK;
                     break;
                 case LOCK_UN:
                     if (flock (f->fd, LOCK_SH | LOCK_NB) >= 0) {
                         (void)flock (f->fd, LOCK_UN);
-                        type = LOCK_UN;
+                        type = newtype ? P9_LOCK_TYPE_UNLCK : F_UNLCK;
                     } else
-                        type = LOCK_EX;
+                        type = newtype ? P9_LOCK_TYPE_WRLCK : F_WRLCK;
                     break;
             }
             break;
+        case P9_LOCK_TYPE_WRLCK:
+            newtype = 1;
         case F_WRLCK:
             switch (f->lock_type) {
                 case LOCK_EX:
-                    type = LOCK_UN;
+                    type = newtype ? P9_LOCK_TYPE_UNLCK : F_UNLCK;
                     break;
                 case LOCK_SH:
                     /* Rather than upgrade the lock to LOCK_EX and risk
                      * not reacquiring the LOCK_SH afterwards, lie about
                      * the lock being available.  Getlock is racy anyway.
                      */
-                    type = LOCK_UN;
+                    type = newtype ? P9_LOCK_TYPE_UNLCK : F_UNLCK;
                     break;
                 case LOCK_UN:
                     if (flock (f->fd, LOCK_EX | LOCK_NB) >= 0) {
                         (void)flock (f->fd, LOCK_UN);
-                        type = LOCK_UN;
+                        type = newtype ? P9_LOCK_TYPE_UNLCK : F_UNLCK;
                     } else
-                        type = LOCK_EX; /* could also be LOCK_SH actually */
+                        type = newtype ? P9_LOCK_TYPE_WRLCK : F_WRLCK; /* could also be LOCK_SH actually */
             }
             break;
         default:
             np_uerror (EINVAL);
             goto error;
     }
-    if (type != LOCK_UN) {
+    if (type != P9_LOCK_TYPE_UNLCK && type != F_UNLCK) {
         /* FIXME: need to fake up start, length, proc_id, cid? */
     }
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {

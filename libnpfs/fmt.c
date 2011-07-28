@@ -119,12 +119,15 @@ static void
 np_printlocktype(char *s, int len, u8 type)
 {
 	switch (type) {
+		case P9_LOCK_TYPE_RDLCK:
 		case F_RDLCK:
 			spf (s, len, "%s", "F_RDLCK");
 			break;
+		case P9_LOCK_TYPE_WRLCK:
 		case F_WRLCK:
 			spf (s, len, "%s", "F_WRLCK");
 			break;
+		case P9_LOCK_TYPE_UNLCK:
 		case F_UNLCK:
 			spf (s, len, "%s", "F_UNLCK");
 			break;
