@@ -543,6 +543,29 @@ np_preprocess_request(Npreq *req)
 		np_fid_incref (req->fid);
 }
 
+static u32
+_floorlog2 (u32 i)
+{
+	u32 j = 0;
+
+	if (i >= (1 <<16)) { i >>= 16; j += 16; }
+	if (i >= (1 << 8)) { i >>=  8; j +=  8; }
+	if (i >= (1 << 4)) { i >>=  4; j +=  4; }
+	if (i >= (1 << 2)) { i >>=  2; j +=  2; }
+	if (i >= (1 << 1)) {           j +=  1; }
+
+	return j;
+}
+
+static int
+_hbin (u64 val)
+{
+	u32 i = val / 1024;
+	u32 j = i < 4 ? 0 : _floorlog2 (i) - 1;
+
+	return j < NPSTATS_RWCOUNT_BINS ? j : NPSTATS_RWCOUNT_BINS - 1;
+}
+
 static Npfcall*
 np_process_request(Npreq *req, Nptpool *tp)
 {
@@ -656,10 +679,8 @@ np_process_request(Npreq *req, Nptpool *tp)
 	if (valid_op) {
 		xpthread_mutex_lock (&tp->srv->lock);
 		tp->stats.rbytes += rbytes;
-		if (rbytes > 0 && rbytes/4096 < NPSTATS_RWCOUNT_BINS)
-			tp->stats.rcount[rbytes/4096]++;
-		if (wbytes > 0 && wbytes/4096 < NPSTATS_RWCOUNT_BINS)
-			tp->stats.wcount[wbytes/4096]++;
+		tp->stats.rcount[_hbin(rbytes)]++;
+		tp->stats.wcount[_hbin(wbytes)]++;
 		tp->stats.wbytes += wbytes;
 		tp->stats.nreqs[tc->type]++;
 		xpthread_mutex_unlock (&tp->srv->lock);
