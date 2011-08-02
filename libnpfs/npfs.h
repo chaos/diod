@@ -300,6 +300,8 @@ struct Npsrv {
 	Npfcall*	(*getlock)(Npfid *, u8 type, u64, u64, u32, Npstr *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*mkdir)(Npfid *, Npstr *, u32, u32);
+	Npfcall*	(*renameat)(Npfid *, Npstr *, Npfid *, Npstr *);
+	Npfcall*	(*unlinkat)(Npfid *, Npstr *);
 
 	/* implementation specific */
 	pthread_mutex_t	lock;

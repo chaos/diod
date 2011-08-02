@@ -176,6 +176,8 @@ diod_register_ops (Npsrv *srv)
     srv->getlock = diod_getlock;
     srv->link = diod_link;
     srv->mkdir = diod_mkdir;
+    //srv->renameat = diod_renameat;
+    //srv->unlinkat = diod_unlinkat;
 
     if (!np_ctl_addfile (srv->ctlroot, "exports", diod_get_exports, srv, 0))
         return -1;

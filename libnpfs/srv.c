@@ -536,6 +536,12 @@ np_preprocess_request(Npreq *req)
 		case P9_TREMOVE:
 			req->fid = np_fid_find (conn, tc->u.tremove.fid);
 			break;
+		case P9_TRENAMEAT:
+			req->fid = np_fid_find (conn, tc->u.trenameat.olddirfid);
+			break;
+		case P9_TUNLINKAT:
+			req->fid = np_fid_find (conn, tc->u.tunlinkat.dirfid);
+			break;
 		default:
 			break;
 	}

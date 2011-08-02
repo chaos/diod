@@ -1113,13 +1113,60 @@ done:
 Npfcall *
 np_renameat (Npreq *req, Npfcall *tc)
 {
-	np_uerror (EOPNOTSUPP);
-	return NULL;
+	Npfid *olddirfid = req->fid;
+	Npfid *newdirfid;
+	Npfcall *rc = NULL;
+
+	if (!olddirfid) {
+		np_uerror (EIO);
+		np_logerr (req->conn->srv, "renameat: invalid olddirfid");
+		return NULL;
+	}
+	if (olddirfid->type & P9_QTTMP) {
+		np_uerror (EPERM);
+		return NULL;
+	}
+	if (!(newdirfid = np_fid_find(req->conn, tc->u.trenameat.newdirfid))) {
+		np_uerror(EIO);
+		np_logerr (req->conn->srv, "renameat: invalid newdirfid");
+		return NULL;
+	}
+	np_fid_incref(newdirfid);
+	if (np_setfsid (req, newdirfid->user, -1) < 0)
+		goto done;
+	if (!req->conn->srv->renameat) {
+		np_uerror (EOPNOTSUPP); /* v9fs expects this not ENOSYS for this op */
+		goto done;
+	}
+	rc = (*req->conn->srv->renameat)(olddirfid, &tc->u.trenameat.oldname,
+					 newdirfid, &tc->u.trenameat.newname);
+done:
+	np_fid_decref (newdirfid);
+	return rc;
 }
 
 Npfcall *
 np_unlinkat (Npreq *req, Npfcall *tc)
 {
-	np_uerror (EOPNOTSUPP);
-	return NULL;
+	Npfid *dirfid = req->fid;
+	Npfcall *rc = NULL;
+
+	if (!dirfid) {
+		np_uerror (EIO);
+		np_logerr (req->conn->srv, "unlinkat: invalid dirfid");
+		return NULL;
+	}
+	if (dirfid->type & P9_QTTMP) {
+		np_uerror (EPERM);
+		return NULL;
+	}
+	if (np_setfsid (req, dirfid->user, -1) < 0)
+		goto done;
+	if (!req->conn->srv->unlinkat) {
+		np_uerror (EOPNOTSUPP); /* v9fs expects this not ENOSYS for this op */
+		goto done;
+	}
+	rc = (*req->conn->srv->unlinkat)(dirfid, &tc->u.tunlinkat.name);
+done:
+	return rc;
 }
