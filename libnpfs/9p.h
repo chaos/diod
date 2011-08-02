@@ -493,18 +493,6 @@ struct p9_tunlinkat {
 };
 struct p9_runlinkat {
 };
-struct p9_tawrite {
-	u32 fid;
-	u8 datacheck;
-	u64 offset;
-	u32 count;
-	u32 rsize;
-	u8 *data;
-	u32 check;
-};
-struct p9_rawrite {
-	u32 count;
-};
 struct p9_tversion {
 	u32 msize;
 	struct p9_str version;
