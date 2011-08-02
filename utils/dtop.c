@@ -475,7 +475,26 @@ _update_display_aname (WINDOW *win)
     wrefresh (win);
 }
 
-typedef enum {VIEW_NORMAL, VIEW_SERVER, VIEW_ANAME, VIEW_RWCOUNT} view_t;
+static void
+_update_display_help (WINDOW *win)
+{
+    int y = 4;
+
+    wclear (win);
+    mvwprintw (win, y++, 8, "==== COMMANDS ===");
+    mvwprintw (win, y++, 8, "q             Quit");
+    mvwprintw (win, y++, 8, "s             Diod server view");
+    mvwprintw (win, y++, 8, "n             Normal server/aname view");
+    mvwprintw (win, y++, 8, "c             I/O size histogram view");
+    mvwprintw (win, y++, 8, "h|?           Display command help");
+    wrefresh (win);
+}
+
+typedef enum {
+    VIEW_NORMAL, VIEW_SERVER, VIEW_ANAME, VIEW_RWCOUNT,
+    VIEW_HELP
+} view_t;
+
 static void
 _curses_watcher (double update_secs)
 {
@@ -510,6 +529,9 @@ _curses_watcher (double update_secs)
             case VIEW_RWCOUNT:
                 _update_display_rwcount (subwin);
                 break;
+            case VIEW_HELP:
+                _update_display_help (subwin);
+                break;
         }
         switch ((c = getch ())) {
             case 'q':
@@ -528,6 +550,10 @@ _curses_watcher (double update_secs)
                 break;
             case 'c': /* rwcount view */
                 view = VIEW_RWCOUNT;
+                break;
+            case 'h': /* help view */
+            case '?':
+                view = VIEW_HELP;
                 break;
             case ERR: /* timeout */
                 break;
