@@ -684,10 +684,14 @@ np_process_request(Npreq *req, Nptpool *tp)
 	}
 	if (valid_op) {
 		xpthread_mutex_lock (&tp->srv->lock);
-		tp->stats.rbytes += rbytes;
-		tp->stats.rcount[_hbin(rbytes)]++;
-		tp->stats.wcount[_hbin(wbytes)]++;
-		tp->stats.wbytes += wbytes;
+		if (rbytes > 0) {
+			tp->stats.rcount[_hbin(rbytes)]++;
+			tp->stats.rbytes += rbytes;
+		}
+		if (wbytes > 0) {
+			tp->stats.wcount[_hbin(wbytes)]++;
+			tp->stats.wbytes += wbytes;
+		}
 		tp->stats.nreqs[tc->type]++;
 		xpthread_mutex_unlock (&tp->srv->lock);
 	}
