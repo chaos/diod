@@ -1,3 +1,8 @@
+1.0-pre49:
+	Fix histogram binning in dtop rwsize view.
+	Add help command to dtop.
+	Lay some groundwork for renameat/unlinkat support.
+	
 1.0-pre48:
 	Add request age and status to ctl:requests synthetic file.
 	Decode new lock/getlock type values (issue 69).
