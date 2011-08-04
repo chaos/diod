@@ -1,3 +1,7 @@
+1.0-pre50:
+	Fix dtop help window and rwsize counts.
+	Various coverity fixes.
+
 1.0-pre49:
 	Fix histogram binning in dtop rwsize view.
 	Add help command to dtop.
