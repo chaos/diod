@@ -602,7 +602,7 @@ _destroy_tpool (Tpool *tp)
     sample_destroy (tp->totreqs);
     sample_destroy (tp->numfids);
     sample_destroy (tp->iops);
-    sample_destroy (tp->wbytes);
+    sample_destroy (tp->rbytes);
     sample_destroy (tp->wbytes);
     free (tp);
 }
