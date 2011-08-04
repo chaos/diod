@@ -316,6 +316,7 @@ _setrlimit (void)
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_AS, &r) < 0)
         err_exit ("setrlimit RLIMIT_AS");
+
 }
 
 /* Create run directory if it doesn't exist and chdir there.
@@ -579,6 +580,9 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         else if (diod_conf_opt_runasuid ())
             _become_user (NULL, diod_conf_get_runasuid (), 1);
     }
+
+    /* clear umask */
+    umask (0);
     
     flags |= SRV_FLAGS_AUTHCONN;
     flags |= SRV_FLAGS_FLUSHSIG;
