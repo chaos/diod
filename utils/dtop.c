@@ -469,30 +469,24 @@ _update_display_server (WINDOW *win)
 }
 
 static void
-_update_display_aname (WINDOW *win)
-{
-    wclear (win);
-    wrefresh (win);
-}
-
-static void
 _update_display_help (WINDOW *win)
 {
-    int y = 4;
+    int y = 0;
 
     wclear (win);
-    mvwprintw (win, y++, 8, "==== COMMANDS ===");
-    mvwprintw (win, y++, 8, "q             Quit");
-    mvwprintw (win, y++, 8, "s             Diod server view");
-    mvwprintw (win, y++, 8, "n             Normal server/aname view");
-    mvwprintw (win, y++, 8, "c             I/O size histogram view");
-    mvwprintw (win, y++, 8, "h|?           Display command help");
+    mvwprintw (win, y++, 0, "Help for Interactive Commands - dtop "
+               "version %s.%s", META_VERSION, META_RELEASE);
+    y++;
+    mvwprintw (win, y++, 2, "n             Normal server/aname view");
+    mvwprintw (win, y++, 2, "s             Diod server view");
+    mvwprintw (win, y++, 2, "c             Display I/O size histograms ");
+    mvwprintw (win, y++, 2, "h|?           Display this help screen");
+    mvwprintw (win, y++, 2, "q             Quit");
     wrefresh (win);
 }
 
 typedef enum {
-    VIEW_NORMAL, VIEW_SERVER, VIEW_ANAME, VIEW_RWCOUNT,
-    VIEW_HELP
+    VIEW_NORMAL, VIEW_SERVER, VIEW_RWCOUNT, VIEW_HELP
 } view_t;
 
 static void
@@ -515,22 +509,21 @@ _curses_watcher (double update_secs)
     curs_set (0);
 
     while (!isendwin ()) {
-        _update_display_topwin (topwin);
         switch (view) {
             case VIEW_NORMAL:
+                _update_display_topwin (topwin);
                 _update_display_normal (subwin);
                 break;
-            case VIEW_ANAME:
-                _update_display_aname (subwin);
-                break;
             case VIEW_SERVER:
+                _update_display_topwin (topwin);
                 _update_display_server (subwin);
                 break;
             case VIEW_RWCOUNT:
+                _update_display_topwin (topwin);
                 _update_display_rwcount (subwin);
                 break;
-            case VIEW_HELP:
-                _update_display_help (subwin);
+             case VIEW_HELP:
+                _update_display_help (topwin);
                 break;
         }
         switch ((c = getch ())) {
@@ -541,9 +534,6 @@ _curses_watcher (double update_secs)
                 break;
             case 's': /* server view */
                 view = VIEW_SERVER;
-                break;
-            case 'a': /* aname view */
-                view = VIEW_ANAME;
                 break;
             case 'n': /* normal view */
                 view = VIEW_NORMAL;
