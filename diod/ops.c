@@ -677,8 +677,6 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
     Npqid qid;
     int fd = -1;
     struct stat sb;
-    mode_t saved_umask;
-    int created = 0;
     u32 iounit = 0; /* client will use msize-P9_IOHDRSZ */
 
     if ((f->xflags & XFLAGS_RO)) {
@@ -691,20 +689,14 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         np_uerror (ENOMEM);
         goto error;
     }
-    saved_umask = umask(0);
-    if ((fd = open (npath, flags, mode)) < 0) {
+    if ((fd = open (npath, flags, mode)) < 0 || fstat (fd, &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
-    }
-    created = 1;
-    umask(saved_umask);
-    if (fstat (fd, &sb) < 0) {
-        np_uerror (errno);
-        goto error; /* shouldn't happen? */
     }
     _ustat2qid (&sb, &qid);
     //iounit = sb.st_blksize;
     if (!((ret = np_create_rlcreate (&qid, iounit)))) {
+        (void)unlink (npath);
         np_uerror (ENOMEM);
         goto error;
     }
@@ -717,11 +709,8 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
           name->len, name->str);
 error_quiet:
-    if (fd >= 0) {
+    if (fd >= 0)
         (void)close (fd);
-    }
-    if (created && npath)
-        (void)unlink (npath);
     if (npath)
         free (npath);
     return NULL;
@@ -735,8 +724,6 @@ diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
     char *target = NULL, *npath = NULL;
     Npqid qid;
     struct stat sb;
-    mode_t saved_umask;
-    int created = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -750,19 +737,13 @@ diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
         np_uerror (ENOMEM);
         goto error;
     }
-    saved_umask = umask(0);
-    if (symlink (target, npath) < 0) {
+    if (symlink (target, npath) < 0 || lstat (npath, &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    created = 1;
-    umask(saved_umask);
-    if (lstat (npath, &sb) < 0) {
-        np_uerror (errno);
-        goto error; /* shouldn't happen? */
-    }
     _ustat2qid (&sb, &qid);
     if (!((ret = np_create_rsymlink (&qid)))) {
+        (void)unlink (npath);
         np_uerror (ENOMEM);
         goto error;
     }
@@ -774,8 +755,6 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
           name->len, name->str);
 error_quiet:
-    if (created && npath)
-        (void)unlink (npath);
     if (npath)
         free (npath);
     if (target)
@@ -791,8 +770,6 @@ diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
     char *npath = NULL;
     Npqid qid;
     struct stat sb;
-    mode_t saved_umask;
-    int created = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -802,19 +779,14 @@ diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
         np_uerror (ENOMEM);
         goto error;
     }
-    saved_umask = umask(0);
-    if (mknod (npath, mode, makedev (major, minor)) < 0) {
+    if (mknod (npath, mode, makedev (major, minor)) < 0
+                                        || lstat (npath, &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    created = 1;
-    umask(saved_umask);
-    if (lstat (npath, &sb) < 0) {
-        np_uerror (errno);
-        goto error; /* shouldn't happen? */
-    }
     _ustat2qid (&sb, &qid);
     if (!((ret = np_create_rmknod (&qid)))) {
+        (void)unlink (npath);
         np_uerror (ENOMEM);
         goto error;
     }
@@ -825,8 +797,6 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
           name->len, name->str);
 error_quiet:
-    if (created && npath)
-        (void)unlink (npath);
     if (npath)
         free (npath);
     return NULL;
@@ -1330,7 +1300,6 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
     Npfcall *ret;
     Fid *df = dfid->aux;
     char *npath = NULL;
-    int created = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1344,8 +1313,8 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
         np_uerror (errno);
         goto error_quiet;
     }
-    created = 1;
     if (!((ret = np_create_rlink ()))) {
+        (void)unlink (npath);
         np_uerror (ENOMEM);
         goto error;
     }
@@ -1356,8 +1325,6 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
           df->path, name->len, name->str);
 error_quiet:
-    if (created && npath)
-        (void)unlink (npath);
     if (npath)
         free (npath);
     return NULL;
@@ -1371,8 +1338,6 @@ diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
     char *npath = NULL;
     Npqid qid;
     struct stat sb;
-    mode_t saved_umask;
-    int created = 0;
 
     if ((f->xflags & XFLAGS_RO)) {
         np_uerror (EROFS);
@@ -1382,19 +1347,13 @@ diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
         np_uerror (ENOMEM);
         goto error;
     }
-    saved_umask = umask(0);
-    if (mkdir (npath, mode) < 0) {
+    if (mkdir (npath, mode) < 0 || lstat (npath, &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    created = 1;
-    umask(saved_umask);
-    if (lstat (npath, &sb) < 0) {
-        np_uerror (errno);
-        goto error; /* shouldn't happen? */
-    }
     _ustat2qid (&sb, &qid);
     if (!((ret = np_create_rmkdir (&qid)))) {
+        (void)rmdir(npath);
         np_uerror (ENOMEM);
         goto error;
     }
@@ -1405,8 +1364,6 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path,
           name->len, name->str);
 error_quiet:
-    if (created && npath)
-        (void)rmdir(npath);
     if (npath)
         free (npath);
     return NULL;
