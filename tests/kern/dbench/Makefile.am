@@ -15,8 +15,9 @@ dbench_SOURCES = \
 	child.c \
 	system.c \
 	snprintf.c \
-	dbench.h \
-	proto.h
+	dbench.h
+
+CLEANFILES = proto.h
 
 proto.h: $(dbench_SOURCES) mkproto.pl
 	./mkproto.pl $(dbench_SOURCES) > proto.h
