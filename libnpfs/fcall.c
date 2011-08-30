@@ -530,10 +530,12 @@ np_clunk(Npreq *req, Npfcall *tc)
 done:
 	/* From clunk(5):
 	 * even if the clunk returns an error, the fid is no longer valid.
+	 * N.B. destroy here instead of later to allow reuse (issue 81)
 	 */
-	if (fid)
-		np_fid_decref(fid);
-
+	if (req->fid) {
+		np_fid_destroy (req->fid);
+		req->fid = NULL;
+	}
 	return rc;
 }
 
@@ -561,8 +563,13 @@ np_remove(Npreq *req, Npfcall *tc)
 		rc = (*req->conn->srv->remove)(fid);
 	}
 done:
-	/* spec says clunk the fid even if the remove fails */
-	np_fid_decref(fid);
+	/* spec says clunk the fid even if the remove fails
+	 * N.B. destroy here instead of later to allow reuse (issue 81)
+   	 */
+	if (req->fid) {
+		np_fid_destroy (req->fid);
+		req->fid = NULL;
+	}
 	return rc;
 }
 
@@ -1114,22 +1121,22 @@ Npfcall *
 np_renameat (Npreq *req, Npfcall *tc)
 {
 	Npfid *olddirfid = req->fid;
-	Npfid *newdirfid;
+	Npfid *newdirfid = NULL;
 	Npfcall *rc = NULL;
 
 	if (!olddirfid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "renameat: invalid olddirfid");
-		return NULL;
+		goto done;
 	}
 	if (olddirfid->type & P9_QTTMP) {
 		np_uerror (EPERM);
-		return NULL;
+		goto done;
 	}
 	if (!(newdirfid = np_fid_find(req->conn, tc->u.trenameat.newdirfid))) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "renameat: invalid newdirfid");
-		return NULL;
+		goto done;
 	}
 	np_fid_incref(newdirfid);
 	if (np_setfsid (req, newdirfid->user, -1) < 0)
