@@ -122,20 +122,11 @@ np_printlocktype(char *s, int len, u8 type)
 		case P9_LOCK_TYPE_RDLCK:
 			spf (s, len, "%s", "P9_LOCK_TYPE_RDLCK");
 			break;
-		case F_RDLCK:
-			spf (s, len, "%s", "F_RDLCK");
-			break;
 		case P9_LOCK_TYPE_WRLCK:
 			spf (s, len, "%s", "P9_LOCK_TYPE_WRLCK");
 			break;
-		case F_WRLCK:
-			spf (s, len, "%s", "F_WRLCK");
-			break;
 		case P9_LOCK_TYPE_UNLCK:
 			spf (s, len, "%s", "P9_LOCK_TYPE_UNLCK");
-			break;
-		case F_UNLCK:
-			spf (s, len, "%s", "F_UNLCK");
 			break;
 		default:
 			spf (s, len, "%u", type);

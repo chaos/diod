@@ -291,9 +291,9 @@ struct p9_qid {
 
 /* Bit values for lock type
  */
-#define P9_LOCK_TYPE_RDLCK 97
-#define P9_LOCK_TYPE_WRLCK 98
-#define P9_LOCK_TYPE_UNLCK 99
+#define P9_LOCK_TYPE_RDLCK 0
+#define P9_LOCK_TYPE_WRLCK 1
+#define P9_LOCK_TYPE_UNLCK 2
 
 /* Structures for Protocol Operations */
 struct p9_rlerror {
