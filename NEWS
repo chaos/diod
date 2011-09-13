@@ -1,3 +1,9 @@
+1.0-pre51:
+	Switch to new lock type defintions.
+          NOTE: This will break regression tests on some non-x86_64
+          architectures until they catch up with upstream kernel fs/9p.
+	Return fid to pool before sending rename/clunk reply (issue 81)
+
 1.0-pre50:
 	Fix dtop help window and rwsize counts.
 	Various coverity fixes.
