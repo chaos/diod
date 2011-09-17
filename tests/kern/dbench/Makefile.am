@@ -17,6 +17,11 @@ dbench_SOURCES = \
 	snprintf.c \
 	dbench.h
 
+dbench_nodist_SOURCES = \
+	proto.h
+
+BUILT_SOURCES = proto.h
+
 CLEANFILES = proto.h
 
 proto.h: $(dbench_SOURCES) mkproto.pl
