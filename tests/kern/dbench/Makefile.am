@@ -26,3 +26,5 @@ CLEANFILES = proto.h
 
 proto.h: $(dbench_SOURCES) mkproto.pl
 	./mkproto.pl $(dbench_SOURCES) > proto.h
+
+EXTRA_DIST = mkproto.pl
