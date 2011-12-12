@@ -62,7 +62,7 @@ libnpfs_a_AR = $(AR) $(ARFLAGS)
 libnpfs_a_LIBADD =
 am__libnpfs_a_SOURCES_DIST = conn.c error.c fcall.c fdtrans.c \
 	fidpool.c fmt.c np.c srv.c trans.c user.c npstring.c npfs.h \
-	npfsimpl.h 9p.h ctl.c rdmatrans.c
+	npfsimpl.h 9p.h ctl.c xpthread.h rdmatrans.c
 @RDMATRANS_TRUE@am__objects_1 = rdmatrans.$(OBJEXT)
 am_libnpfs_a_OBJECTS = conn.$(OBJEXT) error.$(OBJEXT) fcall.$(OBJEXT) \
 	fdtrans.$(OBJEXT) fidpool.$(OBJEXT) fmt.$(OBJEXT) np.$(OBJEXT) \
@@ -219,7 +219,7 @@ AM_CPPFLAGS =
 noinst_LIBRARIES = libnpfs.a
 libnpfs_a_SOURCES = conn.c error.c fcall.c fdtrans.c fidpool.c fmt.c \
 	np.c srv.c trans.c user.c npstring.c npfs.h npfsimpl.h 9p.h \
-	ctl.c $(am__append_1)
+	ctl.c xpthread.h $(am__append_1)
 all: all-am
 
 .SUFFIXES:
