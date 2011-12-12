@@ -24,7 +24,7 @@ diodcat_LDADD = $(common_ldadd)
 diodcat_SOURCES = diodcat.c $(common_sources)
 
 dtop_LDADD = $(common_ldadd)
-dtop_SOURCES = dtop.c sample.c
+dtop_SOURCES = dtop.c sample.c sample.h
 
 diodload_LDADD = $(common_ldadd)
 diodload_SOURCES = diodload.c $(common_sources)
