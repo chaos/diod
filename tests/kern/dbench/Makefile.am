@@ -17,7 +17,7 @@ dbench_SOURCES = \
 	snprintf.c \
 	dbench.h
 
-dbench_nodist_SOURCES = \
+nodist_dbench_SOURCES = \
 	proto.h
 
 BUILT_SOURCES = proto.h
