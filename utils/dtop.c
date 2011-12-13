@@ -87,6 +87,9 @@ typedef struct {
     char aname[PATH_MAX];
 } Tpoolkey; 
 
+/* Tpool view.
+ * This is the actual data we sample.
+ */
 typedef struct {
     Tpoolkey key;
     sample_t rbytes;
@@ -99,14 +102,37 @@ typedef struct {
     sample_t rcount[NPSTATS_RWCOUNT_BINS];
     sample_t wcount[NPSTATS_RWCOUNT_BINS];
 } Tpool;
+static List tpools = NULL;
 
+/* Aname stats.
+ * These are derived from Tpool stats as needed.
+ */
+typedef struct {
+    char *aname;
+    double rmbps;
+    double wmbps;
+    double iops;
+    double numfids;
+    double numreqs;
+    double totreqs;
+} Aname;
+static List anames = NULL;  /* static list of stats for (aname) */
+
+/* Server stats.
+ * The first part is state for polling servers.
+ * The second part is stats for servers, derived from Tpool stats as needed.
+ */
 typedef struct {
     char *host;
     char *port;
     double poll_sec;
     int fd;
     Npcfid *root;
+    time_t last_poll;
     pthread_t thread;
+    /* The following data is only updated when in 'server' view.
+     * It is derived from tpool data in _update_display_server ().
+     */
     int anames;
     double rmbps;
     double wmbps;
@@ -117,19 +143,19 @@ typedef struct {
     sample_t mem_cached;
     sample_t mem_dirty;
     sample_t nfs_ops;
-    time_t last_poll;
 } Server;
+static List servers = NULL; /* static list of servers we are polling */
 
 #define TOPWIN_LINES    7
 
-static List tpools = NULL;
-static List servers = NULL;
 static pthread_mutex_t dtop_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static Server *_server_create (char *host, char *port, double poll_sec);
 static void _server_destroy (Server *sp);
 static void _destroy_tpool (Tpool *tp);
+static void _destroy_aname (Aname *ap);
 static void _curses_watcher (double update_secs);
+static int _match_aname(Aname *ap, char *aname);
 
 static int stale_secs = 5;
 static int exiting = 0;
@@ -192,6 +218,8 @@ main (int argc, char *argv[])
     }
 
     if (!(tpools = list_create ((ListDelF)_destroy_tpool)))
+        err_exit ("out of memory");
+    if (!(anames = list_create ((ListDelF)_destroy_aname)))
         err_exit ("out of memory");
 
     sigemptyset (&sigs);
@@ -302,7 +330,7 @@ _update_display_topwin (WINDOW *win)
 }
 
 static void
-_update_display_normal (WINDOW *win)
+_update_display_tpool (WINDOW *win)
 {
     ListIterator itr;
     Tpool *tp;
@@ -339,6 +367,66 @@ _update_display_normal (WINDOW *win)
     xpthread_mutex_unlock (&dtop_lock);
     wrefresh (win);
 }
+
+static void
+_update_display_aname (WINDOW *win)
+{
+    ListIterator itr;
+    Tpool *tp;
+    Aname *ap;
+    int y = 0;
+    time_t t = time(NULL);
+
+    wclear (win);
+    wmove (win, y++, 0);
+
+    wattron (win, A_REVERSE);
+    wprintw (win,
+             "%25.25s %6.6s %5.5s %5.5s %5.5s %5.5s %5.5s\n",
+             "aname", "fids", "reqs", "queue", "rMB/s", "wMB/s", "IOPS");
+    wattroff (win, A_REVERSE);
+
+    xpthread_mutex_lock (&dtop_lock);
+    if (!(itr = list_iterator_create (anames)))
+        msg_exit ("out of memory");
+    while ((ap = list_next (itr))) {
+        ap->rmbps = ap->wmbps = ap->iops = ap->numfids
+                  = ap->numreqs = ap->totreqs = 0;
+    }
+    list_iterator_destroy (itr);
+    if (!(itr = list_iterator_create (tpools)))
+        msg_exit ("out of memory");
+    while ((tp = list_next (itr))) {
+        ap = list_find_first (anames, (ListFindF)_match_aname, tp->key.aname);
+        assert (ap != NULL);
+        ap->rmbps += sample_rate (tp->rbytes, t) / (1024*1024);
+        ap->wmbps += sample_rate (tp->wbytes, t) / (1024*1024);
+        ap->iops += sample_rate (tp->iops, t);
+        ap->numfids += sample_val (tp->numfids, t);
+        ap->numreqs += sample_val (tp->numreqs, t);
+        ap->totreqs += sample_rate (tp->totreqs, t);
+    }
+    list_iterator_destroy (itr);
+    if (!(itr = list_iterator_create (anames)))
+        msg_exit ("out of memory");
+    while ((ap = list_next (itr))) {
+        if (ap->numfids == 0)
+            continue;
+        mvwprintw (win, y++, 0,
+                "%25.25s %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
+                    ap->aname,
+                    ap->numfids,
+                    ap->totreqs,
+                    ap->numreqs,
+                    ap->rmbps,
+                    ap->wmbps,
+                    ap->iops);
+    }
+    list_iterator_destroy (itr);
+    xpthread_mutex_unlock (&dtop_lock);
+    wrefresh (win);
+}
+
 
 static void
 _update_display_rwcount (WINDOW *win)
@@ -477,7 +565,8 @@ _update_display_help (WINDOW *win)
     mvwprintw (win, y++, 0, "Help for Interactive Commands - dtop "
                "version %s.%s", META_VERSION, META_RELEASE);
     y++;
-    mvwprintw (win, y++, 2, "n             Normal server/aname view");
+    mvwprintw (win, y++, 2, "a   (default) Aname view");
+    mvwprintw (win, y++, 2, "t             Tpool server/aname view");
     mvwprintw (win, y++, 2, "s             Diod server view");
     mvwprintw (win, y++, 2, "c             Display I/O size histograms ");
     mvwprintw (win, y++, 2, "h|?           Display this help screen");
@@ -486,7 +575,7 @@ _update_display_help (WINDOW *win)
 }
 
 typedef enum {
-    VIEW_NORMAL, VIEW_SERVER, VIEW_RWCOUNT, VIEW_HELP
+    VIEW_TPOOL, VIEW_SERVER, VIEW_ANAME, VIEW_RWCOUNT, VIEW_HELP
 } view_t;
 
 static void
@@ -495,7 +584,7 @@ _curses_watcher (double update_secs)
     WINDOW *topwin;
     WINDOW *subwin;
     int c;
-    view_t view = VIEW_NORMAL;
+    view_t view = VIEW_ANAME;
 
     if (!(topwin = initscr ()))
         err_exit ("error initializing parent window");
@@ -510,13 +599,17 @@ _curses_watcher (double update_secs)
 
     while (!isendwin ()) {
         switch (view) {
-            case VIEW_NORMAL:
+            case VIEW_TPOOL:
                 _update_display_topwin (topwin);
-                _update_display_normal (subwin);
+                _update_display_tpool (subwin);
                 break;
             case VIEW_SERVER:
                 _update_display_topwin (topwin);
                 _update_display_server (subwin);
+                break;
+            case VIEW_ANAME:
+                _update_display_topwin (topwin);
+                _update_display_aname (subwin);
                 break;
             case VIEW_RWCOUNT:
                 _update_display_topwin (topwin);
@@ -535,8 +628,11 @@ _curses_watcher (double update_secs)
             case 's': /* server view */
                 view = VIEW_SERVER;
                 break;
-            case 'n': /* normal view */
-                view = VIEW_NORMAL;
+            case 't': /* tpool view */
+                view = VIEW_TPOOL;
+                break;
+            case 'a': /* aname view */
+                view = VIEW_ANAME;
                 break;
             case 'c': /* rwcount view */
                 view = VIEW_RWCOUNT;
@@ -607,6 +703,34 @@ _destroy_tpool (Tpool *tp)
     free (tp);
 }
 
+static int
+_match_aname(Aname *ap, char *aname)
+{
+    if (!strcmp (aname, ap->aname))
+        return 1;
+    return 0;
+}
+
+static Aname *
+_create_aname (char *aname)
+{
+    Aname *ap;
+
+    if (!(ap = malloc (sizeof (*ap))))
+        msg_exit ("out of memory");
+    memset (ap, 0, sizeof (*ap));
+    if (!(ap->aname = strdup (aname)))
+        msg_exit ("out of memory");
+    return ap;
+}
+
+static void
+_destroy_aname (Aname *ap)
+{
+    free (ap->aname);
+    free (ap);
+}
+
 static u64
 _sum_nreqs (Npstats *sp)
 {
@@ -624,6 +748,7 @@ _update (char *host, time_t t, char *s)
     Npstats stats;
     Tpoolkey key;
     Tpool *tp;
+    Aname *ap;
     int i;
 
     memset (stats.nreqs, 0, sizeof(stats.nreqs));
@@ -651,7 +776,13 @@ _update (char *host, time_t t, char *s)
         sample_update (tp->rcount[i], (double)stats.rcount[i], t);
         sample_update (tp->wcount[i], (double)stats.wcount[i], t);
     }
-        
+    /* Create Aname entry if needed, but don't update stats.
+     */
+    if (!(ap = list_find_first (anames, (ListFindF)_match_aname, key.aname))) {
+        ap = _create_aname (key.aname);
+        if (!list_append (anames, ap))
+            msg_exit ("out of memory");
+    }
     xpthread_mutex_unlock (&dtop_lock);
 
     if (stats.name)
