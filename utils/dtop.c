@@ -257,6 +257,7 @@ _update_display_topwin (WINDOW *win)
     int y = 0;
     time_t now = time (NULL);
     char *ts = ctime (&now);
+    int nservers = 0, upservers = 0;
     double statfs=0, lopen=0, lcreate=0, symlink=0, mknod=0;
     double rename=0, readlink=0, getattr=0, setattr=0, readdir=0;
     double fsync=0, lock=0, getlock=0, link=0, mkdir=0;
@@ -265,6 +266,7 @@ _update_display_topwin (WINDOW *win)
     double rmbps=0, wmbps=0;
     ListIterator itr;
     TpoolStats *tp;
+    Server *sp;
 
     xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
@@ -299,6 +301,15 @@ _update_display_topwin (WINDOW *win)
         wmbps    += sample_rate (tp->wbytes, now) / (1024*1024);
     }
     list_iterator_destroy (itr);
+    if (!(itr = list_iterator_create (servers)))
+        msg_exit ("out of memory");    
+    while ((sp = list_next (itr))) {
+        if (now - sp->last_poll < stale_secs)
+            upservers++;
+        nservers++;
+    }
+    list_iterator_destroy (itr);
+
     xpthread_mutex_unlock (&dtop_lock);
 
     wclear (win);
@@ -322,9 +333,11 @@ _update_display_topwin (WINDOW *win)
       "      %6.0f read    %6.0f write    %6.0f clunk   %6.0f remove",
       read, write, clunk, remove);
     y++;
-    mvwprintw (win, y++, 0,
+    mvwprintw (win, y, 0,
       "GB/s:%7.3f read   %7.3f write",
       rmbps / 1024, wmbps / 1024);
+    mvwprintw (win, y, 57,
+      "Live servers: %d/%d", upservers, nservers);
     wrefresh (win);
 }
 
