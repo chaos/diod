@@ -101,11 +101,11 @@ typedef struct {
     sample_t nreqs[P9_RWSTAT + 1];
     sample_t rcount[NPSTATS_RWCOUNT_BINS];
     sample_t wcount[NPSTATS_RWCOUNT_BINS];
-} Tpool;
+} TpoolStats;
 static List tpools = NULL;
 
 /* Aname stats.
- * These are derived from Tpool stats as needed.
+ * These are derived from tpool data in _update_display_aname ().
  */
 typedef struct {
     char *aname;
@@ -115,8 +115,7 @@ typedef struct {
     double numfids;
     double numreqs;
     double totreqs;
-} Aname;
-static List anames = NULL;  /* static list of stats for (aname) */
+} AnameStats;
 
 /* Server stats.
  * The first part is state for polling servers.
@@ -133,7 +132,7 @@ typedef struct {
     /* The following data is only updated when in 'server' view.
      * It is derived from tpool data in _update_display_server ().
      */
-    int anames;
+    int numanames;
     double rmbps;
     double wmbps;
     double numfids;
@@ -150,12 +149,14 @@ static List servers = NULL; /* static list of servers we are polling */
 
 static pthread_mutex_t dtop_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static Server *_server_create (char *host, char *port, double poll_sec);
-static void _server_destroy (Server *sp);
-static void _destroy_tpool (Tpool *tp);
-static void _destroy_aname (Aname *ap);
+static Server *_create_server (char *host, char *port, double poll_sec);
+static void _destroy_server  (Server *sp);
+static int _compare_aname(AnameStats *ap1, AnameStats *ap2);
+static int _match_aname(AnameStats *ap, char *aname);
+static AnameStats *_create_aname (char *aname);
+static void _destroy_aname (AnameStats *ap);
+static void _destroy_tpool (TpoolStats *tp);
 static void _curses_watcher (double update_secs);
-static int _match_aname(Aname *ap, char *aname);
 
 static int stale_secs = 5;
 static int exiting = 0;
@@ -219,8 +220,6 @@ main (int argc, char *argv[])
 
     if (!(tpools = list_create ((ListDelF)_destroy_tpool)))
         err_exit ("out of memory");
-    if (!(anames = list_create ((ListDelF)_destroy_aname)))
-        err_exit ("out of memory");
 
     sigemptyset (&sigs);
     sigaddset (&sigs, SIGPIPE);
@@ -234,7 +233,7 @@ main (int argc, char *argv[])
     if (!(itr = hostlist_iterator_create (hl)))
         err_exit ("out of memory");
     while ((host = hostlist_next (itr))) {
-        if (!(list_append (servers, _server_create (host, port, poll_sec))))
+        if (!(list_append (servers, _create_server (host, port, poll_sec))))
             err_exit ("out of memory");
     }
     hostlist_iterator_destroy (itr);
@@ -244,7 +243,7 @@ main (int argc, char *argv[])
     if (!(si = list_iterator_create (servers)))
         msg_exit ("out of memory");
     while ((sp = list_next (si)))
-        _server_destroy (sp);
+        _destroy_server (sp);
     list_iterator_destroy (si);
 
     diod_log_fini ();
@@ -265,7 +264,7 @@ _update_display_topwin (WINDOW *win)
     double read=0, write=0, clunk=0, remove=0;
     double rmbps=0, wmbps=0;
     ListIterator itr;
-    Tpool *tp;
+    TpoolStats *tp;
 
     xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
@@ -333,9 +332,9 @@ static void
 _update_display_tpool (WINDOW *win)
 {
     ListIterator itr;
-    Tpool *tp;
+    TpoolStats *tp;
     int y = 0;
-    time_t t = time(NULL);
+    time_t now = time(NULL);
 
     wclear (win);
     wmove (win, y++, 0);
@@ -351,17 +350,17 @@ _update_display_tpool (WINDOW *win)
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");    
     while ((tp = list_next (itr))) {
-        if (sample_val (tp->numfids, t) == 0)
+        if (sample_val (tp->numfids, now) == 0)
             continue;
         mvwprintw (win, y++, 0,
                 "%10.10s %14.14s %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
                     tp->key.host, tp->key.aname,
-                    sample_val (tp->numfids, t),
-                    sample_rate (tp->totreqs, t),
-                    sample_val (tp->numreqs, t),
-                    sample_rate (tp->rbytes, t) / (1024*1024),
-                    sample_rate (tp->wbytes, t) / (1024*1024),
-                    sample_rate (tp->iops, t));
+                    sample_val (tp->numfids, now),
+                    sample_rate (tp->totreqs, now),
+                    sample_val (tp->numreqs, now),
+                    sample_rate (tp->rbytes, now) / (1024*1024),
+                    sample_rate (tp->wbytes, now) / (1024*1024),
+                    sample_rate (tp->iops, now));
     }
     list_iterator_destroy (itr);
     xpthread_mutex_unlock (&dtop_lock);
@@ -371,11 +370,13 @@ _update_display_tpool (WINDOW *win)
 static void
 _update_display_aname (WINDOW *win)
 {
+    static List anames = NULL;
     ListIterator itr;
-    Tpool *tp;
-    Aname *ap;
+    TpoolStats *tp;
+    AnameStats *ap;
     int y = 0;
-    time_t t = time(NULL);
+    time_t now = time(NULL);
+    int sort_needed = 0;
 
     wclear (win);
     wmove (win, y++, 0);
@@ -386,7 +387,8 @@ _update_display_aname (WINDOW *win)
              "aname", "fids", "reqs", "queue", "rMB/s", "wMB/s", "IOPS");
     wattroff (win, A_REVERSE);
 
-    xpthread_mutex_lock (&dtop_lock);
+    if (!anames && !(anames = list_create ((ListDelF)_destroy_aname)))
+        err_exit ("out of memory");
     if (!(itr = list_iterator_create (anames)))
         msg_exit ("out of memory");
     while ((ap = list_next (itr))) {
@@ -394,19 +396,30 @@ _update_display_aname (WINDOW *win)
                   = ap->numreqs = ap->totreqs = 0;
     }
     list_iterator_destroy (itr);
+
+    xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");
     while ((tp = list_next (itr))) {
         ap = list_find_first (anames, (ListFindF)_match_aname, tp->key.aname);
-        assert (ap != NULL);
-        ap->rmbps += sample_rate (tp->rbytes, t) / (1024*1024);
-        ap->wmbps += sample_rate (tp->wbytes, t) / (1024*1024);
-        ap->iops += sample_rate (tp->iops, t);
-        ap->numfids += sample_val (tp->numfids, t);
-        ap->numreqs += sample_val (tp->numreqs, t);
-        ap->totreqs += sample_rate (tp->totreqs, t);
+        if (!ap) {
+            ap = _create_aname (tp->key.aname);
+            if (!list_append (anames, ap))
+                msg_exit ("out of memory");
+            sort_needed = 1;
+        }
+        ap->rmbps += sample_rate (tp->rbytes, now) / (1024*1024);
+        ap->wmbps += sample_rate (tp->wbytes, now) / (1024*1024);
+        ap->iops += sample_rate (tp->iops, now);
+        ap->numfids += sample_val (tp->numfids, now);
+        ap->numreqs += sample_val (tp->numreqs, now);
+        ap->totreqs += sample_rate (tp->totreqs, now);
     }
     list_iterator_destroy (itr);
+    xpthread_mutex_unlock (&dtop_lock);
+
+    if (sort_needed)
+        list_sort (anames, (ListCmpF)_compare_aname);
     if (!(itr = list_iterator_create (anames)))
         msg_exit ("out of memory");
     while ((ap = list_next (itr))) {
@@ -423,7 +436,6 @@ _update_display_aname (WINDOW *win)
                     ap->iops);
     }
     list_iterator_destroy (itr);
-    xpthread_mutex_unlock (&dtop_lock);
     wrefresh (win);
 }
 
@@ -432,9 +444,9 @@ static void
 _update_display_rwcount (WINDOW *win)
 {
     ListIterator itr;
-    Tpool *tp;
+    TpoolStats *tp;
     int y = 0;
-    time_t t = time(NULL);
+    time_t now = time(NULL);
 
     wclear (win);
     wmove (win, y++, 0);
@@ -453,23 +465,23 @@ _update_display_rwcount (WINDOW *win)
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");    
     while ((tp = list_next (itr))) {
-        if (sample_val (tp->numfids, t) == 0)
+        if (sample_val (tp->numfids, now) == 0)
             continue;
         mvwprintw (win, y++, 0,
              "%9.9s %10.10s "
              "%5.0f %5.0f %5.0f %5.0f %5.0f "
              "%5.0f %5.0f %5.0f %5.0f %5.0f",
                     tp->key.host, tp->key.aname,
-                    sample_rate (tp->rcount[0], t),
-                    sample_rate (tp->rcount[1], t),
-                    sample_rate (tp->rcount[2], t),
-                    sample_rate (tp->rcount[3], t),
-                    sample_rate (tp->rcount[4], t),
-                    sample_rate (tp->wcount[0], t),
-                    sample_rate (tp->wcount[1], t),
-                    sample_rate (tp->wcount[2], t),
-                    sample_rate (tp->wcount[3], t),
-                    sample_rate (tp->wcount[4], t));
+                    sample_rate (tp->rcount[0], now),
+                    sample_rate (tp->rcount[1], now),
+                    sample_rate (tp->rcount[2], now),
+                    sample_rate (tp->rcount[3], now),
+                    sample_rate (tp->rcount[4], now),
+                    sample_rate (tp->wcount[0], now),
+                    sample_rate (tp->wcount[1], now),
+                    sample_rate (tp->wcount[2], now),
+                    sample_rate (tp->wcount[3], now),
+                    sample_rate (tp->wcount[4], now));
     }
     list_iterator_destroy (itr);
     xpthread_mutex_unlock (&dtop_lock);
@@ -489,8 +501,8 @@ _update_display_server (WINDOW *win)
 {
     ListIterator itr;
     Server *sp;
-    Tpool *tp;
-    time_t t = time (NULL);
+    TpoolStats *tp;
+    time_t now = time (NULL);
     int y = 0;
 
     wclear (win);
@@ -504,10 +516,11 @@ _update_display_server (WINDOW *win)
     wattroff (win, A_REVERSE);
 
     /* zero server stats */
+    xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (servers)))
         msg_exit ("out of memory");    
     while ((sp = list_next (itr))) {
-        sp->anames = sp->numfids = sp->numreqs = sp->totreqs = 0;
+        sp->numanames = sp->numfids = sp->numreqs = sp->totreqs = 0;
         sp->rmbps = sp->wmbps = 0;
     }
     list_iterator_destroy (itr);
@@ -518,12 +531,12 @@ _update_display_server (WINDOW *win)
         sp = list_find_first (servers, (ListFindF)_match_serverhost,
                               tp->key.host);
         if (sp) {
-            sp->anames++;
-            sp->numfids += sample_val (tp->numfids, t);
-            sp->totreqs += sample_rate (tp->totreqs, t);
-            sp->numreqs += sample_val (tp->numreqs, t); /* queue */
-            sp->rmbps += sample_rate (tp->rbytes, t) / (1024*1024);
-            sp->wmbps += sample_rate (tp->wbytes, t) / (1024*1024);
+            sp->numanames++;
+            sp->numfids += sample_val (tp->numfids, now);
+            sp->totreqs += sample_rate (tp->totreqs, now);
+            sp->numreqs += sample_val (tp->numreqs, now); /* queue */
+            sp->rmbps += sample_rate (tp->rbytes, now) / (1024*1024);
+            sp->wmbps += sample_rate (tp->wbytes, now) / (1024*1024);
         }
     }
     list_iterator_destroy (itr);
@@ -533,25 +546,24 @@ _update_display_server (WINDOW *win)
         msg_exit ("out of memory");    
     while ((sp = list_next (itr))) {
         mvwprintw (win, y, 0, "%10.10s ", sp->host);
-        if (t - sp->last_poll < stale_secs) {
+        if (now - sp->last_poll < stale_secs) {
             mvwprintw (win, y, 11,
             "%5.0d %5.0f %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
-            sp->anames,
+            sp->numanames,
             sp->numconns,
             sp->numfids,
             sp->totreqs,
             sp->numreqs,
             sp->rmbps,
             sp->wmbps,
-            sample_val (sp->mem_cached, t) / 1024,
-            sample_val (sp->mem_dirty, t) / 1024,
-            sample_rate (sp->nfs_ops, t));
+            sample_val (sp->mem_cached, now) / 1024,
+            sample_val (sp->mem_dirty, now) / 1024,
+            sample_rate (sp->nfs_ops, now));
         }
         y++;
-        
-
     }
     list_iterator_destroy (itr);
+    xpthread_mutex_unlock (&dtop_lock);
 
     wrefresh (win);
 }
@@ -649,17 +661,17 @@ _curses_watcher (double update_secs)
 }
 
 static int
-_match_tpool (Tpool *x, Tpoolkey *key)
+_match_tpool (TpoolStats *x, Tpoolkey *key)
 {
     if (!strcmp (key->host, x->key.host) && !strcmp(key->aname, x->key.aname))
         return 1;
     return 0;
 }
 
-static Tpool *
+static TpoolStats *
 _create_tpool (Tpoolkey *key)
 {
-    Tpool *tp;
+    TpoolStats *tp;
     int i;
 
     if (!(tp = malloc (sizeof (*tp))))
@@ -684,7 +696,7 @@ _create_tpool (Tpoolkey *key)
 }
 
 static void
-_destroy_tpool (Tpool *tp)
+_destroy_tpool (TpoolStats *tp)
 {
     int i;
 
@@ -703,18 +715,50 @@ _destroy_tpool (Tpool *tp)
     free (tp);
 }
 
+static char *
+_numerical_suffix (char *s, unsigned long *np)
+{
+    char *p = s + strlen (s);
+
+    while (p > s && isdigit (*(p - 1)))
+        p--;
+    if (*p)
+        *np = strtoul (p, NULL, 10);
+    return p;
+}
+
+/* Used for list_sort () of AnameStats list by aname.
+ * Like strcmp, but handle variable-width (unpadded) numerical suffixes, if any.
+ */
 static int
-_match_aname(Aname *ap, char *aname)
+_compare_aname(AnameStats *ap1, AnameStats *ap2)
+{
+    unsigned long n1, n2;
+    char *p1 = _numerical_suffix (ap1->aname, &n1);
+    char *p2 = _numerical_suffix (ap2->aname, &n2);
+
+    if (*p1 && *p2
+            && (p1 - ap1->aname) == (p2 - ap2->aname)
+            && !strncmp (ap1->aname, ap2->aname, p1 - ap1->aname)) {
+        return (n1 < n2 ? -1
+              : n1 > n2 ? 1 : 0);
+    }
+    return strcmp (ap1->aname, ap2->aname);
+
+}
+
+static int
+_match_aname(AnameStats *ap, char *aname)
 {
     if (!strcmp (aname, ap->aname))
         return 1;
     return 0;
 }
 
-static Aname *
+static AnameStats *
 _create_aname (char *aname)
 {
-    Aname *ap;
+    AnameStats *ap;
 
     if (!(ap = malloc (sizeof (*ap))))
         msg_exit ("out of memory");
@@ -725,7 +769,7 @@ _create_aname (char *aname)
 }
 
 static void
-_destroy_aname (Aname *ap)
+_destroy_aname (AnameStats *ap)
 {
     free (ap->aname);
     free (ap);
@@ -747,8 +791,7 @@ _update (char *host, time_t t, char *s)
 {
     Npstats stats;
     Tpoolkey key;
-    Tpool *tp;
-    Aname *ap;
+    TpoolStats *tp;
     int i;
 
     memset (stats.nreqs, 0, sizeof(stats.nreqs));
@@ -775,13 +818,6 @@ _update (char *host, time_t t, char *s)
     for (i = 0; i < NPSTATS_RWCOUNT_BINS; i++) {
         sample_update (tp->rcount[i], (double)stats.rcount[i], t);
         sample_update (tp->wcount[i], (double)stats.wcount[i], t);
-    }
-    /* Create Aname entry if needed, but don't update stats.
-     */
-    if (!(ap = list_find_first (anames, (ListFindF)_match_aname, key.aname))) {
-        ap = _create_aname (key.aname);
-        if (!list_append (anames, ap))
-            msg_exit ("out of memory");
     }
     xpthread_mutex_unlock (&dtop_lock);
 
@@ -915,7 +951,7 @@ skip:
 }
 
 static Server *
-_server_create (char *host, char *port, double poll_sec)
+_create_server (char *host, char *port, double poll_sec)
 {
     Server *sp;
     int err;
@@ -939,7 +975,7 @@ _server_create (char *host, char *port, double poll_sec)
 }
 
 static void
-_server_destroy (Server *sp)
+_destroy_server (Server *sp)
 {
     int err;
 
