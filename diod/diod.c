@@ -479,7 +479,7 @@ _test_setgroups_thread (void *arg)
 {
     gid_t sg[] = { 42, 37, 63 };
 
-    if (setgroups (3, sg) < 0)
+    if (syscall(SYS_setgroups, 3, sg) < 0)
         err_exit ("setgroups");
     return NULL;
 }
@@ -499,7 +499,7 @@ _test_setgroups (void)
         msg_exit ("out of memory");
     if ((nsg = getgroups (ngroups_max, sg)) < 0)
         err_exit ("getgroups");
-    if (setgroups (0, NULL) < 0)  /* clear groups */
+    if (syscall(SYS_setgroups, 0, NULL) < 0) /* clear groups */
         err_exit ("setgroups");
     if ((err = pthread_create (&t, NULL, _test_setgroups_thread, NULL)))
         err_exit ("pthread_create"); 
@@ -509,7 +509,7 @@ _test_setgroups (void)
         err_exit ("getgroups");
     if (n == 0)
         rc = 1;
-    if (setgroups (nsg, sg) < 0)
+    if (syscall(SYS_setgroups, nsg, sg) < 0)
         err_exit ("setgroups");
     free (sg);
     return rc;
