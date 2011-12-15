@@ -1,3 +1,9 @@
+1.0-pre52:
+	Fix broken runtime test for supplementary group creds (issue 53)
+	Change dtop to show file system (aname) view by default.
+	Fix automake issue seen on debian [E. Meshcheryakov]
+	Update 'make dist' target to include some missing files.
+
 1.0-pre51:
 	Switch to new lock type defintions.
           NOTE: This will break regression tests on some non-x86_64
