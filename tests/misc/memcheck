@@ -6,7 +6,8 @@ if [ $# -eq 0 ]; then
 fi
 
 if which valgrind >/dev/null 2>&1; then
-    valgrind --error-exitcode=1 --tool=memcheck --leak-check=yes --quiet $*
+    valgrind --error-exitcode=1 --tool=memcheck --leak-check=yes --quiet \
+             --suppressions=./tcmalloc.supp $*
 else
     export MALLOC_CHECK_=3; $*
 fi
