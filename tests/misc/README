@@ -24,6 +24,7 @@ t09   	Check for memory problems in list package
 	Actually this was to run down a specific case, now fixed.
 t10	Check for memory problems in a skeletal libnpfs client/server
 t11(*)	Show that pthreads can independently set/clear CAP_DAC_OVERRIDE
+t12     Check for memory problems in fidpool
 
 (*) NOTRUN if not run as root
 (@) NOTRUN if lua is not installed

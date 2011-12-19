@@ -1,0 +1,3 @@
+tfidpool: initial count: 0
+tfidpool: count after fid create: 1000
+tfidpool: count after fid destroy: 0

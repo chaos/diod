@@ -10,9 +10,10 @@ check_PROGRAMS = \
 	tlist \
 	tnpsrv \
 	tlua \
-	tcap
+	tcap \
+	tfidpool
 
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12
 # XFAIL_TESTS = t12
 
 CLEANFILES = *.out *.diff
