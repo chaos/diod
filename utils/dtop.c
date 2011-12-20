@@ -558,12 +558,11 @@ _update_display_server (WINDOW *win)
     if (!(itr = list_iterator_create (servers)))
         msg_exit ("out of memory");    
     while ((sp = list_next (itr))) {
-        mvwprintw (win, y, 0, "%10.10s ", sp->host);
+        mvwprintw (win, y, 0, "%10.10s %5.0d %5.0f ",
+                   sp->host, sp->numanames, sp->numconns);
         if (now - sp->last_poll < stale_secs) {
-            mvwprintw (win, y, 11,
-            "%5.0d %5.0f %6.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
-            sp->numanames,
-            sp->numconns,
+            mvwprintw (win, y, 23,
+            "%6.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f %5.0f",
             sp->numfids,
             sp->totreqs,
             sp->numreqs,
@@ -572,6 +571,13 @@ _update_display_server (WINDOW *win)
             sample_val (sp->mem_cached, now) / 1024,
             sample_val (sp->mem_dirty, now) / 1024,
             sample_rate (sp->nfs_ops, now));
+        } else {
+            char *s = strdup (ctime (&sp->last_poll));
+            if (!s)
+                msg_exit ("out of memory");
+            s[strlen (s) - 1] = '\0';
+            mvwprintw (win, y, 23, "[last heard from on %s]", s);
+            free (s);
         }
         y++;
     }
