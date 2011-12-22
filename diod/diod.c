@@ -583,6 +583,8 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
 
     /* clear umask */
     umask (0);
+
+    flags |= SRV_FLAGS_DEBUG_FIDPOOL; /* XXX temporary */
     
     flags |= SRV_FLAGS_AUTHCONN;
     flags |= SRV_FLAGS_FLUSHSIG;

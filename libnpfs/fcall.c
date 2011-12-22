@@ -374,7 +374,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	np_uerror(0);
 	rc = np_create_rwalk(i, wqids);
 done:
-	if (!rc && newfid)
+	if (!rc && tc->u.twalk.fid != tc->u.twalk.newfid && newfid != NULL)
 		np_fid_decref (newfid);
 	return rc;
 }

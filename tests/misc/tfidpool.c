@@ -43,7 +43,7 @@ main (int argc, char *argv[])
 
     memset (&srv, 0, sizeof (srv));
     srv.logmsg = diod_log_msg;
-    //srv.flags |= SRV_FLAGS_DEBUG_FIDPOOL;
+    srv.flags |= SRV_FLAGS_DEBUG_FIDPOOL;
     conn.fidpool = np_fidpool_create ();
     conn.srv = &srv;
 

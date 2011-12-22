@@ -39,6 +39,9 @@ typedef struct Npsrv Npsrv;
 typedef struct Npuser Npuser;
 
 #define FID_HTABLE_SIZE 64
+#define FID_HISTORY_SIZE 128
+#define FID_MAGIC 0x765abcdf
+#define FID_MAGIC_FREED 0xdeadbeef
 
 struct Npfcall {
 	u32		size;
@@ -110,6 +113,7 @@ struct Npfcall {
 
 
 struct Npfid {
+	int		magic;
 	pthread_mutex_t lock;
 	Npconn*		conn;
 	u32		fid;
@@ -118,6 +122,7 @@ struct Npfid {
 	Npuser*		user;
 	Nptpool*	tpool;	/* tpool preference, if any (else NULL) */
 	char		*aname;
+	char		*history;
 	void*		aux;
 
 	Npfid*		next;	/* list of fids within a bucket */
@@ -229,6 +234,7 @@ enum {
 	/* debug */
 	SRV_FLAGS_DEBUG_9PTRACE	=0x00000001,
 	SRV_FLAGS_DEBUG_USER    =0x00000002,
+	SRV_FLAGS_DEBUG_FIDPOOL =0x00000004,
 
 	/* features */
 	SRV_FLAGS_SETFSID	=0x00010000,
@@ -350,12 +356,24 @@ void np_conn_set_authuser(Npconn *, u32);
 
 /* fidpool.c */
 Npfidpool *np_fidpool_create(void);
-int np_fidpool_destroy(Npfidpool *);
+int np_fidpool_destroy(Npfidpool *pool);
 int np_fidpool_count(Npfidpool *pool);
-Npfid *np_fid_find(Npconn *, u32);
-Npfid *np_fid_create(Npconn *, u32, void *);
-Npfid *np_fid_incref(Npfid *);
-void np_fid_decref(Npfid *);
+Npfid *np_fid_find_withnote(Npconn *conn, u32 fid, const char *note);
+Npfid *np_fid_create_withnote(Npconn *conn, u32 fid, void *aux,
+                              const char *note);
+Npfid *np_fid_incref_withnote(Npfid *fid, const char *note);
+void np_fid_decref_withnote(Npfid *fid, const char *note);
+#define np_fid_find(a, b) \
+	np_fid_find_withnote ((a), (b),__FUNCTION__)
+#define np_fid_create(a, b, c) \
+	np_fid_create_withnote ((a), (b), (c), __FUNCTION__)
+#define np_fid_incref(a) \
+	np_fid_incref_withnote ((a), __FUNCTION__)
+#define np_fid_decref(a) \
+	do { \
+	    assert (a->magic == FID_MAGIC); \
+	    np_fid_decref_withnote ((a), __FUNCTION__); \
+	} while (0)
 
 /* trans.c */
 Nptrans *np_trans_create(void *aux, int (*recv)(Npfcall **, u32, void *),
