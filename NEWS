@@ -1,3 +1,9 @@
+1.0-pre53:
+	Rework fidpool code and add debugging for issue 81
+	Fidpool debugging is on by default (temporarily)
+	Dtop shows time missing server was last seen.
+	Add experimental suppoort for building with tcmalloc
+
 1.0-pre52:
 	Fix broken runtime test for supplementary group creds (issue 53)
 	Change dtop to show file system (aname) view by default.
