@@ -127,6 +127,9 @@
 /* Define to 1 if you have the `rdmacm' library (-lrdmacm). */
 #undef HAVE_LIBRDMACM
 
+/* Define to 1 if you have the `tcmalloc' library (-ltcmalloc). */
+#undef HAVE_LIBTCMALLOC
+
 /* Define to 1 if you have the `listxattr' function. */
 #undef HAVE_LISTXATTR
 
@@ -305,6 +308,9 @@
 
 /* build Infiniband RDMA transport */
 #undef WITH_RDMATRANS
+
+/* build with Google-perftools malloc */
+#undef WITH_TCMALLOC
 
 /* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
    significant byte first (like Motorola and SPARC, unlike Intel). */

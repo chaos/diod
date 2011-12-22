@@ -48,6 +48,7 @@ am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/x_ac_expand_install_dirs.m4 \
 	$(top_srcdir)/config/x_ac_meta.m4 \
 	$(top_srcdir)/config/x_ac_rdmatrans.m4 \
+	$(top_srcdir)/config/x_ac_tcmalloc.m4 \
 	$(top_srcdir)/config/x_ac_wrap.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)

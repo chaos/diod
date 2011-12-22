@@ -644,6 +644,8 @@ RDMATRANS_TRUE
 LIBIBVERBS
 LIBRDMACM
 LIBLUA
+TCMALLOC_FALSE
+TCMALLOC_TRUE
 LIBCAP
 LIBMUNGE
 LIBCURSES
@@ -777,6 +779,7 @@ enable_option_checking
 enable_maintainer_mode
 enable_dependency_tracking
 with_ncurses
+with_tcmalloc
 with_lua_suffix
 enable_rdmatrans
 enable_largefile
@@ -1432,6 +1435,7 @@ Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-ncurses          Force the use of ncurses over curses
+  --with-tcmalloc         build with Google-perftools malloc
   --with-lua-suffix=ARG   Lua binary and library files are suffixed with ARG
 
 Some influential environment variables:
@@ -8858,6 +8862,118 @@ fi
 
 
 
+
+got_tcmalloc=no
+
+# Check whether --with-tcmalloc was given.
+if test "${with_tcmalloc+set}" = set; then
+  withval=$with_tcmalloc; want_tcmalloc=yes
+else
+  want_tcmalloc=no
+fi
+
+
+if test x$want_tcmalloc == xyes; then
+
+{ $as_echo "$as_me:$LINENO: checking for malloc in -ltcmalloc" >&5
+$as_echo_n "checking for malloc in -ltcmalloc... " >&6; }
+if test "${ac_cv_lib_tcmalloc_malloc+set}" = set; then
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ltcmalloc  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char malloc ();
+int
+main ()
+{
+return malloc ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:$LINENO: $ac_try_echo\""
+$as_echo "$ac_try_echo") >&5
+  (eval "$ac_link") 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  $as_echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } && {
+	 test -z "$ac_c_werror_flag" ||
+	 test ! -s conftest.err
+       } && test -s conftest$ac_exeext && {
+	 test "$cross_compiling" = yes ||
+	 $as_test_x conftest$ac_exeext
+       }; then
+  ac_cv_lib_tcmalloc_malloc=yes
+else
+  $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+	ac_cv_lib_tcmalloc_malloc=no
+fi
+
+rm -rf conftest.dSYM
+rm -f core conftest.err conftest.$ac_objext conftest_ipa8_conftest.oo \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:$LINENO: result: $ac_cv_lib_tcmalloc_malloc" >&5
+$as_echo "$ac_cv_lib_tcmalloc_malloc" >&6; }
+if test "x$ac_cv_lib_tcmalloc_malloc" = x""yes; then
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBTCMALLOC 1
+_ACEOF
+
+  LIBS="-ltcmalloc $LIBS"
+
+fi
+
+  if test x$ac_cv_lib_tcmalloc_malloc == xyes; then
+    got_tcmalloc=yes
+
+cat >>confdefs.h <<\_ACEOF
+#define WITH_TCMALLOC 1
+_ACEOF
+
+  else
+    { { $as_echo "$as_me:$LINENO: error: building without Google-perftools malloc" >&5
+$as_echo "$as_me: error: building without Google-perftools malloc" >&2;}
+   { (exit 1); exit 1; }; }
+  fi
+fi
+
+ if test "x$got_tcmalloc" != xno; then
+  TCMALLOC_TRUE=
+  TCMALLOC_FALSE='#'
+else
+  TCMALLOC_TRUE='#'
+  TCMALLOC_FALSE=
+fi
+
+
+
+
 # Check whether --with-lua-suffix was given.
 if test "${with_lua_suffix+set}" = set; then
   withval=$with_lua_suffix;
@@ -10501,6 +10617,13 @@ Usually this means the macro was only invoked conditionally." >&2;}
    { (exit 1); exit 1; }; }
 fi
 
+if test -z "${TCMALLOC_TRUE}" && test -z "${TCMALLOC_FALSE}"; then
+  { { $as_echo "$as_me:$LINENO: error: conditional \"TCMALLOC\" was never defined.
+Usually this means the macro was only invoked conditionally." >&5
+$as_echo "$as_me: error: conditional \"TCMALLOC\" was never defined.
+Usually this means the macro was only invoked conditionally." >&2;}
+   { (exit 1); exit 1; }; }
+fi
 if test -z "${RDMATRANS_TRUE}" && test -z "${RDMATRANS_FALSE}"; then
   { { $as_echo "$as_me:$LINENO: error: conditional \"RDMATRANS\" was never defined.
 Usually this means the macro was only invoked conditionally." >&5
