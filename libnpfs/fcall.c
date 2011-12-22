@@ -169,7 +169,6 @@ np_attach(Npreq *req, Npfcall *tc)
 				   tc->u.tattach.afid);
 			goto error;
 		}
-		np_fid_incref(afid);
 		if (!(afid->type & P9_QTAUTH)) {
 			np_uerror(EPERM);
 			np_logerr (srv, "%s: invalid afid type", a);
@@ -242,9 +241,11 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 		rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 	}
+	if (rc)
+		np_fid_incref (fid);
 error:
 	if (afid)
-		np_fid_decref(afid);
+		np_fid_decref (afid);
 	return rc;
 }
 
@@ -311,15 +312,14 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->u.twalk.fid != tc->u.twalk.newfid) {
-		newfid = np_fid_find(conn, tc->u.twalk.newfid);
-		if (newfid) {
-			np_uerror(EIO);
-			np_logerr (conn->srv, "walk: invalid newfid");
+		newfid = np_fid_create(conn, tc->u.twalk.newfid, NULL);
+		if (!newfid) {
+			if (np_rerror () == EEXIST) {
+				np_uerror(EIO);
+				np_logmsg (conn->srv, "walk: invalid newfid");
+			}
 			goto done;
 		}
-		newfid = np_fid_create(conn, tc->u.twalk.newfid, NULL);
-		if (!newfid)
-			goto done;
 		if (fid->type & P9_QTTMP) {
 			if (!np_ctl_clone (fid, newfid))
 				goto done;
@@ -344,7 +344,6 @@ np_walk(Npreq *req, Npfcall *tc)
 	} else
 		newfid = fid;
 
-	np_fid_incref(newfid);
 	if (!(newfid->type & P9_QTTMP)) {
 		if (np_setfsid (req, newfid->user, -1) < 0)
 			goto done;
@@ -369,16 +368,14 @@ np_walk(Npreq *req, Npfcall *tc)
 			break;
 	}
 
-	if (i==0 && tc->u.twalk.nwname!=0)
+	if (i == 0 && tc->u.twalk.nwname != 0)
 		goto done;
 
 	np_uerror(0);
-	if (tc->u.twalk.fid != tc->u.twalk.newfid)
-		np_fid_incref(newfid);
 	rc = np_create_rwalk(i, wqids);
-
 done:
-	np_fid_decref(newfid);
+	if (!rc && newfid)
+		np_fid_decref (newfid);
 	return rc;
 }
 
@@ -530,12 +527,9 @@ np_clunk(Npreq *req, Npfcall *tc)
 done:
 	/* From clunk(5):
 	 * even if the clunk returns an error, the fid is no longer valid.
-	 * N.B. destroy here instead of later to allow reuse (issue 81)
 	 */
-	if (req->fid) {
-		np_fid_destroy (req->fid);
-		req->fid = NULL;
-	}
+	if (req->fid)
+		np_fid_decref (req->fid);
 	return rc;
 }
 
@@ -564,12 +558,9 @@ np_remove(Npreq *req, Npfcall *tc)
 	}
 done:
 	/* spec says clunk the fid even if the remove fails
-	 * N.B. destroy here instead of later to allow reuse (issue 81)
    	 */
-	if (req->fid) {
-		np_fid_destroy (req->fid);
-		req->fid = NULL;
-	}
+	if (req->fid)
+		np_fid_decref (req->fid);
 	return rc;
 }
 
@@ -739,7 +730,6 @@ np_rename(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "rename: invalid dfid");
 		goto done;
 	}
-	np_fid_incref(dfid);
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -753,7 +743,8 @@ np_rename(Npreq *req, Npfcall *tc)
 		rc = (*req->conn->srv->rename)(fid, dfid, &tc->u.trename.name);
 	}
 done:
-	np_fid_decref(dfid);
+	if (dfid)
+		np_fid_decref (dfid);
 	return rc;
 }
 
@@ -859,7 +850,7 @@ Npfcall *
 np_xattrwalk(Npreq *req, Npfcall *tc)
 {
 	Npfid *fid = req->fid;
-	Npfid *attrfid;
+	Npfid *attrfid = NULL;
 	Npfcall *rc = NULL;
 
 	if (!fid) {
@@ -872,7 +863,6 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "xattrwalk: invalid attrfid");
 		goto done;
 	}
-	np_fid_incref(attrfid); /* XXX decref needed? */
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -887,6 +877,8 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 						  &tc->u.txattrwalk.name);
 	}
 done:
+	if (attrfid)
+		np_fid_decref (attrfid);
 	return rc;
 }
 
@@ -1064,7 +1056,6 @@ np_link(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "link: invalid fid");
 		goto done;
 	}
-	np_fid_incref(fid);
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -1078,7 +1069,8 @@ np_link(Npreq *req, Npfcall *tc)
 		rc = (*req->conn->srv->link)(dfid, fid, &tc->u.tlink.name);
 	}
 done:
-	np_fid_decref(fid);
+	if (fid)
+		np_fid_decref (fid);
 	return rc;
 }
 
@@ -1138,7 +1130,6 @@ np_renameat (Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "renameat: invalid newdirfid");
 		goto done;
 	}
-	np_fid_incref(newdirfid);
 	if (np_setfsid (req, newdirfid->user, -1) < 0)
 		goto done;
 	if (!req->conn->srv->renameat) {
@@ -1148,7 +1139,8 @@ np_renameat (Npreq *req, Npfcall *tc)
 	rc = (*req->conn->srv->renameat)(olddirfid, &tc->u.trenameat.oldname,
 					 newdirfid, &tc->u.trenameat.newname);
 done:
-	np_fid_decref (newdirfid);
+	if (newdirfid)
+		np_fid_decref (newdirfid);
 	return rc;
 }
 

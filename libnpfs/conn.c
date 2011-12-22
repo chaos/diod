@@ -104,10 +104,16 @@ np_conn_decref(Npconn *conn)
 static void
 np_conn_destroy(Npconn *conn)
 {
+	int n;
+
 	assert(conn != NULL);
 	assert(conn->refcount == 0);
 	if (conn->fidpool) {
-		np_fidpool_destroy(conn->fidpool);
+		if ((n = np_fidpool_destroy(conn->fidpool)) > 0) {
+			np_logmsg (conn->srv, "%s: connection closed with "
+					      "%d unclunked fids",
+			                      np_conn_get_client_id (conn), n);
+		}
 		conn->fidpool = NULL;
 	}
 	if (conn->trans) {

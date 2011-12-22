@@ -338,7 +338,6 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         goto error;
     }
     fid->aux = f;
-    np_fid_incref (fid);
     return ret;
 error:
     errn (np_rerror (), "diod_attach %s@%s:%.*s", fid->user->uname,

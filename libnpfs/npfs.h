@@ -110,7 +110,7 @@ struct Npfcall {
 
 
 struct Npfid {
-	pthread_mutex_t	lock;
+	pthread_mutex_t lock;
 	Npconn*		conn;
 	u32		fid;
 	int		refcount;
@@ -229,7 +229,6 @@ enum {
 	/* debug */
 	SRV_FLAGS_DEBUG_9PTRACE	=0x00000001,
 	SRV_FLAGS_DEBUG_USER    =0x00000002,
-	SRV_FLAGS_DEBUG_FIDPOOL =0x00000004,
 
 	/* features */
 	SRV_FLAGS_SETFSID	=0x00010000,
@@ -351,12 +350,11 @@ void np_conn_set_authuser(Npconn *, u32);
 
 /* fidpool.c */
 Npfidpool *np_fidpool_create(void);
-void np_fidpool_destroy(Npfidpool *);
+int np_fidpool_destroy(Npfidpool *);
 int np_fidpool_count(Npfidpool *pool);
 Npfid *np_fid_find(Npconn *, u32);
 Npfid *np_fid_create(Npconn *, u32, void *);
-void np_fid_destroy(Npfid *);
-void np_fid_incref(Npfid *);
+Npfid *np_fid_incref(Npfid *);
 void np_fid_decref(Npfid *);
 
 /* trans.c */

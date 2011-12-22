@@ -36,62 +36,97 @@
 #include "xpthread.h"
 #include "npfsimpl.h"
 
-Npfidpool *
-np_fidpool_create(void)
+/* N.B. lock ordering:
+ * 1) pool lock
+ * 2) fid lock
+ */
+
+static Npfid *
+_destroy_fid (Npfid *f)
 {
-	Npfidpool *fp;
+	Npsrv *srv = f->conn->srv;
+	Npfid *next = f->next;
 
-	fp = malloc(sizeof(*fp) + FID_HTABLE_SIZE * sizeof(Npfid *));
-	if (!fp) {
-		np_uerror (ENOMEM);
-		return NULL;
+	if (f->refcount > 0) {
+		np_logmsg (srv, "_destroy_fid: fid %d destroyed with %d refs",
+			   f->fid, f->refcount);
 	}
+	if ((f->type & P9_QTAUTH)) {
+		if (srv->auth && srv->auth->clunk)
+			(*srv->auth->clunk)(f);
+	} else if ((f->type & P9_QTTMP)) {
+		np_ctl_fiddestroy (f);
+	} else {
+		if (srv->fiddestroy)
+			(*srv->fiddestroy)(f);
+	}	
+	if (f->user)
+		np_user_decref(f->user);
+	if (f->tpool)
+		np_tpool_decref(f->tpool);
+	if (f->aname)
+		free (f->aname);
+	pthread_mutex_destroy (&f->lock);
+	free(f);
 
-	pthread_mutex_init(&fp->lock, NULL);
-	fp->size = FID_HTABLE_SIZE;
-	fp->htable = (Npfid **)((char *) fp + sizeof(*fp));
-	memset(fp->htable, 0, fp->size * sizeof(Npfid *));
-
-	return fp;
+	return next;
 }
 
-void
+static Npfid *
+_create_fid (Npconn *conn, u32 fid, void *aux)
+{
+	Npfid *f = malloc (sizeof (*f));
+
+	if (f) {
+		memset (f, 0, sizeof (*f));
+		f->conn = conn;
+		f->fid = fid;
+		f->aux = aux;
+		f->refcount = 0;
+		pthread_mutex_init (&f->lock, NULL);
+	} else
+		np_uerror (ENOMEM);
+
+	return f;
+}
+
+Npfidpool *
+np_fidpool_create (void)
+{
+	const size_t hsize = FID_HTABLE_SIZE * sizeof(Npfid *);
+	Npfidpool *pool;
+
+	if ((pool = malloc (sizeof (*pool) + hsize))) {
+		pthread_mutex_init (&pool->lock, NULL);
+		pool->size = FID_HTABLE_SIZE;
+		pool->htable = (Npfid **)((char *) pool + sizeof (*pool));
+		memset(pool->htable, 0, hsize);
+	} else
+		np_uerror (ENOMEM);
+
+	return pool;
+}
+
+int
 np_fidpool_destroy(Npfidpool *pool)
 {
 	int i;
-	Npfid *f, *ff;
-	Npsrv *srv;
+	Npfid *f;
+	int unclunked = 0;
 
+	xpthread_mutex_lock(&pool->lock);
 	for(i = 0; i < pool->size; i++) {
 		f = pool->htable[i];
 		while (f != NULL) {
-			ff = f->next;
-			srv = f->conn->srv;
-			np_logmsg (srv, "%s@%s:%s fid %d not clunked",
-			           f->user ? f->user->uname : "<unknown>",
-				   np_conn_get_client_id(f->conn),
-				   f->aname ? f->aname : "<NULL>", f->fid);
-			if ((f->type & P9_QTAUTH)) {
-				if (srv->auth && srv->auth->clunk)
-					(*srv->auth->clunk)(f);
-			} else if ((f->type & P9_QTTMP)) {
-				np_ctl_fiddestroy (f);
-			} else {
-				if (srv->fiddestroy)
-					(*srv->fiddestroy)(f);
-			}
-			if (f->aname)
-				free(f->aname);
-			if (f->user)
-				np_user_decref(f->user);
-			if (f->tpool)
-				np_tpool_decref(f->tpool);
-			free(f);
-			f = ff;
+			f = _destroy_fid (f);
+			unclunked++;
 		}
 	}
-
+	xpthread_mutex_unlock (&pool->lock);
+	pthread_mutex_destroy (&pool->lock);
 	free(pool);
+
+	return unclunked;
 }
 
 int
@@ -111,25 +146,30 @@ np_fidpool_count(Npfidpool *pool)
 	return count;
 }
 
-Npfid *
-np_fid_lookup(Npfidpool *fp, u32 fid, int hash)
+static void
+_optimize_fid (Npfid **htable, Npfid *f, int hash)
 {
-	Npfid **htable, *f;
+	/* assert (pool->lock held) */
+	if (f->next)
+		f->next->prev = f->prev;
+	f->prev->next = f->next;
+	f->prev = NULL;
+	f->next = htable[hash];
+	htable[hash]->prev = f;
+	htable[hash] = f;
+}
 
-	htable = fp->htable;
-	for(f = htable[hash]; f != NULL; f = f->next) {
+static Npfid *
+_lookup_fid (Npfidpool *pool, u32 fid, int hash)
+{
+	Npfid **htable = pool->htable;
+	Npfid *f;
+
+	/* assert (pool->lock held) */
+	for (f = htable[hash]; f != NULL; f = f->next) {
 		if (f->fid == fid) {
-			if (f != htable[hash]) {
-				if (f->next)
-					f->next->prev = f->prev;
-
-				f->prev->next = f->next;
-				f->prev = NULL;
-				f->next = htable[hash];
-				htable[hash]->prev = f;
-				htable[hash] = f;
-			}
-
+			if (f != htable[hash]) /* move to head */
+				_optimize_fid (htable, f, hash);
 			break;
 		}
 	}
@@ -137,148 +177,91 @@ np_fid_lookup(Npfidpool *fp, u32 fid, int hash)
 	return f;
 }
 
-Npfid*
-np_fid_find(Npconn *conn, u32 fid)
+/* Find a fid, then refcount++
+ */
+Npfid *
+np_fid_find (Npconn *conn, u32 fid)
 {
-	int hash;
-	Npfidpool *fp;
-	Npfid *ret;
+	Npfidpool *pool = conn->fidpool;
+	int hash = fid % pool->size;
+	Npfid *f;
 
-	fp = conn->fidpool;
-	xpthread_mutex_lock(&fp->lock);
-	hash = fid % fp->size;
-	ret = np_fid_lookup(fp, fid, hash);
-	xpthread_mutex_unlock(&fp->lock);
-
-	return ret;
-}
-
-Npfid*
-np_fid_create(Npconn *conn, u32 fid, void *aux)
-{
-	int hash;
-	Npfidpool *fp;
-	Npfid **htable, *f;
-
-	fp = conn->fidpool;
-	xpthread_mutex_lock(&fp->lock);
-	htable = fp->htable;
-	hash = fid % FID_HTABLE_SIZE;
-	f = np_fid_lookup(fp, fid, hash);
-	if (!f) {
-		f = malloc(sizeof(*f));
-		if (!f) {
-			np_uerror (ENOMEM);
-			xpthread_mutex_unlock(&fp->lock);
-			return NULL;
-		}
-		f->aname = NULL;
-		f->tpool = NULL;
-		pthread_mutex_init(&f->lock, NULL);
-		f->fid = fid;
-		f->conn = conn;
-		f->refcount = 0;
-		if ((conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
-			np_logmsg (conn->srv, "fid_create: fid %d", f->fid);
-		f->type = 0;
-		f->user = NULL;
-		f->aux = aux;
-
-		f->next = htable[hash];
-		f->prev = NULL;
-		if (htable[hash])
-			htable[hash]->prev = f;
-
-		htable[hash] = f;
-	}
-
-	xpthread_mutex_unlock(&fp->lock);
+	xpthread_mutex_lock (&pool->lock);
+	if ((f = _lookup_fid (pool, fid, hash)))
+		np_fid_incref (f);
+	xpthread_mutex_unlock (&pool->lock);
 
 	return f;
 }
 
-void
-np_fid_destroy(Npfid *fid)
+/* Create a fid with initial refcount of 1.
+ */
+Npfid *
+np_fid_create (Npconn *conn, u32 fid, void *aux)
 {
-	int hash;
-	Npconn *conn;
-	Npsrv *srv;
-	Npfidpool *fp;
-	Npfid **htable;
+	Npfidpool *pool = conn->fidpool;
+	int hash = fid % pool->size;
+	Npfid **htable = pool->htable;
+	Npfid *f;
 
-	conn = fid->conn;
-	srv = conn->srv;
-	fp = conn->fidpool;
-	if (!fp)
-		return;
+	xpthread_mutex_lock(&pool->lock);
+	if ((f = _lookup_fid (pool, fid, hash))) {
+		np_uerror (EEXIST);
+		f = NULL;
+		goto done;
+	}
+	if (!(f = _create_fid (conn, fid, aux)))
+		goto done;	
+	f->refcount++;
+	f->next = htable[hash];
+	f->prev = NULL;
+	if (htable[hash])
+		htable[hash]->prev = f;
+	htable[hash] = f;
+done:
+	xpthread_mutex_unlock(&pool->lock);
 
-//	printf("destroy conn %p fid %d\n", conn, fid->fid);
-	xpthread_mutex_lock(&fp->lock);
-	hash = fid->fid % fp->size;
-	htable = fp->htable;
-	if (fid->prev)
-		fid->prev->next = fid->next;
-	else
-		htable[hash] = fid->next;
+	return f;
+}
 
-	if (fid->next)
-		fid->next->prev = fid->prev;
+/* refcount++
+ */
+Npfid *
+np_fid_incref (Npfid *f)
+{
+	xpthread_mutex_lock (&f->lock);
+	f->refcount++;
+	xpthread_mutex_unlock (&f->lock);
 
-	xpthread_mutex_unlock(&fp->lock);
+	return f;
+}
 
-	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
-		np_logmsg (fid->conn->srv, "fid_destroy: fid %d", fid->fid);
+/* refcount--
+ * Destroy when refcount reaches zero.
+ */
+void
+np_fid_decref (Npfid *f)
+{
+	int refcount;
+
+	xpthread_mutex_lock (&f->lock);
+	refcount = --f->refcount;
+	xpthread_mutex_unlock (&f->lock);
 	
-	if ((fid->type & P9_QTAUTH)) {
-		if (srv->auth && srv->auth->clunk)
-			(*srv->auth->clunk)(fid);
-	} else if ((fid->type & P9_QTTMP)) {
-		np_ctl_fiddestroy (fid);
-	} else {
-		if (srv->fiddestroy)
-			(*srv->fiddestroy)(fid);
-	}	
+	if (refcount == 0) {		
+		Npfidpool *pool = f->conn->fidpool;
+		int hash = f->fid % pool->size;
+		Npfid **htable = pool->htable;
 
-	if (fid->user)
-		np_user_decref(fid->user);
-	if (fid->tpool)
-		np_tpool_decref(fid->tpool);
-	if (fid->aname)
-		free (fid->aname);
-	free(fid);
+		xpthread_mutex_lock (&pool->lock);
+		if (f->prev)
+			f->prev->next = f->next;
+		else
+			htable[hash] = f->next;
+		if (f->next)
+			f->next->prev = f->prev;
+		xpthread_mutex_unlock (&pool->lock);
 
-	return;
-}
-
-void
-np_fid_incref(Npfid *fid)
-{
-	if (!fid)
-		return;
-
-	xpthread_mutex_lock(&fid->lock);
-	fid->refcount++;
-	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
-		np_logmsg (fid->conn->srv, "fid_incref: fid %d ref=%d",
-			   fid->fid, fid->refcount);
-	xpthread_mutex_unlock(&fid->lock);
-}
-
-void
-np_fid_decref(Npfid *fid)
-{
-	int n;
-
-	if (!fid)
-		return;
-
-	xpthread_mutex_lock(&fid->lock);
-	n = --fid->refcount;
-	if ((fid->conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL))
-		np_logmsg (fid->conn->srv, "fid_decref: fid %d ref=%d",
-			   fid->fid, fid->refcount);
-	xpthread_mutex_unlock(&fid->lock);
-
-	if (!n)
-		np_fid_destroy(fid);
+		(void) _destroy_fid (f);
+	}
 }

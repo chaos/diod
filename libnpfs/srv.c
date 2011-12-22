@@ -428,7 +428,8 @@ np_tpool_cleanup (Npsrv *srv)
 /* Look up operation's fid and assign it to req->fid.
  * This is done before the request is handed off to a worker, with
  * the plan of using fid data in scheduling work.
- * The fid refcount is incremented here, then decremented in np_respond ().
+ * The fid refcount is incremented here, then decremented in
+ * np_process_request ().
  */
 static void
 np_preprocess_request(Npreq *req)
@@ -491,14 +492,12 @@ np_preprocess_request(Npreq *req)
 		case P9_TVERSION:
 			break;
 		case P9_TAUTH:
-			if (np_fid_find (conn, tc->u.tauth.afid))
-				break;
 			req->fid = np_fid_create (conn, tc->u.tauth.afid, NULL);
 			if (!req->fid)
 				break;
 			req->fid->aname = np_strdup (&tc->u.tauth.aname);
 			if (!req->fid->aname) {
-				np_fid_destroy(req->fid);
+				np_fid_decref (req->fid);
 				req->fid = NULL;
 			}
 			/* XXX leave fid->tpool NULL for now as auth
@@ -507,16 +506,17 @@ np_preprocess_request(Npreq *req)
 			 */
 			break;
 		case P9_TATTACH:
-			if (np_fid_find (conn, tc->u.tattach.fid))
-				break;
 			req->fid = np_fid_create (conn, tc->u.tattach.fid,NULL);
 			if (!req->fid)
 				break;
 			req->fid->aname = np_strdup (&tc->u.tattach.aname);
 			if (!req->fid->aname) {
-				np_fid_destroy(req->fid);
+				np_fid_decref (req->fid);
 				req->fid = NULL;
 			}
+			/* Here we select the tpool that will handle this
+			 * request and requests on fids walked from this fid.
+			 */
 			np_tpool_select (req);
 			break;
 		case P9_TFLUSH:
@@ -545,8 +545,6 @@ np_preprocess_request(Npreq *req)
 		default:
 			break;
 	}
-	if (req->fid)
-		np_fid_incref (req->fid);
 }
 
 static u32
@@ -577,7 +575,7 @@ np_process_request(Npreq *req, Nptpool *tp)
 {
 	Npfcall *rc = NULL;
 	Npfcall *tc = req->tcall;
-	int ecode, valid_op = 1;
+	int ecode;
 	u64 rbytes = 0, wbytes = 0;
 
 	np_uerror(0);
@@ -670,11 +668,8 @@ np_process_request(Npreq *req, Nptpool *tp)
 		case P9_TREMOVE:
 			rc = np_remove(req, tc);
 			break;
-		default: /* N.B. shouldn't get here - unhandled ops are
-			  * caught in np_deserialize ().
-			  */
-			np_uerror(ENOSYS);
-			valid_op = 0;
+		default:
+			assert (0); /* handled in np_deserialize */
 			break;
 	}
 	if ((ecode = np_rerror())) {
@@ -682,19 +677,23 @@ np_process_request(Npreq *req, Nptpool *tp)
 			free(rc);
 		rc = np_create_rlerror(ecode);
 	}
-	if (valid_op) {
-		xpthread_mutex_lock (&tp->srv->lock);
-		if (rbytes > 0) {
-			tp->stats.rcount[_hbin(rbytes)]++;
-			tp->stats.rbytes += rbytes;
-		}
-		if (wbytes > 0) {
-			tp->stats.wcount[_hbin(wbytes)]++;
-			tp->stats.wbytes += wbytes;
-		}
-		tp->stats.nreqs[tc->type]++;
-		xpthread_mutex_unlock (&tp->srv->lock);
+	if (req->fid) {
+		np_fid_decref (req->fid);
+		req->fid = NULL;
 	}
+
+	/* update stats */
+	xpthread_mutex_lock (&tp->srv->lock);
+	if (rbytes > 0) {
+		tp->stats.rcount[_hbin(rbytes)]++;
+		tp->stats.rbytes += rbytes;
+	}
+	if (wbytes > 0) {
+		tp->stats.wcount[_hbin(wbytes)]++;
+		tp->stats.wbytes += wbytes;
+	}
+	tp->stats.nreqs[tc->type]++;
+	xpthread_mutex_unlock (&tp->srv->lock);
 
 	return rc;
 }
@@ -742,10 +741,7 @@ np_req_respond(Npreq *req, Npfcall *rc)
 {
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
-	if (req->fid) {
-		np_fid_decref(req->fid);
-		req->fid = NULL;
-	}
+	assert (req->fid == NULL);
 	if (req->rcall && !req->flushed) {
 		np_set_tag(req->rcall, req->tag);
 		np_conn_respond(req);		
@@ -813,7 +809,7 @@ np_req_unref(Npreq *req)
 	xpthread_mutex_unlock(&req->lock);
 
 	if (req->fid) {
-		np_fid_decref(req->fid);
+		np_fid_decref (req->fid);
 		req->fid = NULL;
 	}
 	if (req->conn) {

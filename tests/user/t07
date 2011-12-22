@@ -2,7 +2,7 @@
 
 echo creating directory
 ./tmkdir "$@" foo
-echo verifying existance
+echo verifying existence
 if ! [ -d $PATH_EXPDIR/foo ]; then
     echo directory does not exist
     exit 1

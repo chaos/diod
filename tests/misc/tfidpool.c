@@ -26,7 +26,7 @@ main (int argc, char *argv[])
     Npconn conn;
     Npfid **fid;
     unsigned long nfids;
-    u32 i;
+    int i, n;
 
     diod_log_init (argv[0]);
 
@@ -58,23 +58,21 @@ main (int argc, char *argv[])
         fid[i] = np_fid_create (&conn, i, NULL);
         np_fid_incref (fid[i]);
         np_fid_incref (fid[i]);
-        assert (fid != NULL);
     }
 
     msg ("count after fid create: %d", np_fidpool_count (conn.fidpool));
 
     for (i = 0; i < nfids; i++) {
-        fid[i] = np_fid_create (&conn, i, NULL);
-        assert (fid != NULL);
-    }
-    for (i = 0; i < nfids; i++) {
+        np_fid_decref (fid[i]);
         np_fid_decref (fid[i]);
         np_fid_decref (fid[i]);
     }
 
     msg ("count after fid destroy: %d", np_fidpool_count (conn.fidpool));
 
-    np_fidpool_destroy (conn.fidpool);
+    n = np_fidpool_destroy (conn.fidpool);
+
+    msg ("unclunked: %d", n);
 
     free (fid);
 
