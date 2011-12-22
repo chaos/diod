@@ -312,7 +312,6 @@ np_ctl_attach(Npfid *fid, Npfid *afid, char *aname)
 	}
 	fid->type = root->qid.type;
 	fid->aux = f;
-	np_fid_incref (fid);
 	return rc;
 error:
 	if (f)
