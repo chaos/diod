@@ -1,3 +1,6 @@
+1.0-pre55:
+	Include op in fidpool debug message (issue 81)
+
 1.0-pre54:
 	Fix race that caused server to segfault (issue 83)
 	Improve fidpool debugging messages (issue 81)
