@@ -108,6 +108,9 @@ np_conn_destroy(Npconn *conn)
 
 	assert(conn != NULL);
 	assert(conn->refcount == 0);
+	/* issue 83: remove from srv->conns before destroying fidpool
+ 	 */
+	np_srv_remove_conn (conn->srv, conn);
 	if (conn->fidpool) {
 		if ((n = np_fidpool_destroy(conn->fidpool)) > 0) {
 			np_logmsg (conn->srv, "%s: connection closed with "
@@ -124,7 +127,6 @@ np_conn_destroy(Npconn *conn)
 	pthread_mutex_destroy(&conn->wlock);
 	pthread_cond_destroy(&conn->refcond);
 
-	np_srv_remove_conn (conn->srv, conn);
 	free(conn);
 }
 
