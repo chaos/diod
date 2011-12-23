@@ -1,3 +1,7 @@
+1.0-pre54:
+	Fix race that caused server to segfault (issue 83)
+	Improve fidpool debugging messages (issue 81)
+
 1.0-pre53:
 	Rework fidpool code and add debugging for issue 81
 	Fidpool debugging is on by default (temporarily)
