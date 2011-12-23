@@ -102,17 +102,13 @@ _create_fid (Npconn *conn, u32 fid, void *aux)
 }
 
 static void
-_append_note (Npfid *f, char op, const char *note)
+_append_history (Npfid *f, char sign, enum p9_msg_t op)
 {
 	if (f->history) {
 		int len = strlen (f->history);
 
-		if (!strcmp (note, "np_preprocess_request") ||
-		    !strcmp (note, "np_process_request"))
-			note = "";
-			
 		snprintf (f->history + len, FID_HISTORY_SIZE - len,
-			  "%s%c%s", len == 0 ? "" : ":", op, note);
+			  "%c%d", sign, op);
 	}
 }
 
@@ -208,7 +204,7 @@ _lookup_fid (Npfidpool *pool, u32 fid, int hash)
 /* Find a fid, then refcount++
  */
 Npfid *
-np_fid_find_withnote (Npconn *conn, u32 fid, const char *note)
+np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
 {
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
@@ -216,7 +212,7 @@ np_fid_find_withnote (Npconn *conn, u32 fid, const char *note)
 
 	xpthread_mutex_lock (&pool->lock);
 	if ((f = _lookup_fid (pool, fid, hash)))
-		np_fid_incref_withnote (f, note);
+		np_fid_incref (f, op);
 	xpthread_mutex_unlock (&pool->lock);
 	
 
@@ -226,7 +222,7 @@ np_fid_find_withnote (Npconn *conn, u32 fid, const char *note)
 /* Create a fid with initial refcount of 1.
  */
 Npfid *
-np_fid_create_withnote (Npconn *conn, u32 fid, void *aux, const char *note)
+np_fid_create (Npconn *conn, u32 fid, void *aux, enum p9_msg_t op)
 {
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
@@ -246,7 +242,7 @@ np_fid_create_withnote (Npconn *conn, u32 fid, void *aux, const char *note)
 	}
 	if (!(f = _create_fid (conn, fid, aux)))
 		goto done;	
-	np_fid_incref_withnote (f, note);
+	np_fid_incref (f, op);
 	f->next = htable[hash];
 	f->prev = NULL;
 	if (htable[hash])
@@ -261,13 +257,13 @@ done:
 /* refcount++
  */
 Npfid *
-np_fid_incref_withnote (Npfid *f, const char *note)
+np_fid_incref (Npfid *f, enum p9_msg_t op)
 {
 	assert (f->magic == FID_MAGIC);
 
 	xpthread_mutex_lock (&f->lock);
 	f->refcount++;
-	_append_note (f, '+', note);
+	_append_history (f, '+', op);
 	xpthread_mutex_unlock (&f->lock);
 
 	return f;
@@ -277,7 +273,7 @@ np_fid_incref_withnote (Npfid *f, const char *note)
  * Destroy when refcount reaches zero.
  */
 void
-np_fid_decref_withnote (Npfid *f, const char *note)
+np_fid_decref (Npfid *f, enum p9_msg_t op)
 {
 	int refcount;
 
@@ -285,7 +281,7 @@ np_fid_decref_withnote (Npfid *f, const char *note)
 
 	xpthread_mutex_lock (&f->lock);
 	refcount = --f->refcount;
-	_append_note (f, '-', note);
+	_append_history (f, '-', op);
 	xpthread_mutex_unlock (&f->lock);
 
 	if (refcount == 0) {		

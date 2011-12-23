@@ -50,22 +50,22 @@ main (int argc, char *argv[])
     msg ("initial count: %d", np_fidpool_count (conn.fidpool));
 
     for (i = 0; i < nfids; i++) {
-        fid[i] = np_fid_find (&conn, i);
+        fid[i] = np_fid_find (&conn, i, 0);
         assert (fid[i] == NULL);
     }
 
     for (i = 0; i < nfids; i++) {
-        fid[i] = np_fid_create (&conn, i, NULL);
-        np_fid_incref (fid[i]);
-        np_fid_incref (fid[i]);
+        fid[i] = np_fid_create (&conn, i, NULL, 1);
+        np_fid_incref (fid[i], 1);
+        np_fid_incref (fid[i], 1);
     }
 
     msg ("count after fid create: %d", np_fidpool_count (conn.fidpool));
 
     for (i = 0; i < nfids; i++) {
-        np_fid_decref (fid[i]);
-        np_fid_decref (fid[i]);
-        np_fid_decref (fid[i]);
+        np_fid_decref (fid[i], 2);
+        np_fid_decref (fid[i], 2);
+        np_fid_decref (fid[i], 2);
     }
 
     msg ("count after fid destroy: %d", np_fidpool_count (conn.fidpool));

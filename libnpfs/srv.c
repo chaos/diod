@@ -436,68 +436,71 @@ np_preprocess_request(Npreq *req)
 {
 	Npfcall *tc = req->tcall;
 	Npconn *conn = req->conn;
+	enum p9_msg_t t = tc->type;
 
-	switch (tc->type) {
+	switch (t) {
 		case P9_TSTATFS:
-			req->fid = np_fid_find (conn, tc->u.tstatfs.fid);
+			req->fid = np_fid_find (conn, tc->u.tstatfs.fid, t);
 			break;
 		case P9_TLOPEN:
-			req->fid = np_fid_find (conn, tc->u.tlopen.fid);
+			req->fid = np_fid_find (conn, tc->u.tlopen.fid, t);
 			break;
 		case P9_TLCREATE:
-			req->fid = np_fid_find (conn, tc->u.tlcreate.fid);
+			req->fid = np_fid_find (conn, tc->u.tlcreate.fid, t);
 			break;
 		case P9_TSYMLINK:
-			req->fid = np_fid_find (conn, tc->u.tsymlink.fid);
+			req->fid = np_fid_find (conn, tc->u.tsymlink.fid, t);
 			break;
 		case P9_TMKNOD:
-			req->fid = np_fid_find (conn, tc->u.tmknod.fid);
+			req->fid = np_fid_find (conn, tc->u.tmknod.fid, t);
 			break;
 		case P9_TRENAME:
-			req->fid = np_fid_find (conn, tc->u.trename.fid);
+			req->fid = np_fid_find (conn, tc->u.trename.fid, t);
 			break;
 		case P9_TREADLINK:
-			req->fid = np_fid_find (conn, tc->u.treadlink.fid);
+			req->fid = np_fid_find (conn, tc->u.treadlink.fid, t);
 			break;
 		case P9_TGETATTR:
-			req->fid = np_fid_find (conn, tc->u.tgetattr.fid);
+			req->fid = np_fid_find (conn, tc->u.tgetattr.fid, t);
 			break;
 		case P9_TSETATTR:
-			req->fid = np_fid_find (conn, tc->u.tsetattr.fid);
+			req->fid = np_fid_find (conn, tc->u.tsetattr.fid, t);
 			break;
 		case P9_TXATTRWALK:
-			req->fid = np_fid_find (conn, tc->u.txattrwalk.fid);
+			req->fid = np_fid_find (conn, tc->u.txattrwalk.fid, t);
 			break;
 		case P9_TXATTRCREATE:
-			req->fid = np_fid_find (conn, tc->u.txattrcreate.fid);
+			req->fid = np_fid_find (conn,
+						tc->u.txattrcreate.fid, t);
 			break;
 		case P9_TREADDIR:
-			req->fid = np_fid_find (conn, tc->u.treaddir.fid);
+			req->fid = np_fid_find (conn, tc->u.treaddir.fid, t);
 			break;
 		case P9_TFSYNC:
-			req->fid = np_fid_find (conn, tc->u.tfsync.fid);
+			req->fid = np_fid_find (conn, tc->u.tfsync.fid, t);
 			break;
 		case P9_TLOCK:
-			req->fid = np_fid_find (conn, tc->u.tlock.fid);
+			req->fid = np_fid_find (conn, tc->u.tlock.fid, t);
 			break;
 		case P9_TGETLOCK:
-			req->fid = np_fid_find (conn, tc->u.tgetlock.fid);
+			req->fid = np_fid_find (conn, tc->u.tgetlock.fid, t);
 			break;
 		case P9_TLINK:
-			req->fid = np_fid_find (conn, tc->u.tlink.dfid);
+			req->fid = np_fid_find (conn, tc->u.tlink.dfid, t);
 			break;
 		case P9_TMKDIR:
-			req->fid = np_fid_find (conn, tc->u.tmkdir.fid);
+			req->fid = np_fid_find (conn, tc->u.tmkdir.fid, t);
 			break;
 		case P9_TVERSION:
 			break;
 		case P9_TAUTH:
-			req->fid = np_fid_create (conn, tc->u.tauth.afid, NULL);
+			req->fid = np_fid_create (conn, tc->u.tauth.afid,
+						  NULL, t);
 			if (!req->fid)
 				break;
 			req->fid->aname = np_strdup (&tc->u.tauth.aname);
 			if (!req->fid->aname) {
-				np_fid_decref (req->fid);
+				np_fid_decref (req->fid, t);
 				req->fid = NULL;
 			}
 			/* XXX leave fid->tpool NULL for now as auth
@@ -506,12 +509,13 @@ np_preprocess_request(Npreq *req)
 			 */
 			break;
 		case P9_TATTACH:
-			req->fid = np_fid_create (conn, tc->u.tattach.fid,NULL);
+			req->fid = np_fid_create (conn, tc->u.tattach.fid,
+						  NULL, t);
 			if (!req->fid)
 				break;
 			req->fid->aname = np_strdup (&tc->u.tattach.aname);
 			if (!req->fid->aname) {
-				np_fid_decref (req->fid);
+				np_fid_decref (req->fid, t);
 				req->fid = NULL;
 			}
 			/* Here we select the tpool that will handle this
@@ -522,25 +526,27 @@ np_preprocess_request(Npreq *req)
 		case P9_TFLUSH:
 			break;
 		case P9_TWALK:
-			req->fid = np_fid_find (conn, tc->u.twalk.fid);
+			req->fid = np_fid_find (conn, tc->u.twalk.fid, t);
 			break;
 		case P9_TREAD:
-			req->fid = np_fid_find (conn, tc->u.tread.fid);
+			req->fid = np_fid_find (conn, tc->u.tread.fid, t);
 			break;
 		case P9_TWRITE:
-			req->fid = np_fid_find (conn, tc->u.twrite.fid);
+			req->fid = np_fid_find (conn, tc->u.twrite.fid, t);
 			break;
 		case P9_TCLUNK:
-			req->fid = np_fid_find (conn, tc->u.tclunk.fid);
+			req->fid = np_fid_find (conn, tc->u.tclunk.fid, t);
 			break;
 		case P9_TREMOVE:
-			req->fid = np_fid_find (conn, tc->u.tremove.fid);
+			req->fid = np_fid_find (conn, tc->u.tremove.fid, t);
 			break;
 		case P9_TRENAMEAT:
-			req->fid = np_fid_find (conn, tc->u.trenameat.olddirfid);
+			req->fid = np_fid_find (conn,
+						tc->u.trenameat.olddirfid, t);
 			break;
 		case P9_TUNLINKAT:
-			req->fid = np_fid_find (conn, tc->u.tunlinkat.dirfid);
+			req->fid = np_fid_find (conn,
+						tc->u.tunlinkat.dirfid, t);
 			break;
 		default:
 			break;
@@ -678,7 +684,7 @@ np_process_request(Npreq *req, Nptpool *tp)
 		rc = np_create_rlerror(ecode);
 	}
 	if (req->fid) {
-		np_fid_decref (req->fid);
+		np_fid_decref (req->fid, tc->type);
 		req->fid = NULL;
 	}
 
@@ -809,7 +815,7 @@ np_req_unref(Npreq *req)
 	xpthread_mutex_unlock(&req->lock);
 
 	if (req->fid) {
-		np_fid_decref (req->fid);
+		np_fid_decref (req->fid, req->tcall ? req->tcall->type : 0);
 		req->fid = NULL;
 	}
 	if (req->conn) {
