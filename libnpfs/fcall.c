@@ -316,7 +316,11 @@ np_walk(Npreq *req, Npfcall *tc)
 		if (!newfid) {
 			if (np_rerror () == EEXIST) {
 				np_uerror(EIO);
-				np_logmsg (conn->srv, "walk: invalid newfid");
+				np_logmsg (conn->srv,
+					   "%s@%s:%s: walk: invalid newfid: %d",
+					   fid->user->uname,
+					   np_conn_get_client_id (conn),
+					   fid->aname, tc->u.twalk.newfid);
 			}
 			goto done;
 		}
@@ -528,8 +532,8 @@ done:
 	/* From clunk(5):
 	 * even if the clunk returns an error, the fid is no longer valid.
 	 */
-	if (req->fid)
-		np_fid_decref (req->fid);
+	if (fid)
+		np_fid_decref (fid);
 	return rc;
 }
 
@@ -559,8 +563,8 @@ np_remove(Npreq *req, Npfcall *tc)
 done:
 	/* spec says clunk the fid even if the remove fails
    	 */
-	if (req->fid)
-		np_fid_decref (req->fid);
+	if (fid)
+		np_fid_decref (fid);
 	return rc;
 }
 

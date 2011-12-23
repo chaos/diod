@@ -107,6 +107,10 @@ _append_note (Npfid *f, char op, const char *note)
 	if (f->history) {
 		int len = strlen (f->history);
 
+		if (!strcmp (note, "np_preprocess_request") ||
+		    !strcmp (note, "np_process_request"))
+			note = "";
+			
 		snprintf (f->history + len, FID_HISTORY_SIZE - len,
 			  "%s%c%s", len == 0 ? "" : ":", op, note);
 	}

@@ -364,7 +364,7 @@ Npfid *np_fid_create_withnote(Npconn *conn, u32 fid, void *aux,
 Npfid *np_fid_incref_withnote(Npfid *fid, const char *note);
 void np_fid_decref_withnote(Npfid *fid, const char *note);
 #define np_fid_find(a, b) \
-	np_fid_find_withnote ((a), (b),__FUNCTION__)
+	np_fid_find_withnote ((a), (b), __FUNCTION__)
 #define np_fid_create(a, b, c) \
 	np_fid_create_withnote ((a), (b), (c), __FUNCTION__)
 #define np_fid_incref(a) \
