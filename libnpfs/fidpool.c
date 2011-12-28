@@ -215,7 +215,6 @@ np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
 		np_fid_incref (f, op);
 	xpthread_mutex_unlock (&pool->lock);
 	
-
 	return f;
 }
 
@@ -232,9 +231,13 @@ np_fid_create (Npconn *conn, u32 fid, void *aux, enum p9_msg_t op)
 	xpthread_mutex_lock(&pool->lock);
 	if ((f = _lookup_fid (pool, fid, hash))) {
 		if (f->history) {
+			char *path = "<nil>";
+
+			if (f->conn->srv->get_path)
+				path = f->conn->srv->get_path (f);
 			np_logmsg (f->conn->srv,
-				   "np_fid_create: fid %d has %d refs: %s",
-			           f->fid, f->refcount, f->history);
+				   "np_fid_create: fid %d (%s) has %d refs: %s",
+			           f->fid, path, f->refcount, f->history);
 		}
 		np_uerror (EEXIST);
 		f = NULL;

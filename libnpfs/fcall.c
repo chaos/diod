@@ -507,7 +507,9 @@ np_clunk(Npreq *req, Npfcall *tc)
 
 	if (!fid) {
 		np_uerror (EIO);
-		np_logerr (req->conn->srv, "clunk: invalid fid");
+		np_logerr (req->conn->srv, "%s: clunk: invalid fid: %d",
+					   np_conn_get_client_id (req->conn),
+					   tc->u.tclunk.fid);
 		goto done;
 	}
 	if (fid->type & P9_QTAUTH) {

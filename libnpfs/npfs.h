@@ -272,6 +272,7 @@ struct Npsrv {
 	void		(*logmsg)(const char *, va_list);
 	int		(*remapuser)(Npfid *fid, Npstr *, u32, Npstr *);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
+	char*		(*get_path)(Npfid *fid);
 	Npauth*		auth;
 	int		flags;
 

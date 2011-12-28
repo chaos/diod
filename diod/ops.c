@@ -138,6 +138,7 @@ Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
 int          diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname,
                              Npstr *aname);
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
+char        *diod_get_path (Npfid *fid);
 
 static void      _ustat2qid     (struct stat *st, Npqid *qid);
 static void      _fidfree       (Fid *f);
@@ -151,6 +152,7 @@ diod_register_ops (Npsrv *srv)
     srv->remapuser = diod_remapuser;
     srv->auth_required = diod_auth_required;
     srv->auth = diod_auth_functions;
+    srv->get_path = diod_get_path;
 
     srv->attach = diod_attach;
     srv->clone = diod_clone;
@@ -1358,6 +1360,14 @@ error_quiet:
     if (npath)
         free (npath);
     return NULL;
+}
+
+char *
+diod_get_path (Npfid *fid)
+{
+    Fid *f = fid->aux;
+
+    return f ? f->path : NULL;
 }
 
 /*
