@@ -815,6 +815,14 @@ np_req_unref(Npreq *req)
 	xpthread_mutex_unlock(&req->lock);
 
 	if (req->fid) {
+		/* We expect to get here with valid fid if request is flushed.
+ 		 * Special case: need to free fid on flushed clunk or remove,
+ 		 * or client reuse of the fid will cause an error (issue 81).
+ 		 */
+		if (req->tcall && (req->tcall->type == P9_TCLUNK ||
+				   req->tcall->type == P9_TREMOVE)) {
+			np_fid_decref (req->fid, req->tcall->type);
+		}
 		np_fid_decref (req->fid, req->tcall ? req->tcall->type : 0);
 		req->fid = NULL;
 	}

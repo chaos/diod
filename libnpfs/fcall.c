@@ -256,12 +256,17 @@ np_flush(Npreq *req, Npfcall *tc)
 	Npreq *creq;
 	Npfcall *ret;
 	Nptpool *tp;
+	Npsrv *srv = req->conn->srv;
 
 	xpthread_mutex_lock(&req->conn->srv->lock);
 	for (tp = req->conn->srv->tpool; tp != NULL; tp = tp->next) {
 		for(creq = tp->reqs_first; creq != NULL; creq = creq->next) {
 			if (!(creq->conn==req->conn && creq->tag==oldtag))
 				continue;
+			if ((srv->flags & SRV_FLAGS_DEBUG_FLUSH)) {
+				np_logmsg (srv, "flush(early): req type %d",
+					   creq->tcall->type);
+			}
 			np_srv_remove_req(tp, creq);
 			np_req_unref(creq);
 			goto done;
@@ -269,7 +274,11 @@ np_flush(Npreq *req, Npfcall *tc)
 		for(creq = tp->workreqs; creq != NULL; creq = creq->next) {
 			if (!(creq->conn==req->conn && creq->tag==oldtag))
 				continue;
-			creq->flushed = 1;
+			if ((srv->flags & SRV_FLAGS_DEBUG_FLUSH)) {
+				np_logmsg (srv, "flush(late): req type %d",
+					   creq->tcall->type);
+			}
+			creq->flushed = 1; /* prevents response */
 			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)
 				pthread_kill (creq->wthread->thread, SIGUSR2);
 			goto done;
