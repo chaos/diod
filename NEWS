@@ -1,3 +1,9 @@
+1.0-pre56:
+	Destroy fids if clunk or remove is flushed (issue 81)
+	Include path in fidpool debug message (issue 81)
+	Add flush debugging flag, on by default (temporarily)
+	Disable worker thread flush signaling (temporarily)
+
 1.0-pre55:
 	Include op in fidpool debug message (issue 81)
 
