@@ -284,6 +284,8 @@ np_flush(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 	}
+	if ((srv->flags & SRV_FLAGS_DEBUG_FLUSH))
+		np_logmsg (srv, "flush: tag %d not found", oldtag);
 done:
 	xpthread_mutex_unlock(&req->conn->srv->lock);
 	if (!(ret = np_create_rflush ()))
