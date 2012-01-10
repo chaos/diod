@@ -193,6 +193,12 @@ main (int argc, char *argv[])
     if (!opt_find (o, "debug"))
         opt_addf (o, "debug=%d", 0x1); /* send errors to dmesg */
 
+    /* Set rwdepth (number of concurrent reads with buffer > msize).
+     * N.B. this option is not upstream yet but unknown options are ignored.
+     */
+    if (!opt_find (o, "rwdepth"))
+        opt_addf (o, "rwdepth=%d", 32);
+
     /* Server is on an inherited file descriptor.
      * For testing, we start server on a socketpair duped to fd 0.
      */
