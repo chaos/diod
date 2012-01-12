@@ -34,6 +34,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <sys/signal.h>
 #include <sys/param.h>
@@ -60,6 +61,17 @@ extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
 int         allow_severity = LOG_INFO;
 int         deny_severity = LOG_WARNING;
 #define DAEMON_NAME     "diod"
+
+static int
+_disable_nagle(int fd)
+{
+    int ret, i = 1;
+
+    ret = setsockopt (fd, IPPROTO_TCP, TCP_NODELAY, (char *)&i, sizeof(i));
+    if (ret < 0)
+        err ("setsockopt TCP_NODELAY");
+    return ret;
+}
 
 /* Open/bind sockets for all addresses that can be associated with host:port,
  * and expand pollfd array (*fdsp) to contain the new file descriptors,
@@ -219,6 +231,7 @@ diod_sock_accept_one (Npsrv *srv, int fd)
             err ("accept");
         return;
     }
+    (void)_disable_nagle (fd);
     if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
                             ip, sizeof(ip), svc, sizeof(svc),
                             NI_NUMERICHOST | NI_NUMERICSERV))) {
@@ -274,6 +287,7 @@ diod_sock_connect (char *host, char *port, int flags)
             errmsg = "socket";
             continue;
         }
+        (void)_disable_nagle (fd);
         if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
             errnum = errno;
             errmsg = "connect";
