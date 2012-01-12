@@ -1,3 +1,8 @@
+1.0-pre57:
+	Set rwdepth=32 mount option (issue 86)
+	Turn off Nagle algorithm for streaming write performance.
+	Add timestamps to protocol debug.
+
 1.0-pre56:
 	Destroy fids if clunk or remove is flushed (issue 81)
 	Include path in fidpool debug message (issue 81)
