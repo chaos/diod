@@ -24,6 +24,7 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <sys/time.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -134,9 +135,15 @@ static void
 _debug_trace (Npsrv *srv, Npfcall *fc)
 {
 	char s[512];
+	static struct timeval b = { 0, 0 };
+	struct timeval a, c;
 
+	if (b.tv_sec == 0)
+		(void)gettimeofday(&b, NULL);
+	(void)gettimeofday(&a, NULL);
+	timersub(&a, &b, &c);
 	np_snprintfcall(s, sizeof (s), fc);
-	np_logmsg(srv, "%s", s);
+	np_logmsg(srv, "[%lu.%-3lu]%s", c.tv_sec, c.tv_usec/1000, s);
 }
 
 /* Per-connection read thread.
