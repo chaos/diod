@@ -134,16 +134,22 @@ np_conn_destroy(Npconn *conn)
 static void
 _debug_trace (Npsrv *srv, Npfcall *fc)
 {
-	char s[512];
-	static struct timeval b = { 0, 0 };
-	struct timeval a, c;
+	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE)) {
+		char s[512];
+		static struct timeval b = { 0, 0 };
+		struct timeval a, c;
 
-	if (b.tv_sec == 0)
-		(void)gettimeofday(&b, NULL);
-	(void)gettimeofday(&a, NULL);
-	timersub(&a, &b, &c);
-	np_snprintfcall(s, sizeof (s), fc);
-	np_logmsg(srv, "[%lu.%-3lu]%s", c.tv_sec, c.tv_usec/1000, s);
+		np_snprintfcall(s, sizeof (s), fc);
+		if ((srv->flags & SRV_FLAGS_DEBUG_TIMES)) {
+			if (b.tv_sec == 0)
+				(void)gettimeofday(&b, NULL);
+			(void)gettimeofday(&a, NULL);
+			timersub(&a, &b, &c);
+			np_logmsg(srv, "[%lu.%-3lu] %s",
+				  c.tv_sec, c.tv_usec/1000, s);
+		} else
+			np_logmsg(srv, "%s", s);
+	}
 }
 
 /* Per-connection read thread.
@@ -167,8 +173,7 @@ np_conn_read_proc(void *a)
 		}
 		if (!fc)
 			break;
-		if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
-			_debug_trace (srv, fc);
+		_debug_trace (srv, fc);
 
 		/* Encapsulate fc in a request and hand to srv worker threads.
 		 * In np_req_alloc, req->fid is looked up/initialized.
@@ -250,8 +255,7 @@ np_conn_respond(Npreq *req)
 	Npsrv *srv = conn->srv;
 	Npfcall *rc = req->rcall;
 
-	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE))
-		_debug_trace (srv, rc);
+	_debug_trace (srv, rc);
 	xpthread_mutex_lock(&conn->wlock);
 	n = np_trans_send(conn->trans, rc);
 	xpthread_mutex_unlock(&conn->wlock);
