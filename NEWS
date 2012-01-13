@@ -1,3 +1,6 @@
+1.0-pre58:
+	Parameterize timestamps in protocol debug.
+
 1.0-pre57:
 	Set rwdepth=32 mount option (issue 86)
 	Turn off Nagle algorithm for streaming write performance.
