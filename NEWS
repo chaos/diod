@@ -1,3 +1,7 @@
+1.0-pre59:
+	Enable keepalives and tune aggressively (issue 88)
+	[dtop] Server aname count should not count tpools with 0 active fids
+
 1.0-pre58:
 	Parameterize timestamps in protocol debug.
 
