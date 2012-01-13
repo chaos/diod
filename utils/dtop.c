@@ -541,6 +541,8 @@ _update_display_server (WINDOW *win)
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");    
     while ((tp = list_next (itr))) {
+        if (sample_val (tp->numfids, now) == 0)
+            continue;
         sp = list_find_first (servers, (ListFindF)_match_serverhost,
                               tp->key.host);
         if (sp) {
