@@ -66,10 +66,75 @@ static int
 _disable_nagle(int fd)
 {
     int ret, i = 1;
+    socklen_t len = sizeof (i);
 
-    ret = setsockopt (fd, IPPROTO_TCP, TCP_NODELAY, (char *)&i, sizeof(i));
-    if (ret < 0)
+    i = 1;
+    ret = setsockopt (fd, IPPROTO_TCP, TCP_NODELAY, &i, len);
+    if (ret < 0) {
         err ("setsockopt TCP_NODELAY");
+        goto done;
+    }
+done:
+    return ret;
+}
+
+/* Protect against resource leakage when cluster compute nodes are rebooted
+ * without a clean unmount.  Transport read will get ECONNRESET after ~3m
+ * if node is rebooted or ECONNABORTED(?) after ~22m if it stays down.
+ *
+ * Name             Default Diod    Desc
+ * SO_KEEPALIVE     0       1       enable/disable keepalive
+ * TCP_KEEPIDLE     7200    120     begin keepalives after idle (s)
+ * TCP_KEEPINTVL    75      120     interval between keepalives (s)
+ * TCP_KEEPCNT      9       9       number of keepalive attempts
+ */
+static int
+_enable_keepalive(int fd)
+{
+    int ret, i;
+    socklen_t len = sizeof (i);
+
+    i = 1;
+    ret = setsockopt (fd, SOL_SOCKET, SO_KEEPALIVE, &i, len);
+    if (ret < 0) {
+        err ("setsockopt SO_KEEPALIVE");
+        goto done;
+    }
+    i = 120;
+    ret = setsockopt (fd, SOL_TCP, TCP_KEEPIDLE, &i, len);
+    if (ret < 0) {
+        err ("setsockopt SO_KEEPIDLE");
+        goto done;
+    }
+    i = 120;
+    ret = setsockopt (fd, SOL_TCP, TCP_KEEPINTVL, &i, len);
+    if (ret < 0) {
+        err ("setsockopt SO_KEEPINTVL");
+        goto done;
+    }
+    i = 9;
+    ret = setsockopt (fd, SOL_TCP, TCP_KEEPCNT, &i, len);
+    if (ret < 0) {
+        err ("setsockopt SO_KEEPCNT");
+        goto done;
+    }
+done:
+    return ret;
+}
+
+static int
+_enable_reuseaddr(int fd)
+{
+    int ret, i;
+    socklen_t len = sizeof (i);
+
+    i = 1;
+    ret = setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &i, len);
+    if (ret < 0) {
+        err ("setsockopt SO_REUSEADDR");
+        goto done;;
+    }
+done:
     return ret;
 }
 
@@ -116,11 +181,7 @@ _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
             continue;
         }
         opt = 1;
-        if (setsockopt (fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-            err ("setsockopt: %s:%s", host, port);
-            close (fd);
-            continue;
-        }
+        (void)_enable_reuseaddr (fd);
         if (bind (fd, r->ai_addr, r->ai_addrlen) < 0) {
             err ("bind: %s:%s", host, port);
             close (fd);
@@ -232,6 +293,7 @@ diod_sock_accept_one (Npsrv *srv, int fd)
         return;
     }
     (void)_disable_nagle (fd);
+    (void)_enable_keepalive (fd);
     if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
                             ip, sizeof(ip), svc, sizeof(svc),
                             NI_NUMERICHOST | NI_NUMERICSERV))) {
