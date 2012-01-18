@@ -11,7 +11,7 @@ common_ldadd = \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBCURSES) \
-	$(LIBIBVERBS) $(LIBRDMACM)
+	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC)
 
 common_sources = \
 	opt.c \

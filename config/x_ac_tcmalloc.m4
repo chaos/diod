@@ -6,9 +6,10 @@ AC_ARG_WITH([tcmalloc],
   [want_tcmalloc=yes], [want_tcmalloc=no])
 
 if test x$want_tcmalloc == xyes; then
-  AC_CHECK_LIB(tcmalloc, malloc)
-  if test x$ac_cv_lib_tcmalloc_malloc == xyes; then
+  X_AC_CHECK_COND_LIB(tcmalloc, tc_cfree)
+  if test x$ac_cv_lib_tcmalloc_tc_cfree == xyes; then
     got_tcmalloc=yes
+    LIBTCMALLOC="-ltcmalloc"
     AC_DEFINE([WITH_TCMALLOC], [1], [build with Google-perftools malloc])
   else
     AC_MSG_ERROR([building without Google-perftools malloc])

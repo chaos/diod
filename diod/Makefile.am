@@ -11,7 +11,7 @@ diod_LDADD = \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) \
-	$(LIBIBVERBS) $(LIBRDMACM)
+	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC)
 
 diod_SOURCES = \
 	diod.c \

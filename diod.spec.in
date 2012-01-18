@@ -15,6 +15,7 @@ BuildRequires: munge-devel
 BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
 BuildRequires: libibverbs-devel librdmacm-devel
+BuildRequires: google-perftools-devel
 
 %description
 diod is a 9P server used in combination with the kernel v9fs file
@@ -24,7 +25,7 @@ system for I/O forwarding on Linux clusters.
 %setup -q
 
 %build
-%configure
+%configure --with-tcmalloc
 make CFLAGS=-Werror
 
 %check

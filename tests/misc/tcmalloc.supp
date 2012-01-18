@@ -1,5 +1,5 @@
 {
-   suppress_tcmalloc_noise
+   <suppress_tcmalloc_noise>
    Memcheck:Param
    msync(start)
    fun:__msync_nocancel
@@ -12,6 +12,7 @@
    fun:_ZN8tcmalloc15CentralFreeList18FetchFromSpansSafeEv
    fun:_ZN8tcmalloc15CentralFreeList11RemoveRangeEPPvS2_i
    fun:_ZN8tcmalloc11ThreadCache21FetchFromCentralCacheEmm
-   obj:/usr/lib64/libtcmalloc.so.0.1.0
+   obj:/usr/lib64/libtcmalloc.so.0.3.0
    fun:_ZN13TCMallocGuardC1Ev
 }
+
