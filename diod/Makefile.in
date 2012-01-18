@@ -67,7 +67,8 @@ diod_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -142,6 +143,7 @@ LIBPOPT = @LIBPOPT@
 LIBPTHREAD = @LIBPTHREAD@
 LIBRDMACM = @LIBRDMACM@
 LIBS = @LIBS@
+LIBTCMALLOC = @LIBTCMALLOC@
 LIBWRAP = @LIBWRAP@
 LTLIBOBJS = @LTLIBOBJS@
 MAINT = @MAINT@
@@ -247,7 +249,7 @@ diod_LDADD = \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) \
-	$(LIBIBVERBS) $(LIBRDMACM)
+	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC)
 
 diod_SOURCES = \
 	diod.c \
