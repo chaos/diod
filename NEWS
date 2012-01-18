@@ -1,3 +1,6 @@
+1.0-pre60:
+	Build with tcmalloc (google-perftools).
+
 1.0-pre59:
 	Enable keepalives and tune aggressively (issue 88)
 	[dtop] Server aname count should not count tpools with 0 active fids
