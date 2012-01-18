@@ -1,3 +1,6 @@
+1.0-pre61:
+	Drop srv->lock before calling np_req_unref (issue 90)
+
 1.0-pre60:
 	Build with tcmalloc (google-perftools).
 
