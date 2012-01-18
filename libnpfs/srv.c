@@ -735,7 +735,11 @@ np_wthread_proc(void *a)
 			
 		xpthread_mutex_lock(&tp->srv->lock);
 		np_srv_remove_donereq(tp, req);
+		xpthread_mutex_unlock(&tp->srv->lock);
+
 		np_req_unref(req);
+
+		xpthread_mutex_lock(&tp->srv->lock);
 	}
 	xpthread_mutex_unlock (&tp->srv->lock);
 
@@ -802,6 +806,8 @@ np_req_ref(Npreq *req)
 	return req;
 }
 
+/* N.B. Do not call holding srv->lock (issue 90)
+ */
 void
 np_req_unref(Npreq *req)
 {

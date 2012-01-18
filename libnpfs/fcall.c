@@ -253,7 +253,7 @@ Npfcall*
 np_flush(Npreq *req, Npfcall *tc)
 {
 	u16 oldtag = tc->u.tflush.oldtag;
-	Npreq *creq;
+	Npreq *creq = NULL;
 	Npfcall *ret;
 	Nptpool *tp;
 	Npsrv *srv = req->conn->srv;
@@ -268,7 +268,6 @@ np_flush(Npreq *req, Npfcall *tc)
 					   creq->tcall->type);
 			}
 			np_srv_remove_req(tp, creq);
-			np_req_unref(creq);
 			goto done;
 		}
 		for(creq = tp->workreqs; creq != NULL; creq = creq->next) {
@@ -281,6 +280,7 @@ np_flush(Npreq *req, Npfcall *tc)
 			creq->flushed = 1; /* prevents response */
 			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)
 				pthread_kill (creq->wthread->thread, SIGUSR2);
+			creq = NULL;
 			goto done;
 		}
 	}
@@ -288,6 +288,8 @@ np_flush(Npreq *req, Npfcall *tc)
 		np_logmsg (srv, "flush: tag %d not found", oldtag);
 done:
 	xpthread_mutex_unlock(&req->conn->srv->lock);
+	if (creq)
+		np_req_unref (creq);
 	if (!(ret = np_create_rflush ()))
 		np_uerror (ENOMEM);
 	return ret;

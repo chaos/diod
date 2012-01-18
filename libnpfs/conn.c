@@ -225,7 +225,7 @@ static void
 np_conn_flush (Npconn *conn)
 {
 	Nptpool *tp;
-	Npreq *creq, *nextreq;
+	Npreq *creq, *nextreq, *unref = NULL;
 
 	xpthread_mutex_lock(&conn->srv->lock);
 	for (tp = conn->srv->tpool; tp != NULL; tp = tp->next) {
@@ -234,7 +234,8 @@ np_conn_flush (Npconn *conn)
 			if (creq->conn != conn)
 				continue;
 			np_srv_remove_req(tp, creq);
-			np_req_unref(creq);
+			creq->next = unref;
+			unref = creq;
 		}
 		for (creq = tp->workreqs; creq != NULL; creq = creq->next) {
 			if (creq->conn != conn)
@@ -245,6 +246,9 @@ np_conn_flush (Npconn *conn)
 		}
 	}
 	xpthread_mutex_unlock(&conn->srv->lock);
+
+	for (creq = unref; creq != NULL; creq = creq->next)
+		np_req_unref(creq);
 }
 
 void
