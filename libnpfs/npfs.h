@@ -210,6 +210,7 @@ struct Npwthread {
 struct Nptpool {
 	char*		name;
 	Npsrv*		srv;
+	pthread_mutex_t lock; /* protects refcount */
 	int		refcount;
 	int		nwthread;
 	Npwthread*	wthreads;

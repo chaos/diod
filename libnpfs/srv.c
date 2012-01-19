@@ -54,7 +54,6 @@ static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_remove_donereq(Nptpool *tp, Npreq *req);
 static void np_srv_add_donereq(Nptpool *tp, Npreq *req);
-static void np_tpool_incref_nolock (Nptpool *tp);
 
 static char *_ctl_get_conns (char *name, void *a);
 static char *_ctl_get_tpools (char *name, void *a);
@@ -90,7 +89,7 @@ np_srv_create(int nwthread, int flags)
 	srv->nwthread = nwthread;
 	if (!(srv->tpool = np_tpool_create (srv, "default")))
 		goto error;
-	np_tpool_incref_nolock (srv->tpool);
+	np_tpool_incref (srv->tpool);
 	return srv;
 error:
 	if (srv)
@@ -296,6 +295,7 @@ np_tpool_destroy(Nptpool *tp)
 		free (wt);
 	}
 	pthread_cond_destroy (&tp->reqcond);
+	pthread_mutex_destroy (&tp->lock);
 	if (tp->name)
 		free (tp->name);
 	free (tp);
@@ -318,6 +318,7 @@ np_tpool_create(Npsrv *srv, char *name)
 	}
 	tp->srv = srv;
 	tp->refcount = 0;
+	pthread_mutex_init(&tp->lock, NULL);
 	pthread_cond_init(&tp->reqcond, NULL);
 	for(tp->nwthread = 0; tp->nwthread < srv->nwthread; tp->nwthread++) {
 		if (np_wthread_create(tp) < 0)
@@ -330,22 +331,14 @@ error:
 	return NULL;
 }
 
-static void
-np_tpool_incref_nolock (Nptpool *tp)
-{
-	if (!tp)
-		return;
-	tp->refcount++;
-}
-
 void
 np_tpool_incref (Nptpool *tp)
 {
 	if (!tp)
 		return;
-	xpthread_mutex_lock (&tp->srv->lock);
-	np_tpool_incref_nolock (tp);
-	xpthread_mutex_unlock (&tp->srv->lock);
+	xpthread_mutex_lock (&tp->lock);
+	tp->refcount++;
+	xpthread_mutex_unlock (&tp->lock);
 }
 
 void
@@ -379,7 +372,7 @@ np_tpool_select (Npreq *req)
 			np_logerr (srv, "np_tpool_create %s", req->fid->aname);
 	}
 	if (tp) {
-		np_tpool_incref_nolock (tp);
+		np_tpool_incref (tp);
 		req->fid->tpool = tp;
 	}
 	xpthread_mutex_unlock (&srv->lock);
@@ -394,9 +387,9 @@ np_tpool_decref (Nptpool *tp)
 {
 	if (!tp)
 		return;
-	xpthread_mutex_lock (&tp->srv->lock);
+	xpthread_mutex_lock (&tp->lock);
 	tp->refcount--;
-	xpthread_mutex_unlock (&tp->srv->lock);
+	xpthread_mutex_unlock (&tp->lock);
 }
 
 static void
@@ -407,7 +400,7 @@ np_tpool_cleanup (Npsrv *srv)
 	xpthread_mutex_lock (&srv->lock);
 	for (tp = srv->tpool; tp != NULL; tp = next) {
 		next = tp->next;
-		assert (tp->refcount >= 0);
+		xpthread_mutex_lock (&tp->lock);
 		if (tp->refcount == 0) {
 			tp->next = dead;
 			dead = tp;
@@ -417,6 +410,7 @@ np_tpool_cleanup (Npsrv *srv)
 				srv->tpool = next;
 		} else
 			prev = tp;
+		xpthread_mutex_unlock (&tp->lock);
 	}
 	xpthread_mutex_unlock (&srv->lock);
 	for (tp = dead; tp != NULL; tp = next) {
@@ -735,11 +729,7 @@ np_wthread_proc(void *a)
 			
 		xpthread_mutex_lock(&tp->srv->lock);
 		np_srv_remove_donereq(tp, req);
-		xpthread_mutex_unlock(&tp->srv->lock);
-
 		np_req_unref(req);
-
-		xpthread_mutex_lock(&tp->srv->lock);
 	}
 	xpthread_mutex_unlock (&tp->srv->lock);
 
@@ -806,8 +796,6 @@ np_req_ref(Npreq *req)
 	return req;
 }
 
-/* N.B. Do not call holding srv->lock (issue 90)
- */
 void
 np_req_unref(Npreq *req)
 {
@@ -929,7 +917,9 @@ _ctl_get_tpools (char *name, void *a)
 	xpthread_mutex_lock(&srv->lock);
 	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
 		tp->stats.name = tp->name;
+		xpthread_mutex_lock (&tp->lock);
 		tp->stats.numfids = tp->refcount;
+		xpthread_mutex_unlock (&tp->lock);
 		tp->stats.numreqs = 0;
 		for (req = tp->reqs_first; req != NULL; req = req->next)
 			tp->stats.numreqs++;
