@@ -1,3 +1,8 @@
+1.0-pre62:
+	Don't leak file descriptor if clunk is flushed.
+	Really close down clunk/walk race on server (issue 81)
+	Better fix to server deadlock (issue 90)
+
 1.0-pre61:
 	Drop srv->lock before calling np_req_unref (issue 90)
 
