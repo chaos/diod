@@ -529,10 +529,10 @@ np_preprocess_request(Npreq *req)
 			req->fid = np_fid_find (conn, tc->u.twrite.fid, t);
 			break;
 		case P9_TCLUNK:
-			req->fid = np_fid_find (conn, tc->u.tclunk.fid, t);
+			req->fid = np_fid_unlink (conn, tc->u.tclunk.fid, t);
 			break;
 		case P9_TREMOVE:
-			req->fid = np_fid_find (conn, tc->u.tremove.fid, t);
+			req->fid = np_fid_unlink (conn, tc->u.tremove.fid, t);
 			break;
 		case P9_TRENAMEAT:
 			req->fid = np_fid_find (conn,
@@ -809,7 +809,8 @@ np_req_unref(Npreq *req)
 	xpthread_mutex_unlock(&req->lock);
 
 	if (req->fid) {
-		/* We expect to get here with valid fid if request is flushed.
+		/* We expect to get here with valid fid if request is flushed
+		 * before it has been picked up by a worker thread.
  		 * Special case: need to free fid on flushed clunk or remove,
  		 * or client reuse of the fid will cause an error (issue 81).
  		 */

@@ -122,6 +122,7 @@ np_fidpool_create (void)
 		pthread_mutex_init (&pool->lock, NULL);
 		pool->size = FID_HTABLE_SIZE;
 		pool->htable = (Npfid **)((char *) pool + sizeof (*pool));
+		pool->unlinked = NULL;
 		memset(pool->htable, 0, hsize);
 	} else
 		np_uerror (ENOMEM);
@@ -144,6 +145,9 @@ np_fidpool_destroy(Npfidpool *pool)
 			unclunked++;
 		}
 	}
+	f = pool->unlinked;
+	while (f != NULL)
+		f = _destroy_fid (f);
 	xpthread_mutex_unlock (&pool->lock);
 	pthread_mutex_destroy (&pool->lock);
 	free(pool);
@@ -171,34 +175,57 @@ np_fidpool_count(Npfidpool *pool)
 }
 
 static void
-_optimize_fid (Npfid **htable, Npfid *f, int hash)
+_optimize_fid (Npfid **head, Npfid *f)
 {
 	/* assert (pool->lock held) */
 	if (f->next)
 		f->next->prev = f->prev;
 	f->prev->next = f->next;
 	f->prev = NULL;
-	f->next = htable[hash];
-	htable[hash]->prev = f;
-	htable[hash] = f;
+	f->next = *head;
+	(*head)->prev = f;
+	*head = f;
 }
 
 static Npfid *
-_lookup_fid (Npfidpool *pool, u32 fid, int hash)
+_lookup_fid (Npfid **head, u32 fid)
 {
-	Npfid **htable = pool->htable;
 	Npfid *f;
 
 	/* assert (pool->lock held) */
-	for (f = htable[hash]; f != NULL; f = f->next) {
+	for (f = *head; f != NULL; f = f->next) {
 		if (f->fid == fid) {
-			if (f != htable[hash]) /* move to head */
-				_optimize_fid (htable, f, hash);
+			if (f != *head) /* move to head */
+				_optimize_fid (head, f);
 			break;
 		}
 	}
 
 	return f;
+}
+
+static void
+_unlink_fid (Npfid **head, Npfid *f)
+{
+	/* assert (pool->lock held) */
+	if (f->prev)
+		f->prev->next = f->next;
+	else
+		*head = f->next;
+	if (f->next)
+		f->next->prev = f->prev;
+	f->prev = f->next = NULL;
+}
+
+static void
+_link_fid (Npfid **head, Npfid *f)
+{
+	/* assert (pool->lock held) */
+	f->next = *head;
+	f->prev = NULL;
+	if (*head)
+		(*head)->prev = f;
+	*head = f;
 }
 
 /* Find a fid, then refcount++
@@ -211,8 +238,34 @@ np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
 	Npfid *f;
 
 	xpthread_mutex_lock (&pool->lock);
-	if ((f = _lookup_fid (pool, fid, hash)))
+	if ((f = _lookup_fid (&pool->htable[hash], fid)))
 		np_fid_incref (f, op);
+	xpthread_mutex_unlock (&pool->lock);
+	
+	return f;
+}
+
+/* Find a fid, refcount++ as above, but remove it from the pool.
+ * This tightens up a possible race where a client might issue a remove or
+ * unlink, then abandon waiting for the response due to signal, retire the
+ * fid number and reuse it in a walk before the original remove or unlink
+ * request processing (flushed or otherwise) is completed on the server
+ * (issue 81)
+ */
+Npfid *
+np_fid_unlink (Npconn *conn, u32 fid, enum p9_msg_t op)
+{
+	Npfidpool *pool = conn->fidpool;
+	int hash = fid % pool->size;
+	Npfid *f;
+
+	xpthread_mutex_lock (&pool->lock);
+	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
+		np_fid_incref (f, op);
+		_unlink_fid (&pool->htable[hash], f);
+		_link_fid (&pool->unlinked, f);
+		f->unlinked = 1;
+	}
 	xpthread_mutex_unlock (&pool->lock);
 	
 	return f;
@@ -225,11 +278,10 @@ np_fid_create (Npconn *conn, u32 fid, void *aux, enum p9_msg_t op)
 {
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
-	Npfid **htable = pool->htable;
 	Npfid *f;
 
 	xpthread_mutex_lock(&pool->lock);
-	if ((f = _lookup_fid (pool, fid, hash))) {
+	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
 		if (f->history) {
 			char *path = "<nil>";
 
@@ -246,11 +298,7 @@ np_fid_create (Npconn *conn, u32 fid, void *aux, enum p9_msg_t op)
 	if (!(f = _create_fid (conn, fid, aux)))
 		goto done;	
 	np_fid_incref (f, op);
-	f->next = htable[hash];
-	f->prev = NULL;
-	if (htable[hash])
-		htable[hash]->prev = f;
-	htable[hash] = f;
+	_link_fid (&pool->htable[hash], f);
 done:
 	xpthread_mutex_unlock(&pool->lock);
 
@@ -287,18 +335,13 @@ np_fid_decref (Npfid *f, enum p9_msg_t op)
 	_append_history (f, '-', op);
 	xpthread_mutex_unlock (&f->lock);
 
-	if (refcount == 0) {		
+	if (refcount == 0) {
 		Npfidpool *pool = f->conn->fidpool;
 		int hash = f->fid % pool->size;
-		Npfid **htable = pool->htable;
 
 		xpthread_mutex_lock (&pool->lock);
-		if (f->prev)
-			f->prev->next = f->next;
-		else
-			htable[hash] = f->next;
-		if (f->next)
-			f->next->prev = f->prev;
+		_unlink_fid (f->unlinked ? &pool->unlinked
+					 : &pool->htable[hash], f);
 		xpthread_mutex_unlock (&pool->lock);
 
 		(void) _destroy_fid (f);

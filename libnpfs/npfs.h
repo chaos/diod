@@ -111,7 +111,6 @@ struct Npfcall {
 	Npfcall*	next;
 };
 
-
 struct Npfid {
 	int		magic;
 	pthread_mutex_t lock;
@@ -124,6 +123,7 @@ struct Npfid {
 	char		*aname;
 	char		*history;
 	void*		aux;
+	int		unlinked;
 
 	Npfid*		next;	/* list of fids within a bucket */
 	Npfid*		prev;
@@ -148,6 +148,7 @@ struct Npfidpool {
 	pthread_mutex_t	lock;
 	int		size;
 	Npfid**		htable;
+	Npfid*		unlinked;
 };
 
 struct Npconn {
@@ -363,6 +364,7 @@ Npfidpool *np_fidpool_create(void);
 int np_fidpool_destroy(Npfidpool *pool);
 int np_fidpool_count(Npfidpool *pool);
 Npfid *np_fid_find(Npconn *conn, u32 fid, enum p9_msg_t op);
+Npfid *np_fid_unlink(Npconn *conn, u32 fid, enum p9_msg_t op);
 Npfid *np_fid_create(Npconn *conn, u32 fid, void *aux, enum p9_msg_t op);
 Npfid *np_fid_incref(Npfid *fid, enum p9_msg_t op);
 void np_fid_decref(Npfid *fid, enum p9_msg_t op);
