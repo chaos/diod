@@ -214,6 +214,10 @@ static void
 _fidfree (Fid *f)
 {
     if (f) {
+        if (f->dir)
+            (void)closedir(f->dir);
+        else if (f->fd != -1)
+            (void)close (f->fd);
         if (f->path)
             free(f->path);
         free(f);
@@ -544,11 +548,13 @@ diod_clunk (Npfid *fid)
             np_uerror (errno);
             goto error_quiet;
         }
+        f->dir = NULL;
     } else if (f->fd != -1) {
         if (close (f->fd) < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
+        f->fd = -1;
     }
     if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
