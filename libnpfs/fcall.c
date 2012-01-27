@@ -245,7 +245,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		np_fid_incref (fid, tc->type);
 error:
 	if (afid)
-		np_fid_decref (afid, tc->type);
+		np_fid_decref (&afid, tc->type);
 	return rc;
 }
 
@@ -268,6 +268,7 @@ np_flush(Npreq *req, Npfcall *tc)
 					   creq->tcall->type);
 			}
 			np_srv_remove_req(tp, creq);
+			creq->state = REQ_FLUSHED_EARLY;
 			np_req_unref(creq);
 			goto done;
 		}
@@ -278,9 +279,9 @@ np_flush(Npreq *req, Npfcall *tc)
 				np_logmsg (srv, "flush(late): req type %d",
 					   creq->tcall->type);
 			}
-			creq->flushed = 1; /* prevents response */
 			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)
 				pthread_kill (creq->wthread->thread, SIGUSR2);
+			creq->state = REQ_FLUSHED_LATE;
 			goto done;
 		}
 	}
@@ -323,7 +324,8 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->u.twalk.fid != tc->u.twalk.newfid) {
-		newfid = np_fid_create(conn, tc->u.twalk.newfid, NULL, tc->type);
+		newfid = np_fid_create_blocking(conn, tc->u.twalk.newfid,
+						tc->type);
 		if (!newfid) {
 			if (np_rerror () == EEXIST) {
 				np_uerror(EIO);
@@ -390,7 +392,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	rc = np_create_rwalk(i, wqids);
 done:
 	if (!rc && tc->u.twalk.fid != tc->u.twalk.newfid && newfid != NULL)
-		np_fid_decref (newfid, tc->type);
+		np_fid_decref (&newfid, tc->type);
 	return rc;
 }
 
@@ -513,17 +515,16 @@ done:
 Npfcall *
 np_clunk(Npreq *req, Npfcall *tc)
 {
-	Npfid *fid = req->fid;
 	Npfcall *rc = NULL;
 
-	if (!fid) {
+	if (!req->fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "%s: clunk: invalid fid: %d",
 					   np_conn_get_client_id (req->conn),
 					   tc->u.tclunk.fid);
 		goto done;
 	}
-	if (fid->type & P9_QTAUTH) {
+	if (req->fid->type & P9_QTAUTH) {
 		if (req->conn->srv->auth) {
 			/* N.B. fidpool calls auth->clunk on last decref */
 			if (!(rc = np_create_rclunk()))
@@ -532,52 +533,51 @@ np_clunk(Npreq *req, Npfcall *tc)
 			np_uerror(ENOSYS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
-		rc = np_ctl_clunk (fid);
+	if (req->fid->type & P9_QTTMP) {
+		rc = np_ctl_clunk (req->fid);
 	} else {
 		if (!req->conn->srv->clunk) {
 			np_uerror (ENOSYS);
 			goto done;
 		}
-		rc = (*req->conn->srv->clunk)(fid);
+		rc = (*req->conn->srv->clunk)(req->fid);
 	}
 done:
 	/* From clunk(5):
 	 * even if the clunk returns an error, the fid is no longer valid.
 	 */
-	if (fid)
-		np_fid_decref (fid, tc->type);
+	if (req->fid)
+		np_fid_decref (&req->fid, tc->type);
 	return rc;
 }
 
 Npfcall *
 np_remove(Npreq *req, Npfcall *tc)
 {
-	Npfid *fid = req->fid;
 	Npfcall *rc = NULL;
 
-	if (!fid) {
+	if (!req->fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "remove: invalid fid");
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (req->fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
-		if (np_setfsid (req, fid->user, -1) < 0)
+		if (np_setfsid (req, req->fid->user, -1) < 0)
 			goto done;
 		if (!req->conn->srv->remove) {
 			np_uerror (ENOSYS);
 			goto done;
 		}
-		rc = (*req->conn->srv->remove)(fid);
+		rc = (*req->conn->srv->remove)(req->fid);
 	}
 done:
 	/* spec says clunk the fid even if the remove fails
    	 */
-	if (fid)
-		np_fid_decref (fid, tc->type);
+	if (req->fid)
+		np_fid_decref (&req->fid, tc->type);
 	return rc;
 }
 
@@ -761,7 +761,7 @@ np_rename(Npreq *req, Npfcall *tc)
 	}
 done:
 	if (dfid)
-		np_fid_decref (dfid, tc->type);
+		np_fid_decref (&dfid, tc->type);
 	return rc;
 }
 
@@ -895,7 +895,7 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 	}
 done:
 	if (attrfid)
-		np_fid_decref (attrfid, tc->type);
+		np_fid_decref (&attrfid, tc->type);
 	return rc;
 }
 
@@ -1087,7 +1087,7 @@ np_link(Npreq *req, Npfcall *tc)
 	}
 done:
 	if (fid)
-		np_fid_decref (fid, tc->type);
+		np_fid_decref (&fid, tc->type);
 	return rc;
 }
 
@@ -1157,7 +1157,7 @@ np_renameat (Npreq *req, Npfcall *tc)
 					 newdirfid, &tc->u.trenameat.newname);
 done:
 	if (newdirfid)
-		np_fid_decref (newdirfid, tc->type);
+		np_fid_decref (&newdirfid, tc->type);
 	return rc;
 }
 

@@ -123,7 +123,6 @@ struct Npfid {
 	char		*aname;
 	char		*history;
 	void*		aux;
-	int		unlinked;
 
 	Npfid*		next;	/* list of fids within a bucket */
 	Npfid*		prev;
@@ -146,9 +145,9 @@ struct Nptrans {
 
 struct Npfidpool {
 	pthread_mutex_t	lock;
+	pthread_cond_t	cond;
 	int		size;
 	Npfid**		htable;
-	Npfid*		unlinked;
 };
 
 struct Npconn {
@@ -170,12 +169,14 @@ struct Npconn {
 	Npconn*		next;	/* list of connections within a server */
 };
 
+typedef enum { REQ_NORMAL, REQ_FLUSHED_EARLY, REQ_FLUSHED_LATE } Reqstate;
+
 struct Npreq {
 	pthread_mutex_t	lock;
 	int		refcount;
 	Npconn*		conn;
 	u16		tag;
-	int		flushed;
+	Reqstate	state;
 	Npfcall*	tcall;
 	Npfcall*	rcall;
 	Npfid*		fid;
@@ -364,10 +365,12 @@ Npfidpool *np_fidpool_create(void);
 int np_fidpool_destroy(Npfidpool *pool);
 int np_fidpool_count(Npfidpool *pool);
 Npfid *np_fid_find(Npconn *conn, u32 fid, enum p9_msg_t op);
-Npfid *np_fid_unlink(Npconn *conn, u32 fid, enum p9_msg_t op);
-Npfid *np_fid_create(Npconn *conn, u32 fid, void *aux, enum p9_msg_t op);
+Npfid *np_fid_create(Npconn *conn, u32 fid, enum p9_msg_t op);
+Npfid *np_fid_create_blocking(Npconn *conn, u32 fid, enum p9_msg_t op);
 Npfid *np_fid_incref(Npfid *fid, enum p9_msg_t op);
-void np_fid_decref(Npfid *fid, enum p9_msg_t op);
+void np_fid_decref(Npfid **fid, enum p9_msg_t op);
+void np_fid_decref_bynum (Npconn *conn, u32 fid, enum p9_msg_t op);
+
 
 /* trans.c */
 Nptrans *np_trans_create(void *aux, int (*recv)(Npfcall **, u32, void *),

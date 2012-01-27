@@ -81,7 +81,7 @@ _destroy_fid (Npfid *f)
 }
 
 static Npfid *
-_create_fid (Npconn *conn, u32 fid, void *aux)
+_create_fid (Npconn *conn, u32 fid)
 {
 	Npfid *f = malloc (sizeof (*f));
 
@@ -89,7 +89,6 @@ _create_fid (Npconn *conn, u32 fid, void *aux)
 		memset (f, 0, sizeof (*f));
 		f->conn = conn;
 		f->fid = fid;
-		f->aux = aux;
 		pthread_mutex_init (&f->lock, NULL);
 		if ((conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL)) 
 			if ((f->history = malloc (FID_HISTORY_SIZE)))
@@ -120,9 +119,9 @@ np_fidpool_create (void)
 
 	if ((pool = malloc (sizeof (*pool) + hsize))) {
 		pthread_mutex_init (&pool->lock, NULL);
+		pthread_cond_init(&pool->cond, NULL);
 		pool->size = FID_HTABLE_SIZE;
 		pool->htable = (Npfid **)((char *) pool + sizeof (*pool));
-		pool->unlinked = NULL;
 		memset(pool->htable, 0, hsize);
 	} else
 		np_uerror (ENOMEM);
@@ -145,11 +144,9 @@ np_fidpool_destroy(Npfidpool *pool)
 			unclunked++;
 		}
 	}
-	f = pool->unlinked;
-	while (f != NULL)
-		f = _destroy_fid (f);
 	xpthread_mutex_unlock (&pool->lock);
 	pthread_mutex_destroy (&pool->lock);
+	pthread_cond_destroy (&pool->cond);
 	free(pool);
 
 	return unclunked;
@@ -245,36 +242,48 @@ np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
 	return f;
 }
 
-/* Find a fid, refcount++ as above, but remove it from the pool.
- * This tightens up a possible race where a client might issue a remove or
- * unlink, then abandon waiting for the response due to signal, retire the
- * fid number and reuse it in a walk before the original remove or unlink
- * request processing (flushed or otherwise) is completed on the server
- * (issue 81)
- */
-Npfid *
-np_fid_unlink (Npconn *conn, u32 fid, enum p9_msg_t op)
+void
+_log_create_err (Npfid *f, int waiting)
 {
-	Npfidpool *pool = conn->fidpool;
-	int hash = fid % pool->size;
-	Npfid *f;
+	Npsrv *srv = f->conn->srv;
 
-	xpthread_mutex_lock (&pool->lock);
-	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
-		np_fid_incref (f, op);
-		_unlink_fid (&pool->htable[hash], f);
-		_link_fid (&pool->unlinked, f);
-		f->unlinked = 1;
-	}
-	xpthread_mutex_unlock (&pool->lock);
-	
-	return f;
+	np_logmsg (srv, "np_fid_create: %sunclunked fid %d (%s): %d refs%s%s",
+		   waiting ? "waiting for " : "", f->fid,
+		   srv->get_path ? srv->get_path (f) : "<nil>",
+		   f->refcount,
+		   f->history ? ": " : "",
+		   f->history ? f->history : "");
 }
 
 /* Create a fid with initial refcount of 1.
  */
 Npfid *
-np_fid_create (Npconn *conn, u32 fid, void *aux, enum p9_msg_t op)
+np_fid_create_blocking (Npconn *conn, u32 fid, enum p9_msg_t op)
+{
+	Npfidpool *pool = conn->fidpool;
+	int hash = fid % pool->size;
+	Npfid *f;
+	int retries = 0;
+
+	xpthread_mutex_lock(&pool->lock);
+	while ((f = _lookup_fid (&pool->htable[hash], fid))) {
+		if (retries++ == 0)
+			_log_create_err (f, 1);
+		xpthread_cond_wait (&pool->cond, &pool->lock);
+	}
+	if ((f = _create_fid (conn, fid))) {
+		np_fid_incref (f, op);
+		_link_fid (&pool->htable[hash], f);
+	}
+	if (retries > 0)
+		np_logmsg (conn->srv, "np_fid_create: fid %d clunked", fid);
+	xpthread_mutex_unlock(&pool->lock);
+
+	return f;
+}
+
+Npfid *
+np_fid_create (Npconn *conn, u32 fid, enum p9_msg_t op)
 {
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
@@ -282,23 +291,15 @@ np_fid_create (Npconn *conn, u32 fid, void *aux, enum p9_msg_t op)
 
 	xpthread_mutex_lock(&pool->lock);
 	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
-		if (f->history) {
-			char *path = "<nil>";
-
-			if (f->conn->srv->get_path)
-				path = f->conn->srv->get_path (f);
-			np_logmsg (f->conn->srv,
-				   "np_fid_create: fid %d (%s) has %d refs: %s",
-			           f->fid, path, f->refcount, f->history);
-		}
+		_log_create_err (f, 0);
 		np_uerror (EEXIST);
 		f = NULL;
 		goto done;
 	}
-	if (!(f = _create_fid (conn, fid, aux)))
-		goto done;	
-	np_fid_incref (f, op);
-	_link_fid (&pool->htable[hash], f);
+	if ((f = _create_fid (conn, fid))) {
+		np_fid_incref (f, op);
+		_link_fid (&pool->htable[hash], f);
+	}
 done:
 	xpthread_mutex_unlock(&pool->lock);
 
@@ -310,6 +311,7 @@ done:
 Npfid *
 np_fid_incref (Npfid *f, enum p9_msg_t op)
 {
+	assert (f != NULL);
 	assert (f->magic == FID_MAGIC);
 
 	xpthread_mutex_lock (&f->lock);
@@ -324,15 +326,19 @@ np_fid_incref (Npfid *f, enum p9_msg_t op)
  * Destroy when refcount reaches zero.
  */
 void
-np_fid_decref (Npfid *f, enum p9_msg_t op)
+np_fid_decref (Npfid **fp, enum p9_msg_t op)
 {
+	Npfid *f = *fp;
 	int refcount;
 
+	assert (f != NULL);
 	assert (f->magic == FID_MAGIC);
 
 	xpthread_mutex_lock (&f->lock);
 	refcount = --f->refcount;
 	_append_history (f, '-', op);
+	if (refcount == 0)
+		*fp = NULL;
 	xpthread_mutex_unlock (&f->lock);
 
 	if (refcount == 0) {
@@ -340,10 +346,36 @@ np_fid_decref (Npfid *f, enum p9_msg_t op)
 		int hash = f->fid % pool->size;
 
 		xpthread_mutex_lock (&pool->lock);
-		_unlink_fid (f->unlinked ? &pool->unlinked
-					 : &pool->htable[hash], f);
+		_unlink_fid (&pool->htable[hash], f);
+		xpthread_cond_signal (&pool->cond);
 		xpthread_mutex_unlock (&pool->lock);
 
 		(void) _destroy_fid (f);
 	}
+}
+
+void
+np_fid_decref_bynum (Npconn *conn, u32 fid, enum p9_msg_t op)
+{
+	Npfidpool *pool = conn->fidpool;
+	int hash = fid % pool->size;
+	int refcount = 0;
+	Npfid *f;
+
+	xpthread_mutex_lock (&pool->lock);
+	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
+		xpthread_mutex_lock (&f->lock);
+		refcount = --f->refcount;
+		_append_history (f, '-', op);
+		xpthread_mutex_unlock (&f->lock);
+
+		if (refcount == 0) {
+			_unlink_fid (&pool->htable[hash], f);
+			xpthread_cond_signal (&pool->cond);
+		}
+	}
+	xpthread_mutex_unlock (&pool->lock);
+
+	if (f && refcount == 0)
+		(void) _destroy_fid (f);
 }

@@ -488,30 +488,24 @@ np_preprocess_request(Npreq *req)
 		case P9_TVERSION:
 			break;
 		case P9_TAUTH:
-			req->fid = np_fid_create (conn, tc->u.tauth.afid,
-						  NULL, t);
+			req->fid = np_fid_create (conn, tc->u.tauth.afid, t);
 			if (!req->fid)
 				break;
 			req->fid->aname = np_strdup (&tc->u.tauth.aname);
-			if (!req->fid->aname) {
-				np_fid_decref (req->fid, t);
-				req->fid = NULL;
-			}
+			if (!req->fid->aname)
+				np_fid_decref (&req->fid, t);
 			/* XXX leave fid->tpool NULL for now as auth
 			 * can be handled in the default thread pool
 			 * without risk of deadlock.
 			 */
 			break;
 		case P9_TATTACH:
-			req->fid = np_fid_create (conn, tc->u.tattach.fid,
-						  NULL, t);
+			req->fid = np_fid_create (conn, tc->u.tattach.fid, t);
 			if (!req->fid)
 				break;
 			req->fid->aname = np_strdup (&tc->u.tattach.aname);
-			if (!req->fid->aname) {
-				np_fid_decref (req->fid, t);
-				req->fid = NULL;
-			}
+			if (!req->fid->aname)
+				np_fid_decref (&req->fid, t);
 			/* Here we select the tpool that will handle this
 			 * request and requests on fids walked from this fid.
 			 */
@@ -529,10 +523,10 @@ np_preprocess_request(Npreq *req)
 			req->fid = np_fid_find (conn, tc->u.twrite.fid, t);
 			break;
 		case P9_TCLUNK:
-			req->fid = np_fid_unlink (conn, tc->u.tclunk.fid, t);
+			req->fid = np_fid_find (conn, tc->u.tclunk.fid, t);
 			break;
 		case P9_TREMOVE:
-			req->fid = np_fid_unlink (conn, tc->u.tremove.fid, t);
+			req->fid = np_fid_find (conn, tc->u.tremove.fid, t);
 			break;
 		case P9_TRENAMEAT:
 			req->fid = np_fid_find (conn,
@@ -678,7 +672,7 @@ np_process_request(Npreq *req, Nptpool *tp)
 		rc = np_create_rlerror(ecode);
 	}
 	if (req->fid) {
-		np_fid_decref (req->fid, tc->type);
+		np_fid_decref (&req->fid, tc->type);
 		req->fid = NULL;
 	}
 
@@ -742,7 +736,7 @@ np_req_respond(Npreq *req, Npfcall *rc)
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
 	assert (req->fid == NULL);
-	if (req->rcall && !req->flushed) {
+	if (req->rcall && req->state == REQ_NORMAL) {
 		np_set_tag(req->rcall, req->tag);
 		np_conn_respond(req);		
 	}
@@ -773,7 +767,7 @@ np_req_alloc(Npconn *conn, Npfcall *tc) {
 	req->refcount = 1;
 	req->conn = conn;
 	req->tag = tc->tag;
-	req->flushed = 0;
+	req->state = REQ_NORMAL;
 	req->tcall = tc;
 	req->rcall = NULL;
 	req->next = NULL;
@@ -799,6 +793,8 @@ np_req_ref(Npreq *req)
 void
 np_req_unref(Npreq *req)
 {
+	Npfcall *tc, *rc;
+
 	xpthread_mutex_lock(&req->lock);
 	assert(req->refcount > 0);
 	req->refcount--;
@@ -808,17 +804,29 @@ np_req_unref(Npreq *req)
 	}
 	xpthread_mutex_unlock(&req->lock);
 
+	tc = req->tcall;
+	rc = req->rcall;
+
+	/* Clean up fid accounting in the case of cancelled operations
+	 * that create/destroy fids (issue 81)
+	 */
+	switch (tc->type) {
+		case P9_TCLUNK:
+		case P9_TREMOVE:
+			if (req->fid && req->state == REQ_FLUSHED_EARLY)
+				np_fid_decref (&req->fid, tc->type);
+			break;
+		case P9_TWALK:
+			if (req->state == REQ_FLUSHED_LATE
+				    && tc->u.twalk.fid != tc->u.twalk.newfid
+				    && rc && rc->type != P9_RLERROR)
+				np_fid_decref_bynum (req->conn,
+					     tc->u.twalk.newfid, tc->type);
+			break;
+	}
 	if (req->fid) {
-		/* We expect to get here with valid fid if request is flushed
-		 * before it has been picked up by a worker thread.
- 		 * Special case: need to free fid on flushed clunk or remove,
- 		 * or client reuse of the fid will cause an error (issue 81).
- 		 */
-		if (req->tcall && (req->tcall->type == P9_TCLUNK ||
-				   req->tcall->type == P9_TREMOVE)) {
-			np_fid_decref (req->fid, req->tcall->type);
-		}
-		np_fid_decref (req->fid, req->tcall ? req->tcall->type : 0);
+		assert (req->state == REQ_FLUSHED_EARLY);
+		np_fid_decref (&req->fid, tc->type);
 		req->fid = NULL;
 	}
 	if (req->conn) {

@@ -233,13 +233,14 @@ np_conn_flush (Npconn *conn)
 			nextreq = creq->next;
 			if (creq->conn != conn)
 				continue;
+			creq->state = REQ_FLUSHED_EARLY;
 			np_srv_remove_req(tp, creq);
 			np_req_unref(creq);
 		}
 		for (creq = tp->workreqs; creq != NULL; creq = creq->next) {
 			if (creq->conn != conn)
 				continue;
-			creq->flushed = 1;
+			creq->state = REQ_FLUSHED_LATE;
 			if (conn->srv->flags & SRV_FLAGS_FLUSHSIG)
 				pthread_kill (creq->wthread->thread, SIGUSR2);
 		}
