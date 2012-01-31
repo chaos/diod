@@ -738,7 +738,7 @@ np_req_respond(Npreq *req, Npfcall *rc)
 	assert (req->fid == NULL);
 	if (req->rcall && req->state == REQ_NORMAL) {
 		np_set_tag(req->rcall, req->tag);
-		np_conn_respond(req);		
+		np_conn_respond(req);
 	}
 	xpthread_mutex_unlock(&req->lock);
 }

@@ -31,6 +31,8 @@
 #include <pthread.h>
 #include <errno.h>
 #include <assert.h>
+#include <sys/time.h>
+
 #include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
@@ -264,12 +266,29 @@ np_fid_create_blocking (Npconn *conn, u32 fid, enum p9_msg_t op)
 	int hash = fid % pool->size;
 	Npfid *f;
 	int retries = 0;
+	struct timespec ts;
+	struct timeval tv;
+	int rc;
+	const int timeout = 150; /* soft lockup message on client after 120s */
+
+	(void)gettimeofday (&tv, NULL);
+	ts.tv_sec = tv.tv_sec;
+	ts.tv_nsec = tv.tv_usec * 1000;
+	ts.tv_sec += timeout;
 
 	xpthread_mutex_lock(&pool->lock);
 	while ((f = _lookup_fid (&pool->htable[hash], fid))) {
 		if (retries++ == 0)
 			_log_create_err (f, 1);
-		xpthread_cond_wait (&pool->cond, &pool->lock);
+		rc = pthread_cond_timedwait (&pool->cond, &pool->lock, &ts);
+		if (rc == ETIMEDOUT) {
+			np_logmsg (conn->srv, "np_fid_create: timeout after %d"
+				   "s on fid %d", timeout, fid);
+			np_uerror (EEXIST);
+			f = NULL;
+			goto done;	
+		}
+		assert (rc == 0);
 	}
 	if ((f = _create_fid (conn, fid))) {
 		np_fid_incref (f, op);
@@ -277,6 +296,7 @@ np_fid_create_blocking (Npconn *conn, u32 fid, enum p9_msg_t op)
 	}
 	if (retries > 0)
 		np_logmsg (conn->srv, "np_fid_create: fid %d clunked", fid);
+done:
 	xpthread_mutex_unlock(&pool->lock);
 
 	return f;
