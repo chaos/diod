@@ -542,19 +542,22 @@ diod_clunk (Npfid *fid)
 {
     Fid *f = fid->aux;
     Npfcall *ret;
+    int rc;
 
     if (f->dir) {
-        if (closedir(f->dir) < 0) {
-            np_uerror (errno);
-            goto error_quiet;
-        }
+        rc = closedir(f->dir);
         f->dir = NULL;
-    } else if (f->fd != -1) {
-        if (close (f->fd) < 0) {
+        if (rc < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
+    } else if (f->fd != -1) {
+        rc = close (f->fd);
         f->fd = -1;
+        if (rc < 0) {
+            np_uerror (errno);
+            goto error_quiet;
+        }
     }
     if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
