@@ -121,7 +121,6 @@ np_fidpool_create (void)
 
 	if ((pool = malloc (sizeof (*pool) + hsize))) {
 		pthread_mutex_init (&pool->lock, NULL);
-		pthread_cond_init(&pool->cond, NULL);
 		pool->size = FID_HTABLE_SIZE;
 		pool->htable = (Npfid **)((char *) pool + sizeof (*pool));
 		memset(pool->htable, 0, hsize);
@@ -148,7 +147,6 @@ np_fidpool_destroy(Npfidpool *pool)
 	}
 	xpthread_mutex_unlock (&pool->lock);
 	pthread_mutex_destroy (&pool->lock);
-	pthread_cond_destroy (&pool->cond);
 	free(pool);
 
 	return unclunked;
@@ -260,49 +258,6 @@ _log_create_err (Npfid *f, int waiting)
 /* Create a fid with initial refcount of 1.
  */
 Npfid *
-np_fid_create_blocking (Npconn *conn, u32 fid, enum p9_msg_t op)
-{
-	Npfidpool *pool = conn->fidpool;
-	int hash = fid % pool->size;
-	Npfid *f;
-	int retries = 0;
-	struct timespec ts;
-	struct timeval tv;
-	int rc;
-	const int timeout = 150; /* soft lockup message on client after 120s */
-
-	(void)gettimeofday (&tv, NULL);
-	ts.tv_sec = tv.tv_sec;
-	ts.tv_nsec = tv.tv_usec * 1000;
-	ts.tv_sec += timeout;
-
-	xpthread_mutex_lock(&pool->lock);
-	while ((f = _lookup_fid (&pool->htable[hash], fid))) {
-		if (retries++ == 0)
-			_log_create_err (f, 1);
-		rc = pthread_cond_timedwait (&pool->cond, &pool->lock, &ts);
-		if (rc == ETIMEDOUT) {
-			np_logmsg (conn->srv, "np_fid_create: timeout after %d"
-				   "s on fid %d", timeout, fid);
-			np_uerror (EEXIST);
-			f = NULL;
-			goto done;	
-		}
-		assert (rc == 0);
-	}
-	if ((f = _create_fid (conn, fid))) {
-		np_fid_incref (f, op);
-		_link_fid (&pool->htable[hash], f);
-	}
-	if (retries > 0)
-		np_logmsg (conn->srv, "np_fid_create: fid %d clunked", fid);
-done:
-	xpthread_mutex_unlock(&pool->lock);
-
-	return f;
-}
-
-Npfid *
 np_fid_create (Npconn *conn, u32 fid, enum p9_msg_t op)
 {
 	Npfidpool *pool = conn->fidpool;
@@ -367,7 +322,6 @@ np_fid_decref (Npfid **fp, enum p9_msg_t op)
 
 		xpthread_mutex_lock (&pool->lock);
 		_unlink_fid (&pool->htable[hash], f);
-		xpthread_cond_signal (&pool->cond);
 		xpthread_mutex_unlock (&pool->lock);
 
 		(void) _destroy_fid (f);
@@ -391,7 +345,6 @@ np_fid_decref_bynum (Npconn *conn, u32 fid, enum p9_msg_t op)
 
 		if (refcount == 0) {
 			_unlink_fid (&pool->htable[hash], f);
-			xpthread_cond_signal (&pool->cond);
 		}
 	}
 	xpthread_mutex_unlock (&pool->lock);

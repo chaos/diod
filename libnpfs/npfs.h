@@ -145,7 +145,6 @@ struct Nptrans {
 
 struct Npfidpool {
 	pthread_mutex_t	lock;
-	pthread_cond_t	cond;
 	int		size;
 	Npfid**		htable;
 };

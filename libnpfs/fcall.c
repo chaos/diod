@@ -324,8 +324,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->u.twalk.fid != tc->u.twalk.newfid) {
-		newfid = np_fid_create_blocking(conn, tc->u.twalk.newfid,
-						tc->type);
+		newfid = np_fid_create(conn, tc->u.twalk.newfid, tc->type);
 		if (!newfid) {
 			if (np_rerror () == EEXIST) {
 				np_uerror(EIO);
