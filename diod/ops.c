@@ -649,12 +649,11 @@ diod_lopen (Npfid *fid, u32 flags)
         np_uerror (errno);
         goto error_quiet;
     }
-    f->dir = fdopendir (f->fd);
-    if (!f->dir && errno != ENOTDIR) {
+    if (fstat (f->fd, &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    if (fstat (f->fd, &sb) < 0) {
+    if (S_ISDIR(sb.st_mode) && !(f->dir = fdopendir (f->fd))) {
         np_uerror (errno);
         goto error_quiet;
     }
