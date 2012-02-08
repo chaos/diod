@@ -671,10 +671,6 @@ np_process_request(Npreq *req, Nptpool *tp)
 			free(rc);
 		rc = np_create_rlerror(ecode);
 	}
-	if (req->fid) {
-		np_fid_decref (&req->fid, tc->type);
-		req->fid = NULL;
-	}
 
 	/* update stats */
 	xpthread_mutex_lock (&tp->srv->lock);
@@ -690,6 +686,47 @@ np_process_request(Npreq *req, Nptpool *tp)
 	xpthread_mutex_unlock (&tp->srv->lock);
 
 	return rc;
+}
+
+static void
+np_postprocess_request(Npreq *req, Npfcall *rc)
+{
+	Npfcall *tc = req->tcall;
+
+	assert (tc != NULL);
+	assert (rc != NULL);
+
+	/* Fid accounting: In the common case we drop the fid reference
+	 * taken in np_preprocess_request().  Special handling is needed
+	 * for late-flushed Tclunk/Tremove/Twalk (reverse fid accounting).
+	 */
+	if (req->fid && req->state == REQ_FLUSHED_LATE) {
+		switch (tc->type) {
+			case P9_TCLUNK:
+			case P9_TREMOVE:
+				req->fid = NULL; /* avoid final decrement */
+				break;
+			case P9_TWALK: {
+				u32 ofid = tc->u.twalk.fid;
+				u32 nfid = tc->u.twalk.newfid;
+
+				if (ofid == nfid || rc->type == P9_RLERROR)
+					break;
+				np_fid_decref_bynum (req->conn, nfid, tc->type);
+				break;
+			}
+			/* FIXME: handle flushed P9_TAUTH and P9_TATTACH? */
+		}
+	}
+	if (req->fid) {
+		np_fid_decref (&req->fid, tc->type);
+		req->fid = NULL;
+	}
+
+	/* send response unless flushed */
+	if (req->state == REQ_NORMAL) {
+		np_req_respond(req, rc);
+	}
 }
 
 static void *
@@ -719,7 +756,7 @@ np_wthread_proc(void *a)
 		np_srv_add_donereq(tp, req);
 		xpthread_mutex_unlock(&tp->srv->lock);
 
-		np_req_respond(req, rc);
+		np_postprocess_request (req, rc);
 			
 		xpthread_mutex_lock(&tp->srv->lock);
 		np_srv_remove_donereq(tp, req);
@@ -793,8 +830,6 @@ np_req_ref(Npreq *req)
 void
 np_req_unref(Npreq *req)
 {
-	Npfcall *tc, *rc;
-
 	xpthread_mutex_lock(&req->lock);
 	assert(req->refcount > 0);
 	req->refcount--;
@@ -804,29 +839,9 @@ np_req_unref(Npreq *req)
 	}
 	xpthread_mutex_unlock(&req->lock);
 
-	tc = req->tcall;
-	rc = req->rcall;
-
-	/* Clean up fid accounting in the case of cancelled operations
-	 * that create/destroy fids (issue 81)
-	 */
-	switch (tc->type) {
-		case P9_TCLUNK:
-		case P9_TREMOVE:
-			if (req->fid && req->state == REQ_FLUSHED_EARLY)
-				np_fid_decref (&req->fid, tc->type);
-			break;
-		case P9_TWALK:
-			if (req->state == REQ_FLUSHED_LATE
-				    && tc->u.twalk.fid != tc->u.twalk.newfid
-				    && rc && rc->type != P9_RLERROR)
-				np_fid_decref_bynum (req->conn,
-					     tc->u.twalk.newfid, tc->type);
-			break;
-	}
 	if (req->fid) {
 		assert (req->state == REQ_FLUSHED_EARLY);
-		np_fid_decref (&req->fid, tc->type);
+		np_fid_decref (&req->fid, req->tcall->type);
 		req->fid = NULL;
 	}
 	if (req->conn) {
