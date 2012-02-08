@@ -191,7 +191,7 @@ _lookup_fid (Npfid **head, u32 fid)
 
 	/* assert (pool->lock held) */
 	for (f = *head; f != NULL; f = f->next) {
-		if (f->fid == fid) {
+		if (f->fid == fid && !f->zombie) {
 			if (f != *head) /* move to head */
 				_optimize_fid (head, f);
 			break;
@@ -243,12 +243,12 @@ np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
 }
 
 void
-_log_create_err (Npfid *f, int waiting)
+_log_create_err (Npfid *f, int loose)
 {
 	Npsrv *srv = f->conn->srv;
 
 	np_logmsg (srv, "np_fid_create: %sunclunked fid %d (%s): %d refs%s%s",
-		   waiting ? "waiting for " : "", f->fid,
+		   loose ? "recycling " : "", f->fid,
 		   srv->get_path ? srv->get_path (f) : "<nil>",
 		   f->refcount,
 		   f->history ? ": " : "",
@@ -260,16 +260,21 @@ _log_create_err (Npfid *f, int waiting)
 Npfid *
 np_fid_create (Npconn *conn, u32 fid, enum p9_msg_t op)
 {
+	int loose = (conn->srv->flags & SRV_FLAGS_LOOSEFID);
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
 	Npfid *f;
 
 	xpthread_mutex_lock(&pool->lock);
 	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
-		_log_create_err (f, 0);
-		np_uerror (EEXIST);
-		f = NULL;
-		goto done;
+		_log_create_err (f, loose);
+		if (loose) {
+			f->zombie = 1; /* fid persists invisibly */
+		} else {
+			np_uerror (EEXIST);
+			f = NULL;
+			goto done;
+		}
 	}
 	if ((f = _create_fid (conn, fid))) {
 		np_fid_incref (f, op);

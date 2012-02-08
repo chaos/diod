@@ -123,6 +123,7 @@ struct Npfid {
 	char		*aname;
 	char		*history;
 	void*		aux;
+	int		zombie;
 
 	Npfid*		next;	/* list of fids within a bucket */
 	Npfid*		prev;
@@ -248,6 +249,7 @@ enum {
 	SRV_FLAGS_FLUSHSIG	=0x00100000,
 	SRV_FLAGS_DAC_BYPASS  	=0x00200000,
 	SRV_FLAGS_SETGROUPS	=0x00400000,
+	SRV_FLAGS_LOOSEFID	=0x00800000, /* work around buggy clients */
 };
 
 typedef char * (*SynGetF)(char *name, void *arg);
