@@ -387,10 +387,11 @@ _statmnt (char *path, struct stat *sb)
 {
     DIR *dir = NULL;
     struct stat sbp;
-    struct dirent *dp;
+    struct dirent dbuf, *dp;
     char *ppath = NULL;
     int plen = strlen (path) + 4;
     char *name;
+    int err;
 
     if (stat (path, sb) < 0) {
         np_uerror (errno);
@@ -411,10 +412,13 @@ _statmnt (char *path, struct stat *sb)
     }
     name = strrchr (path, '/');
     name = name ? name + 1 : path;
-    while ((dp = readdir (dir))) {
-        if (!strcmp (name, dp->d_name))
-            break;
-    } 
+    do {
+        err = readdir_r (dir, &dbuf, &dp);
+        if (err > 0) {
+            np_uerror (err);
+            goto error;
+        }
+    } while (dp != NULL && strcmp (name, dp->d_name) != 0);
     if (!dp) {
         np_uerror (ENOENT);
         goto error;
@@ -653,10 +657,6 @@ diod_lopen (Npfid *fid, u32 flags)
         np_uerror (errno);
         goto error_quiet;
     }
-    if (S_ISDIR(sb.st_mode) && !(f->dir = fdopendir (f->fd))) {
-        np_uerror (errno);
-        goto error_quiet;
-    }
     _ustat2qid (&sb, &qid);
     //iounit = sb.st_blksize;
     if (!(res = np_create_rlopen (&qid, iounit))) {
@@ -668,11 +668,8 @@ error:
     errn (np_rerror (), "diod_lopen %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path);
 error_quiet:
-    if (f->dir)
-        (void)closedir (f->dir);
-    else if (f->fd != -1)
+    if (f->fd != -1)
         (void)close (f->fd); 
-    f->dir = NULL;
     f->fd = -1;
     return NULL;
 }
@@ -1078,14 +1075,20 @@ done:
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
-    int i, n = 0;
+    struct dirent dbuf;
+    int i, n = 0, err;
 
     if (offset == 0)
         rewinddir (f->dir);
     else
         seekdir (f->dir, offset);
     do {
-        if (!(f->dirent = readdir (f->dir)))
+        err = readdir_r (f->dir, &dbuf, &f->dirent);
+        if (err > 0) {
+            np_uerror (err);
+            break;
+        }
+        if (err == 0 && f->dirent == NULL)
             break;
         if (f->mountpt && strcmp (f->dirent->d_name, ".") 
                        && strcmp (f->dirent->d_name, ".."))
@@ -1105,6 +1108,14 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     Fid *f = fid->aux;
     Npfcall *ret;
 
+    if (f->fd == -1) {
+        np_uerror (EBADF);
+        goto error;
+    }
+    if (f->dir == NULL && !(f->dir = fdopendir (f->fd))) {
+        np_uerror (errno);
+        goto error;
+    }
     if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
         goto error;
