@@ -116,6 +116,8 @@ np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a)
 	}
 	while (len < size || len < 4) {
 		n = read(fdt->fdin, fc->pkt + len, msize - len);
+		if (n < 0 && errno == EINTR)
+			continue;
 		if (n < 0) {
 			np_uerror (errno);
 			goto error;
@@ -163,6 +165,8 @@ np_fdtrans_send(Npfcall *fc, void *a)
 	 */
 	do {
 		n = write(fdt->fdout, fc->pkt + len, size - len);
+		if (n < 0 && errno == EINTR)
+			continue;
 		if (n < 0) {
 			np_uerror(errno);
 			return -1;
