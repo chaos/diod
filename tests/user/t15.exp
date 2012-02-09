@@ -1,5 +1,7 @@
-tflush: sent 100 tfsyncs
-tflush: sent 1 tflush
-tflush: received 100/101 respones
+tflush: sent 100 Tfsyncs
+tflush: sent 1 Tflush
+tflush: sent 100 Tfsyncs
+tflush: received 1 Rflush
+tflush: received either 199 or 200 Rfsyncs
 conjoin: t15 exited with rc=0
 conjoin: diod exited with rc=0

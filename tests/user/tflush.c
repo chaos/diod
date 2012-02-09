@@ -13,7 +13,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <assert.h>
-#include <signal.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -69,32 +68,20 @@ main (int argc, char *argv[])
 }
 
 static void
-_alarm_clock (int sig)
-{
-    //msg ("alarm clock!");
-}
-
-static void
 _flush_series (Npcfsys *fs, Npcfid *root)
 {
     Npfcall *rc = NULL, *tc = NULL, *ac = NULL;
     Npcfid *f;
     u16 tag, flushtag;
     int n, i;
-    struct sigaction sa;
+    int orig_reply_received = 0;
+    int rflush_received = 0;
 
     assert (fs->trans != NULL);
-
-    sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
-    sa.sa_handler = _alarm_clock;
-    if (sigaction (SIGALRM, &sa, NULL) < 0)
-        err_exit ("sigaction");
 
     if (!(f = npc_open_bypath (root, "/", 0644)))
         err_exit ("open)");
 
-    /* write 100 fsyncs */
     for (i = 0; i < 100; i++) {
         if (!(tc = np_create_tfsync (f->fid)))
             msg_exit ("out of memory");
@@ -103,50 +90,67 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         n = np_trans_send(fs->trans, tc);
         if (n < 0)
             errn_exit (np_rerror (), "np_trans_write");
-        //msg ("sent tversion tag %d", tc->tag);
         free(tc);
     }
-    msg ("sent 100 tfsyncs");
+    msg ("sent 100 Tfsyncs");
 
-    /* flush the most recent */
+    /* flush one fsync */
     if (!(ac = np_create_tflush (flushtag)))
         msg_exit ("out of memory");
     tag = npc_get_id(fs->tagpool);
     np_set_tag(ac, tag);
     if (np_trans_send(fs->trans, ac) < 0)
         errn_exit (np_rerror (), "np_trans_write");
-    //msg ("sent tflush tag %d (flushing tag %d)", ac->tag, flushtag);
     free (ac);
-    msg ("sent 1 tflush");
+    msg ("sent 1 Tflush");
+
+    for (i = 0; i < 100; i++) {
+        if (!(tc = np_create_tfsync (f->fid)))
+            msg_exit ("out of memory");
+        tag = npc_get_id(fs->tagpool);
+        np_set_tag(tc, tag);
+        n = np_trans_send(fs->trans, tc);
+        if (n < 0)
+            errn_exit (np_rerror (), "np_trans_write");
+        free(tc);
+    }
+    msg ("sent 100 Tfsyncs");
         
-    /* receive up to 101 responses with 1s timeout */
-    for (i = 0; i < 101; i++) {
+    for (i = 0; i < 200 + orig_reply_received; i++) {
+        const int size = sizeof(rc->size)+sizeof(rc->type)+sizeof(rc->tag);
+
+        assert (size <= fs->msize);
+
         /* Trick: both rfsync and rflush are the same size (empty).
          * Read exactly that much.  Code bloats if we can't assume that.
          */
-        int size = sizeof(rc->size)+sizeof(rc->type)+sizeof(rc->tag);
-        assert (size <= fs->msize);
-        alarm (1);
-        if (np_trans_recv (fs->trans, &rc, size) < 0) {
-            if (errno == EINTR)
-                break;
+        if (np_trans_recv (fs->trans, &rc, size) < 0)
             errn_exit (np_rerror (), "np_trans_read");
-        }
-        alarm (0);
         if (rc == NULL)
             msg_exit ("np_trans_read: unexpected EOF");
         if (!np_deserialize (rc))
-            msg_exit ("failed to deserialize response in one go");
-        if (rc->type != P9_RFSYNC && rc->type != P9_RFLUSH)
-            msg_exit ("received unexpected reply type (%d)", rc->type);
-        //msg ("received tag %d", rc->tag);
+            msg_exit ("failed to deserialize response");
+        switch (rc->type) {
+            case P9_RFSYNC:
+                if (rc->tag == flushtag) {
+                    assert (orig_reply_received == 0);
+                    if (rflush_received)
+                        msg_exit ("received Rfsync after Rflush");
+                    orig_reply_received = 1;
+                }
+                break;
+            case P9_RFLUSH:
+                rflush_received = 1;
+                break;
+            default:
+                msg_exit ("received unexpected reply type (%d)", rc->type);
+                break;
+        }
         free(rc);
-        //npc_put_id(fs->tagpool, rc->tag);
     }
-    if (i == 100 || i == 101)
-        msg ("received 100/101 respones");
-    else 
-        msg ("received %d responses", i);
+
+    msg ("received 1 Rflush");
+    msg ("received either 199 or 200 Rfsyncs");
 
     (void)npc_clunk (f);
 }
