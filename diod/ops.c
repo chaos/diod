@@ -548,19 +548,19 @@ diod_clunk (Npfid *fid)
 
     if (f->dir) {
         rc = closedir(f->dir);
-        f->dir = NULL;
         if (rc < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
     } else if (f->fd != -1) {
         rc = close (f->fd);
-        f->fd = -1;
         if (rc < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
     }
+    f->dir = NULL;
+    f->fd = -1;
     if (!(ret = np_create_rclunk ())) {
         np_uerror (ENOMEM);
         goto error;
