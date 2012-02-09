@@ -212,10 +212,13 @@ static void
 _fidfree (Fid *f)
 {
     if (f) {
-        if (f->dir)
-            (void)closedir(f->dir);
-        else if (f->fd != -1)
-            (void)close (f->fd);
+        if (f->dir) {
+            if (closedir(f->dir) < 0 && errno == EBADF)
+                errn (errno, "_fidfree: closedir");
+        } else if (f->fd != -1) {
+            if (close (f->fd) < 0 && errno == EBADF)
+                errn (errno, "_fidfree: close");
+        }
         if (f->path)
             free(f->path);
         free(f);
