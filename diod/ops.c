@@ -97,7 +97,6 @@ typedef struct {
     char            *path;
     int              fd;
     DIR             *dir;
-    struct dirent   *dirent;
     /* advisory locking */
     int              lock_type;
     /* export flags */
@@ -199,7 +198,6 @@ _fidalloc (void)
         f->path = NULL;
         f->fd = -1;
         f->dir = NULL;
-        f->dirent = NULL;
         f->lock_type = LOCK_UN;
         f->xflags = 0;
         f->mountpt = 0;
@@ -232,8 +230,8 @@ diod_fiddestroy (Npfid *fid)
 {
     Fid *f = fid->aux;
 
-    _fidfree (f);
     fid->aux = NULL;
+    _fidfree (f);
 }
 
 /* Create a 9P qid from a file's stat info.
@@ -648,6 +646,11 @@ diod_lopen (Npfid *fid, u32 flags)
     if ((flags & O_CREAT)) /* can't happen? */
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
+    if (f->fd != -1 || f->dir != NULL) {
+        np_uerror (EINVAL);
+        errn (EINVAL, "fid is already open");
+        goto error_quiet; 
+    }
     f->fd = open (f->path, flags);
     if (f->fd < 0) {
         np_uerror (errno);
@@ -1049,25 +1052,25 @@ error_quiet:
 }
 
 static u32
-_copy_dirent_linux (Fid *f, u8 *buf, u32 buflen)
+_copy_dirent_linux (Fid *f, struct dirent *dp, u8 *buf, u32 buflen)
 {
     Npqid qid;
     u32 ret = 0;
 
-    if (f->dirent->d_type == DT_UNKNOWN) {
+    if (dp->d_type == DT_UNKNOWN) {
         char path[PATH_MAX + 1];
         struct stat sb;
-        snprintf (path, sizeof(path), "%s/%s", f->path, f->dirent->d_name);
+        snprintf (path, sizeof(path), "%s/%s", f->path, dp->d_name);
         if (lstat (path, &sb) < 0) {
             np_uerror (errno);
             goto done;
         }
         _ustat2qid (&sb, &qid);
     } else  {
-        _dirent2qid (f->dirent, &qid);
+        _dirent2qid (dp, &qid);
     }
-    ret = np_serialize_p9dirent(&qid, f->dirent->d_off, f->dirent->d_type,
-                                      f->dirent->d_name, buf, buflen);
+    ret = np_serialize_p9dirent(&qid, dp->d_off, dp->d_type,
+                                      dp->d_name, buf, buflen);
 done:
     return ret;
 }
@@ -1075,7 +1078,7 @@ done:
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
-    struct dirent dbuf;
+    struct dirent dbuf, *dp;
     int i, n = 0, err;
 
     if (offset == 0)
@@ -1083,17 +1086,16 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
     else
         seekdir (f->dir, offset);
     do {
-        err = readdir_r (f->dir, &dbuf, &f->dirent);
+        err = readdir_r (f->dir, &dbuf, &dp);
         if (err > 0) {
             np_uerror (err);
             break;
         }
-        if (err == 0 && f->dirent == NULL)
+        if (err == 0 && dp == NULL)
             break;
-        if (f->mountpt && strcmp (f->dirent->d_name, ".") 
-                       && strcmp (f->dirent->d_name, ".."))
+        if (f->mountpt && strcmp (dp->d_name, ".") && strcmp (dp->d_name, ".."))
                 continue;
-        i = _copy_dirent_linux (f, buf + n, count - n);
+        i = _copy_dirent_linux (f, dp, buf + n, count - n);
         if (i == 0)
             break;
         n += i;
