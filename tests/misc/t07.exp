@@ -1,5 +1,7 @@
 test_rlerror(7): 11
 P9_RLERROR tag 42 ecode 42
+test_rlerror(7): 11
+P9_RLERROR tag 42 ecode 42
 test_tstatfs(8): 11
 P9_TSTATFS tag 42 fid 42
 test_rstatfs(9): 67

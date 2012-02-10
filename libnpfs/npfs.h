@@ -426,6 +426,7 @@ Npfcall *np_create_tread(u32 fid, u64 offset, u32 count);
 Npfcall * np_alloc_rread(u32);
 void np_set_rread_count(Npfcall *, u32);
 Npfcall *np_create_rlerror(u32 ecode);
+Npfcall *np_create_rlerror_static(u32 ecode, void *buf, int buflen);
 Npfcall *np_create_tstatfs(u32 fid);
 Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 		u64 blocks, u64 bfree, u64 bavail,

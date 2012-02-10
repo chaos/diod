@@ -268,6 +268,25 @@ np_create_common(struct cbuf *bufp, u32 size, u8 id)
 }
 
 static Npfcall *
+np_create_common_static(struct cbuf *bufp, u32 size, u8 id,
+			void *buf, int buflen)
+{
+	Npfcall *fc;
+
+	size += sizeof(fc->size) + sizeof(fc->type) + sizeof (fc->tag);
+	assert (buflen >= sizeof(Npfcall) + size);
+
+	fc = buf;
+	fc->pkt = (u8 *) fc + sizeof(*fc);
+	buf_init(bufp, (char *) fc->pkt, size);
+	buf_put_int32(bufp, size, &fc->size);
+	buf_put_int8(bufp, id, &fc->type);
+	buf_put_int16(bufp, P9_NOTAG, &fc->tag);
+
+	return fc;
+}
+
+static Npfcall *
 np_post_check(Npfcall *fc, struct cbuf *bufp)
 {
 	if (buf_check_overflow(bufp)) {
@@ -616,6 +635,20 @@ np_create_rlerror(u32 ecode)
 
 	if (!(fc = np_create_common(bufp, size, P9_RLERROR)))
 		return NULL;
+	buf_put_int32(bufp, ecode, &fc->u.rlerror.ecode);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
+np_create_rlerror_static(u32 ecode, void *buf, int bufsize)
+{
+	int size = sizeof(u32);
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
+
+	fc = np_create_common_static(bufp, size, P9_RLERROR, buf, bufsize);
 	buf_put_int32(bufp, ecode, &fc->u.rlerror.ecode);
 
 	return np_post_check(fc, bufp);

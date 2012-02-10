@@ -144,6 +144,7 @@ static void
 test_rlerror (void)
 {
     Npfcall *fc, *fc2;
+    char buf[512];
 
     if (!(fc = np_create_rlerror (42)))
         msg_exit ("out of memory");
@@ -152,6 +153,13 @@ test_rlerror (void)
     assert (fc->u.rlerror.ecode == fc2->u.rlerror.ecode);
 
     free (fc);
+    free (fc2);
+
+    fc = np_create_rlerror_static (42, buf, sizeof(buf));
+    fc2 = _rcv_buf (fc, P9_RLERROR,  __FUNCTION__);
+
+    assert (fc->u.rlerror.ecode == fc2->u.rlerror.ecode);
+
     free (fc2);
 }
 
