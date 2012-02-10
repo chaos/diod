@@ -52,8 +52,6 @@ static void np_tpool_cleanup (Npsrv *srv);
 static void *np_wthread_proc(void *a);
 static void np_srv_remove_workreq(Nptpool *tp, Npreq *req);
 static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
-static void np_srv_remove_donereq(Nptpool *tp, Npreq *req);
-static void np_srv_add_donereq(Nptpool *tp, Npreq *req);
 
 static char *_ctl_get_conns (char *name, void *a);
 static char *_ctl_get_tpools (char *name, void *a);
@@ -213,29 +211,6 @@ np_srv_remove_workreq(Nptpool *tp, Npreq *req)
 		req->prev->next = req->next;
 	else
 		tp->workreqs = req->next;
-	if (req->next)
-		req->next->prev = req->prev;
-}
-
-static void
-np_srv_add_donereq(Nptpool *tp, Npreq *req)
-{
-	/* assert: srv->lock held */
-	if (tp->donereqs)
-		tp->donereqs->prev = req;
-	req->next = tp->donereqs;
-	tp->donereqs = req;
-	req->prev = NULL;
-}
-
-static void
-np_srv_remove_donereq(Nptpool *tp, Npreq *req)
-{
-	/* assert: srv->lock held */
-	if (req->prev)
-		req->prev->next = req->next;
-	else
-		tp->donereqs = req->next;
 	if (req->next)
 		req->next->prev = req->prev;
 }
@@ -750,16 +725,10 @@ np_wthread_proc(void *a)
 		xpthread_mutex_unlock(&tp->srv->lock);
 
 		rc = np_process_request(req, tp);
-
-		xpthread_mutex_lock(&tp->srv->lock);
-		np_srv_remove_workreq(tp, req);
-		np_srv_add_donereq(tp, req);
-		xpthread_mutex_unlock(&tp->srv->lock);
-
 		np_postprocess_request (req, rc);
 			
 		xpthread_mutex_lock(&tp->srv->lock);
-		np_srv_remove_donereq(tp, req);
+		np_srv_remove_workreq(tp, req);
 		np_req_unref(req);
 	}
 	xpthread_mutex_unlock (&tp->srv->lock);
@@ -999,10 +968,6 @@ _ctl_get_requests(char *name, void *a)
 				goto error_unlock;
 		for (req = tp->workreqs; req != NULL; req = req->next)
 			if (!(_get_one_request (&s, &len, 'R',
-						now - req->birth, req)))
-				goto error_unlock;
-		for (req = tp->donereqs; req != NULL; req = req->next)
-			if (!(_get_one_request (&s, &len, 'D',
 						now - req->birth, req)))
 				goto error_unlock;
 	}
