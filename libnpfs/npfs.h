@@ -111,7 +111,6 @@ struct Npfcall {
 	   struct p9_tremove tremove;
 	   struct p9_rremove rremove;
 	} u;
-	Npfcall*	next;
 };
 
 struct Npfid {
