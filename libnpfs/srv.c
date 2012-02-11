@@ -842,7 +842,7 @@ np_req_unref(Npreq *req)
 		req->fid = NULL;
 	}
 	if (req->flushreq)
-		np_req_unref(req);
+		np_req_unref(req->flushreq);
 	if (req->conn) {
 		np_conn_decref(req->conn);
 		req->conn = NULL;
