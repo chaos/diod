@@ -668,7 +668,7 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 	/* If an in-progress op was interrupted with a signal due to a flush,
 	 * fix up the fid accounting and suppress reply.
 	 */
-	if (ecode == EINTR && req->flushreq) {
+	if (ecode == EINTR) {
 		switch (tc->type) {
 			case P9_TCLUNK:
 			case P9_TREMOVE:
@@ -678,9 +678,9 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 				u32 ofid = tc->u.twalk.fid;
 				u32 nfid = tc->u.twalk.newfid;
 
-				if (ofid == nfid)
-					break;
-				np_fid_decref_bynum (req->conn, nfid, tc->type);
+				if (ofid != nfid)
+					np_fid_decref_bynum (req->conn,
+							     nfid, tc->type);
 				break;
 			}
 		}
@@ -701,9 +701,17 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 		np_req_respond_error(req, ecode);
 	} else
 		np_req_respond(req, rc);
-	/* If a flush was sent for this request, send the flush response.
-	 * This must come after the original response, if there is one.
-	 */
+}
+
+/* If a Tflush was received for this request, send the Rflush now.
+ * This must come after the original response, if there is one.
+ * Since req->flushreq is set while request is in the work queue,
+ * Rflush is deferred until after it is no longer in the work queue to
+ * avoid a race.
+ */
+static void
+np_postprocess_flush (Npreq *req)
+{
 	if (req->flushreq) {
 		np_req_respond_flush(req->flushreq);
 		np_req_unref(req->flushreq);
@@ -736,7 +744,12 @@ np_wthread_proc(void *a)
 			
 		xpthread_mutex_lock(&tp->srv->lock);
 		np_srv_remove_workreq(tp, req);
+		xpthread_mutex_unlock(&tp->srv->lock);
+
+		np_postprocess_flush (req);
 		np_req_unref(req);
+
+		xpthread_mutex_lock(&tp->srv->lock);
 	}
 	xpthread_mutex_unlock (&tp->srv->lock);
 
