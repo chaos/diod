@@ -1,3 +1,8 @@
+1.0-pre64:
+	Set rwdepth=1 mount option until v9fs null deref is resolved.
+	Avoid allocating memory in error response path
+	Change the way a late flush is handled: don't suppress successful req
+
 1.0-pre63:
 	Avoid double close introduced in pre62 (issue 92)
 	Add 'loosefid' flag to work around buggy client (issue 81)
