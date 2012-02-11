@@ -544,7 +544,6 @@ np_process_request(Npreq *req, Nptpool *tp)
 {
 	Npfcall *rc = NULL;
 	Npfcall *tc = req->tcall;
-	int ecode;
 	u64 rbytes = 0, wbytes = 0;
 
 	np_uerror(0);
@@ -641,11 +640,6 @@ np_process_request(Npreq *req, Nptpool *tp)
 			assert (0); /* handled in np_deserialize */
 			break;
 	}
-	if ((ecode = np_rerror())) {
-		if (rc)
-			free(rc);
-		rc = np_create_rlerror(ecode);
-	}
 
 	/* update stats */
 	xpthread_mutex_lock (&tp->srv->lock);
@@ -669,13 +663,13 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 	Npfcall *tc = req->tcall;
 
 	assert (tc != NULL);
-	assert (rc != NULL);
+
 
 	/* Fid accounting: In the common case we drop the fid reference
 	 * taken in np_preprocess_request().  Special handling is needed
 	 * for late-flushed Tclunk/Tremove/Twalk (reverse fid accounting).
 	 */
-	if (req->fid && req->state == REQ_FLUSHED_LATE) {
+	if (rc && req->fid && req->state == REQ_FLUSHED_LATE) {
 		switch (tc->type) {
 			case P9_TCLUNK:
 			case P9_TREMOVE:
@@ -698,9 +692,15 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 		req->fid = NULL;
 	}
 
-	/* send response unless flushed */
 	if (req->state == REQ_NORMAL) {
-		np_req_respond(req, rc);
+		int ecode = np_rerror();
+
+		if (ecode != 0) {
+			if (rc)
+				free(rc);
+			np_req_respond_error(req, ecode);
+		} else 
+			np_req_respond(req, rc);
 	}
 }
 
@@ -739,14 +739,23 @@ np_wthread_proc(void *a)
 void
 np_req_respond(Npreq *req, Npfcall *rc)
 {
+	assert (rc != NULL);
+
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
-	assert (req->fid == NULL);
-	if (req->rcall && req->state == REQ_NORMAL) {
-		np_set_tag(req->rcall, req->tag);
-		np_conn_respond(req);
-	}
+	np_set_tag(req->rcall, req->tag);
+	np_conn_respond(req);
 	xpthread_mutex_unlock(&req->lock);
+}
+
+void
+np_req_respond_error(Npreq *req, int ecode)
+{
+	char buf[512];
+	Npfcall *rc = np_create_rlerror_static(ecode, buf, sizeof(buf));
+
+	np_req_respond (req, rc);
+	req->rcall = NULL;
 }
 
 Npreq *
