@@ -396,6 +396,19 @@ np_create_rflush(void)
 }
 
 Npfcall *
+np_create_rflush_static(void *buf, int buflen)
+{
+	int size = 0;
+	struct cbuf buffer;
+	struct cbuf *bufp = &buffer;
+	Npfcall *fc;
+
+	fc = np_create_common_static(bufp, size, P9_RFLUSH, buf, buflen);
+
+	return np_post_check(fc, bufp);
+}
+
+Npfcall *
 np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
 {
         int size = 2*sizeof(u32)

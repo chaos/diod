@@ -191,12 +191,10 @@ np_conn_read_proc(void *a)
 		 * thread, except P9_TFLUSH which is handled immediately.
 		 */
 		if (fc->type == P9_TFLUSH) {
-			Npfcall *rc;
-
-			rc = np_flush (req, fc);
-			np_req_respond (req, rc);
-			np_req_unref(req);
-
+			if (np_flush (req, fc)) {
+				np_req_respond_flush (req);
+				np_req_unref(req);
+			}
 			xpthread_mutex_lock (&srv->lock);
 			srv->tpool->stats.nreqs[P9_TFLUSH]++;
 			xpthread_mutex_unlock (&srv->lock);
@@ -233,14 +231,13 @@ np_conn_flush (Npconn *conn)
 			nextreq = creq->next;
 			if (creq->conn != conn)
 				continue;
-			creq->state = REQ_FLUSHED_EARLY;
 			np_srv_remove_req(tp, creq);
 			np_req_unref(creq);
 		}
 		for (creq = tp->workreqs; creq != NULL; creq = creq->next) {
 			if (creq->conn != conn)
 				continue;
-			creq->state = REQ_FLUSHED_LATE;
+			creq->state = REQ_NOREPLY;
 			if (conn->srv->flags & SRV_FLAGS_FLUSHSIG)
 				pthread_kill (creq->wthread->thread, SIGUSR2);
 		}

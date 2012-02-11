@@ -24,7 +24,7 @@
 Npfcall *np_version(Npreq *req, Npfcall *tc);
 Npfcall *np_auth(Npreq *req, Npfcall *tc);
 Npfcall *np_attach(Npreq *req, Npfcall *tc);
-Npfcall *np_flush(Npreq *req, Npfcall *tc);
+int np_flush(Npreq *req, Npfcall *tc);
 Npfcall *np_walk(Npreq *req, Npfcall *tc);
 Npfcall *np_open(Npreq *req, Npfcall *tc);
 Npfcall *np_create(Npreq *req, Npfcall *tc);

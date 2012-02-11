@@ -169,7 +169,7 @@ struct Npconn {
 	Npconn*		next;	/* list of connections within a server */
 };
 
-typedef enum { REQ_NORMAL, REQ_FLUSHED_EARLY, REQ_FLUSHED_LATE } Reqstate;
+typedef enum { REQ_NORMAL, REQ_NOREPLY } Reqstate;
 
 struct Npreq {
 	pthread_mutex_t	lock;
@@ -177,6 +177,7 @@ struct Npreq {
 	Npconn*		conn;
 	u16		tag;
 	Reqstate	state;
+	Npreq*		flushreq;
 	Npfcall*	tcall;
 	Npfcall*	rcall;
 	Npfid*		fid;
@@ -345,6 +346,7 @@ int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
 void np_req_respond(Npreq *req, Npfcall *rc);
 void np_req_respond_error(Npreq *req, int ecode);
+void np_req_respond_flush(Npreq *req);
 void np_logerr(Npsrv *srv, const char *fmt, ...)
 	__attribute__ ((format (printf, 2, 3)));
 void np_logmsg(Npsrv *srv, const char *fmt, ...)
@@ -410,6 +412,7 @@ Npfcall *np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname);
 Npfcall *np_create_rauth(Npqid *aqid);
 Npfcall *np_create_tflush(u16 oldtag);
 Npfcall *np_create_rflush(void);
+Npfcall *np_create_rflush_static(void *buf, int buflen);
 Npfcall *np_create_tattach(u32 fid, u32 afid, char *uname, char *aname,
 		   u32 n_uname);
 Npfcall *np_create_rattach(Npqid *qid);

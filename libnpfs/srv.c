@@ -661,15 +661,14 @@ static void
 np_postprocess_request(Npreq *req, Npfcall *rc)
 {
 	Npfcall *tc = req->tcall;
+	int ecode = np_rerror();
 
 	assert (tc != NULL);
 
-
-	/* Fid accounting: In the common case we drop the fid reference
-	 * taken in np_preprocess_request().  Special handling is needed
-	 * for late-flushed Tclunk/Tremove/Twalk (reverse fid accounting).
+	/* If an in-progress op was interrupted with a signal due to a flush,
+	 * fix up the fid accounting and suppress reply.
 	 */
-	if (rc && req->fid && req->state == REQ_FLUSHED_LATE) {
+	if (ecode == EINTR && req->flushreq) {
 		switch (tc->type) {
 			case P9_TCLUNK:
 			case P9_TREMOVE:
@@ -679,28 +678,36 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 				u32 ofid = tc->u.twalk.fid;
 				u32 nfid = tc->u.twalk.newfid;
 
-				if (ofid == nfid || rc->type == P9_RLERROR)
+				if (ofid == nfid)
 					break;
 				np_fid_decref_bynum (req->conn, nfid, tc->type);
 				break;
 			}
-			/* FIXME: handle flushed P9_TAUTH and P9_TATTACH? */
 		}
+		req->state = REQ_NOREPLY;
 	}
+	/* In case this was Tclunk or Tremove, fid must be discarded
+	 * prior to reply, or we could find it reused before we're done.
+	 */ 
 	if (req->fid) {
 		np_fid_decref (&req->fid, tc->type);
 		req->fid = NULL;
 	}
-
-	if (req->state == REQ_NORMAL) {
-		int ecode = np_rerror();
-
-		if (ecode != 0) {
-			if (rc)
-				free(rc);
-			np_req_respond_error(req, ecode);
-		} else 
-			np_req_respond(req, rc);
+	/* Send the response.
+	 */
+	if (ecode) {
+		if (rc)
+			free(rc);
+		np_req_respond_error(req, ecode);
+	} else
+		np_req_respond(req, rc);
+	/* If a flush was sent for this request, send the flush response.
+	 * This must come after the original response, if there is one.
+	 */
+	if (req->flushreq) {
+		np_req_respond_flush(req->flushreq);
+		np_req_unref(req->flushreq);
+		req->flushreq = NULL;
 	}
 }
 
@@ -743,7 +750,8 @@ np_req_respond(Npreq *req, Npfcall *rc)
 
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
-	np_set_tag(req->rcall, req->tag);
+	if (req->state == REQ_NORMAL)
+		np_set_tag(req->rcall, req->tag);
 	np_conn_respond(req);
 	xpthread_mutex_unlock(&req->lock);
 }
@@ -753,6 +761,16 @@ np_req_respond_error(Npreq *req, int ecode)
 {
 	char buf[512];
 	Npfcall *rc = np_create_rlerror_static(ecode, buf, sizeof(buf));
+
+	np_req_respond (req, rc);
+	req->rcall = NULL;
+}
+
+void
+np_req_respond_flush(Npreq *req)
+{
+	char buf[512];
+	Npfcall *rc = np_create_rflush_static(buf, sizeof(buf));
 
 	np_req_respond (req, rc);
 	req->rcall = NULL;
@@ -783,6 +801,7 @@ np_req_alloc(Npconn *conn, Npfcall *tc) {
 	req->conn = conn;
 	req->tag = tc->tag;
 	req->state = REQ_NORMAL;
+	req->flushreq = NULL;
 	req->tcall = tc;
 	req->rcall = NULL;
 	req->next = NULL;
@@ -818,10 +837,11 @@ np_req_unref(Npreq *req)
 	xpthread_mutex_unlock(&req->lock);
 
 	if (req->fid) {
-		assert (req->state == REQ_FLUSHED_EARLY);
 		np_fid_decref (&req->fid, req->tcall->type);
 		req->fid = NULL;
 	}
+	if (req->flushreq)
+		np_req_unref(req);
 	if (req->conn) {
 		np_conn_decref(req->conn);
 		req->conn = NULL;
@@ -847,7 +867,6 @@ np_req_unref(Npreq *req)
 	if (req)
 		free(req);
 }
-
 
 void
 np_logmsg(Npsrv *srv, const char *fmt, ...)

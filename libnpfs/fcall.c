@@ -249,12 +249,12 @@ error:
 	return rc;
 }
 
-Npfcall*
+int
 np_flush(Npreq *req, Npfcall *tc)
 {
 	u16 oldtag = tc->u.tflush.oldtag;
 	Npreq *creq;
-	Npfcall *ret;
+	int ret = 1;
 	Nptpool *tp;
 	Npsrv *srv = req->conn->srv;
 
@@ -268,7 +268,6 @@ np_flush(Npreq *req, Npfcall *tc)
 					   creq->tcall->type);
 			}
 			np_srv_remove_req(tp, creq);
-			creq->state = REQ_FLUSHED_EARLY;
 			np_req_unref(creq);
 			goto done;
 		}
@@ -279,9 +278,13 @@ np_flush(Npreq *req, Npfcall *tc)
 				np_logmsg (srv, "flush(late): req type %d",
 					   creq->tcall->type);
 			}
+			/* only the most recent flush must be responded to */
+			if (creq->flushreq)
+				np_req_unref(creq->flushreq);
+			creq->flushreq = req;
+			ret = 0; /* reply is delayed until after req */
 			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)
 				pthread_kill (creq->wthread->thread, SIGUSR2);
-			creq->state = REQ_FLUSHED_LATE;
 			goto done;
 		}
 	}
@@ -289,8 +292,6 @@ np_flush(Npreq *req, Npfcall *tc)
 		np_logmsg (srv, "flush: tag %d not found", oldtag);
 done:
 	xpthread_mutex_unlock(&req->conn->srv->lock);
-	if (!(ret = np_create_rflush ()))
-		np_uerror (ENOMEM);
 	return ret;
 }
 
