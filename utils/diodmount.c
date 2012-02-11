@@ -197,7 +197,7 @@ main (int argc, char *argv[])
      * N.B. this option is not upstream yet but unknown options are ignored.
      */
     if (!opt_find (o, "rwdepth"))
-        opt_addf (o, "rwdepth=%d", 32);
+        opt_addf (o, "rwdepth=%d", 1);
 
     /* Server is on an inherited file descriptor.
      * For testing, we start server on a socketpair duped to fd 0.
