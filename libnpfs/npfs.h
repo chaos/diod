@@ -43,6 +43,9 @@ typedef struct Npuser Npuser;
 #define FID_MAGIC 0x765abcdf
 #define FID_MAGIC_FREED 0xdeadbeef
 
+#define STATIC_RFLUSH_SIZE	(sizeof(Npfcall) + 4 + 1 + 2)
+#define STATIC_RLERROR_SIZE	(sizeof(Npfcall) + 4 + 1 + 2 + 4)
+
 struct Npfcall {
 	u32		size;
 	u8		type;

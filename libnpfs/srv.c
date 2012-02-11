@@ -759,7 +759,7 @@ np_req_respond(Npreq *req, Npfcall *rc)
 void
 np_req_respond_error(Npreq *req, int ecode)
 {
-	char buf[512];
+	char buf[STATIC_RLERROR_SIZE];
 	Npfcall *rc = np_create_rlerror_static(ecode, buf, sizeof(buf));
 
 	np_req_respond (req, rc);
@@ -769,7 +769,7 @@ np_req_respond_error(Npreq *req, int ecode)
 void
 np_req_respond_flush(Npreq *req)
 {
-	char buf[512];
+	char buf[STATIC_RFLUSH_SIZE];
 	Npfcall *rc = np_create_rflush_static(buf, sizeof(buf));
 
 	np_req_respond (req, rc);

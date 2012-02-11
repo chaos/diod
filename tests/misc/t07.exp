@@ -92,6 +92,8 @@ test_tflush(108): 9
 P9_TFLUSH tag 42 oldtag 1
 test_rflush(109): 7
 P9_RFLUSH tag 42
+test_rflush(109): 7
+P9_RFLUSH tag 42
 test_tattach(104): 29
 P9_TATTACH tag 42 fid 1 afid 2 uname 'abc' aname 'xyz' n_uname 5
 test_rattach(105): 20

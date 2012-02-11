@@ -144,7 +144,7 @@ static void
 test_rlerror (void)
 {
     Npfcall *fc, *fc2;
-    char buf[512];
+    char buf[STATIC_RLERROR_SIZE];
 
     if (!(fc = np_create_rlerror (42)))
         msg_exit ("out of memory");
@@ -941,12 +941,19 @@ static void
 test_rflush (void)
 {
     Npfcall *fc, *fc2;
+    char buf[STATIC_RFLUSH_SIZE];
 
     if (!(fc = np_create_rflush ()))
         msg_exit ("out of memory in %s", __FUNCTION__); 
     fc2 = _rcv_buf (fc, P9_RFLUSH, __FUNCTION__);
 
     free (fc);
+    free (fc2);
+
+    if (!(fc = np_create_rflush_static (buf, sizeof(buf))))
+        msg_exit ("out of memory in %s", __FUNCTION__); 
+    fc2 = _rcv_buf (fc, P9_RFLUSH, __FUNCTION__);
+
     free (fc2);
 }
 
