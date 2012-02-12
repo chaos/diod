@@ -193,7 +193,7 @@ np_conn_read_proc(void *a)
 		if (fc->type == P9_TFLUSH) {
 			if (np_flush (req, fc)) {
 				np_req_respond_flush (req);
-				np_req_unref(req);
+				np_req_free(req);
 			}
 			xpthread_mutex_lock (&srv->lock);
 			srv->tpool->stats.nreqs[P9_TFLUSH]++;
@@ -232,7 +232,7 @@ np_conn_flush (Npconn *conn)
 			if (creq->conn != conn)
 				continue;
 			np_srv_remove_req(tp, creq);
-			np_req_unref(creq);
+			np_req_free(creq);
 		}
 		for (creq = tp->workreqs; creq != NULL; creq = creq->next) {
 			if (creq->conn != conn)

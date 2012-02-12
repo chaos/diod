@@ -174,8 +174,6 @@ struct Npconn {
 typedef enum { REQ_NORMAL, REQ_NOREPLY } Reqstate;
 
 struct Npreq {
-	pthread_mutex_t	lock;
-	int		refcount;
 	Npconn*		conn;
 	u16		tag;
 	Reqstate	state;
@@ -222,7 +220,6 @@ struct Nptpool {
 	Npreq*		reqs_first;
 	Npreq*		reqs_last;
 	Npreq*		workreqs;
-	Npreq*		donereqs;
 	Npstats		stats;
 	pthread_cond_t	reqcond;
 	Nptpool		*next;

@@ -268,7 +268,7 @@ np_flush(Npreq *req, Npfcall *tc)
 					   creq->tcall->type);
 			}
 			np_srv_remove_req(tp, creq);
-			np_req_unref(creq);
+			np_req_free(creq);
 			goto done;
 		}
 		for(creq = tp->workreqs; creq != NULL; creq = creq->next) {
@@ -280,7 +280,7 @@ np_flush(Npreq *req, Npfcall *tc)
 			}
 			/* only the most recent flush must be responded to */
 			if (creq->flushreq)
-				np_req_unref(creq->flushreq);
+				np_req_free(creq->flushreq);
 			creq->flushreq = req;
 			ret = 0; /* reply is delayed until after req */
 			if (req->conn->srv->flags & SRV_FLAGS_FLUSHSIG)

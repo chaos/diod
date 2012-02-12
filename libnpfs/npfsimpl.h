@@ -56,6 +56,5 @@ Npfcall *np_unlinkat(Npreq *req, Npfcall *tc);
 void np_srv_add_req(Npsrv *srv, Npreq *req);
 void np_srv_remove_req(Nptpool *tp, Npreq *req);
 Npreq *np_req_alloc(Npconn *conn, Npfcall *tc);
-Npreq *np_req_ref(Npreq*);
-void np_req_unref(Npreq*);
+void np_req_free(Npreq *req);
 

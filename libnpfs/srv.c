@@ -41,12 +41,6 @@
 #include "xpthread.h"
 #include "npfsimpl.h"
 
-struct Reqpool {
-	pthread_mutex_t	lock;
-	int		reqnum;
-	Npreq*		reqlist;
-} reqpool = { PTHREAD_MUTEX_INITIALIZER, 0, NULL };
-
 static Nptpool *np_tpool_create(Npsrv *srv, char *name);
 static void np_tpool_cleanup (Npsrv *srv);
 static void *np_wthread_proc(void *a);
@@ -714,7 +708,7 @@ np_postprocess_flush (Npreq *req)
 {
 	if (req->flushreq) {
 		np_req_respond_flush(req->flushreq);
-		np_req_unref(req->flushreq);
+		np_req_free(req->flushreq);
 		req->flushreq = NULL;
 	}
 }
@@ -747,7 +741,7 @@ np_wthread_proc(void *a)
 		xpthread_mutex_unlock(&tp->srv->lock);
 
 		np_postprocess_flush (req);
-		np_req_unref(req);
+		np_req_free(req);
 
 		xpthread_mutex_lock(&tp->srv->lock);
 	}
@@ -761,13 +755,11 @@ np_req_respond(Npreq *req, Npfcall *rc)
 {
 	assert (rc != NULL);
 
-	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
 	if (req->state == REQ_NORMAL) {
 		np_set_tag(req->rcall, req->tag);
 		np_conn_respond(req);
 	}
-	xpthread_mutex_unlock(&req->lock);
 }
 
 void
@@ -794,24 +786,11 @@ Npreq *
 np_req_alloc(Npconn *conn, Npfcall *tc) {
 	Npreq *req;
 
-	req = NULL;
-	xpthread_mutex_lock(&reqpool.lock);
-	if (reqpool.reqlist) {
-		req = reqpool.reqlist;
-		reqpool.reqlist = req->next;
-		reqpool.reqnum--;
-	}
-	xpthread_mutex_unlock(&reqpool.lock);
-
-	if (!req) {
-		req = malloc(sizeof(*req));
-		if (!req)
-			return NULL;
-	}
+	req = malloc(sizeof(*req));
+	if (!req)
+		return NULL;
 
 	np_conn_incref(conn);
-	pthread_mutex_init(&req->lock, NULL);
-	req->refcount = 1;
 	req->conn = conn;
 	req->tag = tc->tag;
 	req->state = REQ_NORMAL;
@@ -829,33 +808,15 @@ np_req_alloc(Npconn *conn, Npfcall *tc) {
 	return req;
 }
 
-Npreq *
-np_req_ref(Npreq *req)
-{
-	xpthread_mutex_lock(&req->lock);
-	req->refcount++;
-	xpthread_mutex_unlock(&req->lock);
-	return req;
-}
-
 void
-np_req_unref(Npreq *req)
+np_req_free(Npreq *req)
 {
-	xpthread_mutex_lock(&req->lock);
-	assert(req->refcount > 0);
-	req->refcount--;
-	if (req->refcount) {
-		xpthread_mutex_unlock(&req->lock);
-		return;
-	}
-	xpthread_mutex_unlock(&req->lock);
-
 	if (req->fid) {
 		np_fid_decref (&req->fid, req->tcall->type);
 		req->fid = NULL;
 	}
 	if (req->flushreq)
-		np_req_unref(req->flushreq);
+		np_req_free(req->flushreq);
 	if (req->conn) {
 		np_conn_decref(req->conn);
 		req->conn = NULL;
@@ -868,18 +829,7 @@ np_req_unref(Npreq *req)
 		free (req->rcall);
 		req->rcall = NULL;
 	}
-	pthread_mutex_destroy (&req->lock);
-
-	xpthread_mutex_lock(&reqpool.lock);
-	if (reqpool.reqnum < 64) {
-		req->next = reqpool.reqlist;
-		reqpool.reqlist = req;
-		reqpool.reqnum++;
-		req = NULL;
-	}
-	xpthread_mutex_unlock(&reqpool.lock);
-	if (req)
-		free(req);
+	free(req);
 }
 
 void
