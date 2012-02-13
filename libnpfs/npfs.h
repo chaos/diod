@@ -174,6 +174,8 @@ struct Npconn {
 typedef enum { REQ_NORMAL, REQ_NOREPLY } Reqstate;
 
 struct Npreq {
+	pthread_mutex_t	lock;
+	int		refcount;
 	Npconn*		conn;
 	u16		tag;
 	Reqstate	state;
