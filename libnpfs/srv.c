@@ -49,7 +49,6 @@ static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 
 static char *_ctl_get_conns (char *name, void *a);
 static char *_ctl_get_tpools (char *name, void *a);
-static char *_ctl_get_requests (char *name, void *a);
 
 Npsrv*
 np_srv_create(int nwthread, int flags)
@@ -73,8 +72,6 @@ np_srv_create(int nwthread, int flags)
 	if (!np_ctl_addfile (srv->ctlroot, "connections", _ctl_get_conns,srv,0))
 		goto error;
 	if (!np_ctl_addfile (srv->ctlroot, "tpools", _ctl_get_tpools, srv, 0))
-		goto error;
-	if (!np_ctl_addfile (srv->ctlroot, "requests", _ctl_get_requests,srv,0))
 		goto error;
 	if (np_usercache_create (srv) < 0)
 		goto error;
@@ -940,53 +937,6 @@ _ctl_get_tpools (char *name, void *a)
 			np_uerror (ENOMEM);
 			goto error_unlock;
 		}
-	}
-	xpthread_mutex_unlock(&srv->lock);
-	return s;
-error_unlock:
-	xpthread_mutex_unlock(&srv->lock);
-	if (s)
-		free(s);
-	return NULL;
-}
-
-static char *
-_get_one_request (char **sp, int *lp, char state, int age, Npreq *req)
-{
-	char *uname = req->fid ? req->fid->user->uname : "-";
-	char *aname = req->fid && req->fid->aname ? req->fid->aname : "-";
-	char reqstr[40];
-
-	np_snprintfcall (reqstr, sizeof (reqstr), req->tcall);
-	if (aspf (sp, lp, "%-10.10s %-10.10s %-10.10s %d %c %s\n",
-		 			np_conn_get_client_id (req->conn),
-					aname, uname, age, state, reqstr) < 0) {
-		np_uerror (ENOMEM);
-		return NULL;
-	}
-	return *sp;
-}
-
-static char *
-_ctl_get_requests(char *name, void *a)
-{
-	Npsrv *srv = (Npsrv *)a;
-	Nptpool *tp;
-	char *s = NULL;
-	int len = 0;
-	Npreq *req;
-	time_t now = time (NULL);
-
-	xpthread_mutex_lock(&srv->lock);
-	for (tp = srv->tpool; tp != NULL; tp = tp->next) {
-		for (req = tp->reqs_first; req != NULL; req = req->next)
-			if (!(_get_one_request (&s, &len, 'W',
-						now - req->birth, req)))
-				goto error_unlock;
-		for (req = tp->workreqs; req != NULL; req = req->next)
-			if (!(_get_one_request (&s, &len, 'R',
-						now - req->birth, req)))
-				goto error_unlock;
 	}
 	xpthread_mutex_unlock(&srv->lock);
 	return s;
