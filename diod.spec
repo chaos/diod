@@ -1,6 +1,6 @@
 Name: diod
-Version: 1.0
-Release: pre64
+Version: 1.0.0
+Release: 1
 
 Summary:  I/O forwarding server for 9P.
 License: GPL
