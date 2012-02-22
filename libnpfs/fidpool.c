@@ -54,9 +54,9 @@ _destroy_fid (Npfid *f)
 
 	srv = f->conn->srv;
 	next = f->next;
-	if (f->refcount > 0 && f->history) {
-		np_logmsg (srv, "_destroy_fid: fid %d has %d refs: %s",
-			   f->fid, f->refcount, f->history);
+	if (f->refcount > 0 && (srv->flags & SRV_FLAGS_DEBUG_FIDPOOL)) {
+		np_logmsg (srv, "_destroy_fid: fid %d has %d refs",
+			   f->fid, f->refcount);
 	}
 	if ((f->type & P9_QTAUTH)) {
 		if (srv->auth && srv->auth->clunk)
@@ -73,8 +73,6 @@ _destroy_fid (Npfid *f)
 		np_tpool_decref(f->tpool);
 	if (f->aname)
 		free (f->aname);
-	if (f->history)
-		free (f->history);
 	pthread_mutex_destroy (&f->lock);
 	f->magic = FID_MAGIC_FREED;
 	free(f);
@@ -92,25 +90,11 @@ _create_fid (Npconn *conn, u32 fid)
 		f->conn = conn;
 		f->fid = fid;
 		pthread_mutex_init (&f->lock, NULL);
-		if ((conn->srv->flags & SRV_FLAGS_DEBUG_FIDPOOL)) 
-			if ((f->history = malloc (FID_HISTORY_SIZE)))
-				f->history[0] = '\0';
 		f->magic = FID_MAGIC;
 	} else
 		np_uerror (ENOMEM);
 
 	return f;
-}
-
-static void
-_append_history (Npfid *f, char sign, enum p9_msg_t op)
-{
-	if (f->history) {
-		int len = strlen (f->history);
-
-		snprintf (f->history + len, FID_HISTORY_SIZE - len,
-			  "%c%d", sign, op);
-	}
 }
 
 Npfidpool *
@@ -191,7 +175,7 @@ _lookup_fid (Npfid **head, u32 fid)
 
 	/* assert (pool->lock held) */
 	for (f = *head; f != NULL; f = f->next) {
-		if (f->fid == fid && !f->zombie) {
+		if (f->fid == fid && !(f->flags & FID_FLAGS_ZOMBIE)) {
 			if (f != *head) /* move to head */
 				_optimize_fid (head, f);
 			break;
@@ -228,7 +212,7 @@ _link_fid (Npfid **head, Npfid *f)
 /* Find a fid, then refcount++
  */
 Npfid *
-np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
+np_fid_find (Npconn *conn, u32 fid)
 {
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
@@ -236,40 +220,29 @@ np_fid_find (Npconn *conn, u32 fid, enum p9_msg_t op)
 
 	xpthread_mutex_lock (&pool->lock);
 	if ((f = _lookup_fid (&pool->htable[hash], fid)))
-		np_fid_incref (f, op);
+		np_fid_incref (f);
 	xpthread_mutex_unlock (&pool->lock);
 	
 	return f;
 }
 
-void
-_log_create_err (Npfid *f, int loose)
-{
-	Npsrv *srv = f->conn->srv;
-
-	np_logmsg (srv, "np_fid_create: %sunclunked fid %d (%s): %d refs%s%s",
-		   loose ? "recycling " : "", f->fid,
-		   srv->get_path ? srv->get_path (f) : "<nil>",
-		   f->refcount,
-		   f->history ? ": " : "",
-		   f->history ? f->history : "");
-}
-
 /* Create a fid with initial refcount of 1.
  */
 Npfid *
-np_fid_create (Npconn *conn, u32 fid, enum p9_msg_t op)
+np_fid_create (Npconn *conn, u32 fid)
 {
-	int loose = (conn->srv->flags & SRV_FLAGS_LOOSEFID);
+	Npsrv *srv = conn->srv;
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
 	Npfid *f;
 
 	xpthread_mutex_lock(&pool->lock);
 	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
-		_log_create_err (f, loose);
-		if (loose) {
-			f->zombie = 1; /* fid persists invisibly */
+		np_logmsg (srv, "np_fid_create: unclunked fid %d (%s): %d refs",
+			   f->fid, srv->get_path ? srv->get_path (f) : "<nil>",
+			   f->refcount);
+		if ((srv->flags & SRV_FLAGS_LOOSEFID)) {
+			f->flags |= FID_FLAGS_ZOMBIE;
 		} else {
 			np_uerror (EEXIST);
 			f = NULL;
@@ -277,7 +250,7 @@ np_fid_create (Npconn *conn, u32 fid, enum p9_msg_t op)
 		}
 	}
 	if ((f = _create_fid (conn, fid))) {
-		np_fid_incref (f, op);
+		np_fid_incref (f);
 		_link_fid (&pool->htable[hash], f);
 	}
 done:
@@ -289,14 +262,13 @@ done:
 /* refcount++
  */
 Npfid *
-np_fid_incref (Npfid *f, enum p9_msg_t op)
+np_fid_incref (Npfid *f)
 {
 	assert (f != NULL);
 	assert (f->magic == FID_MAGIC);
 
 	xpthread_mutex_lock (&f->lock);
 	f->refcount++;
-	_append_history (f, '+', op);
 	xpthread_mutex_unlock (&f->lock);
 
 	return f;
@@ -306,7 +278,7 @@ np_fid_incref (Npfid *f, enum p9_msg_t op)
  * Destroy when refcount reaches zero.
  */
 void
-np_fid_decref (Npfid **fp, enum p9_msg_t op)
+np_fid_decref (Npfid **fp)
 {
 	Npfid *f = *fp;
 	int refcount;
@@ -316,7 +288,6 @@ np_fid_decref (Npfid **fp, enum p9_msg_t op)
 
 	xpthread_mutex_lock (&f->lock);
 	refcount = --f->refcount;
-	_append_history (f, '-', op);
 	if (refcount == 0)
 		*fp = NULL;
 	xpthread_mutex_unlock (&f->lock);
@@ -334,7 +305,7 @@ np_fid_decref (Npfid **fp, enum p9_msg_t op)
 }
 
 void
-np_fid_decref_bynum (Npconn *conn, u32 fid, enum p9_msg_t op)
+np_fid_decref_bynum (Npconn *conn, u32 fid)
 {
 	Npfidpool *pool = conn->fidpool;
 	int hash = fid % pool->size;
@@ -345,7 +316,6 @@ np_fid_decref_bynum (Npconn *conn, u32 fid, enum p9_msg_t op)
 	if ((f = _lookup_fid (&pool->htable[hash], fid))) {
 		xpthread_mutex_lock (&f->lock);
 		refcount = --f->refcount;
-		_append_history (f, '-', op);
 		xpthread_mutex_unlock (&f->lock);
 
 		if (refcount == 0) {

@@ -112,7 +112,7 @@ np_auth(Npreq *req, Npfcall *tc)
 		np_logerr (srv, "%s: invalid afid (%d)", a, tc->u.tauth.afid);
 		goto error;
 	}
-	np_fid_incref(afid, tc->type);
+	np_fid_incref(afid);
 	if (!(afid->user = np_attach2user (srv, &tc->u.tauth.uname,
 				     		 tc->u.tauth.n_uname))) {
 		np_logerr (srv, "%s: user lookup", a);
@@ -163,7 +163,7 @@ np_attach(Npreq *req, Npfcall *tc)
 		goto error;
 	}
 	if (tc->u.tattach.afid != P9_NOFID) {
-		if (!(afid = np_fid_find(conn, tc->u.tattach.afid, tc->type))) {
+		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
 			np_uerror(EPERM);
 			np_logerr (srv, "%s: invalid afid (%d)", a,
 				   tc->u.tattach.afid);
@@ -242,10 +242,10 @@ np_attach(Npreq *req, Npfcall *tc)
 		rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 	}
 	if (rc)
-		np_fid_incref (fid, tc->type);
+		np_fid_incref (fid);
 error:
 	if (afid)
-		np_fid_decref (&afid, tc->type);
+		np_fid_decref (&afid);
 	return rc;
 }
 
@@ -325,7 +325,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	}
 
 	if (tc->u.twalk.fid != tc->u.twalk.newfid) {
-		newfid = np_fid_create(conn, tc->u.twalk.newfid, tc->type);
+		newfid = np_fid_create(conn, tc->u.twalk.newfid);
 		if (!newfid) {
 			if (np_rerror () == EEXIST) {
 				np_uerror(EIO);
@@ -392,7 +392,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	rc = np_create_rwalk(i, wqids);
 done:
 	if (!rc && tc->u.twalk.fid != tc->u.twalk.newfid && newfid != NULL)
-		np_fid_decref (&newfid, tc->type);
+		np_fid_decref (&newfid);
 	return rc;
 }
 
@@ -547,7 +547,7 @@ done:
 	 * even if the clunk returns an error, the fid is no longer valid.
 	 */
 	if (req->fid)
-		np_fid_decref (&req->fid, tc->type);
+		np_fid_decref (&req->fid);
 	return rc;
 }
 
@@ -577,7 +577,7 @@ done:
 	/* spec says clunk the fid even if the remove fails
    	 */
 	if (req->fid)
-		np_fid_decref (&req->fid, tc->type);
+		np_fid_decref (&req->fid);
 	return rc;
 }
 
@@ -742,7 +742,7 @@ np_rename(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "rename: invalid fid");
 		goto done;
 	}
-	if (!(dfid = np_fid_find(req->conn, tc->u.trename.dfid, tc->type))) {
+	if (!(dfid = np_fid_find(req->conn, tc->u.trename.dfid))) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "rename: invalid dfid");
 		goto done;
@@ -761,7 +761,7 @@ np_rename(Npreq *req, Npfcall *tc)
 	}
 done:
 	if (dfid)
-		np_fid_decref (&dfid, tc->type);
+		np_fid_decref (&dfid);
 	return rc;
 }
 
@@ -875,7 +875,7 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "xattrwalk: invalid fid");
 		goto done;
 	}
-	if (!(attrfid = np_fid_find(req->conn, tc->u.txattrwalk.attrfid, tc->type))) {
+	if (!(attrfid = np_fid_find(req->conn, tc->u.txattrwalk.attrfid))) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "xattrwalk: invalid attrfid");
 		goto done;
@@ -895,7 +895,7 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 	}
 done:
 	if (attrfid)
-		np_fid_decref (&attrfid, tc->type);
+		np_fid_decref (&attrfid);
 	return rc;
 }
 
@@ -1068,7 +1068,7 @@ np_link(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "link: invalid dfid");
 		goto done;
 	}
-	if (!(fid = np_fid_find(req->conn, tc->u.tlink.fid, tc->type))) {
+	if (!(fid = np_fid_find(req->conn, tc->u.tlink.fid))) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "link: invalid fid");
 		goto done;
@@ -1087,7 +1087,7 @@ np_link(Npreq *req, Npfcall *tc)
 	}
 done:
 	if (fid)
-		np_fid_decref (&fid, tc->type);
+		np_fid_decref (&fid);
 	return rc;
 }
 
@@ -1142,7 +1142,7 @@ np_renameat (Npreq *req, Npfcall *tc)
 		np_uerror (EPERM);
 		goto done;
 	}
-	if (!(newdirfid = np_fid_find(req->conn, tc->u.trenameat.newdirfid, tc->type))) {
+	if (!(newdirfid = np_fid_find(req->conn, tc->u.trenameat.newdirfid))) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "renameat: invalid newdirfid");
 		goto done;
@@ -1157,7 +1157,7 @@ np_renameat (Npreq *req, Npfcall *tc)
 					 newdirfid, &tc->u.trenameat.newname);
 done:
 	if (newdirfid)
-		np_fid_decref (&newdirfid, tc->type);
+		np_fid_decref (&newdirfid);
 	return rc;
 }
 

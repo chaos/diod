@@ -113,6 +113,8 @@ struct Npfcall {
 	} u;
 };
 
+#define FID_FLAGS_ZOMBIE	0x01
+
 struct Npfid {
 	int		magic;
 	pthread_mutex_t lock;
@@ -123,9 +125,8 @@ struct Npfid {
 	Npuser*		user;
 	Nptpool*	tpool;	/* tpool preference, if any (else NULL) */
 	char		*aname;
-	char		*history;
+	int		flags;
 	void*		aux;
-	int		zombie;
 
 	Npfid*		next;	/* list of fids within a bucket */
 	Npfid*		prev;
@@ -369,13 +370,12 @@ void np_conn_set_authuser(Npconn *, u32);
 Npfidpool *np_fidpool_create(void);
 int np_fidpool_destroy(Npfidpool *pool);
 int np_fidpool_count(Npfidpool *pool);
-Npfid *np_fid_find(Npconn *conn, u32 fid, enum p9_msg_t op);
-Npfid *np_fid_create(Npconn *conn, u32 fid, enum p9_msg_t op);
-Npfid *np_fid_create_blocking(Npconn *conn, u32 fid, enum p9_msg_t op);
-Npfid *np_fid_incref(Npfid *fid, enum p9_msg_t op);
-void np_fid_decref(Npfid **fid, enum p9_msg_t op);
-void np_fid_decref_bynum (Npconn *conn, u32 fid, enum p9_msg_t op);
-
+Npfid *np_fid_find(Npconn *conn, u32 fid);
+Npfid *np_fid_create(Npconn *conn, u32 fid);
+Npfid *np_fid_create_blocking(Npconn *conn, u32 fid);
+Npfid *np_fid_incref(Npfid *fid);
+void np_fid_decref(Npfid **fid);
+void np_fid_decref_bynum (Npconn *conn, u32 fid);
 
 /* trans.c */
 Nptrans *np_trans_create(void *aux, int (*recv)(Npfcall **, u32, void *),
