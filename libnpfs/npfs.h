@@ -253,6 +253,7 @@ enum {
 	SRV_FLAGS_DAC_BYPASS  	=0x00200000,
 	SRV_FLAGS_SETGROUPS	=0x00400000,
 	SRV_FLAGS_LOOSEFID	=0x00800000, /* work around buggy clients */
+	SRV_FLAGS_SHAREFD 	=0x01000000, /* clients share file desc */
 };
 
 typedef char * (*SynGetF)(char *name, void *arg);

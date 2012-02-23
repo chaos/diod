@@ -585,7 +585,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     umask (0);
 
     flags |= SRV_FLAGS_LOOSEFID;        /* work around buggy clients */
-    
+    flags |= SRV_FLAGS_SHAREFD;
     flags |= SRV_FLAGS_AUTHCONN;
     //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
     if (geteuid () == 0) {
@@ -600,8 +600,8 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         flags |= SRV_FLAGS_NOUSERDB;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
         errn_exit (np_rerror (), "np_srv_create");
-    if (diod_register_ops (ss.srv) < 0)
-        errn_exit (np_rerror (), "diod_register_ops");
+    if (diod_init (ss.srv) < 0)
+        errn_exit (np_rerror (), "diod_init");
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL)))
         errn_exit (n, "pthread_create _service_loop");
@@ -624,6 +624,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         errn_exit (n, "pthread_join _service_loop_rdma");
 #endif
 
+    diod_fini (ss.srv);
     np_srv_destroy (ss.srv);
 }
 

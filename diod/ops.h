@@ -21,7 +21,8 @@
  *  <http://www.gnu.org/licenses/>.
  *****************************************************************************/
 
-int diod_register_ops (Npsrv *srv);
+int diod_init (Npsrv *srv);
+void diod_fini (Npsrv *srv);
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
