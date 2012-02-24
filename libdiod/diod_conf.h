@@ -86,6 +86,7 @@ void    diod_conf_add_listen (char *s);
 
 #define XFLAGS_RO           0x01
 #define XFLAGS_SUPPRESS     0x02
+#define XFLAGS_SHAREFD      0x04
 
 typedef struct {
     char         *path;

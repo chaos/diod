@@ -23,7 +23,9 @@ The exports table can include two types of element, a string element (as above),
 or a table element of the form \fI{ path="/path", opts="ro" }\fR.
 The path attribute is mandatory, and the opts attribute is an optional,
 comma-separated list of export options.  Currently the only supported
-options are "ro" (export read-only) and "suppress" (no export).
+options are "ro" (export read-only), "suppress" (no export), and
+"sharefd" (allow limited server-side file descriptor sharing for files
+opened O_RDONLY).
 The two table element forms can be mixed in the exports table.
 Note that although \fBdiod\fR will not traverse file system boundaries
 for a given mount due to inode uniqueness constraints, subdirectories of 

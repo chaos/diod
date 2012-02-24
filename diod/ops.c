@@ -129,6 +129,7 @@ struct pathpool_struct {
 
 #define DIOD_FID_FLAGS_ROFS       0x01
 #define DIOD_FID_FLAGS_MOUNTPT    0x02
+#define DIOD_FID_FLAGS_SHAREFD    0x04
 
 typedef struct {
     Path            path;
@@ -354,7 +355,7 @@ _ioctx_open (Npfid *fid, u32 flags, u32 mode)
     assert (f->ioctx == NULL);
 
     xpthread_mutex_lock (&f->path->lock);
-    if ((srv->flags & SRV_FLAGS_SHAREFD) && ((flags & 3) == O_RDONLY)) {
+    if ((f->flags & DIOD_FID_FLAGS_SHAREFD) && ((flags & 3) == O_RDONLY)) {
         for (ip = f->path->ioctx; ip != NULL; ip = ip->next) {
             if (ip->qid.type != P9_QTFILE)
                 continue;
@@ -703,6 +704,8 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         goto error;
     if ((xflags & XFLAGS_RO))
         f->flags |= DIOD_FID_FLAGS_ROFS;
+    if ((xflags & XFLAGS_SHAREFD))
+        f->flags |= DIOD_FID_FLAGS_SHAREFD;
     if (stat (f->path->s, &sb) < 0) { /* OK to follow symbolic links */
         np_uerror (errno);
         goto error;

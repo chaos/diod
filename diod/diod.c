@@ -585,7 +585,6 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     umask (0);
 
     flags |= SRV_FLAGS_LOOSEFID;        /* work around buggy clients */
-    flags |= SRV_FLAGS_SHAREFD;
     flags |= SRV_FLAGS_AUTHCONN;
     //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
     if (geteuid () == 0) {
