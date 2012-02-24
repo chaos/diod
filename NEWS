@@ -1,4 +1,11 @@
 =========================================================================
+Release Notes for DIOD version 1.0.2                          24 Feb 2012
+=========================================================================
+
+* Add 'exportopts' diod.conf config option.  This allows the new
+  'sharefd' option to be enabled globally in conjunction with exportall=1.
+
+=========================================================================
 Release Notes for DIOD version 1.0.1                          24 Feb 2012
 =========================================================================
 
