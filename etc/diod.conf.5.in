@@ -38,6 +38,10 @@ has started, they will become immediately mountable.
 If there is a duplicate entry for a file system in the \fIexports\fR list,
 any options listed in the exports entry will apply.
 .TP
+.I "exportopts = ""opt,opt,..."""
+Establish a default set of export options.  These are overridden,
+not appended to, by opts attributes in an "exports" entry.
+.TP
 .I "nwthreads = INTEGER"
 Sets the (fixed) number of worker threads created to handle 9P requests
 for a unique aname.  The default is 16 per aname.

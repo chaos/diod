@@ -79,8 +79,9 @@
 #define RO_CONFIGPATH       0x0400
 #define RO_LOGDEST          0x0800
 #define RO_EXPORTALL        0x1000
-#define RO_ALLSQUASH        0x2000
-#define RO_SQUASHUSER       0x4000
+#define RO_EXPORTOPTS       0x2000
+#define RO_ALLSQUASH        0x4000
+#define RO_SQUASHUSER       0x8000
 
 typedef struct {
     int          debuglevel;
@@ -93,6 +94,7 @@ typedef struct {
     uid_t        runasuid;
     List         listen;
     int          exportall;
+    char        *exportopts;
     List         exports;
     char        *configpath;
     char        *logdest;
@@ -180,6 +182,7 @@ diod_conf_init (void)
     _xlist_append (config.listen, _xstrdup (DFLT_LISTEN));
     config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.exportall = DFLT_EXPORTALL;
+    config.exportopts = NULL;
 #if defined(DFLT_CONFIGPATH)
     config.configpath = _xstrdup (DFLT_CONFIGPATH);
 #else
@@ -202,6 +205,8 @@ diod_conf_fini (void)
         free (config.logdest);
     if (config.squashuser)
         free (config.squashuser);
+    if (config.exportopts)
+        free (config.exportopts);
 }
 
 /* logdest - logging destination
@@ -354,6 +359,8 @@ List diod_conf_get_mounts (void)
         *p = '\0';
         if (!(x = _create_export (path)))
             goto error;
+        if (config.exportopts)
+            x->opts = _xstrdup (config.exportopts);
         if (!list_append (l, x)) {
             _destroy_export (x);
             goto error;
@@ -549,6 +556,8 @@ _lua_getglobal_exports (char *path, lua_State *L, List *lp)
                 x = _xcreate_export (p);
                 free (p);
                 _lua_get_expattr (path, i, L, "opts", &x->opts);
+                if (!x->opts && config.exportopts)
+                    x->opts = _xstrdup (config.exportopts);
                 if (x->opts)
                     _parse_expopt (x->opts, &x->oflags);
                 _lua_get_expattr (path, i, L, "users", &x->users);
@@ -635,6 +644,11 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.ro_mask & RO_EXPORTALL)) {
             config.exportall = DFLT_EXPORTALL;
             _lua_getglobal_int (path, L, "exportall", &config.exportall);
+        }
+        if (!(config.ro_mask & RO_EXPORTOPTS)) {
+            free (config.exportopts);
+            config.exportopts = NULL;
+            _lua_getglobal_string (path, L, "exportopts", &config.exportopts);
         }
         if (!(config.ro_mask & RO_EXPORTS))
             list_destroy (config.exports);
