@@ -1,4 +1,12 @@
 =========================================================================
+Release Notes for DIOD version 1.0.1                          24 Feb 2012
+=========================================================================
+
+* Add 'sharefd' export option which enables limited server-side
+  sharing of file descriptors for files opened read-only.  The default
+  is (still) for every client open to trigger a server open.
+
+=========================================================================
 Release Notes for DIOD version 1.0.0                          17 Feb 2012
 =========================================================================
 
