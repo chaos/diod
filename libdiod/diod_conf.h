@@ -107,6 +107,10 @@ int     diod_conf_get_exportall (void);
 int     diod_conf_opt_exportall (void);
 void    diod_conf_set_exportall (int i);
 
+char   *diod_conf_get_exportopts(void);
+int     diod_conf_opt_exportopts(void);
+void    diod_conf_set_exportopts(char *opts);
+
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */

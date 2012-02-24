@@ -44,6 +44,10 @@ It overrides the \fIexports\fR setting in diod.conf (5).
 .I "-E, --export-all"
 Export everything in the server's /proc/mounts.
 .TP
+.I "-o, --export-opts OPT[,OPT,...]"
+Set global export options.
+This option overrides the \fIexportopts\fR setting in diod.conf (5).
+.TP
 .I "-n, --no-auth"
 This option allows users to attach without security credentials.
 It overrides  the \fIauth_required\fR setting in diod.conf (5).

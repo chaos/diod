@@ -326,6 +326,65 @@ void diod_conf_add_listen (char *s)
     config.ro_mask |= RO_LISTEN;
 }
 
+/* exports - list of paths of exported file systems
+ */
+List diod_conf_get_exports (void) { return config.exports; }
+int diod_conf_opt_exports (void) { return config.ro_mask & RO_EXPORTS; }
+void diod_conf_clr_exports (void)
+{
+    list_destroy (config.exports);
+    config.exports = _xlist_create ((ListDelF)_destroy_export);
+    config.ro_mask |= RO_EXPORTS;
+}
+void diod_conf_add_exports (char *path)
+{
+    Export *x = _xcreate_export (path);
+    _xlist_append (config.exports, x);
+    config.ro_mask |= RO_EXPORTS;
+}
+void diod_conf_validate_exports (void)
+{
+    ListIterator itr;
+    Export *x;
+
+    if (config.exportall == 0 && list_count (config.exports) == 0)
+        msg_exit ("no exports defined");
+    if ((itr = list_iterator_create (config.exports)) == NULL)
+        msg_exit ("out of memory");
+    while ((x = list_next (itr))) {
+        if (*x->path != '/')
+            msg_exit ("exports should begin with '/'");
+        if (strstr (x->path, "/..") != 0)
+            msg_exit ("exports should not contain '/..'"); /* FIXME */
+    }
+    list_iterator_destroy (itr);
+}
+
+static void
+_parse_expopt (char *s, int *fp)
+{
+    int flags = 0;
+    char *cpy, *item;
+    char *saveptr = NULL;
+
+    if (!(cpy = strdup (s)))
+        msg_exit ("out of memory");
+    item = strtok_r (cpy, ",", &saveptr);
+    while (item) {
+        if (!strcmp (item, "ro"))
+            flags |= XFLAGS_RO;
+        else if (!strcmp (item, "suppress"))
+            flags |= XFLAGS_SUPPRESS;
+        else if (!strcmp (item, "sharefd"))
+            flags |= XFLAGS_SHAREFD;
+        else
+            msg_exit ("unknown export option: %s", item);
+        item = strtok_r (NULL, ",", &saveptr);
+    }
+    free (cpy);
+    *fp = flags;
+}
+
 /* exportall - export everything in /proc/mounts
  */
 int diod_conf_get_exportall (void) { return config.exportall; }
@@ -361,6 +420,8 @@ List diod_conf_get_mounts (void)
             goto error;
         if (config.exportopts)
             x->opts = _xstrdup (config.exportopts);
+        if (x->opts)
+            _parse_expopt (x->opts, &x->oflags);
         if (!list_append (l, x)) {
             _destroy_export (x);
             goto error;
@@ -376,66 +437,19 @@ error:
     return NULL;
 }
 
-/* exports - list of paths of exported file systems
+/* exportopts - set global export options
  */
-List diod_conf_get_exports (void) { return config.exports; }
-int diod_conf_opt_exports (void) { return config.ro_mask & RO_EXPORTS; }
-void diod_conf_clr_exports (void)
+char *diod_conf_get_exportopts (void) { return config.exportopts; }
+int diod_conf_opt_exportopts (void) { return config.ro_mask & RO_EXPORTOPTS; }
+void diod_conf_set_exportopts(char *opts)
 {
-    list_destroy (config.exports);
-    config.exports = _xlist_create ((ListDelF)_destroy_export);
-    config.ro_mask |= RO_EXPORTS;
-}
-void diod_conf_add_exports (char *path)
-{
-    Export *x = _xcreate_export (path);
-    _xlist_append (config.exports, x);
-    config.ro_mask |= RO_EXPORTS;
-}
-void diod_conf_validate_exports (void)
-{
-    ListIterator itr;
-    Export *x;
-
-    if (config.exportall == 0 && list_count (config.exports) == 0)
-        msg_exit ("no exports defined");
-    if ((itr = list_iterator_create (config.exports)) == NULL)
-        msg_exit ("out of memory");
-    while ((x = list_next (itr))) {
-        if (*x->path != '/')
-            msg_exit ("exports should begin with '/'");
-        if (strstr (x->path, "/..") != 0)
-            msg_exit ("exports should not contain '/..'"); /* FIXME */
-    }
-    list_iterator_destroy (itr);
+    if (config.exportopts)
+        free (config.exportopts);
+    config.exportopts = _xstrdup (opts);
+    config.ro_mask |= RO_EXPORTOPTS;
 }
 
 #if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
-static void
-_parse_expopt (char *s, int *fp)
-{
-    int flags = 0;
-    char *cpy, *item;
-    char *saveptr = NULL;
-
-    if (!(cpy = strdup (s)))
-        msg_exit ("out of memory");
-    item = strtok_r (cpy, ",", &saveptr);
-    while (item) {
-        if (!strcmp (item, "ro"))
-            flags |= XFLAGS_RO;
-        else if (!strcmp (item, "suppress"))
-            flags |= XFLAGS_SUPPRESS;
-        else if (!strcmp (item, "sharefd"))
-            flags |= XFLAGS_SHAREFD;
-        else
-            msg_exit ("unknown export option: %s", item);
-        item = strtok_r (NULL, ",", &saveptr);
-    }
-    free (cpy);
-    *fp = flags;
-}
-
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
@@ -646,14 +660,17 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             _lua_getglobal_int (path, L, "exportall", &config.exportall);
         }
         if (!(config.ro_mask & RO_EXPORTOPTS)) {
-            free (config.exportopts);
-            config.exportopts = NULL;
+            if (config.exportopts) {
+                free (config.exportopts);
+                config.exportopts = NULL;
+            }
             _lua_getglobal_string (path, L, "exportopts", &config.exportopts);
         }
-        if (!(config.ro_mask & RO_EXPORTS))
+        if (!(config.ro_mask & RO_EXPORTS)) {
             list_destroy (config.exports);
             config.exports = _xlist_create ((ListDelF)_destroy_export);
             _lua_getglobal_exports (path, L, &config.exports);
+        }
         lua_close(L);
     }
 }
