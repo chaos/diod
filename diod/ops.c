@@ -421,16 +421,14 @@ _path_decref (Npsrv *srv, Path path)
     int n;
 
     xpthread_mutex_lock (&pp->lock);
-
     xpthread_mutex_lock (&path->lock);
     n = --path->refcount;
     xpthread_mutex_unlock (&path->lock);
-    if (n == 0) {
+    if (n == 0)
         hash_remove (pp->hash, path->s);
-        _path_free (path);
-    }
-
     xpthread_mutex_unlock (&pp->lock);
+    if (n == 0)
+        _path_free (path);
 }
 
 static Path
