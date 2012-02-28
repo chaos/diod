@@ -274,53 +274,49 @@ _count_ioctx (IOCtx i, int *shared, int *unique)
     }
 }
 
-static void
-_ioctx_free (Npfid *fid)
+static IOCtx
+_ioctx_incref (IOCtx ioctx)
 {
-    Fid *f = fid->aux;
-    int n;
+    xpthread_mutex_lock (&ioctx->lock);
+    ioctx->refcount++;
+    xpthread_mutex_unlock (&ioctx->lock);
 
-    if (f->ioctx) {
-        xpthread_mutex_lock (&f->ioctx->lock);
-        n = --f->ioctx->refcount;
-        xpthread_mutex_unlock (&f->ioctx->lock);
-        if (n == 0) {
-            xpthread_mutex_lock (&f->path->lock);
-            _unlink_ioctx (&f->path->ioctx, f->ioctx);
-            xpthread_mutex_unlock (&f->path->lock);
-            if (f->ioctx->dir)
-                (void)closedir(f->ioctx->dir);
-            else if (f->ioctx->fd != -1)
-                (void)close (f->ioctx->fd);
-            pthread_mutex_destroy (&f->ioctx->lock);
-            free (f->ioctx);
-        }
-        f->ioctx = NULL;
-    }
+    return ioctx;
 }
 
 static int
-_ioctx_close (Npfid *fid)
+_ioctx_decref (IOCtx ioctx)
+{
+    int n;
+
+    xpthread_mutex_lock (&ioctx->lock);
+    n = --ioctx->refcount;
+    xpthread_mutex_unlock (&ioctx->lock);
+
+    return n;
+}
+
+static int
+_ioctx_close (Npfid *fid, int seterrno)
 {
     Fid *f = fid->aux;
     int n;
     int rc = 0;
 
     if (f->ioctx) {
-        xpthread_mutex_lock (&f->ioctx->lock);
-        n = --f->ioctx->refcount;
-        xpthread_mutex_unlock (&f->ioctx->lock);
-        if (n == 0) {
-            xpthread_mutex_lock (&f->path->lock);
+        xpthread_mutex_lock (&f->path->lock);
+        n = _ioctx_decref (f->ioctx);
+        if (n == 0)
             _unlink_ioctx (&f->path->ioctx, f->ioctx);
-            xpthread_mutex_unlock (&f->path->lock);
+        xpthread_mutex_unlock (&f->path->lock);
+        if (n == 0) {
             if (f->ioctx->dir) {
                 rc = closedir(f->ioctx->dir);
-                if (rc < 0)
+                if (rc < 0 && seterrno)
                     np_uerror (errno);
             } else if (f->ioctx->fd != -1) {
                 rc = close (f->ioctx->fd);
-                if (rc < 0)
+                if (rc < 0 && seterrno)
                     np_uerror (errno);
             }
             if (f->ioctx->user)
@@ -332,16 +328,6 @@ _ioctx_close (Npfid *fid)
     }
 
     return rc;
-}
-
-static IOCtx
-_ioctx_incref (IOCtx ioctx)
-{
-    xpthread_mutex_lock (&ioctx->lock);
-    ioctx->refcount++;
-    xpthread_mutex_unlock (&ioctx->lock);
-
-    return ioctx;
 }
 
 static int
@@ -404,7 +390,7 @@ _ioctx_open (Npfid *fid, u32 flags, u32 mode)
     return 0;
 error:
     xpthread_mutex_unlock (&f->path->lock);
-    _ioctx_free (fid);
+    _ioctx_close (fid, 0);
     return -1;
 }
 
@@ -470,9 +456,9 @@ _path_ref (Npsrv *srv, Npstr *ns)
     char *s;
     Path path = NULL;
 
-    xpthread_mutex_lock (&pp->lock);
     if (!(s = np_strdup (ns)))
         goto error;
+    xpthread_mutex_lock (&pp->lock);
     path = hash_find (pp->hash, s);
     if (path) {
         _path_incref (path);
@@ -480,16 +466,17 @@ _path_ref (Npsrv *srv, Npstr *ns)
     } else {
         assert (errno == 0);
         if (!(path = _path_alloc (s, len))) /* frees 's' on failure */
-            goto error;
+            goto error_unlock;
         if (!hash_insert (pp->hash, path->s, path)) {
             assert (errno == ENOMEM);
-            goto error;
+            goto error_unlock;
         }
     }
     xpthread_mutex_unlock (&pp->lock);
     return path;
-error:
+error_unlock:
     xpthread_mutex_unlock (&pp->lock);
+error:
     if (path)
         _path_free (path);
     return NULL;
@@ -503,13 +490,13 @@ _path_ref2 (Npsrv *srv, Path opath, Npstr *ns)
     int len = opath->len + 1 + ns->len;
     Path path = NULL;
 
-    xpthread_mutex_lock (&pp->lock);
     if (!(s = malloc (len + 1)))
         goto error;    
     memcpy (s, opath->s, opath->len);
     s[opath->len] = '/';
     memcpy (s + opath->len + 1, ns->str, ns->len);
     s[len] = '\0';
+    xpthread_mutex_lock (&pp->lock);
     path = hash_find (pp->hash, s);
     if (path) {
         _path_incref (path);
@@ -517,16 +504,17 @@ _path_ref2 (Npsrv *srv, Path opath, Npstr *ns)
     } else {
         assert (errno == 0);
         if (!(path = _path_alloc (s, len))) /* frees 's' on failure */
-            goto error;
+            goto error_unlock;
         if (!hash_insert (pp->hash, path->s, path)) {
             assert (errno == ENOMEM);
-            goto error;
+            goto error_unlock;
         }
     }
     xpthread_mutex_unlock (&pp->lock);
     return path;
-error:
+error_unlock:
     xpthread_mutex_unlock (&pp->lock);
+error:
     if (path)
         _path_free (path);
     return NULL;
@@ -610,7 +598,7 @@ diod_fiddestroy (Npfid *fid)
 
     if (f) {
         if (f->ioctx)
-            _ioctx_free (fid);
+            _ioctx_close (fid, 0);
         if (f->path)
             _path_decref (fid->conn->srv, f->path);
         free(f);
@@ -925,7 +913,7 @@ diod_clunk (Npfid *fid)
     Npfcall *ret;
 
     if (f->ioctx) {
-        if (_ioctx_close (fid) < 0)
+        if (_ioctx_close (fid, 1) < 0)
             goto error_quiet;
     }
     if (!(ret = np_create_rclunk ())) {
@@ -1030,7 +1018,7 @@ error:
     errn (np_rerror (), "diod_lopen %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
 error_quiet:
-    _ioctx_free (fid); 
+    _ioctx_close (fid, 0); 
     return NULL;
 }
 
@@ -1074,7 +1062,7 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn),
           opath ? opath->s : f->path->s, name->len, name->str);
 error_quiet:
-    _ioctx_free (fid);
+    _ioctx_close (fid, 0);
     if (opath) {
         if (f->path)
             _path_decref (srv, f->path);
