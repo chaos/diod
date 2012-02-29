@@ -1,4 +1,13 @@
 =========================================================================
+Release Notes for DIOD version 1.0.5                          29 Feb 2012
+=========================================================================
+
+* Add 'maxmmap' tunable which will mmap the first 'maxmmap' bytes of
+  a shared file as a performance optimization for parallel reads
+  (default 4194304).  This option only affects file systems exported
+  with the 'sharefd' attribute.
+
+=========================================================================
 Release Notes for DIOD version 1.0.4                          28 Feb 2012
 =========================================================================
 
