@@ -67,6 +67,14 @@ The squash user must be present in the password file.
 Set the destination for logging.
 \fIDEST\fR is in the form of \fIsyslog:facility:level\fR or \fIfilename\fR.
 The default is \fIsyslog:daemon:err\fR.
+.TP
+.I "maxmmap = INTEGER"
+Sets the maximum number of bytes to mmap for files that have sharable
+I/O contexts (regular files opened O_RDONLY on file systems exported with
+the "sharefd" attribute, see above).
+Mmmaping a portion of the file is a performance optimization for
+parallel executable/shared library loading.
+The default is 4194304.
 .SH "EXAMPLE"
 .nf
 --

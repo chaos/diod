@@ -36,6 +36,12 @@ for each unique aname.
 This option overrides the \fInwthreads\fR setting in diod.conf (5).
 The default is 16.
 .TP
+.I "-m, --maxmmap INT"
+Set the maximum number of bytes to mmap of a file eligible for
+I/O context sharing.
+This option overrides the \fImaxmmap\fR setting in diod.conf (5).
+The default is 4194304.
+.TP
 .I "-e, --export PATH"
 Set the file system to be exported.
 This option may be specified more than once.

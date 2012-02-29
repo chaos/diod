@@ -74,6 +74,7 @@
 #define RO_RUNASUID         0x0010
 #define RO_USERDB           0x0020
 #define RO_LISTEN           0x0040
+#define RO_MAXMMAP          0x0080
 #define RO_EXPORTS          0x0100
 #define RO_STATSLOG         0x0200
 #define RO_CONFIGPATH       0x0400
@@ -86,6 +87,7 @@
 typedef struct {
     int          debuglevel;
     int          nwthreads;
+    int          maxmmap;
     int          foreground;
     int          auth_required;
     int          userdb;
@@ -172,6 +174,7 @@ diod_conf_init (void)
 {
     config.debuglevel = DFLT_DEBUGLEVEL;
     config.nwthreads = DFLT_NWTHREADS;
+    config.maxmmap = DFLT_MAXMMAP;
     config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
     config.userdb = DFLT_USERDB;
@@ -245,6 +248,16 @@ void diod_conf_set_nwthreads (int i)
 {
     config.nwthreads = i;
     config.ro_mask |= RO_NWTHREADS;
+}
+
+/* maxmmap - maximum bytes of a shared I/O context to mmap
+ */
+int diod_conf_get_maxmmap (void) { return config.maxmmap; }
+int diod_conf_opt_maxmmap (void) { return config.ro_mask & RO_MAXMMAP; }
+void diod_conf_set_maxmmap (int i)
+{
+    config.maxmmap = i;
+    config.ro_mask |= RO_MAXMMAP;
 }
 
 /* foreground - run daemon in foreground
@@ -625,6 +638,10 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.ro_mask & RO_NWTHREADS)) {
             config.nwthreads = DFLT_NWTHREADS;
             _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
+        }
+        if (!(config.ro_mask & RO_MAXMMAP)) {
+            config.maxmmap = DFLT_MAXMMAP;
+            _lua_getglobal_int (path, L, "maxmmap", &config.maxmmap);
         }
         if (!(config.ro_mask & RO_AUTH_REQUIRED)) {
             config.auth_required = DFLT_AUTH_REQUIRED;

@@ -73,7 +73,7 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fr:w:d:l:t:e:Eo:u:SL:nc:NU:"
+#define OPTIONS "fr:w:d:l:t:m:e:Eo:u:SL:nc:NU:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -84,6 +84,7 @@ static const struct option longopts[] = {
     {"debug",           required_argument,  0, 'd'},
     {"listen",          required_argument,  0, 'l'},
     {"nwthreads",       required_argument,  0, 't'},
+    {"maxmmap",         required_argument,  0, 'm'},
     {"export",          required_argument,  0, 'e'},
     {"export-all",      no_argument,        0, 'E'},
     {"export-opts",     required_argument,  0, 'o'},
@@ -110,6 +111,7 @@ usage()
 "   -w,--wfdno             service connected client on write file descriptor\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
 "   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
+"   -m,--maxmmap INT       set maximum bytes of shared files to mmap\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -E,--export-all        export all mounted file systems\n"
 "   -o,--export-opts       set global export options (comma-seperated)\n"
@@ -178,6 +180,9 @@ main(int argc, char **argv)
                 break;
             case 't':   /* --nwthreads INT */
                 diod_conf_set_nwthreads (strtoul (optarg, NULL, 10));
+                break;
+            case 'm':   /* --maxmmap INT */
+                diod_conf_set_maxmmap (strtoul (optarg, NULL, 10));
                 break;
             case 'c':   /* --config-file PATH */
                 break;

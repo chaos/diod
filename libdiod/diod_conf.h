@@ -23,6 +23,7 @@
 
 #define DFLT_DEBUGLEVEL     0
 #define DFLT_NWTHREADS      16
+#define DFLT_MAXMMAP        (1024*1024*4)
 #define DFLT_FOREGROUND     0
 #define DFLT_AUTH_REQUIRED  1
 #define DFLT_USERDB         1
@@ -54,6 +55,10 @@ void    diod_conf_set_debuglevel (int i);
 int     diod_conf_get_nwthreads (void);
 int     diod_conf_opt_nwthreads (void);
 void    diod_conf_set_nwthreads (int i);
+
+int     diod_conf_get_maxmmap (void);
+int     diod_conf_opt_maxmmap (void);
+void    diod_conf_set_maxmmap (int i);
 
 int     diod_conf_get_foreground (void);
 int     diod_conf_opt_foreground (void);
