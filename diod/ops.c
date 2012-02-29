@@ -112,7 +112,6 @@ struct ioctx_struct {
     u32             iounit;
     u32             open_flags;
     Npuser          *user;
-    Npsrv           *srv;
     IOCtx           next;
     IOCtx           prev;
 };
@@ -343,7 +342,6 @@ _ioctx_close (Npfid *fid, int seterrno)
 static int
 _ioctx_open (Npfid *fid, u32 flags, u32 mode)
 {
-    Npsrv *srv = fid->conn->srv;
     Fid *f = fid->aux;
     struct stat sb;
     IOCtx ip;
@@ -378,7 +376,6 @@ _ioctx_open (Npfid *fid, u32 flags, u32 mode)
         f->ioctx->lock_type = LOCK_UN;
         f->ioctx->dir = NULL;
         f->ioctx->open_flags = flags;
-        f->ioctx->srv = srv;
         np_user_incref (fid->user);
         f->ioctx->user = fid->user;
         f->ioctx->prev = f->ioctx->next = NULL;
