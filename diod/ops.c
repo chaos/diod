@@ -389,7 +389,7 @@ _ioctx_open (Npfid *fid, u32 flags, u32 mode)
             np_uerror (errno);
             goto error;
         }
-        if (sharable && S_ISREG(sb.st_mode) && maxmmap > 0) {
+        if (sharable && S_ISREG(sb.st_mode) && maxmmap > 0 && sb.st_size > 0) {
             f->ioctx->mmap_size = sb.st_size <= maxmmap ? sb.st_size : maxmmap;
             f->ioctx->mmap = mmap (NULL, f->ioctx->mmap_size, PROT_READ,
                                    MAP_PRIVATE, f->ioctx->fd, 0);
