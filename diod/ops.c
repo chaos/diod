@@ -313,11 +313,8 @@ _ioctx_close (Npfid *fid, int seterrno)
         xpthread_mutex_unlock (&f->path->lock);
         if (n == 0) {
             if (f->ioctx->mmap != MAP_FAILED) {
-                rc = munmap (f->ioctx->mmap, f->ioctx->mmap_size);
-                if (rc < 0)
+                if (munmap (f->ioctx->mmap, f->ioctx->mmap_size) < 0)
                     errn (errno, "munmap %s", f->path->s);
-                if (rc < 0 && seterrno)
-                    np_uerror (errno);
             }
             if (f->ioctx->dir) {
                 rc = closedir(f->ioctx->dir);
