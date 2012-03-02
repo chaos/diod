@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+TEST=$(basename $0 | cut -d- -f1)
+./memcheck ./tnpsrv2 >$TEST.out 2>&1
+diff $TEST.exp $TEST.out >$TEST.diff
