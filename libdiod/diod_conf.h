@@ -23,7 +23,7 @@
 
 #define DFLT_DEBUGLEVEL     0
 #define DFLT_NWTHREADS      16
-#define DFLT_MAXMMAP        (1024*1024*4)
+#define DFLT_MAXMMAP        0
 #define DFLT_FOREGROUND     0
 #define DFLT_AUTH_REQUIRED  1
 #define DFLT_USERDB         1

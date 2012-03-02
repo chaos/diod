@@ -72,9 +72,9 @@ The default is \fIsyslog:daemon:err\fR.
 Sets the maximum number of bytes to mmap for files that have sharable
 I/O contexts (regular files opened O_RDONLY on file systems exported with
 the "sharefd" attribute, see above).
-Mmmaping a portion of the file is a performance optimization for
+Mmmaping a portion of the file may be performance optimization for
 parallel executable/shared library loading.
-The default is 4194304.
+The default is 0 (disabled).
 .SH "EXAMPLE"
 .nf
 --
