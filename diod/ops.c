@@ -95,49 +95,8 @@
 
 #include "ops.h"
 #include "exp.h"
-
-typedef struct path_struct *Path;
-typedef struct ioctx_struct *IOCtx;
-typedef struct pathpool_struct *PathPool;
-
-struct ioctx_struct {
-    pthread_mutex_t lock;
-    int             refcount;
-    int             fd;
-    char            *mmap;
-    size_t          mmap_size;
-    DIR             *dir;
-    int             lock_type;
-    Npqid           qid;
-    u32             iounit;
-    u32             open_flags;
-    Npuser          *user;
-    IOCtx           next;
-    IOCtx           prev;
-};
-
-struct path_struct {
-    pthread_mutex_t lock;
-    int             refcount;
-    char            *s;
-    int             len;
-    IOCtx           ioctx;
-};
-
-struct pathpool_struct {
-    pthread_mutex_t lock;
-    hash_t          hash;
-};
-
-#define DIOD_FID_FLAGS_ROFS       0x01
-#define DIOD_FID_FLAGS_MOUNTPT    0x02
-#define DIOD_FID_FLAGS_SHAREFD    0x04
-
-typedef struct {
-    Path            path;
-    IOCtx           ioctx;
-    int             flags;
-} Fid;
+#include "ioctx.h"
+#include "fid.h"
 
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *aname);
 int          diod_clone  (Npfid *fid, Npfid *newfid);
@@ -174,15 +133,6 @@ int          diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname,
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 char        *diod_get_path (Npfid *fid);
 char        *diod_get_files (char *name, void *a);
-
-static void      _ustat2qid     (struct stat *st, Npqid *qid);
-
-static PathPool  _ppool_create (void);
-static void      _ppool_destroy (PathPool pp);
-
-static void      _path_decref (Npsrv *srv, Path p);
-static Path      _path_incref (Path p);
-
 
 int
 diod_init (Npsrv *srv)
@@ -224,9 +174,7 @@ diod_init (Npsrv *srv)
 
     if (!np_ctl_addfile (srv->ctlroot, "exports", diod_get_exports, srv, 0))
         goto error;
-    if (!(srv->srvaux = _ppool_create ()))
-        goto error;
-    if (!np_ctl_addfile (srv->ctlroot, "files", diod_get_files, srv, 0))
+    if (ppool_init (srv) < 0)
         goto error;
     return 0;
 error:
@@ -237,393 +185,14 @@ error:
 void
 diod_fini (Npsrv *srv)
 {
-    if (srv->srvaux) {
-        _ppool_destroy (srv->srvaux);
-        srv->srvaux = NULL;
-    }
-}
-
-static void
-_unlink_ioctx (IOCtx *head, IOCtx i)
-{
-    if (i->prev)
-        i->prev->next = i->next;
-    else
-        *head = i->next;
-    if (i->next)
-        i->next->prev = i->prev;
-    i->prev = i->next = NULL;
-}
-
-static void
-_link_ioctx (IOCtx *head, IOCtx i)
-{
-    i->next = *head;
-    i->prev = NULL;
-    if (*head)
-        (*head)->prev = i;
-    *head = i;
-}
-
-static void
-_count_ioctx (IOCtx i, int *shared, int *unique)
-{
-    for (*unique = *shared = 0; i != NULL; i = i->next) {
-        (*unique)++;
-        xpthread_mutex_lock (&i->lock);
-        (*shared) += i->refcount;
-        xpthread_mutex_unlock (&i->lock);
-    }
-}
-
-static IOCtx
-_ioctx_incref (IOCtx ioctx)
-{
-    xpthread_mutex_lock (&ioctx->lock);
-    ioctx->refcount++;
-    xpthread_mutex_unlock (&ioctx->lock);
-
-    return ioctx;
-}
-
-static int
-_ioctx_decref (IOCtx ioctx)
-{
-    int n;
-
-    xpthread_mutex_lock (&ioctx->lock);
-    n = --ioctx->refcount;
-    xpthread_mutex_unlock (&ioctx->lock);
-
-    return n;
-}
-
-static int
-_ioctx_close (Npfid *fid, int seterrno)
-{
-    Fid *f = fid->aux;
-    int n;
-    int rc = 0;
-
-    if (f->ioctx) {
-        xpthread_mutex_lock (&f->path->lock);
-        n = _ioctx_decref (f->ioctx);
-        if (n == 0)
-            _unlink_ioctx (&f->path->ioctx, f->ioctx);
-        xpthread_mutex_unlock (&f->path->lock);
-        if (n == 0) {
-            if (f->ioctx->mmap != MAP_FAILED) {
-                if (munmap (f->ioctx->mmap, f->ioctx->mmap_size) < 0)
-                    errn (errno, "munmap %s", f->path->s);
-            }
-            if (f->ioctx->dir) {
-                rc = closedir(f->ioctx->dir);
-                if (rc < 0 && seterrno)
-                    np_uerror (errno);
-            } else if (f->ioctx->fd != -1) {
-                rc = close (f->ioctx->fd);
-                if (rc < 0 && seterrno)
-                    np_uerror (errno);
-            }
-            if (f->ioctx->user)
-                np_user_decref (f->ioctx->user);
-            pthread_mutex_destroy (&f->ioctx->lock);
-            free (f->ioctx);
-        }
-        f->ioctx = NULL;
-    }
-
-    return rc;
-}
-
-static int
-_ioctx_open (Npfid *fid, u32 flags, u32 mode)
-{
-    Fid *f = fid->aux;
-    struct stat sb;
-    IOCtx ip;
-    int sharable = ((f->flags & DIOD_FID_FLAGS_SHAREFD)
-                 && (flags & 3) == O_RDONLY);
-    int maxmmap = diod_conf_get_maxmmap ();
-
-    assert (f->ioctx == NULL);
-
-    xpthread_mutex_lock (&f->path->lock);
-    if (sharable) {
-        for (ip = f->path->ioctx; ip != NULL; ip = ip->next) {
-            if (ip->qid.type != P9_QTFILE)
-                continue;
-            if (ip->open_flags != flags)
-                continue;
-            if (ip->user->uid != fid->user->uid)
-                continue;
-            /* NOTE: we could do a stat and check qid? */
-            f->ioctx = _ioctx_incref (ip);
-            break;
-        }
-    }
-    if (f->ioctx == NULL) {
-        f->ioctx = malloc (sizeof (*f->ioctx));
-        if (!f->ioctx) {
-            np_uerror (ENOMEM);
-            goto error;
-        }
-        pthread_mutex_init (&f->ioctx->lock, NULL);
-        f->ioctx->refcount = 1;
-        f->ioctx->lock_type = LOCK_UN;
-        f->ioctx->dir = NULL;
-        f->ioctx->open_flags = flags;
-        np_user_incref (fid->user);
-        f->ioctx->user = fid->user;
-        f->ioctx->prev = f->ioctx->next = NULL;
-        f->ioctx->mmap = MAP_FAILED;
-        f->ioctx->fd = open (f->path->s, flags, mode);
-        if (f->ioctx->fd < 0) {
-            np_uerror (errno);
-            goto error;
-        }
-        if (fstat (f->ioctx->fd, &sb) < 0) {
-            np_uerror (errno);
-            goto error;
-        }
-        if (sharable && S_ISREG(sb.st_mode) && maxmmap > 0 && sb.st_size > 0) {
-            f->ioctx->mmap_size = sb.st_size <= maxmmap ? sb.st_size : maxmmap;
-            f->ioctx->mmap = mmap (NULL, f->ioctx->mmap_size, PROT_READ,
-                                   MAP_PRIVATE, f->ioctx->fd, 0);
-            if (f->ioctx->mmap == MAP_FAILED) /* non-fatal (use pread) */
-                errn (errno, "mmap %s", f->path->s);
-        }
-        f->ioctx->iounit = 0; /* if iounit=0, v9fs will use msize-P9_IOHDRSZ */
-        if (S_ISDIR(sb.st_mode) && !(f->ioctx->dir = fdopendir (f->ioctx->fd))) {
-            np_uerror (errno);
-            goto error;
-        }
-        _ustat2qid (&sb, &f->ioctx->qid);
-        _link_ioctx (&f->path->ioctx, f->ioctx);
-    }
-    xpthread_mutex_unlock (&f->path->lock);
-    return 0;
-error:
-    xpthread_mutex_unlock (&f->path->lock);
-    _ioctx_close (fid, 0);
-    return -1;
-}
-
-static void
-_path_free (Path path)
-{
-    assert (path->ioctx == NULL);
-    if (path->s)
-        free (path->s);
-    pthread_mutex_destroy (&path->lock);
-    free (path);
-}
-
-static Path
-_path_incref (Path path)
-{
-    xpthread_mutex_lock (&path->lock);
-    path->refcount++;
-    xpthread_mutex_unlock (&path->lock);
-
-    return path;
-}
-
-static void
-_path_decref (Npsrv *srv, Path path)
-{
-    PathPool pp = srv->srvaux;
-    int n;
-
-    xpthread_mutex_lock (&pp->lock);
-    xpthread_mutex_lock (&path->lock);
-    n = --path->refcount;
-    xpthread_mutex_unlock (&path->lock);
-    if (n == 0)
-        hash_remove (pp->hash, path->s);
-    xpthread_mutex_unlock (&pp->lock);
-    if (n == 0)
-        _path_free (path);
-}
-
-static Path
-_path_alloc (char *s, int len)
-{
-    Path path = malloc (sizeof (*path));
-
-    if (path) {
-        path->refcount = 1;
-        pthread_mutex_init (&path->lock, NULL);
-        path->s = s;
-        path->len = len;
-        path->ioctx = NULL;
-    }
-    return path;
-}
-
-static Path
-_path_ref (Npsrv *srv, Npstr *ns)
-{
-    PathPool pp = srv->srvaux;
-    int len = ns->len;
-    char *s;
-    Path path = NULL;
-
-    if (!(s = np_strdup (ns)))
-        goto error;
-    xpthread_mutex_lock (&pp->lock);
-    path = hash_find (pp->hash, s);
-    if (path) {
-        _path_incref (path);
-        free (s);
-    } else {
-        assert (errno == 0);
-        if (!(path = _path_alloc (s, len))) /* frees 's' on failure */
-            goto error_unlock;
-        if (!hash_insert (pp->hash, path->s, path)) {
-            assert (errno == ENOMEM);
-            goto error_unlock;
-        }
-    }
-    xpthread_mutex_unlock (&pp->lock);
-    return path;
-error_unlock:
-    xpthread_mutex_unlock (&pp->lock);
-error:
-    if (path)
-        _path_free (path);
-    return NULL;
-}
-
-static Path
-_path_ref2 (Npsrv *srv, Path opath, Npstr *ns)
-{
-    PathPool pp = srv->srvaux;
-    char *s;
-    int len = opath->len + 1 + ns->len;
-    Path path = NULL;
-
-    if (!(s = malloc (len + 1)))
-        goto error;    
-    memcpy (s, opath->s, opath->len);
-    s[opath->len] = '/';
-    memcpy (s + opath->len + 1, ns->str, ns->len);
-    s[len] = '\0';
-    xpthread_mutex_lock (&pp->lock);
-    path = hash_find (pp->hash, s);
-    if (path) {
-        _path_incref (path);
-        free (s);
-    } else {
-        assert (errno == 0);
-        if (!(path = _path_alloc (s, len))) /* frees 's' on failure */
-            goto error_unlock;
-        if (!hash_insert (pp->hash, path->s, path)) {
-            assert (errno == ENOMEM);
-            goto error_unlock;
-        }
-    }
-    xpthread_mutex_unlock (&pp->lock);
-    return path;
-error_unlock:
-    xpthread_mutex_unlock (&pp->lock);
-error:
-    if (path)
-        _path_free (path);
-    return NULL;
-}
-
-static PathPool
-_ppool_create (void)
-{
-    PathPool pp = malloc (sizeof (*pp));
-
-    if (pp) {
-        pthread_mutex_init (&pp->lock, NULL);
-        pp->hash = hash_create (1000,
-                                (hash_key_f)hash_key_string,
-                                (hash_cmp_f)strcmp, NULL);
-        if (!pp->hash) {
-            free (pp);
-            pp = NULL;
-        }
-    }
-    return pp;
-}
-
-static void
-_ppool_destroy (PathPool pp)
-{
-    assert (hash_is_empty (pp->hash));
-    hash_destroy (pp->hash);
-    pthread_mutex_destroy (&pp->lock);
-    free (pp);
-}
-
-/* Allocate local fid struct and attach to fid->aux.
- */
-static Fid *
-_fidalloc (Npfid *fid, Npstr *ns)
-{
-    Fid *f = malloc (sizeof (*f));
-
-    assert (fid->aux == NULL);
-    if (f) {
-        f->flags = 0;
-        f->ioctx = NULL;
-        f->path = _path_ref (fid->conn->srv, ns);
-        if (!f->path) {
-            free (f);
-            f = NULL;
-        }
-    }
-    fid->aux = f;
-  
-    return f;
-}
-
-/* Clone newfid->aux from fid->aux.
- */
-static Fid *
-_fidclone (Npfid *newfid, Npfid *fid)
-{
-    Fid *f = fid->aux;
-    Fid *nf = malloc (sizeof (*f));
-
-    assert (newfid->aux == NULL);
-    if (nf) {
-        nf->flags = f->flags;
-        nf->ioctx = NULL;
-        nf->path = _path_incref (f->path);
-    }
-    newfid->aux = nf;
-  
-    return nf;
-}
-
-/* Destroy local fid structure.
- * This is called when fid we are parasitically attached to is bieng destroyed.
- */
-void
-diod_fiddestroy (Npfid *fid)
-{
-    Fid *f = fid->aux;
-
-    if (f) {
-        if (f->ioctx)
-            _ioctx_close (fid, 0);
-        if (f->path)
-            _path_decref (fid->conn->srv, f->path);
-        free(f);
-        fid->aux = NULL;
-    }
+    ppool_fini (srv);
 }
 
 /* Create a 9P qid from a file's stat info.
  * N.B. v9fs maps st_ino = qid->path + 2
  */
-static void
-_ustat2qid (struct stat *st, Npqid *qid)
+void
+diod_ustat2qid (struct stat *st, Npqid *qid)
 {
     qid->path = st->st_ino;
     //qid->version = st->st_mtime ^ (st->st_size << 8);
@@ -691,7 +260,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         np_uerror (EPERM);
         goto error;
     }
-    if (!(f = _fidalloc (fid, aname))) {
+    if (!(f = diod_fidalloc (fid, aname))) {
         np_uerror (ENOMEM);
         goto error;
     }
@@ -701,13 +270,13 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
             goto error;
         }
     }
-    if (!diod_match_exports (f->path->s, fid->conn, fid->user, &xflags))
+    if (!diod_match_exports (path_s (f->path), fid->conn, fid->user, &xflags))
         goto error;
     if ((xflags & XFLAGS_RO))
         f->flags |= DIOD_FID_FLAGS_ROFS;
     if ((xflags & XFLAGS_SHAREFD))
         f->flags |= DIOD_FID_FLAGS_SHAREFD;
-    if (stat (f->path->s, &sb) < 0) { /* OK to follow symbolic links */
+    if (stat (path_s (f->path), &sb) < 0) { /* OK to follow symbolic links */
         np_uerror (errno);
         goto error;
     }
@@ -715,7 +284,7 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         np_uerror (ENOTDIR);
         goto error;
     }
-    _ustat2qid (&sb, &qid);
+    diod_ustat2qid (&sb, &qid);
     if ((ret = np_create_rattach (&qid)) == NULL) {
         np_uerror (ENOMEM);
         goto error;
@@ -737,14 +306,15 @@ diod_clone (Npfid *fid, Npfid *newfid)
 {
     Fid *f = fid->aux;
 
-    if (!(_fidclone (newfid, fid))) {
+    if (!(diod_fidclone (newfid, fid))) {
         np_uerror (ENOMEM);
         goto error;
     }
     return 1;
 error:
     errn (np_rerror (), "diod_clone %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
     return 0;
 }
 
@@ -821,34 +391,34 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
         np_uerror (ENOENT);
         goto error_quiet;
     }
-    if (!(npath = _path_ref2 (srv, f->path, wname))) {
+    if (!(npath = path_append (srv, f->path, wname))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (lstat (npath->s, &sb) < 0) {
+    if (lstat (path_s (npath), &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    if (lstat (f->path->s, &sb2) < 0) {
+    if (lstat (path_s (f->path), &sb2) < 0) {
         np_uerror (errno);
         goto error;
     }
     if (sb.st_dev != sb2.st_dev) {
-        if (_statmnt (npath->s, &sb) < 0)
+        if (_statmnt (path_s (npath), &sb) < 0)
             goto error;
         f->flags |= DIOD_FID_FLAGS_MOUNTPT;
     }
-    _path_decref (srv, f->path);
+    path_decref (srv, f->path);
     f->path = npath; 
-    _ustat2qid (&sb, wqid);
+    diod_ustat2qid (&sb, wqid);
     return 1;
 error:
     errn (np_rerror (), "diod_walk %s@%s:%s/%.*s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           wname->len, wname->str);
 error_quiet:
     if (npath)
-        _path_decref (srv, npath);
+        path_decref (srv, npath);
     return 0;
 }
 
@@ -869,21 +439,17 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
         np_uerror (ENOMEM);
         goto error;
     }
-    if (f->ioctx->mmap != MAP_FAILED && offset + count <= f->ioctx->mmap_size) {
-        memcpy (ret->u.rread.data, f->ioctx->mmap + offset, count);
-        n = count;
-    } else {
-        n = pread (f->ioctx->fd, ret->u.rread.data, count, offset);
-        if (n < 0) {
-            np_uerror (errno);
-            goto error_quiet;
-        }
+    n = ioctx_pread (f->ioctx, ret->u.rread.data, count, offset);
+    if (n < 0) {
+        np_uerror (errno);
+        goto error_quiet;
     }
     np_set_rread_count (ret, n);
     return ret;
 error:
     errn (np_rerror (), "diod_read %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     if (ret)
         free (ret);
@@ -907,7 +473,7 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if ((n = pwrite (f->ioctx->fd, data, count, offset)) < 0) {
+    if ((n = ioctx_pwrite (f->ioctx, data, count, offset)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -918,7 +484,8 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
     return ret;
 error:
     errn (np_rerror (), "diod_write %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -932,7 +499,7 @@ diod_clunk (Npfid *fid)
     Npfcall *ret;
 
     if (f->ioctx) {
-        if (_ioctx_close (fid, 1) < 0)
+        if (ioctx_close (fid, 1) < 0)
             goto error_quiet;
     }
     if (!(ret = np_create_rclunk ())) {
@@ -942,7 +509,8 @@ diod_clunk (Npfid *fid)
     return ret;
 error:
     errn (np_rerror (), "diod_clunk %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -959,7 +527,7 @@ diod_remove (Npfid *fid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (remove (f->path->s) < 0) {
+    if (remove (path_s (f->path)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -970,7 +538,8 @@ diod_remove (Npfid *fid)
     return ret;
 error:
     errn (np_rerror (), "diod_remove %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -985,7 +554,7 @@ diod_statfs (Npfid *fid)
     Npfcall *ret;
     u64 fsid;
 
-    if (statfs (f->path->s, &sb) < 0) {
+    if (statfs (path_s (f->path), &sb) < 0) {
         np_uerror (errno);
         goto error;
     }
@@ -1000,7 +569,8 @@ diod_statfs (Npfid *fid)
     return ret;
 error:
     errn (np_rerror (), "diod_statfs %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
     return NULL;
 }
 
@@ -1023,21 +593,23 @@ diod_lopen (Npfid *fid, u32 flags)
         errn (errno, "diod_lopen: fid is already open");
         goto error_quiet; 
     }
-    if (_ioctx_open (fid, flags, 0) < 0) {
+    if (ioctx_open (fid, flags, 0) < 0) {
         if (np_rerror () == ENOMEM)
             goto error;
         goto error_quiet;
     }
-    if (!(res = np_create_rlopen (&f->ioctx->qid, f->ioctx->iounit))) {
+    if (!(res = np_create_rlopen (ioctx_qid (f->ioctx),
+                                  ioctx_iounit (f->ioctx)))) {
         np_uerror (ENOMEM);
         goto error;
     }
     return res;
 error:
     errn (np_rerror (), "diod_lopen %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
-    _ioctx_close (fid, 0); 
+    ioctx_close (fid, 0); 
     return NULL;
 }
 
@@ -1060,31 +632,32 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         goto error; 
     }
     opath = f->path;
-    if (!(f->path = _path_ref2 (srv, opath, name))) {
+    if (!(f->path = path_append (srv, opath, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (_ioctx_open (fid, flags, mode) < 0) {
+    if (ioctx_open (fid, flags, mode) < 0) {
         if (np_rerror () == ENOMEM)
             goto error;
         goto error_quiet;
     }
-    if (!((ret = np_create_rlcreate (&f->ioctx->qid, f->ioctx->iounit)))) {
-        (void)unlink (f->path->s);
+    if (!((ret = np_create_rlcreate (ioctx_qid (f->ioctx),
+                                     ioctx_iounit (f->ioctx))))) {
+        (void)unlink (path_s (f->path));
         np_uerror (ENOMEM);
         goto error;
     }
-    _path_decref (srv, opath);
+    path_decref (srv, opath);
     return ret;
 error:
     errn (np_rerror (), "diod_lcreate %s@%s:%s/%.*s",
           fid->user->uname, np_conn_get_client_id (fid->conn),
-          opath ? opath->s : f->path->s, name->len, name->str);
+          opath ? path_s (opath) : path_s (f->path), name->len, name->str);
 error_quiet:
-    _ioctx_close (fid, 0);
+    ioctx_close (fid, 0);
     if (opath) {
         if (f->path)
-            _path_decref (srv, f->path);
+            path_decref (srv, f->path);
         f->path = opath;
     }
     return NULL;
@@ -1105,7 +678,7 @@ diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _path_ref2 (srv, f->path, name))) {
+    if (!(npath = path_append (srv, f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
@@ -1113,26 +686,27 @@ diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
         np_uerror (ENOMEM);
         goto error;
     }
-    if (symlink (target, npath->s) < 0 || lstat (npath->s, &sb) < 0) {
+    if (symlink (target, path_s (npath)) < 0 || lstat (path_s (npath),
+                                                       &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    _ustat2qid (&sb, &qid);
+    diod_ustat2qid (&sb, &qid);
     if (!((ret = np_create_rsymlink (&qid)))) {
-        (void)unlink (npath->s);
+        (void)unlink (path_s (npath));
         np_uerror (ENOMEM);
         goto error;
     }
-    _path_decref (srv, npath);
+    path_decref (srv, npath);
     free (target);
     return ret;
 error:
     errn (np_rerror (), "diod_symlink %s@%s:%s/%.*s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
-          name->len, name->str);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path), name->len, name->str);
 error_quiet:
     if (npath)
-        _path_decref (srv, npath);
+        path_decref (srv, npath);
     if (target)
         free (target);
     return NULL;
@@ -1152,30 +726,30 @@ diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _path_ref2 (srv, f->path, name))) {
+    if (!(npath = path_append (srv, f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (mknod (npath->s, mode, makedev (major, minor)) < 0
-                                        || lstat (npath->s, &sb) < 0) {
+    if (mknod (path_s (npath), mode, makedev (major, minor)) < 0
+                                        || lstat (path_s (npath), &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    _ustat2qid (&sb, &qid);
+    diod_ustat2qid (&sb, &qid);
     if (!((ret = np_create_rmknod (&qid)))) {
-        (void)unlink (npath->s);
+        (void)unlink (path_s (npath));
         np_uerror (ENOMEM);
         goto error;
     }
-    _path_decref (srv, npath);
+    path_decref (srv, npath);
     return ret;
 error:
     errn (np_rerror (), "diod_mknod %s@%s:%s/%.*s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           name->len, name->str);
 error_quiet:
     if (npath)
-        _path_decref (srv, npath);
+        path_decref (srv, npath);
     return NULL;
 }
 
@@ -1195,11 +769,11 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _path_ref2 (srv, d->path, name))) {
+    if (!(npath = path_append (srv, d->path, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (rename (f->path->s, npath->s) < 0) {
+    if (rename (path_s (f->path), path_s (npath)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -1208,18 +782,18 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
         np_uerror (ENOMEM);
         goto error;
     }
-    _path_decref (srv, f->path);
+    path_decref (srv, f->path);
     f->path = npath;
     return ret;
 error:
     errn (np_rerror (), "diod_rename %s@%s:%s to %s/%.*s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
-          d->path->s, name->len, name->str);
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
+          path_s (d->path), name->len, name->str);
 error_quiet:
     if (renamed && npath)
-        (void)rename (npath->s, f->path->s);
+        (void)rename (path_s (npath), path_s (f->path));
     if (npath)
-        _path_decref (srv, npath);
+        path_decref (srv, npath);
     return NULL;
 }
 
@@ -1231,7 +805,7 @@ diod_readlink(Npfid *fid)
     char target[PATH_MAX + 1];
     int n;
 
-    if ((n = readlink (f->path->s, target, sizeof(target) - 1)) < 0) {
+    if ((n = readlink (path_s (f->path), target, sizeof(target) - 1)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -1243,7 +817,8 @@ diod_readlink(Npfid *fid)
     return ret;
 error:
     errn (np_rerror (), "diod_readlink %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -1257,17 +832,17 @@ diod_getattr(Npfid *fid, u64 request_mask)
     struct stat sb;
 
     if ((f->flags & DIOD_FID_FLAGS_MOUNTPT)) {
-        if (_statmnt (f->path->s, &sb) < 0) {
+        if (_statmnt (path_s (f->path), &sb) < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
     } else {
-        if (lstat (f->path->s, &sb) < 0) {
+        if (lstat (path_s (f->path), &sb) < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
     }
-    _ustat2qid (&sb, &qid);
+    diod_ustat2qid (&sb, &qid);
     if (!(ret = np_create_rgetattr(request_mask, &qid,
                                     sb.st_mode,
                                     sb.st_uid,
@@ -1290,7 +865,8 @@ diod_getattr(Npfid *fid, u64 request_mask)
     return ret;
 error:
     errn (np_rerror (), "diod_getattr %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -1308,22 +884,22 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         goto error_quiet;
     }
     if ((valid & P9_SETATTR_MODE)) { /* N.B. derefs symlinks */
-        if (chmod (f->path->s, mode) < 0) {
+        if (chmod (path_s (f->path), mode) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
     if ((valid & P9_SETATTR_UID) || (valid & P9_SETATTR_GID)) {
-        if (lchown (f->path->s, (valid & P9_SETATTR_UID) ? uid : -1,
-                                (valid & P9_SETATTR_GID) ? gid : -1) < 0) {
+        if (lchown (path_s (f->path), (valid & P9_SETATTR_UID) ? uid : -1,
+                                      (valid & P9_SETATTR_GID) ? gid : -1) < 0){
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
     if ((valid & P9_SETATTR_SIZE)) {
-        if (truncate (f->path->s, size) < 0) {
+        if (truncate (path_s (f->path), size) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
@@ -1353,7 +929,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             ts[1].tv_sec = mtime_sec;
             ts[1].tv_nsec = mtime_nsec;
         }
-        if (utimensat(-1, f->path->s, ts, AT_SYMLINK_NOFOLLOW) < 0) {
+        if (utimensat(-1, path_s (f->path), ts, AT_SYMLINK_NOFOLLOW) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
@@ -1364,7 +940,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
          && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
             tvp = NULL; /* set both to now */
         } else {
-            if (lstat(f->path->s, &sb) < 0) {
+            if (lstat(path_s (f->path), &sb) < 0) {
                 np_uerror (errno);
                 goto error_quiet;
             }
@@ -1395,7 +971,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             }
             tvp = tv;
         }
-        if (utimes (f->path->s, tvp) < 0) {
+        if (utimes (path_s (f->path), tvp) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
@@ -1403,7 +979,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         ctime_updated = 1;
     }
     if ((valid & P9_SETATTR_CTIME) && !ctime_updated) {
-        if (lchown (f->path->s, -1, -1) < 0) {
+        if (lchown (path_s (f->path), -1, -1) < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
@@ -1415,7 +991,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     return ret;
 error:
     errn (np_rerror (), "diod_setattr %s@%s:%s (valid=0x%x)",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           valid);
 error_quiet:
     return NULL;
@@ -1430,12 +1006,12 @@ _copy_dirent_linux (Fid *f, struct dirent *dp, u8 *buf, u32 buflen)
     if (dp->d_type == DT_UNKNOWN) {
         char path[PATH_MAX + 1];
         struct stat sb;
-        snprintf (path, sizeof(path), "%s/%s", f->path->s, dp->d_name);
+        snprintf (path, sizeof(path), "%s/%s", path_s (f->path), dp->d_name);
         if (lstat (path, &sb) < 0) {
             np_uerror (errno);
             goto done;
         }
-        _ustat2qid (&sb, &qid);
+        diod_ustat2qid (&sb, &qid);
     } else  {
         _dirent2qid (dp, &qid);
     }
@@ -1452,11 +1028,11 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
     int i, n = 0, err;
 
     if (offset == 0)
-        rewinddir (f->ioctx->dir);
+        ioctx_rewinddir (f->ioctx);
     else
-        seekdir (f->ioctx->dir, offset);
+        ioctx_seekdir (f->ioctx, offset);
     do {
-        err = readdir_r (f->ioctx->dir, &dbuf, &dp);
+        err = ioctx_readdir_r (f->ioctx, &dbuf, &dp);
         if (err > 0) {
             np_uerror (err);
             break;
@@ -1481,7 +1057,7 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     Fid *f = fid->aux;
     Npfcall *ret;
 
-    if (!f->ioctx || !f->ioctx->dir) {
+    if (!f->ioctx) {
         np_uerror (EBADF);
         goto error;
     }
@@ -1498,7 +1074,8 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     return ret;
 error:
     errn (np_rerror (), "diod_readdir %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
     return NULL;
 }
 
@@ -1516,7 +1093,7 @@ diod_fsync (Npfid *fid)
         np_uerror (EBADF);
         goto error;
     }
-    if (fsync(f->ioctx->fd) < 0) {
+    if (ioctx_fsync (f->ioctx) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -1527,7 +1104,8 @@ diod_fsync (Npfid *fid)
     return ret;
 error:
     errn (np_rerror (), "diod_fsync %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -1559,28 +1137,20 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
     }
     switch (type) {
         case P9_LOCK_TYPE_UNLCK:
-            if (flock (f->ioctx->fd, LOCK_UN) >= 0) {
+            if (ioctx_flock (f->ioctx, LOCK_UN) == 0)
                 status = P9_LOCK_SUCCESS;
-                f->ioctx->lock_type = LOCK_UN;
-            } else
-                status = P9_LOCK_ERROR;
             break;
         case P9_LOCK_TYPE_RDLCK:
-            if (flock (f->ioctx->fd, LOCK_SH | LOCK_NB) >= 0) {
+            if (ioctx_flock (f->ioctx, LOCK_SH | LOCK_NB) == 0)
                 status = P9_LOCK_SUCCESS;
-                f->ioctx->lock_type = LOCK_SH;
-            } else if (errno == EWOULDBLOCK) {
+            else if (errno == EWOULDBLOCK)
                 status = P9_LOCK_BLOCKED;
-            } else
-                status = P9_LOCK_ERROR;
             break;
         case P9_LOCK_TYPE_WRLCK:
-            if (flock (f->ioctx->fd, LOCK_EX | LOCK_NB) >= 0) {
+            if (ioctx_flock (f->ioctx, LOCK_EX | LOCK_NB) == 0) 
                 status = P9_LOCK_SUCCESS;
-                f->ioctx->lock_type = LOCK_EX;
-            } else if (errno == EWOULDBLOCK) {
+            else if (errno == EWOULDBLOCK)
                 status  = P9_LOCK_BLOCKED;
-            }
             break;
         default:
             np_uerror (EINVAL);
@@ -1593,7 +1163,8 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
     return ret;
 error:
     errn (np_rerror (), "diod_lock %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     return NULL;
 }
@@ -1605,6 +1176,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     Fid *f = fid->aux;
     Npfcall *ret;
     char *cid = NULL;
+    int ftype;
 
     if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
         np_uerror (EROFS);
@@ -1618,49 +1190,13 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         np_uerror (ENOMEM);
         goto error;
     }
-    switch (type) {
-        case P9_LOCK_TYPE_RDLCK:
-            switch (f->ioctx->lock_type) {
-                case LOCK_EX:
-                case LOCK_SH:
-                    type = P9_LOCK_TYPE_UNLCK;
-                    break;
-                case LOCK_UN:
-                    if (flock (f->ioctx->fd, LOCK_SH | LOCK_NB) >= 0) {
-                        (void)flock (f->ioctx->fd, LOCK_UN);
-                        type = P9_LOCK_TYPE_UNLCK;
-                    } else
-                        type = P9_LOCK_TYPE_WRLCK;
-                    break;
-            }
-            break;
-        case P9_LOCK_TYPE_WRLCK:
-            switch (f->ioctx->lock_type) {
-                case LOCK_EX:
-                    type = P9_LOCK_TYPE_UNLCK;
-                    break;
-                case LOCK_SH:
-                    /* Rather than upgrade the lock to LOCK_EX and risk
-                     * not reacquiring the LOCK_SH afterwards, lie about
-                     * the lock being available.  Getlock is racy anyway.
-                     */
-                    type = P9_LOCK_TYPE_UNLCK;
-                    break;
-                case LOCK_UN:
-                    if (flock (f->ioctx->fd, LOCK_EX | LOCK_NB) >= 0) {
-                        (void)flock (f->ioctx->fd, LOCK_UN);
-                        type = P9_LOCK_TYPE_UNLCK;
-                    } else
-                        type = P9_LOCK_TYPE_WRLCK; /* could also be LOCK_SH actually */
-            }
-            break;
-        default:
-            np_uerror (EINVAL);
-            goto error;
+    if (type != P9_LOCK_TYPE_RDLCK && type != P9_LOCK_TYPE_WRLCK) {
+        np_uerror (EINVAL);
+        goto error;
     }
-    if (type != P9_LOCK_TYPE_UNLCK && type != F_UNLCK) {
-        /* FIXME: need to fake up start, length, proc_id, cid? */
-    }
+    ftype = (type == P9_LOCK_TYPE_RDLCK) ? LOCK_SH : LOCK_EX;
+    ftype = ioctx_testlock (f->ioctx, ftype);    
+    type = (ftype == LOCK_EX) ? P9_LOCK_TYPE_WRLCK : P9_LOCK_TYPE_UNLCK;
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
         goto error;
@@ -1669,7 +1205,8 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     return ret;
 error:
     errn (np_rerror (), "diod_getlock %s@%s:%s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s);
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
 error_quiet:
     if (cid)
         free (cid);
@@ -1689,28 +1226,28 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _path_ref2 (srv, df->path, name))) {
+    if (!(npath = path_append (srv, df->path, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (link (f->path->s, npath->s) < 0) {
+    if (link (path_s (f->path), path_s (npath)) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
     if (!((ret = np_create_rlink ()))) {
-        (void)unlink (npath->s);
+        (void)unlink (path_s (npath));
         np_uerror (ENOMEM);
         goto error;
     }
-    _path_decref (srv, npath);
+    path_decref (srv, npath);
     return ret;
 error:
     errn (np_rerror (), "diod_link %s@%s:%s %s/%.*s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
-          df->path->s, name->len, name->str);
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
+          path_s (df->path), name->len, name->str);
 error_quiet:
     if (npath)
-        _path_decref (srv, npath);
+        path_decref (srv, npath);
     return NULL;
 }
 
@@ -1728,29 +1265,29 @@ diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if (!(npath = _path_ref2 (srv, f->path, name))) {
+    if (!(npath = path_append (srv, f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
     }
-    if (mkdir (npath->s, mode) < 0 || lstat (npath->s, &sb) < 0) {
+    if (mkdir (path_s (npath), mode) < 0 || lstat (path_s (npath), &sb) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
-    _ustat2qid (&sb, &qid);
+    diod_ustat2qid (&sb, &qid);
     if (!((ret = np_create_rmkdir (&qid)))) {
-        (void)rmdir(npath->s);
+        (void)rmdir(path_s (npath));
         np_uerror (ENOMEM);
         goto error;
     }
-    _path_decref (srv, npath);
+    path_decref (srv, npath);
     return ret;
 error:
     errn (np_rerror (), "diod_mkdir %s@%s:%s/%.*s",
-          fid->user->uname, np_conn_get_client_id (fid->conn), f->path->s,
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           name->len, name->str);
 error_quiet:
     if (npath)
-        _path_decref (srv, npath);
+        path_decref (srv, npath);
     return NULL;
 }
 
@@ -1759,38 +1296,7 @@ diod_get_path (Npfid *fid)
 {
     Fid *f = fid->aux;
 
-    return f ? f->path->s : NULL;
-}
-
-typedef struct {
-    int len;
-    char *s;
-} DynStr;
-
-static int
-_get_one_file (Path path, char *s, DynStr *ds)
-{
-    int unique, shared;
-
-    xpthread_mutex_lock (&path->lock);
-    _count_ioctx (path->ioctx, &shared, &unique);
-    aspf (&ds->s, &ds->len, "%d %d %d %s\n", path->refcount, shared, unique, s);
-    xpthread_mutex_unlock (&path->lock);
-    return 0;
-}
-
-char *
-diod_get_files (char *name, void *a)
-{
-    Npsrv *srv = a;
-    PathPool pp = srv->srvaux;
-    DynStr ds = { .s = NULL, .len = 0 };
-
-    xpthread_mutex_lock (&pp->lock);
-    hash_for_each (pp->hash, (hash_arg_f)_get_one_file, &ds);
-    xpthread_mutex_unlock (&pp->lock);
-
-    return ds.s;
+    return f ? path_s (f->path) : NULL;
 }
 
 /*
