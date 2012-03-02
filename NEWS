@@ -1,4 +1,15 @@
 =========================================================================
+Release Notes for DIOD version 1.0.6                          02 Mar 2012
+=========================================================================
+
+* Set maxmmap=0 by default as no performance benefit has been
+  demonstrated and it increases our VM footprint.
+
+* Don't try to mmap zero length files (generates log noise).
+
+* Do not return clunk error in the event of munmap failure.
+
+=========================================================================
 Release Notes for DIOD version 1.0.5                          29 Feb 2012
 =========================================================================
 
