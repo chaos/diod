@@ -80,11 +80,11 @@ int npc_clunk (Npcfid *fid);
 int npc_open (Npcfid *fid, u32 flags);
 
 /* Send LCREATE request to create a file in directory 'fid'
- * with specified 'name', 'perm', and 'mode'.
+ * with specified 'name', 'flags', and 'mode'.
  * Afterward, 'fid' will represent the new file, which can be used for I/O.
  * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
  */ 
-int npc_create (Npcfid *fid, char *name, u32 perm, u32 mode, gid_t gid);
+int npc_create (Npcfid *fid, char *name, u32 flags, u32 mode, gid_t gid);
 
 /* Read 'count' bytes to 'buf' at 'offset' using READ requests.
  * Less than 'count' may be read if it exceeds the maximum request size
@@ -148,14 +148,14 @@ Npcfid *npc_mount (int rfd, int wfd, int msize, char *aname, AuthFun auth);
 void npc_umount (Npcfid *fid);
 
 /* Shorthand for walk/open.
- * Returns fid for file, or -1 on error (retrieve with np_rerror ()).
+ * Returns fid for file, or NULL on error (retrieve with np_rerror ()).
  */
 Npcfid* npc_open_bypath (Npcfid *root, char *path, u32 mode);
 
 /* Shorthand for walk/create.
- * Returns fid for new file, or -1 on error (retrieve with np_rerror ()).
+ * Returns fid for new file, or NULL on error (retrieve with np_rerror ()).
  */
-Npcfid *npc_create_bypath (Npcfid *root, char *path, u32 perm, u32 mode,
+Npcfid *npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode,
 			   gid_t gid);
 
 /* Like read (2).  Just a npc_pread() using offset stored in fid.
