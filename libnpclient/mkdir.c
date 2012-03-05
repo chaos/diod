@@ -94,8 +94,9 @@ npc_mkdir_bypath (Npcfid *root, char *path, u32 mode)
 		np_uerror (saved_err);
 		return -1;
 	}
-        (void)npc_clunk (fid);
 	free (cpy);
+        if (npc_clunk (fid) < 0)
+		return -1;
         return 0;
 }
 
