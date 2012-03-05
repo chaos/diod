@@ -70,14 +70,8 @@ npc_remove_bypath (Npcfid *root, char *path)
 	Npcfid *fid;
 
 	if (!(fid = npc_walk (root, path)))
-		goto error;
-	if (npc_remove (fid) < 0) {
-		int saved_err = np_rerror ();
-		(void)npc_clunk (fid);
-		np_uerror (saved_err);
-		goto error;
-	}
+		return -1;
+	if (npc_remove (fid) < 0)
+		return -1;
 	return 0;
-error:
-	return -1;
 }
