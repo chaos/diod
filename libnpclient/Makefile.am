@@ -18,4 +18,5 @@ libnpclient_a_SOURCES = \
 	walk.c \
 	write.c \
 	mkdir.c \
-	stat.c 
+	stat.c \
+	remove.c
