@@ -32,6 +32,10 @@ struct Npcfid {
 	Npcfsys*	fsys;
 	u32		fid;
 	u64		offset;
+	char		*dbuf;		/* packed p9_dirents */
+	int		dbuf_size;	/* size of 'dbuf' buffer */
+	int		dbuf_len;	/* length of 'dbuf' filled */
+	int		dbuf_used;	/* amount of 'dbuf' used */
 };
 
 typedef int (*AuthFun)(Npcfid *afid, u32 uid);
@@ -122,6 +126,15 @@ int npc_getattr (Npcfid *fid, struct stat *sb);
  */
 int npc_remove (Npcfid *fid);
 
+/* Send READDIR request to list contents of directory 'fid'.
+ * 'data' will contain up to 'count' bytes of packed variable length
+ * directory structures of the form: qid[13] offset[8] type[1] name[s]
+ * The 'offset' returned in the last entry can be passed to a subsequent
+ * npc_readdir call in the offset field.  The only legal values for
+ * the offset argument are 0 or the last offset returned.
+ */
+int npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count);
+
 /* TODO:
  * npc_statfs ()
  * npc_symlink ()
@@ -130,7 +143,6 @@ int npc_remove (Npcfid *fid);
  * npc_setattr ()
  * npc_xattrwalk ()
  * npc_xattrcreate ()
- * npc_readdir ()
  * npc_fsync ()
  * npc_lock ()
  * npc_getlock ()
@@ -219,3 +231,22 @@ int npc_getattr_bypath (Npcfid *root, char *path, struct stat *sb);
  */
 int npc_remove_bypath (Npcfid *root, char *path);
 
+struct dirent;
+
+/* Shorthand for walk/open, and initializes internally for npc_readdir_r()
+ * Returns fid for file, or NULL on error (retrieve with np_rerror ()).
+ */
+Npcfid *npc_opendir (Npcfid *root, char *path);
+
+/* Tell the server to forget about 'fid' with a CLUNK request,
+ * and free internal data structures associated with readdir.
+ * Return 0 on success, -1 on error (retrieve with np_rerror ()).
+ */
+int npc_closedir (Npcfid *fid);
+
+/* Read a directory entry from directory 'fid' that was opened with
+ * npc_opendir().  Entry points to dirent storage allocated by the caller.
+ * Like readdir_r, returns 0 on success (>0) errno on failure.
+ * On EOF set result to NULL, otherwise set to entry.
+ */
+int npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result);

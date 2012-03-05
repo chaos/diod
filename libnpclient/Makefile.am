@@ -19,4 +19,5 @@ libnpclient_a_SOURCES = \
 	write.c \
 	mkdir.c \
 	stat.c \
-	remove.c
+	remove.c \
+	readdir.c
