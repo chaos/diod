@@ -56,6 +56,7 @@ npc_remove (Npcfid *fid)
 		goto done;
 	ret = 0;
 done:
+	npc_fid_free (fid); /* fid is no longer valid after remove */
 	if (tc)
 		free(tc);
 	if (rc)
@@ -76,8 +77,6 @@ npc_remove_bypath (Npcfid *root, char *path)
 		np_uerror (saved_err);
 		goto error;
 	}
-	if (npc_clunk (fid) < 0)
-		goto error;
 	return 0;
 error:
 	return -1;

@@ -117,7 +117,7 @@ int npc_mkdir (Npcfid *fid, char *name, u32 mode);
  */
 int npc_getattr (Npcfid *fid, struct stat *sb);
 
-/* Senda REMOVE request to remove file associated with 'fid'.
+/* Send REMOVE request to unlink file/dir associated with 'fid', and clunk fid.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
 int npc_remove (Npcfid *fid);
@@ -214,7 +214,7 @@ int npc_mkdir_bypath (Npcfid *root, char *path, u32 mode);
  */
 int npc_getattr_bypath (Npcfid *root, char *path, struct stat *sb);
 
-/* Like unlink/rmdir (2).  Shorthand for walk/rmeove/clunk.
+/* Like unlink/rmdir (2).  Shorthand for walk/remove.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
 int npc_remove_bypath (Npcfid *root, char *path);
