@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <assert.h>
+#include <dirent.h>
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -39,15 +40,15 @@ main (int argc, char *argv[])
     Npsrv *srv;
     int s[2];
     int flags = 0;
-    Npcfsys *fs;
-    Npcfid *root, *f[TEST_ITER];
+    Npcfid *root, *dir, *f[TEST_ITER];
     char tmpdir[] = "/tmp/tnpsrv2.XXXXXX";
     int i;
     char tmpstr[PATH_MAX + 1];
     int n, len = 4096*100;
     char *buf = malloc (len);
     char *buf2 = malloc (len);
-
+    char dbuf[TEST_MSIZE - P9_IOHDRSZ];
+    struct dirent d, *dp;
 
     diod_log_init (argv[0]);
     diod_conf_init ();
@@ -68,57 +69,55 @@ main (int argc, char *argv[])
         errn_exit (np_rerror (), "diod_init");
     diod_sock_startfd (srv, s[1], s[1], "loopback");
 
-    if (!(fs = npc_start (s[0], s[0], TEST_MSIZE, 0)))
-        errn_exit (np_rerror (), "npc_start");
+    if (!(root = npc_mount (s[0], s[0], TEST_MSIZE, tmpdir, NULL)))
+        errn_exit (np_rerror (), "npc_mount");
 
-    if (!(root = npc_attach (fs, NULL, tmpdir, 0)))
-        errn_exit (np_rerror (), "npc_attach");
     msg ("attached");
 
-    /* create a file */
-    if (!(f[0] = npc_create_bypath (root, "/foo", 0, 0644, getgid())))
-        errn (np_rerror (), "npc_create_bypath /foo");
+    /* create a file, write some data into it, then read it TEST_ITER
+     * times, each on a unique fid.  The path and ioctx will be shared due
+     * to "sharefd" export option set above.  We want to be sure no memory
+     * leaks result from the management of shared paths and io contexts.
+     */
+    if (!(f[0] = npc_create_bypath (root, "foo", 0, 0644, getgid())))
+        errn (np_rerror (), "npc_create_bypath foo");
     else {
         if (!buf || !buf2)
             errn_exit (ENOMEM, "malloc");
-        msg ("created file");
         if (npc_clunk (f[0]) < 0)
             errn (np_rerror (), "npc_clunk");
 
         /* fill it with some data */
         memset (buf, 9, len);
-        n = npc_put (root, "/foo", buf, len);
+        n = npc_put (root, "foo", buf, len);
         if (n < 0)
             errn (np_rerror (), "npc_put");
-        else
-            msg ("write %d bytes", n);
+        if (n < len)
+            msg ("npc_put: short write: %d", n);
 
         /*  walk */
         for (i = 0; i < TEST_ITER; i++) {
             f[i] = npc_walk (root, "foo");
             if (!f[i])
                 errn (np_rerror (), "npc_walk");
-            else
-                msg ("walk");
         }
         /* open */
         for (i = 0; i < TEST_ITER; i++) {
             if (f[i]) {
                 if (npc_open (f[i], O_RDONLY) < 0)
                     errn (np_rerror (), "npc_open");
-                else
-                    msg ("open");
             }
         }
         /* read (using new fids) */
         for (i = 0; i < TEST_ITER; i++) {
             if (f[i]) {
-                n = npc_get (root, "/foo", buf2, len);
+                memset (buf2, 0, len);
+                n = npc_get (root, "foo", buf2, len);
                 if (n < 0)
                     errn (np_rerror (), "npc_get");
-                else
-                    msg ("read %d bytes", n);
-                if (memcmp (buf, buf2, len) != 0)
+                if (n < len) 
+                    msg ("short read: %d bytes", n);
+                if (memcmp (buf, buf2, n) != 0)
                     msg ("memcmp failure");
             }
         }
@@ -127,67 +126,75 @@ main (int argc, char *argv[])
             if (f[i]) {
                 if (npc_clunk (f[i]) < 0)
                     errn (np_rerror (), "npc_clunk");
-                else
-                    msg ("clunk");
             }
         }
 
-        /* remove the file
-         * N.B. npc_remove not implemented yet so we have this reach around
-         */
-        snprintf (tmpstr, sizeof(tmpstr), "%s/foo", tmpdir);
-        if (unlink (tmpstr) < 0)
-            errn (errno, "unlink");
-        else
-            msg ("unlink");
+        /* remove */
+        if (npc_remove_bypath (root, "foo") < 0)
+            errn_exit (np_rerror(), "np_remove_bypath");
 
         free (buf);
         free (buf2);
+
+        msg ("file test finished");
     }
 
-    /* create a directory */
+    /* create a directory with TEST_ITER files, and exercise varios ops
+     * on the files and directory.
+    */
     if (npc_mkdir_bypath (root, "foo", 0755) < 0)
-        errn (errno, "npc_mkdir_bypath");
+        errn (np_rerror (), "npc_mkdir_bypath");
     else {
-        msg ("mkdir");
 
         /* create files */
         for (i = 0; i < TEST_ITER; i++) {
-            snprintf (tmpstr, sizeof (tmpstr), "/foo/%i", i);
+            snprintf (tmpstr, sizeof (tmpstr), "foo/%-.200i", i);
             if (!(f[i] = npc_create_bypath (root, tmpstr, 0, 0644, getgid())))
                 errn (np_rerror (), "npc_create_bypath %s", tmpstr);
-            else
-                msg ("created %s", tmpstr);
         }
-        /* clunk */
+        /* open the directory */
+        if ((dir = npc_opendir (root, "foo"))) {
+
+            /* read one chunk of directory (redundant with below) */
+            if (npc_readdir (dir, 0, dbuf, sizeof (dbuf)) < 0)
+                errn (np_rerror (), "npc_readdir");
+
+            /* list the files in the directory */
+            i = 0;
+            do {
+                if ((n = npc_readdir_r (dir, &d, &dp)) > 0) {
+                    errn (n, "npc_readdir_r");
+                    break;
+                }
+                if (dp)
+                    i++;
+            } while (n == 0 && dp != NULL);
+            if (i != TEST_ITER + 2) /* . and .. will appear */
+                msg ("readdir found fewer than expected files: %d", i);
+
+            /* close the directory */
+            if (npc_closedir (dir) < 0)
+                errn (np_rerror (), "npc_closedir foo");
+        }
+            
+        /* remove files (implicit clunk) */
         for (i = 0; i < TEST_ITER; i++) {
             if (f[i]) {
-                if (npc_clunk (f[i]) < 0)
-                    errn (np_rerror (), "npc_clunk");
-                else
-                    msg ("clunk");
+                if (npc_remove (f[i]) < 0)
+                    errn (np_rerror (), "npc_remove");
             }
-        }
-        /* unlink files */
-        for (i = 0; i < TEST_ITER; i++) {
-            snprintf (tmpstr, sizeof (tmpstr), "%s/foo/%i", tmpdir, i);
-            if (unlink (tmpstr) < 0)
-                errn (errno, "unlink");
-            else
-                msg ("unlink");
         }
 
         /* remove directory */
-        snprintf (tmpstr, sizeof(tmpstr), "%s/foo", tmpdir);
-        if (rmdir (tmpstr) < 0)
-            errn (errno, "rmdir");
-        else
-            msg ("rmdir");
+        if (npc_remove_bypath (root, "foo") < 0)
+            errn_exit (np_rerror (), "npc_remove_bypath");
+
+        msg ("directory test finished");
     }
 
-    npc_clunk (root);
+    npc_umount (root);
 
-    npc_finish (fs);
+    msg ("detached");
 
     np_srv_wait_conncount (srv, 1);
 
