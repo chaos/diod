@@ -174,8 +174,10 @@ npc_mount (int rfd, int wfd, int msize, char *aname, AuthFun auth)
 {
 	Npcfsys *fs;
 	Npcfid *afid, *fid;
+	int flags = 0;
 
-	if (!(fs = npc_start (rfd, wfd, msize, NPC_SHORTREAD_EOF)))
+	//flags |= NPC_SHORTREAD_EOF;
+	if (!(fs = npc_start (rfd, wfd, msize, flags)))
 		return NULL;
 	if (!(afid = npc_auth (fs, aname, geteuid (), auth)) && np_rerror ()) {
 		npc_finish (fs);
