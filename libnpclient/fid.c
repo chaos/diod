@@ -54,6 +54,7 @@ npc_fid_alloc(Npcfsys *fs)
 	ret->fid = npc_get_id(fs->fidpool);
 	ret->offset = 0;
 	ret->iounit = 0;
+	ret->dbuf = NULL;
 
 	fs->incref(fs);
 	return ret;
