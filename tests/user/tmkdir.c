@@ -38,7 +38,7 @@ _mkdir_p (Npcfid *root, char *path, mode_t mode)
     char *cpy;
     int res = 0;
 
-    if (npc_getattr_bypath (root, path, &sb) == 0) {
+    if (npc_stat (root, path, &sb) == 0) {
         if (!S_ISDIR (sb.st_mode)) {
             np_uerror (ENOTDIR);
             return -1;

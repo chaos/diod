@@ -119,7 +119,13 @@ int npc_mkdir (Npcfid *fid, char *name, u32 mode);
 /* Send a GETATTR request to get stat(2) information on 'fid'.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
-int npc_getattr (Npcfid *fid, struct stat *sb);
+int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, struct p9_qid *qid,
+	         u32 *mode, u32 *uid, u32 *gid, u64 *nlink, u64 *rdev,
+		 u64 *size, u64 *blksize, u64 *blocks, u64 *atime_sec,
+		 u64 *atime_nsec, u64 *mtime_sec, u64 *mtime_nsec,
+		 u64 *ctime_sec, u64 *ctime_nsec, u64 *btime_sec,
+		 u64 *btime_nsec, u64 *gen, u64 *data_version);
+
 
 /* Send REMOVE request to unlink file/dir associated with 'fid', and clunk fid.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
@@ -221,10 +227,15 @@ u64 npc_lseek(Npcfid *fid, u64 offset, int whence);
  */
 int npc_mkdir_bypath (Npcfid *root, char *path, u32 mode);
 
+/* Like fstat (2).  Maps directly to a getattr, but we use struct stat.
+ * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
+ */
+int npc_fstat (Npcfid *fid, struct stat *sb);
+
 /* Like stat (2).  Shorthand for walk/getattr/clunk.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
-int npc_getattr_bypath (Npcfid *root, char *path, struct stat *sb);
+int npc_stat (Npcfid *root, char *path, struct stat *sb);
 
 /* Like unlink/rmdir (2).  Shorthand for walk/remove.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
@@ -254,3 +265,4 @@ int npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result);
 void npc_seekdir (Npcfid *fid, long offset);
 
 long npc_telldir (Npcfid *fid);
+

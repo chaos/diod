@@ -248,7 +248,7 @@ loadgen (void *arg)
         do {
             struct stat sb;
 
-            if (npc_getattr (t->infile, &sb) < 0) {
+            if (npc_fstat (t->infile, &sb) < 0) {
                 errn (np_rerror (), "walk null");
                 break;
             }

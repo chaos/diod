@@ -48,8 +48,8 @@ main (int argc, char *argv[])
 
     if (!(root = npc_mount (0, 0, 65536+24, aname, diod_auth)))
         errn_exit (np_rerror (), "npc_mount");
-    if (npc_getattr_bypath (root, path1, &sb1) < 0)
-        errn_exit (np_rerror (), "npc_getattr_bypath");
+    if (npc_stat (root, path1, &sb1) < 0)
+        errn_exit (np_rerror (), "npc_stat");
     npc_umount (root);
 
     if (stat (path2, &sb2) < 0)

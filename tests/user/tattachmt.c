@@ -62,7 +62,7 @@ client (void *arg)
         if (afid && npc_clunk (afid) < 0)
             errn_exit (np_rerror (), "npc_clunk afid");
         for (i = 0; i < t->numgetattrs; i++) {
-            if (npc_getattr (root, &sb) < 0) {
+            if (npc_fstat (root, &sb) < 0) {
                 errn_exit (np_rerror (), "npc_getattr");
             }
         }
