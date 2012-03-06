@@ -45,6 +45,10 @@ enum {
 	NPC_SHORTREAD_EOF=2,	/* npc_aget, npc_get treat short read as eof */
 };
 
+struct utimbuf;
+struct dirent;
+
+
 /**
  ** Basic functions
  **/
@@ -116,7 +120,7 @@ Npcfid *npc_walk (Npcfid *fid, char *path);
  */
 int npc_mkdir (Npcfid *fid, char *name, u32 mode);
 
-/* Send a GETATTR request to get stat(2) information on 'fid'.
+/* Send a GETATTR request to get information on 'fid'.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
 int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, struct p9_qid *qid,
@@ -126,6 +130,10 @@ int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, struct p9_qid *qid,
 		 u64 *ctime_sec, u64 *ctime_nsec, u64 *btime_sec,
 		 u64 *btime_nsec, u64 *gen, u64 *data_version);
 
+/* Send a SETATTR request to set information about 'fid'.
+ */
+int npc_setattr (Npcfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
+                 u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec);
 
 /* Send REMOVE request to unlink file/dir associated with 'fid', and clunk fid.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
@@ -146,7 +154,6 @@ int npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count);
  * npc_symlink ()
  * npc_rename ()
  * npc_readlink ()
- * npc_setattr ()
  * npc_xattrwalk ()
  * npc_xattrcreate ()
  * npc_fsync ()
@@ -242,8 +249,6 @@ int npc_stat (Npcfid *root, char *path, struct stat *sb);
  */
 int npc_remove_bypath (Npcfid *root, char *path);
 
-struct dirent;
-
 /* Shorthand for walk/open, and initializes internally for npc_readdir_r()
  * Returns fid for file, or NULL on error (retrieve with np_rerror ()).
  */
@@ -261,8 +266,17 @@ int npc_closedir (Npcfid *fid);
  * On EOF set result to NULL, otherwise set to entry.
  */
 int npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result);
-
 void npc_seekdir (Npcfid *fid, long offset);
-
 long npc_telldir (Npcfid *fid);
+
+/* Wrappers for setattr.
+ */
+int npc_fchmod (Npcfid *fid, mode_t mode);
+int npc_chmod (Npcfid *root, char *path, mode_t mode);
+int npc_fchown (Npcfid *fid, uid_t owner, gid_t group);
+int npc_chown (Npcfid *root, char *path, uid_t owner, gid_t group);
+int npc_ftruncate (Npcfid *fid, off_t length);
+int npc_truncate (Npcfid *root, char *path, off_t length);
+int npc_futime (Npcfid *fid, const struct utimbuf *times);
+int npc_utime(Npcfid *root, char *path, const struct utimbuf *times);
 

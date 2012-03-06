@@ -20,4 +20,5 @@ libnpclient_a_SOURCES = \
 	mkdir.c \
 	stat.c \
 	remove.c \
-	readdir.c
+	readdir.c \
+	chmod.c
