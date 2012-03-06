@@ -250,3 +250,7 @@ int npc_closedir (Npcfid *fid);
  * On EOF set result to NULL, otherwise set to entry.
  */
 int npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result);
+
+void npc_seekdir (Npcfid *fid, long offset);
+
+long npc_telldir (Npcfid *fid);

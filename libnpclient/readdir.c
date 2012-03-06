@@ -138,3 +138,16 @@ npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result)
 	*result = entry;
 	return 0;
 }
+
+void
+npc_seekdir (Npcfid *fid, long offset)
+{
+	fid->offset = offset;
+	fid->dbuf_used = fid->dbuf_len; /* force a 9p readdir call */
+}
+
+long
+npc_telldir (Npcfid *fid)
+{
+	return fid->offset;
+}
