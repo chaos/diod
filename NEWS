@@ -1,4 +1,25 @@
 =========================================================================
+Release Notes for DIOD version 1.0.7                          07 Mar 2012
+=========================================================================
+
+* Change statfs to return f_type == V9FS_MAGIC by default, and add
+  statfs_passthru = 1 config to get old behavior (issue 80)
+
+* Relax kern/t14 to work around 32 bit f_fsid issue (high byte -1)
+  and allow f_type to be V9FS_MAGIC (issue 54)
+
+* Allow DAC_OVERRIDE to work in --no-auth mode, which
+  was causing kern/t31 to intermittently fail (issue 94)
+
+* Build with -g so debuginfo package contains symbols (issue 96)
+
+* Fix problem writing to files with mode g+w (issue 98)
+
+* Expanded valgrind test coverage.
+
+* Fix 'make dist' to include all source materials.
+
+=========================================================================
 Release Notes for DIOD version 1.0.6                          02 Mar 2012
 =========================================================================
 

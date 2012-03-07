@@ -1,5 +1,5 @@
 Name: diod
-Version: 1.0.6
+Version: 1.0.7
 Release: 1
 
 Summary:  I/O forwarding server for 9P.
@@ -26,7 +26,7 @@ system for I/O forwarding on Linux clusters.
 
 %build
 %configure --with-tcmalloc
-make CFLAGS=-Werror
+make CFLAGS="-Werror -O2 -g"
 
 %check
 make check CFLAGS=-Werror
