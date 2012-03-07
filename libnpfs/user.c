@@ -579,7 +579,8 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	u32 gid;
 	uid_t authuid;
 
-	np_conn_get_authuser(req->conn, &authuid);
+	if (np_conn_get_authuser(req->conn, &authuid) < 0)
+		authuid = P9_NONUNAME;
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		/* gid_override must be one of user's suppl. groups unless

@@ -213,6 +213,17 @@ np_attach(Npreq *req, Npfcall *tc)
 				goto error;
 			}
 		}
+	} else {
+		if (!fid->user) {
+			fid->user = np_attach2user (srv, &tc->u.tattach.uname,
+						    tc->u.tattach.n_uname);
+			if (!fid->user) {
+				np_logerr (srv, "%s: user lookup", a);
+				goto error;
+			}
+		}
+		if (fid->user->uid == 0)
+			np_conn_set_authuser(conn, fid->user->uid);
 	}
 
 	if (srv->remapuser) { /* squash user handling */
@@ -223,15 +234,6 @@ np_attach(Npreq *req, Npfcall *tc)
 			goto error;
 		}
 	}
-	if (!fid->user) {
-		fid->user = np_attach2user (srv, &tc->u.tattach.uname,
-					          tc->u.tattach.n_uname);
-		if (!fid->user) {
-			np_logerr (srv, "%s: user lookup", a);
-			goto error;
-		}
-	}
-
 	if (!strcmp (fid->aname, "ctl")) {
 		rc = np_ctl_attach (fid, afid, fid->aname);
 	} else {
