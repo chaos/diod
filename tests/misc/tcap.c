@@ -96,12 +96,12 @@ wait_state (state_t s)
 
 static void *proc1 (void *a)
 {
-    _prtcap ("task1", CAP_DAC_OVERRIDE);
+    _prtcap ("task1", CAP_DAC_OVERRIDE); /* 1) task 1, expect clr */
     _prtcap ("task1", CAP_CHOWN);
     change_state (S1);
 
     wait_state (S2);
-    _prtcap ("task1", CAP_DAC_OVERRIDE);
+    _prtcap ("task1", CAP_DAC_OVERRIDE); /* 4) task 1, still clr */
     _prtcap ("task1", CAP_CHOWN);
 
     msg ("task1: clr cap");
@@ -115,18 +115,18 @@ static void *proc1 (void *a)
 static void *proc2 (void *a)
 {
     wait_state (S1);
-    _prtcap ("task2", CAP_DAC_OVERRIDE);
+    _prtcap ("task2", CAP_DAC_OVERRIDE); /* 2) task 2, expect clr */
     _prtcap ("task2", CAP_CHOWN);
 
     msg ("task2: set cap");
     _setcap ("task2", CAP_DAC_OVERRIDE);
     _setcap ("task2", CAP_CHOWN);
-    _prtcap ("task2", CAP_DAC_OVERRIDE);
+    _prtcap ("task2", CAP_DAC_OVERRIDE); /* 3) task 2, expect set */
     _prtcap ("task2", CAP_CHOWN);
     change_state (S2);
 
     wait_state (S3);
-    _prtcap ("task2", CAP_DAC_OVERRIDE);
+    _prtcap ("task2", CAP_DAC_OVERRIDE); /* 5) task 2, expect set */
     _prtcap ("task2", CAP_CHOWN);
     change_state (S4);
     return NULL;
@@ -162,19 +162,19 @@ int main(int argc, char *argv[])
     msg ("task0: set cap");
     _setcap ("task0", CAP_DAC_OVERRIDE);
     _setcap ("task0", CAP_CHOWN);
-    _prtcap ("task0", CAP_DAC_OVERRIDE);
-    _prtcap ("task0", CAP_CHOWN);
+    _prtcap ("task0", CAP_DAC_OVERRIDE); /* root with cap explicitly set, */
+    _prtcap ("task0", CAP_CHOWN);        /*  expect set */
 
     msg ("task0: setfsuid 2");
     setfsuid (2); 
-    _prtcap ("task0", CAP_DAC_OVERRIDE);
-    _prtcap ("task0", CAP_CHOWN);
+    _prtcap ("task0", CAP_DAC_OVERRIDE);/* non-root with cap explicitly set, */
+    _prtcap ("task0", CAP_CHOWN);       /*  (as root) expect set */
 
     msg ("task0: clr cap");
     _clrcap ("task0", CAP_DAC_OVERRIDE);
     _clrcap ("task0", CAP_CHOWN);
-    _prtcap ("task0", CAP_DAC_OVERRIDE);
-    _prtcap ("task0", CAP_CHOWN);
+    _prtcap ("task0", CAP_DAC_OVERRIDE);/* non-root with cap explicitly clr, */
+    _prtcap ("task0", CAP_CHOWN);       /* (as non-root) expect clr */
 
     _create (&t1, proc1, NULL);
     _create (&t2, proc2, NULL);
@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
     _join (t2, NULL);
     _join (t1, NULL);
 
-    _prtcap ("task0", CAP_DAC_OVERRIDE);
+    _prtcap ("task0", CAP_DAC_OVERRIDE); /* after threads, expect clr */
     _prtcap ("task0", CAP_CHOWN);
 #else
     fprintf (stderr, "libcap unavailable\n");
