@@ -67,22 +67,23 @@
 #endif
 
 /* ro_mask values to protect attribute from overwrite by config file */
-#define RO_DEBUGLEVEL       0x0001
-#define RO_NWTHREADS        0x0002
-#define RO_FOREGROUND       0x0004
-#define RO_AUTH_REQUIRED    0x0008
-#define RO_RUNASUID         0x0010
-#define RO_USERDB           0x0020
-#define RO_LISTEN           0x0040
-#define RO_MAXMMAP          0x0080
-#define RO_EXPORTS          0x0100
-#define RO_STATSLOG         0x0200
-#define RO_CONFIGPATH       0x0400
-#define RO_LOGDEST          0x0800
-#define RO_EXPORTALL        0x1000
-#define RO_EXPORTOPTS       0x2000
-#define RO_ALLSQUASH        0x4000
-#define RO_SQUASHUSER       0x8000
+#define RO_DEBUGLEVEL       0x00000001
+#define RO_NWTHREADS        0x00000002
+#define RO_FOREGROUND       0x00000004
+#define RO_AUTH_REQUIRED    0x00000008
+#define RO_RUNASUID         0x00000010
+#define RO_USERDB           0x00000020
+#define RO_LISTEN           0x00000040
+#define RO_MAXMMAP          0x00000080
+#define RO_EXPORTS          0x00000100
+#define RO_STATSLOG         0x00000200
+#define RO_CONFIGPATH       0x00000400
+#define RO_LOGDEST          0x00000800
+#define RO_EXPORTALL        0x00001000
+#define RO_EXPORTOPTS       0x00002000
+#define RO_ALLSQUASH        0x00004000
+#define RO_SQUASHUSER       0x00008000
+#define RO_STATFS_PASSTHRU  0x00010000
 
 typedef struct {
     int          debuglevel;
@@ -90,6 +91,7 @@ typedef struct {
     int          maxmmap;
     int          foreground;
     int          auth_required;
+    int          statfs_passthru;
     int          userdb;
     int          allsquash;
     char        *squashuser;
@@ -177,6 +179,7 @@ diod_conf_init (void)
     config.maxmmap = DFLT_MAXMMAP;
     config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
+    config.statfs_passthru = DFLT_STATFS_PASSTHRU;
     config.userdb = DFLT_USERDB;
     config.allsquash = DFLT_ALLSQUASH;
     config.squashuser = _xstrdup (DFLT_SQUASHUSER);
@@ -278,6 +281,16 @@ void diod_conf_set_auth_required (int i)
 {
     config.auth_required = i;
     config.ro_mask |= RO_AUTH_REQUIRED;
+}
+
+/* statfs_passthru - whether statfs should return host f_type or V9FS_MAGIC
+ */
+int diod_conf_get_statfs_passthru (void) { return config.statfs_passthru; }
+int diod_conf_opt_statfs_passthru (void) { return config.ro_mask & RO_STATFS_PASSTHRU; }
+void diod_conf_set_statfs_passthru (int i)
+{
+    config.statfs_passthru = i;
+    config.ro_mask |= RO_STATFS_PASSTHRU;
 }
 
 /* userdb - whether to do passwd/group lookup
@@ -647,6 +660,11 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             config.auth_required = DFLT_AUTH_REQUIRED;
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
+        }
+        if (!(config.ro_mask & RO_STATFS_PASSTHRU)) {
+            config.statfs_passthru = DFLT_STATFS_PASSTHRU;
+            _lua_getglobal_int (path, L, "statfs_passthru",
+                                &config.statfs_passthru);
         }
         if (!(config.ro_mask & RO_USERDB)) {
             config.userdb = DFLT_USERDB;

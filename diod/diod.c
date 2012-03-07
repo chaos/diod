@@ -73,7 +73,7 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fr:w:d:l:t:m:e:Eo:u:SL:nc:NU:"
+#define OPTIONS "fr:w:d:l:t:m:e:Eo:u:SL:npc:NU:"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -89,6 +89,7 @@ static const struct option longopts[] = {
     {"export-all",      no_argument,        0, 'E'},
     {"export-opts",     required_argument,  0, 'o'},
     {"no-auth",         no_argument,        0, 'n'},
+    {"statfs-passthru", no_argument,        0, 'p'},
     {"no-userdb",       no_argument,        0, 'N'},
     {"runas-uid",       required_argument,  0, 'u'},
     {"allsquash",       no_argument,        0, 'S'},
@@ -116,6 +117,7 @@ usage()
 "   -E,--export-all        export all mounted file systems\n"
 "   -o,--export-opts       set global export options (comma-seperated)\n"
 "   -n,--no-auth           disable authentication check\n"
+"   -p,--statfs-passthru   statfs should return underly f_type not V9FS_MAGIC\n"
 "   -N,--no-userdb         bypass password/group file lookup\n"
 "   -u,--runas-uid UID     only allow UID to attach\n"
 "   -S,--allsquash         map all users to the squash user\n"
@@ -199,6 +201,9 @@ main(int argc, char **argv)
                 break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);
+                break;
+            case 'p':   /* --statfs-passthru */
+                diod_conf_set_statfs_passthru (0);
                 break;
             case 'N':   /* --no-userdb */
                 diod_conf_set_userdb (0);

@@ -75,6 +75,11 @@ the "sharefd" attribute, see above).
 Mmmaping a portion of the file may be performance optimization for
 parallel executable/shared library loading.
 The default is 0 (disabled).
+.TP
+.I "statfs_passthru = 1"
+This option configures statfs to return the host file system's type
+rather than V9FS_MAGIC.
+The default is 0 (return V9FS_MAGIC).
 .SH "EXAMPLE"
 .nf
 --

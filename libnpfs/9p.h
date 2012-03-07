@@ -30,6 +30,10 @@
 #ifndef NET_9P_H
 #define NET_9P_H
 
+#ifndef V9FS_MAGIC
+#define V9FS_MAGIC      0x01021997
+#endif
+
 typedef uint8_t   u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

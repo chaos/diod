@@ -553,12 +553,17 @@ diod_statfs (Npfid *fid)
     struct statfs sb;
     Npfcall *ret;
     u64 fsid;
+    u32 type = V9FS_MAGIC;
 
     if (statfs (path_s (f->path), &sb) < 0) {
         np_uerror (errno);
         goto error;
     }
+
     fsid = (u64)sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
+    if (diod_conf_get_statfs_passthru ())
+        type = sb.f_type;
+
     if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
                                   sb.f_ffree, fsid,
