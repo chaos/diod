@@ -1,0 +1,6 @@
+#!/bin/bash -e
+
+TEST=$(basename $0 | cut -d- -f1)
+test $(id -u) == 0 || exit 77 #skip if not root
+./memcheck ./tnpsrv3 >$TEST.out 2>&1
+diff $TEST.exp $TEST.out >$TEST.diff

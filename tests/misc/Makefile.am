@@ -10,11 +10,12 @@ check_PROGRAMS = \
 	tlist \
 	tnpsrv \
 	tnpsrv2 \
+	tnpsrv3 \
 	tlua \
 	tcap \
 	tfidpool
 
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14
 # XFAIL_TESTS = t12
 
 CLEANFILES = *.out *.diff
@@ -62,6 +63,7 @@ tserialize_SOURCES = tserialize.c $(common_sources)
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources)
 tnpsrv2_SOURCES = tnpsrv2.c $(common_sources) $(diod_sources)
+tnpsrv3_SOURCES = tnpsrv3.c $(common_sources) $(diod_sources)
 tlua_SOURCES = tlua.c $(common_sources) 
 tcap_SOURCES = tcap.c $(common_sources) 
 
