@@ -37,8 +37,8 @@ target_triplet = @target@
 check_PROGRAMS = tfcntl$(EXEEXT) tsetfsuid$(EXEEXT) \
 	tsetfsuidsupp$(EXEEXT) tsetuid$(EXEEXT) tsuppgrp$(EXEEXT) \
 	topt$(EXEEXT) tconf$(EXEEXT) tserialize$(EXEEXT) \
-	tlist$(EXEEXT) tnpsrv$(EXEEXT) tlua$(EXEEXT) tcap$(EXEEXT) \
-	tfidpool$(EXEEXT)
+	tlist$(EXEEXT) tnpsrv$(EXEEXT) tnpsrv2$(EXEEXT) \
+	tnpsrv3$(EXEEXT) tlua$(EXEEXT) tcap$(EXEEXT) tfidpool$(EXEEXT)
 subdir = tests/misc
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -130,6 +130,30 @@ tnpsrv_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am__objects_2 = ops.$(OBJEXT) fid.$(OBJEXT) exp.$(OBJEXT) \
+	ioctx.$(OBJEXT)
+am_tnpsrv2_OBJECTS = tnpsrv2.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
+tnpsrv2_OBJECTS = $(am_tnpsrv2_OBJECTS)
+tnpsrv2_LDADD = $(LDADD)
+tnpsrv2_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_tnpsrv3_OBJECTS = tnpsrv3.$(OBJEXT) $(am__objects_1) \
+	$(am__objects_2)
+tnpsrv3_OBJECTS = $(am_tnpsrv3_OBJECTS)
+tnpsrv3_LDADD = $(LDADD)
+tnpsrv3_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_topt_OBJECTS = topt.$(OBJEXT) $(am__objects_1)
 topt_OBJECTS = $(am_topt_OBJECTS)
 topt_LDADD = $(LDADD)
@@ -200,12 +224,14 @@ CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(tcap_SOURCES) $(tconf_SOURCES) $(tfcntl_SOURCES) \
 	tfidpool.c $(tlist_SOURCES) $(tlua_SOURCES) $(tnpsrv_SOURCES) \
-	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tnpsrv2_SOURCES) $(tnpsrv3_SOURCES) $(topt_SOURCES) \
+	$(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
 	$(tsuppgrp_SOURCES)
 DIST_SOURCES = $(tcap_SOURCES) $(tconf_SOURCES) $(tfcntl_SOURCES) \
 	tfidpool.c $(tlist_SOURCES) $(tlua_SOURCES) $(tnpsrv_SOURCES) \
-	$(topt_SOURCES) $(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
+	$(tnpsrv2_SOURCES) $(tnpsrv3_SOURCES) $(topt_SOURCES) \
+	$(tserialize_SOURCES) $(tsetfsuid_SOURCES) \
 	$(tsetfsuidsupp_SOURCES) $(tsetuid_SOURCES) \
 	$(tsuppgrp_SOURCES)
 ETAGS = etags
@@ -346,7 +372,7 @@ target_vendor = @target_vendor@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12
+TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14
 # XFAIL_TESTS = t12
 CLEANFILES = *.out *.diff
 AM_CFLAGS = @GCCWARN@
@@ -355,7 +381,8 @@ AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpclient \
 	-I$(top_srcdir)/liblsd \
 	-I$(top_srcdir)/libdiod \
-	-I$(top_srcdir)/utils
+	-I$(top_srcdir)/utils \
+	-I$(top_srcdir)/diod
 
 LDADD = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
@@ -368,6 +395,16 @@ common_sources = \
 	$(top_srcdir)/utils/opt.h \
 	test.h
 
+diod_sources = \
+	$(top_srcdir)/diod/ops.c \
+	$(top_srcdir)/diod/ops.h \
+	$(top_srcdir)/diod/fid.c \
+	$(top_srcdir)/diod/fid.h \
+	$(top_srcdir)/diod/exp.c \
+	$(top_srcdir)/diod/exp.h \
+	$(top_srcdir)/diod/ioctx.c \
+	$(top_srcdir)/diod/ioctx.h
+
 tsetuid_SOURCES = tsetuid.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
@@ -378,6 +415,8 @@ tconf_SOURCES = tconf.c $(common_sources)
 tserialize_SOURCES = tserialize.c $(common_sources) 
 tlist_SOURCES = tlist.c $(common_sources) 
 tnpsrv_SOURCES = tnpsrv.c $(common_sources)
+tnpsrv2_SOURCES = tnpsrv2.c $(common_sources) $(diod_sources)
+tnpsrv3_SOURCES = tnpsrv3.c $(common_sources) $(diod_sources)
 tlua_SOURCES = tlua.c $(common_sources) 
 tcap_SOURCES = tcap.c $(common_sources) 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf
@@ -439,6 +478,12 @@ tlua$(EXEEXT): $(tlua_OBJECTS) $(tlua_DEPENDENCIES)
 tnpsrv$(EXEEXT): $(tnpsrv_OBJECTS) $(tnpsrv_DEPENDENCIES) 
 	@rm -f tnpsrv$(EXEEXT)
 	$(LINK) $(tnpsrv_OBJECTS) $(tnpsrv_LDADD) $(LIBS)
+tnpsrv2$(EXEEXT): $(tnpsrv2_OBJECTS) $(tnpsrv2_DEPENDENCIES) 
+	@rm -f tnpsrv2$(EXEEXT)
+	$(LINK) $(tnpsrv2_OBJECTS) $(tnpsrv2_LDADD) $(LIBS)
+tnpsrv3$(EXEEXT): $(tnpsrv3_OBJECTS) $(tnpsrv3_DEPENDENCIES) 
+	@rm -f tnpsrv3$(EXEEXT)
+	$(LINK) $(tnpsrv3_OBJECTS) $(tnpsrv3_LDADD) $(LIBS)
 topt$(EXEEXT): $(topt_OBJECTS) $(topt_DEPENDENCIES) 
 	@rm -f topt$(EXEEXT)
 	$(LINK) $(topt_OBJECTS) $(topt_LDADD) $(LIBS)
@@ -464,6 +509,10 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/exp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fid.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ioctx.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ops.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tconf.Po@am__quote@
@@ -472,6 +521,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tlua.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpsrv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpsrv2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tnpsrv3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/topt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tserialize.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuid.Po@am__quote@
@@ -506,6 +557,62 @@ opt.obj: $(top_srcdir)/utils/opt.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/utils/opt.c' object='opt.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o opt.obj `if test -f '$(top_srcdir)/utils/opt.c'; then $(CYGPATH_W) '$(top_srcdir)/utils/opt.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/utils/opt.c'; fi`
+
+ops.o: $(top_srcdir)/diod/ops.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ops.o -MD -MP -MF $(DEPDIR)/ops.Tpo -c -o ops.o `test -f '$(top_srcdir)/diod/ops.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/ops.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ops.Tpo $(DEPDIR)/ops.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/ops.c' object='ops.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ops.o `test -f '$(top_srcdir)/diod/ops.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/ops.c
+
+ops.obj: $(top_srcdir)/diod/ops.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ops.obj -MD -MP -MF $(DEPDIR)/ops.Tpo -c -o ops.obj `if test -f '$(top_srcdir)/diod/ops.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/ops.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/ops.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ops.Tpo $(DEPDIR)/ops.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/ops.c' object='ops.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ops.obj `if test -f '$(top_srcdir)/diod/ops.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/ops.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/ops.c'; fi`
+
+fid.o: $(top_srcdir)/diod/fid.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fid.o -MD -MP -MF $(DEPDIR)/fid.Tpo -c -o fid.o `test -f '$(top_srcdir)/diod/fid.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/fid.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fid.Tpo $(DEPDIR)/fid.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/fid.c' object='fid.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fid.o `test -f '$(top_srcdir)/diod/fid.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/fid.c
+
+fid.obj: $(top_srcdir)/diod/fid.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT fid.obj -MD -MP -MF $(DEPDIR)/fid.Tpo -c -o fid.obj `if test -f '$(top_srcdir)/diod/fid.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/fid.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/fid.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/fid.Tpo $(DEPDIR)/fid.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/fid.c' object='fid.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o fid.obj `if test -f '$(top_srcdir)/diod/fid.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/fid.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/fid.c'; fi`
+
+exp.o: $(top_srcdir)/diod/exp.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT exp.o -MD -MP -MF $(DEPDIR)/exp.Tpo -c -o exp.o `test -f '$(top_srcdir)/diod/exp.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/exp.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/exp.Tpo $(DEPDIR)/exp.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/exp.c' object='exp.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o exp.o `test -f '$(top_srcdir)/diod/exp.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/exp.c
+
+exp.obj: $(top_srcdir)/diod/exp.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT exp.obj -MD -MP -MF $(DEPDIR)/exp.Tpo -c -o exp.obj `if test -f '$(top_srcdir)/diod/exp.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/exp.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/exp.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/exp.Tpo $(DEPDIR)/exp.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/exp.c' object='exp.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o exp.obj `if test -f '$(top_srcdir)/diod/exp.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/exp.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/exp.c'; fi`
+
+ioctx.o: $(top_srcdir)/diod/ioctx.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ioctx.o -MD -MP -MF $(DEPDIR)/ioctx.Tpo -c -o ioctx.o `test -f '$(top_srcdir)/diod/ioctx.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/ioctx.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ioctx.Tpo $(DEPDIR)/ioctx.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/ioctx.c' object='ioctx.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ioctx.o `test -f '$(top_srcdir)/diod/ioctx.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/ioctx.c
+
+ioctx.obj: $(top_srcdir)/diod/ioctx.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT ioctx.obj -MD -MP -MF $(DEPDIR)/ioctx.Tpo -c -o ioctx.obj `if test -f '$(top_srcdir)/diod/ioctx.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/ioctx.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/ioctx.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/ioctx.Tpo $(DEPDIR)/ioctx.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/ioctx.c' object='ioctx.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ioctx.obj `if test -f '$(top_srcdir)/diod/ioctx.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/ioctx.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/ioctx.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
