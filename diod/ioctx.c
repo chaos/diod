@@ -513,7 +513,8 @@ ppool_fini (Npsrv *srv)
 
     if (pp) {
         if (pp->hash) {
-            assert (hash_is_empty (pp->hash));
+            /* issue 99: this triggers when shutting down with active clients */
+            /*assert (hash_is_empty (pp->hash));*/
             hash_destroy (pp->hash);
         }
         pthread_mutex_destroy (&pp->lock);
