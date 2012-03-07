@@ -41,8 +41,12 @@ main (int argc, char *argv[])
         perror (argv[2]);
         exit (1);
     }
+    /* As of diod-1.0.7, the default is to return V9FS_MAGIC.
+     * A patch was submitted to let the server control this but
+     * as of linux-3.3.3-rc5 it has not gone in upstream.
+     * (Without the patch f_type is always V9FS_MAGIC.)
+     */
     if (tfield ("type") && s1.f_type != s2.f_type) {
-        /* If they differ and one is plan 9 type, be quiet . */
         if (s1.f_type != V9FS_MAGIC && s2.f_type != V9FS_MAGIC) {
             fprintf (stderr, "f_type differs\n");
             diff++;
@@ -72,22 +76,19 @@ main (int argc, char *argv[])
         fprintf (stderr, "f_ffree differs\n");
         diff++;
     }
-#if 0
-    if (tfield ("fsid") && (s1.f_fsid.__val[0] != s2.f_fsid.__val[0]
-                         || s1.f_fsid.__val[1] != s2.f_fsid.__val[1])) {
-        fprintf (stderr, "statfs f_fsid differs (%d.%d != %d.%d)\n",
-                        s1.f_fsid.__val[0], s1.f_fsid.__val[1],
-                        s2.f_fsid.__val[0], s2.f_fsid.__val[1]);
-        diff++;
+    /* I'm not sure if this is a bug in v9fs or elsewhere, but on 32 bit
+     * systems, f_fsid.__val[1] == -1.
+     */
+    if (tfield ("fsid")) {
+        if (s1.f_fsid.__val[0] != s2.f_fsid.__val[0]) {
+            fprintf (stderr, "statfs f_fsid differs)\n");
+            diff++;
+        } else if (s1.f_fsid.__val[1] != -1 && s2.f_fsid.__val[1] != -1
+                && s1.f_fsid.__val[1] != s2.f_fsid.__val[1]) {
+            fprintf (stderr, "statfs f_fsid differs\n");
+            diff++;
+        }
     }
-#else
-    /* Just test first byte until we run down why second byte is -1 on ubuntu */
-    if (tfield ("fsid") && (s1.f_fsid.__val[0] != s2.f_fsid.__val[0])) {
-        fprintf (stderr, "statfs f_fsid differs (%d != %d)\n",
-                        s1.f_fsid.__val[0], s2.f_fsid.__val[0]);
-        diff++;
-    }
-#endif
     if (tfield ("namelen") && s1.f_namelen != s2.f_namelen) {
         fprintf (stderr, "f_namelen differs\n");
         diff++;
