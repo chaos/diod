@@ -1,3 +1,10 @@
 tnpsrv3: attached
-tnpsrv3: file test finished
+tnpsrv3: root file test done
+tnpsrv3: npc_create_bypath foo: Permission denied
+tnpsrv3: user file test done
+tnpsrv3: chmod 0777 mount point
+tnpsrv3: user file test done
+tnpsrv3: chown 1 mount point
+tnpsrv3: chmod 0700 mount point
+tnpsrv3: user file test done
 tnpsrv3: detached

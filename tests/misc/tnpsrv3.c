@@ -45,7 +45,7 @@ file_test (Npcfid *root)
 
     if (!(f = npc_create_bypath (root, "foo", 0, 0644, getgid()))) {
         errn (np_rerror (), "npc_create_bypath foo");
-        return;
+        goto done;
     }
     if (npc_clunk (f) < 0)
         errn (np_rerror (), "npc_clunk");
@@ -85,7 +85,7 @@ file_test (Npcfid *root)
     /* remove */
     if (npc_remove_bypath (root, "foo") < 0)
         errn_exit (np_rerror(), "np_remove_bypath");
-
+done:
     free (buf);
     free (buf2);
 }
@@ -97,7 +97,7 @@ main (int argc, char *argv[])
     int s[2];
     int flags = 0;
     Npcfsys *fs;
-    Npcfid *root, *user;
+    Npcfid *root, *user, *user2;
     char tmpdir[] = "/tmp/tnpsrv2.XXXXXX";
 
     assert (geteuid () == 0);
@@ -106,7 +106,6 @@ main (int argc, char *argv[])
     diod_conf_init ();
 
     /* Allow attach with afid==-1.
-     * SRV_FLAGS_AUTHCONN has no effect in this mode.
      */
     diod_conf_set_auth_required (0);
 
@@ -119,8 +118,11 @@ main (int argc, char *argv[])
     if (socketpair (AF_LOCAL, SOCK_STREAM, 0, s) < 0)
         err_exit ("socketpair");
 
+    /* Note: supplementary groups do not work in this mode, however
+     * regular uid:gid switching of fsid works.  Enabling DAC_BYPASS
+     * assumes v9fs is enforcing permissions, not the case with npclient.
+     */
     flags |= SRV_FLAGS_SETFSID;
-    //flags |= SRV_FLAGS_DAC_BYPASS;
     if (!(srv = np_srv_create (16, flags)))
         errn_exit (np_rerror (), "np_srv_create");
     if (diod_init (srv) < 0)
@@ -134,13 +136,35 @@ main (int argc, char *argv[])
         errn_exit (np_rerror (), "npc_attach");
     if (!(user = npc_attach (fs, NULL, tmpdir, 1))) /* attach as uid=1 */
         errn_exit (np_rerror (), "npc_attach (uid=1)");
+    /* attach one more time as uid=1 to exercise user cache under valgrind */
+    if (!(user2 = npc_attach (fs, NULL, tmpdir, 1)))
+        errn_exit (np_rerror (), "npc_attach (uid=1)");
     msg ("attached");
 
-    file_test (root);
-    file_test (user);
-    msg ("file test finished");
+    file_test (root); /* expect success */
+    msg ("root file test done");
+
+    file_test (user); /* expect failure */
+    msg ("user file test done");
+
+    if (npc_chmod (root, ".", 0777) < 0)
+        errn (np_rerror (), "npc_chmod");
+    msg ("chmod 0777 mount point");
+    file_test (user); /* expect success */
+    msg ("user file test done");
+
+    if (npc_chown (root, ".", 1, 1) < 0)
+        errn (np_rerror (), "npc_chmod");
+    msg ("chown 1 mount point");
+    if (npc_chmod (root, ".", 0700) < 0)
+        errn (np_rerror (), "npc_chmod");
+    msg ("chmod 0700 mount point");
+    file_test (user); /* expect success */
+    msg ("user file test done");
 
     if (npc_clunk (user) < 0)
+        errn (np_rerror (), "npc_clunk (uid=1)");
+    if (npc_clunk (user2) < 0)
         errn (np_rerror (), "npc_clunk (uid=1)");
     if (npc_clunk (root) < 0)
         errn (np_rerror (), "npc_clunk");
