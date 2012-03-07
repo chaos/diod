@@ -579,6 +579,47 @@ error:
     return NULL;
 }
 
+/* Remap 9p2000.L open flags to linux open flags.
+ * (I borrowed liberally from vfs_inode_dotl.c)
+ */
+
+struct dotl_openflag_map {
+        int open_flag;
+        int dotl_flag;
+};
+
+static int
+_remap_oflags (int flags)
+{
+    int i;
+    int rflags = 0;
+    struct dotl_openflag_map dotl_oflag_map[] = {
+        { O_CREAT,      P9_DOTL_CREATE },
+        { O_EXCL,       P9_DOTL_EXCL },
+        { O_NOCTTY,     P9_DOTL_NOCTTY },
+        { O_TRUNC,      P9_DOTL_TRUNC },
+        { O_APPEND,     P9_DOTL_APPEND },
+        { O_NONBLOCK,   P9_DOTL_NONBLOCK },
+        { O_DSYNC,      P9_DOTL_DSYNC },
+        { FASYNC,       P9_DOTL_FASYNC },
+        { O_DIRECT,     P9_DOTL_DIRECT },
+        { O_LARGEFILE,  P9_DOTL_LARGEFILE },
+        { O_DIRECTORY,  P9_DOTL_DIRECTORY },
+        { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
+        { O_NOATIME,    P9_DOTL_NOATIME },
+        { O_CLOEXEC,    P9_DOTL_CLOEXEC },
+        { O_SYNC,       P9_DOTL_SYNC},
+    };
+    int nel = sizeof(dotl_oflag_map)/sizeof(dotl_oflag_map[0]);
+
+    rflags |= (flags & O_ACCMODE);
+    for (i = 0; i < nel; i++) {
+        if (flags & dotl_oflag_map[i].dotl_flag)
+            rflags |= dotl_oflag_map[i].open_flag;
+    }
+    return rflags;
+}
+
 Npfcall*
 diod_lopen (Npfid *fid, u32 flags)
 {
@@ -590,6 +631,9 @@ diod_lopen (Npfid *fid, u32 flags)
         np_uerror (EROFS);
         goto error_quiet;
     }
+
+    flags = _remap_oflags (flags);
+
     if ((flags & O_CREAT)) /* can't happen? */
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
@@ -630,6 +674,9 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         np_uerror (EROFS);
         goto error_quiet;
     }
+
+    flags = _remap_oflags (flags);
+
     if (!(flags & O_CREAT)) /* can't happen? */
         flags |= O_CREAT;
     if (f->ioctx != NULL) {
