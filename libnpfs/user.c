@@ -527,7 +527,7 @@ _chg_privcap (Npsrv *srv, cap_flag_value_t val)
 {
 	cap_t cap;
 	cap_flag_value_t cur;
-	cap_value_t cf[] = { CAP_DAC_OVERRIDE, CAP_CHOWN };
+	cap_value_t cf[] = { CAP_DAC_OVERRIDE, CAP_CHOWN, CAP_FOWNER };
 	int need_set = 0;
 	int i, ret = -1;
 
