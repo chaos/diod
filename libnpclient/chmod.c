@@ -71,7 +71,7 @@ done:
 int
 npc_fchmod (Npcfid *fid, mode_t mode)
 {
-	u32 valid = P9_SETATTR_MODE;
+	u32 valid = P9_ATTR_MODE;
 
 	return npc_setattr (fid, valid, mode, 0, 0, 0, 0, 0, 0, 0);
 }
@@ -100,9 +100,9 @@ npc_fchown (Npcfid *fid, uid_t owner, gid_t group)
 	u32 valid = 0;
 
 	if (owner != -1)
-		valid |= P9_SETATTR_UID;
+		valid |= P9_ATTR_UID;
 	if (group != -1)
-		valid |= P9_SETATTR_GID;
+		valid |= P9_ATTR_GID;
 	return npc_setattr (fid, valid, 0, owner, group, 0, 0, 0, 0, 0);
 }
 
@@ -127,7 +127,7 @@ npc_chown (Npcfid *root, char *path, uid_t owner, gid_t group)
 int
 npc_ftruncate (Npcfid *fid, off_t length)
 {
-	u32 valid = P9_SETATTR_SIZE;
+	u32 valid = P9_ATTR_SIZE;
 
 	return npc_setattr (fid, valid, 0, 0, 0, length, 0, 0, 0, 0);
 }
@@ -157,13 +157,13 @@ npc_futime (Npcfid *fid, const struct utimbuf *times)
 	u64 atime_sec = 0, atime_nsec = 0;
 	u64 mtime_sec = 0, mtime_nsec = 0;
 
-	valid |= P9_SETATTR_ATIME;
-	valid |= P9_SETATTR_MTIME;
+	valid |= P9_ATTR_ATIME;
+	valid |= P9_ATTR_MTIME;
 	if (times) {
 		atime_sec = times->actime;
-		valid |= P9_SETATTR_ATIME_SET;
+		valid |= P9_ATTR_ATIME_SET;
 		mtime_sec = times->modtime;
-		valid |= P9_SETATTR_MTIME_SET;
+		valid |= P9_ATTR_MTIME_SET;
 	}
 
 	return npc_setattr (fid, valid, 0, 0, 0, 0,

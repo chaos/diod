@@ -102,7 +102,7 @@ npc_fstat (Npcfid *fid, struct stat *sb)
 	u64 btime_sec, btime_nsec;
 	u64 gen, data_version;
 
-	ret = npc_getattr (fid, P9_GETATTR_BASIC, &valid, &qid,
+	ret = npc_getattr (fid, P9_STAT_BASIC, &valid, &qid,
 			   &mode, &uid, &gid, &nlink, &rdev, &size,
 			   &blksize, &blocks, &atime_sec, &atime_nsec,
 			   &mtime_sec, &mtime_nsec, &ctime_sec, &ctime_nsec,

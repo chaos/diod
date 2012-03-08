@@ -935,46 +935,46 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if ((valid & P9_SETATTR_MODE)) { /* N.B. derefs symlinks */
+    if ((valid & P9_ATTR_MODE)) { /* N.B. derefs symlinks */
         if (chmod (path_s (f->path), mode) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-    if ((valid & P9_SETATTR_UID) || (valid & P9_SETATTR_GID)) {
-        if (lchown (path_s (f->path), (valid & P9_SETATTR_UID) ? uid : -1,
-                                      (valid & P9_SETATTR_GID) ? gid : -1) < 0){
+    if ((valid & P9_ATTR_UID) || (valid & P9_ATTR_GID)) {
+        if (lchown (path_s (f->path), (valid & P9_ATTR_UID) ? uid : -1,
+                                      (valid & P9_ATTR_GID) ? gid : -1) < 0){
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-    if ((valid & P9_SETATTR_SIZE)) {
+    if ((valid & P9_ATTR_SIZE)) {
         if (truncate (path_s (f->path), size) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-    if ((valid & P9_SETATTR_ATIME) || (valid & P9_SETATTR_MTIME)) {
+    if ((valid & P9_ATTR_ATIME) || (valid & P9_ATTR_MTIME)) {
 #if HAVE_UTIMENSAT
         struct timespec ts[2];
 
-        if (!(valid & P9_SETATTR_ATIME)) {
+        if (!(valid & P9_ATTR_ATIME)) {
             ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_OMIT;
-        } else if (!(valid & P9_SETATTR_ATIME_SET)) {
+        } else if (!(valid & P9_ATTR_ATIME_SET)) {
             ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_NOW;
         } else {
             ts[0].tv_sec = atime_sec;
             ts[0].tv_nsec = atime_nsec;
         }
-        if (!(valid & P9_SETATTR_MTIME)) {
+        if (!(valid & P9_ATTR_MTIME)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_OMIT;
-        } else if (!(valid & P9_SETATTR_MTIME_SET)) {
+        } else if (!(valid & P9_ATTR_MTIME_SET)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_NOW;
         } else {
@@ -988,8 +988,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 #else /* HAVE_UTIMENSAT */
         struct timeval tv[2], now, *tvp;
         struct stat sb;
-        if ((valid & P9_SETATTR_ATIME) && !(valid & P9_SETATTR_ATIME_SET)
-         && (valid & P9_SETATTR_MTIME) && !(valid & P9_SETATTR_MTIME_SET)) {
+        if ((valid & P9_ATTR_ATIME) && !(valid & P9_ATTR_ATIME_SET)
+         && (valid & P9_ATTR_MTIME) && !(valid & P9_ATTR_MTIME_SET)) {
             tvp = NULL; /* set both to now */
         } else {
             if (lstat(path_s (f->path), &sb) < 0) {
@@ -1000,10 +1000,10 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                 np_uerror (errno);
                 goto error_quiet;
             }
-            if (!(valid & P9_SETATTR_ATIME)) {
+            if (!(valid & P9_ATTR_ATIME)) {
                 tv[0].tv_sec = sb.st_atim.tv_sec;
                 tv[0].tv_usec = sb.st_atim.tv_nsec / 1000;
-            } else if (!(valid & P9_SETATTR_ATIME_SET)) {
+            } else if (!(valid & P9_ATTR_ATIME_SET)) {
                 tv[0].tv_sec = now.tv_sec;
                 tv[0].tv_usec = now.tv_usec;
             } else {
@@ -1011,10 +1011,10 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                 tv[0].tv_usec = atime_nsec / 1000;
             }
 
-            if (!(valid & P9_SETATTR_MTIME)) {
+            if (!(valid & P9_ATTR_MTIME)) {
                 tv[1].tv_sec = sb.st_mtim.tv_sec;
                 tv[1].tv_usec = sb.st_mtim.tv_nsec / 1000;
-            } else if (!(valid & P9_SETATTR_MTIME_SET)) {
+            } else if (!(valid & P9_ATTR_MTIME_SET)) {
                 tv[1].tv_sec = now.tv_sec;
                 tv[1].tv_usec = now.tv_usec;
             } else {
@@ -1030,7 +1030,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 #endif /* HAVE_UTIMENSAT */
         ctime_updated = 1;
     }
-    if ((valid & P9_SETATTR_CTIME) && !ctime_updated) {
+    if ((valid & P9_ATTR_CTIME) && !ctime_updated) {
         if (lchown (path_s (f->path), -1, -1) < 0) {
             np_uerror (errno);
             goto error_quiet;

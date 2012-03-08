@@ -270,64 +270,64 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_RGETATTR tag %u", fc->tag);
 		spf (s, len, " valid 0x%"PRIx64, fc->u.rgetattr.valid);
 		spf (s, len, " qid ");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_INO))
+		if ((fc->u.rgetattr.valid & P9_STAT_INO))
 			np_printqid(s, len, &fc->u.rgetattr.qid);
 		else
 			spf (s, len, "X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_MODE))
+		if ((fc->u.rgetattr.valid & P9_STAT_MODE))
 			spf (s, len, " mode 0%"PRIo32, fc->u.rgetattr.mode);
 		else
 			spf (s, len, " mode X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_UID))
+		if ((fc->u.rgetattr.valid & P9_STAT_UID))
 			spf (s, len, " uid %"PRIu32, fc->u.rgetattr.uid);
 		else
 			spf (s, len, " uid X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_GID))
+		if ((fc->u.rgetattr.valid & P9_STAT_GID))
 			spf (s, len, " gid %"PRIu32, fc->u.rgetattr.gid);
 		else
 			spf (s, len, " gid X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_NLINK))
+		if ((fc->u.rgetattr.valid & P9_STAT_NLINK))
 			spf (s, len, " nlink %"PRIu64, fc->u.rgetattr.nlink);
 		else
 			spf (s, len, " nlink X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_RDEV))
+		if ((fc->u.rgetattr.valid & P9_STAT_RDEV))
 			spf (s, len, " rdev %"PRIu64, fc->u.rgetattr.rdev);
 		else
 			spf (s, len, " rdev X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_SIZE))
+		if ((fc->u.rgetattr.valid & P9_STAT_SIZE))
 			spf (s, len, " size %"PRIu64, fc->u.rgetattr.size);
 		else
 			spf (s, len, " size X");
 		spf (s, len, " blksize %"PRIu64, fc->u.rgetattr.blksize);
-		if ((fc->u.rgetattr.valid & P9_GETATTR_BLOCKS))
+		if ((fc->u.rgetattr.valid & P9_STAT_BLOCKS))
 			spf (s, len, " blocks %"PRIu64, fc->u.rgetattr.blocks);
 		else
 			spf (s, len, " blocks X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_ATIME))
+		if ((fc->u.rgetattr.valid & P9_STAT_ATIME))
 			spf (s, len, " atime %s",
 				np_timestr(fc->u.rgetattr.atime_sec, fc->u.rgetattr.atime_nsec));
 		else
 			spf (s, len, " atime X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_MTIME))
+		if ((fc->u.rgetattr.valid & P9_STAT_MTIME))
 			spf (s, len, " mtime %s",
 				np_timestr(fc->u.rgetattr.mtime_sec, fc->u.rgetattr.mtime_nsec));
 		else
 			spf (s, len, " mtime X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_CTIME))
+		if ((fc->u.rgetattr.valid & P9_STAT_CTIME))
 			spf (s, len, " ctime %s",
 				np_timestr(fc->u.rgetattr.ctime_sec, fc->u.rgetattr.ctime_nsec));
 		else
 			spf (s, len, " ctime X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_BTIME))
+		if ((fc->u.rgetattr.valid & P9_STAT_BTIME))
 			spf (s, len, " btime %s",
 				np_timestr(fc->u.rgetattr.btime_sec, fc->u.rgetattr.btime_nsec));
 		else
 			spf (s, len, " btime X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_GEN))
+		if ((fc->u.rgetattr.valid & P9_STAT_GEN))
 			spf (s, len, " gen %"PRIu64, fc->u.rgetattr.gen);
 		else
 			spf (s, len, " gen X");
-		if ((fc->u.rgetattr.valid & P9_GETATTR_DATA_VERSION))
+		if ((fc->u.rgetattr.valid & P9_STAT_DATA_VERSION))
 			spf (s, len, " data_version %"PRIu64, fc->u.rgetattr.data_version);
 		else
 			spf (s, len, " data_version X");
@@ -336,32 +336,32 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_TSETATTR tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.tsetattr.fid);
 		spf (s, len, " valid 0x%"PRIx32, fc->u.tsetattr.valid);
-		if ((fc->u.tsetattr.valid & P9_SETATTR_MODE))
+		if ((fc->u.tsetattr.valid & P9_ATTR_MODE))
 			spf (s, len, " mode 0%"PRIo32, fc->u.tsetattr.mode);
 		else
 			spf (s, len, " mode X");
-		if ((fc->u.tsetattr.valid & P9_SETATTR_UID))
+		if ((fc->u.tsetattr.valid & P9_ATTR_UID))
 			spf (s, len, " uid %"PRIu32, fc->u.tsetattr.uid);
 		else
 			spf (s, len, " uid X");
-		if ((fc->u.tsetattr.valid & P9_SETATTR_GID))
+		if ((fc->u.tsetattr.valid & P9_ATTR_GID))
 			spf (s, len, " gid %"PRIu32, fc->u.tsetattr.gid);
 		else
 			spf (s, len, " gid X");
-		if ((fc->u.tsetattr.valid & P9_SETATTR_SIZE))
+		if ((fc->u.tsetattr.valid & P9_ATTR_SIZE))
 			spf (s, len, " size %"PRIu64, fc->u.tsetattr.size);
 		else
 			spf (s, len, " size X");
-		if (!(fc->u.tsetattr.valid & P9_SETATTR_ATIME))
+		if (!(fc->u.tsetattr.valid & P9_ATTR_ATIME))
 			spf (s, len, " atime X");
-		else if (!(fc->u.tsetattr.valid & P9_SETATTR_ATIME_SET))
+		else if (!(fc->u.tsetattr.valid & P9_ATTR_ATIME_SET))
 			spf (s, len, " atime X");
 		else
 			spf (s, len, " atime %s",
 				np_timestr(fc->u.tsetattr.atime_sec, fc->u.tsetattr.atime_nsec));
-		if (!(fc->u.tsetattr.valid & P9_SETATTR_MTIME))
+		if (!(fc->u.tsetattr.valid & P9_ATTR_MTIME))
 			spf (s, len, " mtime X");
-		else if (!(fc->u.tsetattr.valid & P9_SETATTR_MTIME_SET))
+		else if (!(fc->u.tsetattr.valid & P9_ATTR_MTIME_SET))
 			spf (s, len, " mtime now");
 		else
 			spf (s, len, " mtime %s",
