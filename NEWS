@@ -1,4 +1,17 @@
 =========================================================================
+Release Notes for DIOD version 1.0.8                          09 Mar 2012
+=========================================================================
+
+* Enable core dumps for diod (issue 105)
+  Add new assert macro that ensures assertions are captured in logs.
+
+* Interpret 9P2000.L open flags (issue 101)
+
+* Avoid asserting in ppool_fini on SIGTERM (issue 99)
+
+* Don't close ioctx if already open in diod_lopen.
+
+=========================================================================
 Release Notes for DIOD version 1.0.7                          07 Mar 2012
 =========================================================================
 
