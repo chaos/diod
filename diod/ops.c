@@ -640,7 +640,7 @@ diod_lopen (Npfid *fid, u32 flags)
     if (f->ioctx != NULL) {
         np_uerror (EINVAL);
         errn (errno, "diod_lopen: fid is already open");
-        goto error_quiet; 
+        return NULL;
     }
     if (ioctx_open (fid, flags, 0) < 0) {
         if (np_rerror () == ENOMEM)
