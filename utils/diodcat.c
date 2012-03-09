@@ -169,7 +169,7 @@ cat9 (Npcfid *root, char *path)
         errn (np_rerror (), "open %s", path);
         goto done;
     }
-    assert (fid->iounit > 0); /* libnpclient invariant */
+    ASSERT (fid->iounit > 0); /* libnpclient invariant */
     if (!(buf = malloc (fid->iounit))) {
         msg ("out of memory");
         goto done;

@@ -161,7 +161,7 @@ diod_match_exports (char *path, Npconn *conn, Npuser *user, int *xfp)
     Export *x;
     int res = 0; /* DENIED */
 
-    assert (exports != NULL);
+    ASSERT (exports != NULL);
     if (strstr (path, "/..") != NULL) {
         np_uerror (EPERM);
         goto done;
@@ -256,7 +256,7 @@ diod_get_exports (char *name, void *a)
     char *s = NULL;
     char *ret = NULL;
 
-    assert (exports != NULL);
+    ASSERT (exports != NULL);
 
     if (!(seen = list_create (NULL))) {
         np_uerror (ENOMEM);

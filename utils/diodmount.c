@@ -245,15 +245,15 @@ main (int argc, char *argv[])
         opt_addf (o, "wfdno=%d", wfd);
     }
 
-    assert (opt_find (o, "trans=fd"));
-    assert (opt_scanf (o, "msize=%d", &i));
-    assert (opt_find (o, "version=9p2000.L"));
-    assert (opt_scanf (o, "debug=%d", &i) || opt_scanf (o, "debug=%x", &i));
-    assert (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
-    assert ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
+    ASSERT (opt_find (o, "trans=fd"));
+    ASSERT (opt_scanf (o, "msize=%d", &i));
+    ASSERT (opt_find (o, "version=9p2000.L"));
+    ASSERT (opt_scanf (o, "debug=%d", &i) || opt_scanf (o, "debug=%x", &i));
+    ASSERT (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
+    ASSERT ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
          || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
 
-    assert (!opt_find (o, "port"));
+    ASSERT (!opt_find (o, "port"));
 
     _diod_mount (o, rfd, wfd, nspec ? nspec : spec, dir, vopt, fopt, nopt);
 

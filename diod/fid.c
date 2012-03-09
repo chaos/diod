@@ -68,7 +68,7 @@ diod_fidalloc (Npfid *fid, Npstr *ns)
 {
     Fid *f = malloc (sizeof (*f));
 
-    assert (fid->aux == NULL);
+    ASSERT (fid->aux == NULL);
     if (f) {
         f->flags = 0;
         f->ioctx = NULL;
@@ -91,7 +91,7 @@ diod_fidclone (Npfid *newfid, Npfid *fid)
     Fid *f = fid->aux;
     Fid *nf = malloc (sizeof (*f));
 
-    assert (newfid->aux == NULL);
+    ASSERT (newfid->aux == NULL);
     if (nf) {
         nf->flags = f->flags;
         nf->ioctx = NULL;

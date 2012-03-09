@@ -207,7 +207,7 @@ diod_ustat2qid (struct stat *st, Npqid *qid)
 static void
 _dirent2qid (struct dirent *d, Npqid *qid)
 {
-    assert (d->d_type != DT_UNKNOWN);
+    ASSERT (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino;
     qid->version = 0;
     qid->type = 0;

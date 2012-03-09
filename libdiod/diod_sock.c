@@ -234,7 +234,7 @@ diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
             goto done;
         }
         port = strchr (host, ':');
-        assert (port != NULL);
+        ASSERT (port != NULL);
         *port++ = '\0';
         if (nport)
             port = nport;

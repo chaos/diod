@@ -49,7 +49,7 @@ struct opt_struct {
 void
 opt_destroy (Opt o)
 {
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
     if (o->list)
         list_destroy (o->list);
     free (o);
@@ -78,7 +78,7 @@ opt_csv (Opt o)
     int strsize = 1;
     int n;
 
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
     if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");
     while ((item = list_next (itr)))
@@ -122,7 +122,7 @@ opt_addf (Opt o, const char *fmt, ...)
     char *saveptr = NULL;
     int error;
 
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
     va_start (ap, fmt);
     error = vasprintf (&csv, fmt, ap);
     va_end (ap);
@@ -157,7 +157,7 @@ opt_find (Opt o, char *key)
 {
     char *s;
 
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
 
     if (strchr (key, '='))
         s = list_find_first (o->list, (ListFindF)_match_keyval, key);
@@ -172,7 +172,7 @@ opt_find (Opt o, char *key)
 int
 opt_delete (Opt o, char *key)
 {
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
 
     return list_delete_all (o->list, (ListFindF)_match_key, key);   
 }
@@ -184,7 +184,7 @@ opt_vscanf (Opt o, const char *fmt, va_list ap)
     char *item;
     int ret = 0;
 
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
 
     if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");
@@ -224,7 +224,7 @@ opt_check_allowed_csv (Opt o, const char *csv)
     char *item, *cpy, *p;
     int ret = 0;
 
-    assert (o->magic == OPT_MAGIC);
+    ASSERT (o->magic == OPT_MAGIC);
 
     allow = opt_create ();
     opt_addf (allow, "%s", csv);
