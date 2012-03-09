@@ -45,9 +45,11 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/resource.h>
+#include <sys/prctl.h>
 #include <string.h>
 #include <signal.h>
 #include <pthread.h>
+#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -327,6 +329,9 @@ _setrlimit (void)
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_CORE, &r) < 0)
         err_exit ("setrlimit RLIMIT_CORE");
+
+    if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
+        err_exit ("prctl PR_SET_DUMPABLE failed");
 
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_AS, &r) < 0)
