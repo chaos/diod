@@ -52,12 +52,12 @@
 
 #include "9p.h"
 #include "npfs.h"
-#include "xpthread.h"
 #include "npclient.h"
 
 #include "list.h"
 #include "hostlist.h"
 #include "diod_log.h"
+#include "diod_pthread.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "sample.h"

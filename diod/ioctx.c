@@ -50,13 +50,13 @@
 
 #include "9p.h"
 #include "npfs.h"
-#include "xpthread.h"
 #include "list.h"
 #include "hash.h"
 #include "hostlist.h"
 
 #include "diod_conf.h"
 #include "diod_log.h"
+#include "diod_pthread.h"
 
 #include "ioctx.h"
 #include "fid.h"

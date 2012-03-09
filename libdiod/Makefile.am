@@ -13,7 +13,8 @@ libdiod_a_SOURCES = \
 	diod_conf.c \
 	diod_conf.h \
 	diod_sock.c \
-	diod_sock.h
+	diod_sock.h \
+	diod_pthread.h
 
 if RDMATRANS
 libdiod_a_SOURCES += diod_rdma.c diod_rdma.h
