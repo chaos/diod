@@ -39,6 +39,7 @@
 #if HAVE_LIBCAP
 #include <sys/capability.h>
 #endif
+#include <sys/prctl.h>
 #include <assert.h>
 
 #include "9p.h"
@@ -578,6 +579,8 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	int i, n, ret = -1;
 	u32 gid;
 	uid_t authuid;
+	int dumpable = prctl (PR_GET_DUMPABLE, 0, 0, 0, 0);
+	int dumpclrd = 0;
 
 	if (np_conn_get_authuser(req->conn, &authuid) < 0)
 		authuid = P9_NONUNAME;
@@ -602,6 +605,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		}
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
+			dumpclrd = 1;
 			if ((n = setfsgid (gid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
@@ -620,6 +624,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			wt->fsgid = gid;
 		}
 		if (wt->fsuid != u->uid) {
+			dumpclrd = 1;
 			if ((n = setfsuid (u->uid)) < 0) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
@@ -666,15 +671,18 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			if (_chg_privcap (srv, CAP_SET) < 0)
 				goto done;
 			wt->privcap = 1;
+			dumpclrd = 1;
 		} else if (wt->privcap && authuid != 0) {
 			if (_chg_privcap (srv, CAP_CLEAR) < 0)
 				goto done;
 			wt->privcap = 0;
+			dumpclrd = 1;
 		}
-
 	}
 #endif
 	ret = 0;
 done:
+	if (dumpable && dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
+        	np_logerr (srv, "prctl PR_SET_DUMPABLE failed");
 	return ret;
 }

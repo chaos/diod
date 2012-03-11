@@ -330,9 +330,6 @@ _setrlimit (void)
     if (setrlimit (RLIMIT_CORE, &r) < 0)
         err_exit ("setrlimit RLIMIT_CORE");
 
-    if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
-        err_exit ("prctl PR_SET_DUMPABLE failed");
-
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_AS, &r) < 0)
         err_exit ("setrlimit RLIMIT_AS");
@@ -615,6 +612,14 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         else
             msg ("test_setgroups: groups are per-process (disabling)");
     }
+
+    /* Process dumpable flag may have been cleared by uid manipulation above.
+     * Set it here, then maintain it in user.c::np_setfsid () as uids are
+     * further manipulated.
+     */
+    if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
+        err_exit ("prctl PR_SET_DUMPABLE failed");
+
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
