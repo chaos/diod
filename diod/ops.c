@@ -432,6 +432,7 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
     ssize_t n;
 
     if (!f->ioctx) {
+        msg ("diod_read: fid is not open");
         np_uerror (EBADF);
         goto error;
     }
