@@ -32,7 +32,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <stdarg.h>
 
 #include "9p.h"

@@ -42,7 +42,6 @@
 #include <errno.h>
 #include <ctype.h>
 #include <libgen.h>
-#include <assert.h>
 #include <signal.h>
 #include <time.h>
 #include <pthread.h>

@@ -31,7 +31,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/time.h>
-#include <assert.h>
+#include <signal.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <inttypes.h>
@@ -49,6 +49,9 @@ static void np_srv_add_workreq(Nptpool *tp, Npreq *req);
 
 static char *_ctl_get_conns (char *name, void *a);
 static char *_ctl_get_tpools (char *name, void *a);
+
+/* Ugly hack so NP_ASSERT can get to registsered srv->logmsg */
+static Npsrv *np_assert_srv = NULL;
 
 Npsrv*
 np_srv_create(int nwthread, int flags)
@@ -79,6 +82,7 @@ np_srv_create(int nwthread, int flags)
 	if (!(srv->tpool = np_tpool_create (srv, "default")))
 		goto error;
 	np_tpool_incref (srv->tpool);
+	np_assert_srv = srv;
 	return srv;
 error:
 	if (srv)
@@ -93,6 +97,7 @@ np_srv_destroy(Npsrv *srv)
 	np_tpool_cleanup (srv);
 	np_usercache_destroy (srv);
 	np_ctl_finalize (srv);
+	np_assert_srv = NULL;
 	free (srv);
 }
 
@@ -313,7 +318,7 @@ np_tpool_select (Npreq *req)
 	Npsrv *srv = req->conn->srv;
 	Nptpool *tp = NULL;
 
-	assert (srv->tpool != NULL);
+	NP_ASSERT (srv->tpool != NULL);
 	if (!req->fid || req->fid->tpool)
 		return;
 
@@ -331,7 +336,7 @@ np_tpool_select (Npreq *req)
 	if (!tp) {
 		tp = np_tpool_create(srv, req->fid->aname);
 		if (tp) {
-			assert (srv->tpool); /* default tpool */
+			NP_ASSERT (srv->tpool); /* default tpool */
 			tp->next = srv->tpool->next;
 			srv->tpool->next = tp;
 		} else
@@ -603,7 +608,7 @@ np_process_request(Npreq *req, Nptpool *tp)
 			rc = np_attach(req, tc);
 			break;
 		case P9_TFLUSH:
-			assert (0); /* handled in receive path */
+			NP_ASSERT (0); /* handled in receive path */
 			break;
 		case P9_TWALK:
 			rc = np_walk(req, tc);
@@ -625,7 +630,7 @@ np_process_request(Npreq *req, Nptpool *tp)
 			rc = np_remove(req, tc);
 			break;
 		default:
-			assert (0); /* handled in np_deserialize */
+			NP_ASSERT (0); /* handled in np_deserialize */
 			break;
 	}
 
@@ -651,7 +656,7 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 	Npfcall *tc = req->tcall;
 	int ecode = np_rerror();
 
-	assert (tc != NULL);
+	NP_ASSERT (tc != NULL);
 
 	/* If an in-progress op was interrupted with a signal due to a flush,
 	 * fix up the fid accounting and suppress reply.
@@ -746,7 +751,7 @@ np_wthread_proc(void *a)
 void
 np_req_respond(Npreq *req, Npfcall *rc)
 {
-	assert (rc != NULL);
+	NP_ASSERT (rc != NULL);
 
 	xpthread_mutex_lock(&req->lock);
 	req->rcall = rc;
@@ -818,7 +823,7 @@ void
 np_req_unref(Npreq *req)
 {
 	xpthread_mutex_lock(&req->lock);
-	assert(req->refcount > 0);
+	NP_ASSERT (req->refcount > 0);
 	req->refcount--;
 	if (req->refcount) {
 		xpthread_mutex_unlock(&req->lock);
@@ -877,6 +882,21 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 
 		np_logmsg (srv, "%s: %s", buf, s);
 	}
+}
+
+void
+np_assfail (char *ass, char *file, int line)
+{
+	Npsrv *srv = np_assert_srv;
+
+	if (srv && srv->logmsg)
+		np_logmsg (srv, "assertion failure: %s:%d: %s",
+			   file, line, ass);
+	else
+		fprintf (stderr, "assertion failure: %s:%d: %s",
+			   file, line, ass);
+	if (raise (SIGABRT) < 0)
+		exit (1);
 }
 
 static char *

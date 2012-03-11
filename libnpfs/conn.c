@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
-#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -96,7 +95,7 @@ void
 np_conn_decref(Npconn *conn)
 {
 	xpthread_mutex_lock(&conn->lock);
-	assert(conn->refcount > 0);
+	NP_ASSERT(conn->refcount > 0);
 	conn->refcount--;
 	xpthread_mutex_unlock(&conn->lock);
 	xpthread_cond_signal(&conn->refcond);
@@ -107,8 +106,8 @@ np_conn_destroy(Npconn *conn)
 {
 	int n;
 
-	assert(conn != NULL);
-	assert(conn->refcount == 0);
+	NP_ASSERT(conn != NULL);
+	NP_ASSERT(conn->refcount == 0);
 	/* issue 83: remove from srv->conns before destroying fidpool
  	 */
 	np_srv_remove_conn (conn->srv, conn);

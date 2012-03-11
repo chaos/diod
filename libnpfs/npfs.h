@@ -356,6 +356,8 @@ void np_logmsg(Npsrv *srv, const char *fmt, ...)
 void np_tpool_incref(Nptpool *);
 void np_tpool_decref(Nptpool *);
 int np_decode_tpools_str (char *s, Npstats *stats);
+void np_assfail (char *ass, char *file, int line);
+#define NP_ASSERT(exp) if ((exp)) ; else np_assfail(#exp, __FILE__, __LINE__ ) 
 
 /* conn.c */
 Npconn *np_conn_create(Npsrv *, Nptrans *, char *);

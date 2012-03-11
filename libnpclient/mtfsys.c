@@ -34,7 +34,6 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <errno.h>
-#include <assert.h>
 #include <stdint.h>
 #include <inttypes.h>
 
@@ -170,7 +169,7 @@ npc_decref_fsys(Npcfsys *fs)
 		return;
 	}
 
-	assert(fs->wfd<0 && fs->trans==NULL);
+	NP_ASSERT(fs->wfd<0 && fs->trans==NULL);
 	if (fs->tagpool) {
 		npc_destroy_pool(fs->tagpool);
 		fs->tagpool = NULL;

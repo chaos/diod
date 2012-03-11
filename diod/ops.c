@@ -79,7 +79,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <utime.h>
-#include <assert.h>
 #include <stdarg.h>
 
 #include "9p.h"
@@ -207,7 +206,7 @@ diod_ustat2qid (struct stat *st, Npqid *qid)
 static void
 _dirent2qid (struct dirent *d, Npqid *qid)
 {
-    ASSERT (d->d_type != DT_UNKNOWN);
+    NP_ASSERT (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino;
     qid->version = 0;
     qid->type = 0;

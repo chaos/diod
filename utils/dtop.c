@@ -43,7 +43,6 @@
 #include <ctype.h>
 #include <libgen.h>
 #include <curses.h>
-#include <assert.h>
 #include <signal.h>
 #include <sys/time.h>
 #include <pthread.h>
@@ -53,11 +52,11 @@
 #include "9p.h"
 #include "npfs.h"
 #include "npclient.h"
+#include "xpthread.h"
 
 #include "list.h"
 #include "hostlist.h"
 #include "diod_log.h"
-#include "diod_pthread.h"
 #include "diod_sock.h"
 #include "diod_auth.h"
 #include "sample.h"

@@ -31,7 +31,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <signal.h>
 #include "9p.h"
 #include "npfs.h"
@@ -123,7 +122,7 @@ np_auth(Npreq *req, Npfcall *tc)
 		np_logerr (srv, "%s: startauth", a);
 		goto error;
 	}
-	assert((aqid.type & P9_QTAUTH));
+	NP_ASSERT((aqid.type & P9_QTAUTH));
 	if (!(rc = np_create_rauth(&aqid))) {
 		np_uerror(ENOMEM);
 		np_logerr (srv, "%s: creating response", a);

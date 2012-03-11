@@ -50,7 +50,6 @@
 #include <ctype.h>
 #include <pwd.h>
 #include <libgen.h>
-#include <assert.h>
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -245,15 +244,15 @@ main (int argc, char *argv[])
         opt_addf (o, "wfdno=%d", wfd);
     }
 
-    ASSERT (opt_find (o, "trans=fd"));
-    ASSERT (opt_scanf (o, "msize=%d", &i));
-    ASSERT (opt_find (o, "version=9p2000.L"));
-    ASSERT (opt_scanf (o, "debug=%d", &i) || opt_scanf (o, "debug=%x", &i));
-    ASSERT (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
-    ASSERT ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
+    NP_ASSERT (opt_find (o, "trans=fd"));
+    NP_ASSERT (opt_scanf (o, "msize=%d", &i));
+    NP_ASSERT (opt_find (o, "version=9p2000.L"));
+    NP_ASSERT (opt_scanf (o, "debug=%d", &i) || opt_scanf (o, "debug=%x", &i));
+    NP_ASSERT (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
+    NP_ASSERT ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
          || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
 
-    ASSERT (!opt_find (o, "port"));
+    NP_ASSERT (!opt_find (o, "port"));
 
     _diod_mount (o, rfd, wfd, nspec ? nspec : spec, dir, vopt, fopt, nopt);
 

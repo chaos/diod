@@ -49,7 +49,6 @@
 #include <string.h>
 #include <signal.h>
 #include <pthread.h>
-#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"

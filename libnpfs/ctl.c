@@ -34,7 +34,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <dirent.h>
@@ -301,7 +300,7 @@ np_ctl_attach(Npfid *fid, Npfid *afid, char *aname)
 	Npsrv *srv = fid->conn->srv;
 	Npfile *root = srv->ctlroot;
 
-	assert (aname && !strcmp (aname, "ctl"));
+	NP_ASSERT(aname && !strcmp (aname, "ctl"));
 	if (!root)
 		goto error;
 	if (!(f = _alloc_fid (root)))
@@ -325,9 +324,9 @@ np_ctl_clone(Npfid *fid, Npfid *newfid)
 	Fid *f = fid->aux;
 	Fid *nf;
 
-	assert (f != NULL);
-	assert (f->file != NULL);
-	assert (f->file->name != NULL);
+	NP_ASSERT(f != NULL);
+	NP_ASSERT(f->file != NULL);
+	NP_ASSERT(f->file->name != NULL);
 	if (!(nf = _alloc_fid (f->file))) {
 		np_uerror (ENOMEM);
 		return 0;
@@ -396,7 +395,7 @@ np_ctl_lopen(Npfid *fid, u32 mode)
 		np_uerror (EACCES);
 		goto done;
 	}
-	assert (f->data == NULL);
+	NP_ASSERT(f->data == NULL);
 
 	if (!(rc = np_create_rlopen (&f->file->qid, 0))) {
 		np_uerror (ENOMEM);

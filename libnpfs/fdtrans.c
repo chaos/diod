@@ -30,7 +30,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
-#include <assert.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -101,7 +100,7 @@ np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a)
 	int n, size, len;
 
 	if (fdt->fc) {
-		assert (fdt->fc_msize >= msize);
+		NP_ASSERT (fdt->fc_msize >= msize);
 		fc = fdt->fc;
 		len = fdt->fc->size;
 		fdt->fc = NULL;

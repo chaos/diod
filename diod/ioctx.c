@@ -45,7 +45,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <utime.h>
-#include <assert.h>
 #include <stdarg.h>
 
 #include "9p.h"
@@ -53,10 +52,10 @@
 #include "list.h"
 #include "hash.h"
 #include "hostlist.h"
+#include "xpthread.h"
 
 #include "diod_conf.h"
 #include "diod_log.h"
-#include "diod_pthread.h"
 
 #include "ioctx.h"
 #include "fid.h"
@@ -196,7 +195,7 @@ ioctx_open (Npfid *fid, u32 flags, u32 mode)
                  && (flags & 3) == O_RDONLY);
     int maxmmap = diod_conf_get_maxmmap ();
 
-    ASSERT (f->ioctx == NULL);
+    NP_ASSERT (f->ioctx == NULL);
 
     xpthread_mutex_lock (&f->path->lock);
     if (sharable) {
@@ -374,7 +373,7 @@ ioctx_qid (IOCtx ioctx)
 static void
 _path_free (Path path)
 {
-    ASSERT (path->ioctx == NULL);
+    NP_ASSERT (path->ioctx == NULL);
     if (path->s)
         free (path->s);
     pthread_mutex_destroy (&path->lock);
@@ -420,7 +419,7 @@ _path_alloc (Npsrv *srv, char *s, int len)
         path_incref (path);
         free (s);
     } else {
-        ASSERT (errno == 0);
+        NP_ASSERT (errno == 0);
         if (!(path = malloc (sizeof (*path)))) {
             free (s);
             goto error;
@@ -431,7 +430,7 @@ _path_alloc (Npsrv *srv, char *s, int len)
         path->len = len;
         path->ioctx = NULL;
         if (!hash_insert (pp->hash, path->s, path)) {
-            ASSERT (errno == ENOMEM);
+            NP_ASSERT (errno == ENOMEM);
             goto error;
         }
     }
@@ -514,7 +513,7 @@ ppool_fini (Npsrv *srv)
     if (pp) {
         if (pp->hash) {
             /* issue 99: this triggers when shutting down with active clients */
-            /*ASSERT (hash_is_empty (pp->hash));*/
+            /*NP_ASSERT (hash_is_empty (pp->hash));*/
             hash_destroy (pp->hash);
         }
         pthread_mutex_destroy (&pp->lock);

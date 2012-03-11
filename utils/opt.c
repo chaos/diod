@@ -32,7 +32,10 @@
 #include <string.h>
 #include <errno.h>
 #include <stdarg.h>
-#include <assert.h>
+#include <inttypes.h>
+
+#include "9p.h"
+#include "npfs.h"
 
 #include "diod_log.h"
 
@@ -49,7 +52,7 @@ struct opt_struct {
 void
 opt_destroy (Opt o)
 {
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
     if (o->list)
         list_destroy (o->list);
     free (o);
@@ -78,7 +81,7 @@ opt_csv (Opt o)
     int strsize = 1;
     int n;
 
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
     if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");
     while ((item = list_next (itr)))
@@ -122,7 +125,7 @@ opt_addf (Opt o, const char *fmt, ...)
     char *saveptr = NULL;
     int error;
 
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
     va_start (ap, fmt);
     error = vasprintf (&csv, fmt, ap);
     va_end (ap);
@@ -157,7 +160,7 @@ opt_find (Opt o, char *key)
 {
     char *s;
 
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
 
     if (strchr (key, '='))
         s = list_find_first (o->list, (ListFindF)_match_keyval, key);
@@ -172,7 +175,7 @@ opt_find (Opt o, char *key)
 int
 opt_delete (Opt o, char *key)
 {
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
 
     return list_delete_all (o->list, (ListFindF)_match_key, key);   
 }
@@ -184,7 +187,7 @@ opt_vscanf (Opt o, const char *fmt, va_list ap)
     char *item;
     int ret = 0;
 
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
 
     if (!(itr = list_iterator_create (o->list)))
         msg_exit ("out of memory");
@@ -224,7 +227,7 @@ opt_check_allowed_csv (Opt o, const char *csv)
     char *item, *cpy, *p;
     int ret = 0;
 
-    ASSERT (o->magic == OPT_MAGIC);
+    NP_ASSERT (o->magic == OPT_MAGIC);
 
     allow = opt_create ();
     opt_addf (allow, "%s", csv);

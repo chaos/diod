@@ -40,7 +40,6 @@
 #include <sys/capability.h>
 #endif
 #include <sys/prctl.h>
-#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -148,7 +147,7 @@ np_usercache_create (Npsrv *srv)
 {
 	Npusercache *uc;
 
-	assert (srv->usercache == NULL);
+	NP_ASSERT (srv->usercache == NULL);
 	if (!(uc = malloc (sizeof (*uc)))) {
 		np_uerror (ENOMEM);
 		return -1;
@@ -172,7 +171,7 @@ np_usercache_destroy (Npsrv *srv)
 	Npusercache *uc;
 	Npuser *u;
 
-	assert (srv->usercache != NULL);
+	NP_ASSERT (srv->usercache != NULL);
 	uc = srv->usercache;
 
 	u = uc->users;

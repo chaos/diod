@@ -46,7 +46,6 @@
 #include <sys/time.h>
 #include <poll.h>
 #include <pthread.h>
-#include <assert.h>
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
 

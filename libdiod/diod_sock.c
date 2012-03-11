@@ -48,7 +48,6 @@
 #endif
 #include <poll.h>
 #include <pthread.h>
-#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"
@@ -234,7 +233,7 @@ diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
             goto done;
         }
         port = strchr (host, ':');
-        ASSERT (port != NULL);
+        NP_ASSERT (port != NULL);
         *port++ = '\0';
         if (nport)
             port = nport;

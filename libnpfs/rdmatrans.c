@@ -13,7 +13,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
-#include <assert.h>
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
 #include "9p.h"

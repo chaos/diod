@@ -41,7 +41,6 @@
 #include <errno.h>
 #include <ctype.h>
 #include <libgen.h>
-#include <assert.h>
 #include <signal.h>
 
 #include "9p.h"
@@ -169,7 +168,7 @@ cat9 (Npcfid *root, char *path)
         errn (np_rerror (), "open %s", path);
         goto done;
     }
-    ASSERT (fid->iounit > 0); /* libnpclient invariant */
+    NP_ASSERT (fid->iounit > 0); /* libnpclient invariant */
     if (!(buf = malloc (fid->iounit))) {
         msg ("out of memory");
         goto done;

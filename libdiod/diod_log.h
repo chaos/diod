@@ -40,9 +40,6 @@ void msg_exit (const char *fmt, ...)
 void msg (const char *fmt, ...)
         __attribute__ ((format (printf, 1, 2)));
 
-void msg_assfail (char *ass, char *file, int line);
-
-#define ASSERT(exp)  if ((exp)) ; else msg_assfail(#exp, __FILE__, __LINE__ ) 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */

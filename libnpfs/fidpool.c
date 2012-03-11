@@ -30,7 +30,6 @@
 #include <stdarg.h>
 #include <pthread.h>
 #include <errno.h>
-#include <assert.h>
 #include <sys/time.h>
 
 #include "9p.h"
@@ -49,8 +48,8 @@ _destroy_fid (Npfid *f)
 	Npsrv *srv;
 	Npfid *next;
 
-	assert (f != NULL);
-	assert (f->magic == FID_MAGIC);
+	NP_ASSERT(f != NULL);
+	NP_ASSERT(f->magic == FID_MAGIC);
 
 	srv = f->conn->srv;
 	next = f->next;
@@ -146,7 +145,7 @@ np_fidpool_count(Npfidpool *pool)
 	xpthread_mutex_lock(&pool->lock);
 	for(i = 0; i < pool->size; i++) {
 		for (f = pool->htable[i]; f != NULL; f = f->next) {
-			assert (f->magic == FID_MAGIC);
+			NP_ASSERT(f->magic == FID_MAGIC);
 			count++;
 		}
 	}
@@ -264,8 +263,8 @@ done:
 Npfid *
 np_fid_incref (Npfid *f)
 {
-	assert (f != NULL);
-	assert (f->magic == FID_MAGIC);
+	NP_ASSERT(f != NULL);
+	NP_ASSERT(f->magic == FID_MAGIC);
 
 	xpthread_mutex_lock (&f->lock);
 	f->refcount++;
@@ -283,8 +282,8 @@ np_fid_decref (Npfid **fp)
 	Npfid *f = *fp;
 	int refcount;
 
-	assert (f != NULL);
-	assert (f->magic == FID_MAGIC);
+	NP_ASSERT(f != NULL);
+	NP_ASSERT(f->magic == FID_MAGIC);
 
 	xpthread_mutex_lock (&f->lock);
 	refcount = --f->refcount;

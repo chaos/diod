@@ -36,7 +36,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
+#include <signal.h>
 
 #include "diod_log.h"
 
@@ -314,14 +314,6 @@ msg (const char *fmt, ...)
     diod_log_msg (fmt, ap);
     va_end (ap);
 }
-
-void
-msg_assfail (char *ass, char *file, int line)
-{
-    msg ("%s::%d: assertion failure: %s", file, line, ass);
-    assert (0);
-}
-
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

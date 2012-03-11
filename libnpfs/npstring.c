@@ -29,7 +29,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <inttypes.h>
 
 #include "9p.h"
@@ -143,7 +142,7 @@ spf (char *s, int len, const char *fmt, ...)
 
         len -= n;
         s += n;
-        assert (len > 0);
+        NP_ASSERT (len > 0);
 
         va_start (ap, fmt);
         vsnprintf (s, len, fmt, ap); /* ignore overflow */

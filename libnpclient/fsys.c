@@ -34,7 +34,6 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/socket.h>
-#include <assert.h>
 #include <stdint.h>
 #include <inttypes.h>
 

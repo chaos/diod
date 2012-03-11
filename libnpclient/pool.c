@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <assert.h>
 
 #include "9p.h"
 #include "npfs.h"

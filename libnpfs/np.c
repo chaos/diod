@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <errno.h>
-#include <assert.h>
 #include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
@@ -274,7 +273,7 @@ np_create_common_static(struct cbuf *bufp, u32 size, u8 id,
 	Npfcall *fc;
 
 	size += sizeof(fc->size) + sizeof(fc->type) + sizeof (fc->tag);
-	assert (buflen >= sizeof(Npfcall) + size);
+	NP_ASSERT (buflen >= sizeof(Npfcall) + size);
 
 	fc = buf;
 	fc->pkt = (u8 *) fc + sizeof(*fc);
@@ -453,7 +452,7 @@ np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-	assert (nwname <= P9_MAXWELEM);
+	NP_ASSERT (nwname <= P9_MAXWELEM);
         for(i = 0; i < nwname; i++)
                 size += sizeof(u16) + strlen(wnames[i]);
         if (!(fc = np_create_common(bufp, size, P9_TWALK)))
@@ -475,7 +474,7 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	assert (nwqid <= P9_MAXWELEM);
+	NP_ASSERT (nwqid <= P9_MAXWELEM);
 	if (!(fc = np_create_common(bufp, size, P9_RWALK)))
 		return NULL;
 	buf_put_int16(bufp, nwqid, &fc->u.rwalk.nwqid);
@@ -540,7 +539,7 @@ np_set_rread_count(Npfcall *fc, u32 count)
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
-	assert(count <= fc->u.rread.count);
+	NP_ASSERT (count <= fc->u.rread.count);
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
@@ -1092,7 +1091,7 @@ np_finalize_rreaddir(Npfcall *fc, u32 count)
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
-	assert(count <= fc->u.rreaddir.count);
+	NP_ASSERT (count <= fc->u.rreaddir.count);
 
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);

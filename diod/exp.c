@@ -42,7 +42,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <utime.h>
-#include <assert.h>
 #include <stdarg.h>
 
 #include "9p.h"
@@ -161,7 +160,7 @@ diod_match_exports (char *path, Npconn *conn, Npuser *user, int *xfp)
     Export *x;
     int res = 0; /* DENIED */
 
-    ASSERT (exports != NULL);
+    NP_ASSERT (exports != NULL);
     if (strstr (path, "/..") != NULL) {
         np_uerror (EPERM);
         goto done;
@@ -256,7 +255,7 @@ diod_get_exports (char *name, void *a)
     char *s = NULL;
     char *ret = NULL;
 
-    ASSERT (exports != NULL);
+    NP_ASSERT (exports != NULL);
 
     if (!(seen = list_create (NULL))) {
         np_uerror (ENOMEM);

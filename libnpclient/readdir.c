@@ -39,7 +39,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <libgen.h>
-#include <assert.h>
 #include <sys/param.h>
 
 #include "9p.h"
@@ -59,7 +58,7 @@ npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count)
 	}
 	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
-	assert (rc->u.rreaddir.count <= count);
+	NP_ASSERT(rc->u.rreaddir.count <= count);
 	memcpy (data, rc->u.rreaddir.data, rc->u.rreaddir.count);
 	ret = rc->u.rreaddir.count;
 done:

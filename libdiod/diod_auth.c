@@ -53,7 +53,6 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
-#include <assert.h>
 #if HAVE_LIBMUNGE
 #define GPL_LICENSED 1
 #include <munge.h>
@@ -127,7 +126,7 @@ done:
 static void
 _da_destroy (da_t da)
 {
-    ASSERT (da->magic == DIOD_AUTH_MAGIC);
+    NP_ASSERT (da->magic == DIOD_AUTH_MAGIC);
     da->magic = 0;
     if (da->datastr)
         free (da->datastr);
@@ -181,7 +180,7 @@ checkauth(Npfid *fid, Npfid *afid, char *aname)
         goto done;
     }
     da = afid->aux;
-    ASSERT (da->magic == DIOD_AUTH_MAGIC);
+    NP_ASSERT (da->magic == DIOD_AUTH_MAGIC);
 
     snprintf (a, sizeof(a), "checkauth(%s@%s:%s)", fid->user->uname,
               np_conn_get_client_id (fid->conn), aname ? aname : "<NULL>");
@@ -197,7 +196,7 @@ checkauth(Npfid *fid, Npfid *afid, char *aname)
         err ("%s: munge cred decode: %s", a, munge_strerror (da->mungerr));
         goto done;
     }
-    ASSERT (afid->user->uid == fid->user->uid); /* enforced in np_attach */
+    NP_ASSERT (afid->user->uid == fid->user->uid); /* enforced in np_attach */
     if (afid->user->uid != da->mungeuid) {
         np_uerror (EPERM);
         err ("%s: munge cred uid mismatch: %d", a, da->mungeuid);
@@ -232,7 +231,7 @@ writeafid(Npfid *afid, u64 offset, u32 count, u8 *data)
         goto done;
     }
     da = afid->aux;
-    ASSERT (da->magic == DIOD_AUTH_MAGIC);
+    NP_ASSERT (da->magic == DIOD_AUTH_MAGIC);
 
     if (offset == 0 && !da->datastr) {
         da->datastr = malloc (count + 1); 
