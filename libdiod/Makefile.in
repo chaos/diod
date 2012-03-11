@@ -62,7 +62,7 @@ libdiod_a_AR = $(AR) $(ARFLAGS)
 libdiod_a_LIBADD =
 am__libdiod_a_SOURCES_DIST = diod_auth.c diod_auth.h diod_log.c \
 	diod_log.h diod_conf.c diod_conf.h diod_sock.c diod_sock.h \
-	diod_pthread.h diod_rdma.c diod_rdma.h
+	diod_rdma.c diod_rdma.h
 @RDMATRANS_TRUE@am__objects_1 = diod_rdma.$(OBJEXT)
 am_libdiod_a_OBJECTS = diod_auth.$(OBJEXT) diod_log.$(OBJEXT) \
 	diod_conf.$(OBJEXT) diod_sock.$(OBJEXT) $(am__objects_1)
@@ -219,7 +219,7 @@ AM_CPPFLAGS = \
 
 noinst_LIBRARIES = libdiod.a
 libdiod_a_SOURCES = diod_auth.c diod_auth.h diod_log.c diod_log.h \
-	diod_conf.c diod_conf.h diod_sock.c diod_sock.h diod_pthread.h \
+	diod_conf.c diod_conf.h diod_sock.c diod_sock.h \
 	$(am__append_1)
 all: all-am
 
