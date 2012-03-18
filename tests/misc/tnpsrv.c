@@ -50,8 +50,8 @@ main (int argc, char *argv[])
 
     if (!(root0 = npc_attach (fs, NULL, "ctl", 0)))
         errn_exit (np_rerror (), "npc_attach");
-    if (!(str = npc_aget (root0, "tpools")))
-        errn_exit (np_rerror (), "npc_aget tpools");
+    if (!(str = npc_aget (root0, "connections")))
+        errn_exit (np_rerror (), "npc_aget connections");
     free (str);
 
     if (!(root1 = npc_attach (fs, NULL, "ctl", 1)))
