@@ -10,6 +10,7 @@ The tests are:
 t05	Simple mount/unmount sanity test for diod (default options).
 t06	Simple mount/read/unmount sanity test for diod
 t07	Simple mount/write/unmount sanity test for diod
+t12	Create a file and check that file creation mode was honored
 t13	Demonstrate that rename works across directories.
 t14	Demonstrate that statfs returns correct data.
 t15	Demonstrate that fsync does not return an error.

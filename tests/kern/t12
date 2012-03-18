@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+rc=0
+
+seq=0
+for u in 0 1 2 3 4 5 6 7; do
+   for g in 0 1 2 3 4 5 6 7; do
+      for o in 0 1 2 3 4 5 6 7; do
+         ./tcreate $PATH_MNTDIR/file.$seq 0$u$g$o || rc=1
+         seq=$(($seq + 1))
+      done
+   done
+done
+
+exit $rc
