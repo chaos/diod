@@ -75,6 +75,17 @@ export PATH_MNTDIR
 
 export MALLOC_CHECK_=3
 
+# t00 is a special interactive test, not normally run
+if [ "`basename $TEST`" = "t00" ]; then
+./kconjoin \
+    "$PATH_DIOD -r80 -w81 -c /dev/null -n -d 1 -e $PATH_EXPDIR" \
+    "$PATH_DIODMOUNT -n -owfdno=81,rfdno=80 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$TEST"
+    [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
+    [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
+    exit 0
+fi
+
 ./kconjoin \
     "$PATH_DIOD $opt -r80 -w81 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
     "$PATH_DIODMOUNT -n -owfdno=81,rfdno=80 nohost:$PATH_EXPDIR $PATH_MNTDIR" \

@@ -7,6 +7,7 @@ These tests all run the same way:
 - <test>.out is compared wtih <test>.exp 
 
 The tests are:
+t00	Run bash interactively in 9p mounted directory (not run automatically)
 t05	Simple mount/unmount sanity test for diod (default options).
 t06	Simple mount/read/unmount sanity test for diod
 t07	Simple mount/write/unmount sanity test for diod

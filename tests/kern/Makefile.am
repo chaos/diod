@@ -53,4 +53,4 @@ tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
 tcreate_SOURCES = tcreate.c $(common_sources)
 
-EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest t00

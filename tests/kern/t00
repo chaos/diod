@@ -1,0 +1,1 @@
+cd $PATH_MNTDIR && exec /bin/bash
