@@ -564,7 +564,7 @@ diod_statfs (Npfid *fid)
     if (diod_conf_get_statfs_passthru ())
         type = sb.f_type;
 
-    if (!(ret = np_create_rstatfs(sb.f_type, sb.f_bsize, sb.f_blocks,
+    if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
                                   sb.f_ffree, fsid,
                                   sb.f_namelen))) {
