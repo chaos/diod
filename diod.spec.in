@@ -15,7 +15,7 @@ BuildRequires: munge-devel
 BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
 BuildRequires: libibverbs-devel librdmacm-devel
-BuildRequires: google-perftools-devel
+BuildRequires: gperftools-devel
 
 %description
 diod is a 9P server used in combination with the kernel v9fs file
