@@ -1,4 +1,16 @@
 =========================================================================
+Release Notes for DIOD version 1.0.10                         30 Mar 2012
+=========================================================================
+
+* Fix statfs_passthru option which had no effect
+
+* Improve unit tests:
+  - add tests/kern/t12 to verify creat modes
+  - eliminate a false failure in tests/misc/t10
+
+* Update RPM BuildRequires for tcmalloc's package rename in EPEL.
+
+=========================================================================
 Release Notes for DIOD version 1.0.9                          12 Mar 2012
 =========================================================================
 
