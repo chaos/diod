@@ -55,12 +55,11 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 
-#define OPTIONS "h:p:m:n:r:g"
+#define OPTIONS "s:m:n:r:g"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
-    {"hostname",   required_argument,      0, 'h'},
-    {"port",       required_argument,      0, 'p'},
+    {"server",     required_argument,      0, 's'},
     {"msize",      required_argument,      0, 'm'},
     {"numthreads", required_argument,      0, 'n'},
     {"runtime",    required_argument,      0, 'r'},
@@ -76,8 +75,7 @@ typedef enum { LOAD_IO, LOAD_GETATTR } load_t;
 typedef struct {
     pthread_t t;
     time_t stoptime;
-    char *host;
-    char *port;
+    char *server;
     int msize;
     int fd;
     uint64_t readbytes;
@@ -100,8 +98,7 @@ usage (void)
 {
     fprintf (stderr,
 "Usage: diodload [OPTIONS]\n"
-"   -h,--hostname HOST    hostname (default localhost)\n"
-"   -p,--port PORT        port (default 564)\n"
+"   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -n,--numthreads       specify thread count (default 16)\n"
 "   -r,--runtime          specify runtime in seconds (default 10)\n"
@@ -113,8 +110,7 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    char *host = NULL;
-    char *port = "564";
+    char *server = NULL;
     int msize = 65536;
     int numthreads = 16;
     int runtime = 10;
@@ -129,11 +125,8 @@ main (int argc, char *argv[])
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 'h':   /* --hostname NAME */
-                host = optarg;
-                break;
-            case 'p':   /* --port PORT */
-                port = optarg;
+            case 's':   /* --server HOST:PORT or /path/to/unix_domain_socket */
+                server = optarg;
                 break;
             case 'm':   /* --msize SIZE */
                 msize = strtoul (optarg, NULL, 10);
@@ -159,8 +152,7 @@ main (int argc, char *argv[])
         msg_exit ("out of memory");
 
     for (i = 0; i < numthreads; i++) {
-        t[i].host = host ? host : "localhost";
-        t[i].port = port;
+        t[i].server = server ? server : "localhost:564";
         t[i].msize = msize;
         t[i].stoptime = now + runtime;
         t[i].fd = -1;
@@ -201,7 +193,7 @@ loadgen (void *arg)
     void *ret = NULL;
     int n, loops = 0;
 
-    if ((t->fd = diod_sock_connect (t->host, t->port, 0)) < 0)
+    if ((t->fd = diod_sock_connect (t->server, 0)) < 0)
         goto done;
     if (!(t->fs = npc_start (t->fd, t->fd, t->msize, 0))) {
         errn (np_rerror (), "error negotiating protocol with server");

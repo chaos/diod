@@ -2,7 +2,7 @@
 .SH NAME
 diodload \- create artificial diod load
 .SH SYNOPSIS
-\fBdiodload\fR \fI[OPTIONS] [-h host]\fR
+\fBdiodload\fR \fI[OPTIONS] [-s IP:PORT]\fR
 .SH DESCRIPTION
 .B diodload
 connects to a \fBdiod\fR server and issues requests.
@@ -10,11 +10,9 @@ Unless changed with \fI-g\fR, each thread copies from
 \fIctl:zero\fR to \fIctl:null\fR.
 .SH OPTIONS
 .TP
-.I "-h, --host HOST"
-Specify the host to connect to (default localhost).
-.TP
-.I "-p, --port PORT"
-Specify the port to connect to (default 564).
+.I "-s, --server IP:PORT"
+The server in IP:PORT, HOST:PORT, or /path/to/unix_domain_socket form
+default localhost:564).
 .TP
 .I "-m, --msize SIZE"
 Specifiy the maximum size of a protocol unit (default 65536).

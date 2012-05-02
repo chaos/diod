@@ -174,10 +174,10 @@ main(int argc, char **argv)
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
-            case 'l':   /* --listen HOST:PORT */
+            case 'l':   /* --listen HOST:PORT or /path/to/socket */
                 if (!diod_conf_opt_listen ())
                     diod_conf_clr_listen ();
-                if (!strchr (optarg, ':'))
+                if (!strchr (optarg, ':') && optarg[0] != '/')
                     usage ();
                 diod_conf_add_listen (optarg);
                 break;
@@ -553,8 +553,8 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         case SRV_FILEDES:
             break;
         case SRV_NORMAL:
-            if (!diod_sock_listen_hostports (l, &ss.fds, &ss.nfds, NULL))
-                msg_exit ("failed to set up listen ports");
+            if (!diod_sock_listen (l, &ss.fds, &ss.nfds))
+                msg_exit ("failed to set up listener");
 #if WITH_RDMATRANS
             ss.rdma = diod_rdma_create ();
             diod_rdma_listen (ss.rdma);

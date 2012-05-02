@@ -206,6 +206,18 @@ main (int argc, char *argv[])
             msg_exit ("-orfdno,wfdno must be used together");
         nopt = 1; /* force no mtab */
 
+    /* Connect to server on UNIX domain socket
+     */
+    } else if (host[0] == '/') {
+        if (opt_find (o, "port"))
+            msg_exit ("-oport won't work with UNIX domain socket");
+        if ((rfd = diod_sock_connect_unix (host, 0)) < 0)
+            exit (1);
+        wfd = rfd;
+
+        opt_addf (o, "rfdno=%d", rfd);
+        opt_addf (o, "wfdno=%d", wfd);
+
     /* Connect to server on IANA port (or user-specified) and host.
      */
     } else {
@@ -223,7 +235,7 @@ main (int argc, char *argv[])
         while ((h = hostlist_next (hi))) {
             if (vopt)
                 msg ("trying to connect to %s:%s", h, port);
-            if ((rfd = diod_sock_connect (h, port, DIOD_SOCK_QUIET)) >= 0)
+            if ((rfd = diod_sock_connect_inet (h, port, DIOD_SOCK_QUIET)) >= 0)
                 break;
         }
         if (h) { /* create new 'spec' string identifying successful host */

@@ -52,13 +52,12 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 
-#define OPTIONS "a:h:p:m:u:t:"
+#define OPTIONS "a:s:m:u:t:"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"aname",   required_argument,      0, 'a'},
-    {"hostname",required_argument,      0, 'h'},
-    {"port",    required_argument,      0, 'p'},
+    {"server",  required_argument,      0, 's'},
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
     {"timeout", required_argument,      0, 't'},
@@ -76,10 +75,9 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodcat [OPTIONS] [-h hostname] [-a aname] [file [file...]]\n"
-"   -h,--hostname HOST    hostname (default localhost)\n"
+"Usage: diodcat [OPTIONS] [-s HOST:PORT] [-a aname] [file [file...]]\n"
 "   -a,--aname NAME       file system (default ctl)\n"
-"   -p,--port PORT        port (default 564)\n"
+"   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -t,--timeout SECS     give up after specified seconds\n"
@@ -91,8 +89,7 @@ int
 main (int argc, char *argv[])
 {
     char *aname = NULL;
-    char *hostname = NULL;
-    char *port = "564";
+    char *server = "localhost:564";
     int msize = 65536;
     uid_t uid = geteuid ();
     int topt = 0;
@@ -106,11 +103,8 @@ main (int argc, char *argv[])
             case 'a':   /* --aname NAME */
                 aname = optarg;
                 break;
-            case 'h':   /* --hostname NAME */
-                hostname = optarg;
-                break;
-            case 'p':   /* --port PORT */
-                port = optarg;
+            case 's':   /* --server HOST:PORT or /path/to/socket */
+                server = optarg;
                 break;
             case 'm':   /* --msize SIZE */
                 msize = strtoul (optarg, NULL, 10);
@@ -134,13 +128,11 @@ main (int argc, char *argv[])
     if (topt > 0)
         alarm (topt);
 
-    if (!hostname) 
-        hostname = "localhost";
-    if ((fd = diod_sock_connect (hostname, port, 0)) < 0)
+    if ((fd = diod_sock_connect (server, 0)) < 0)
         exit (1);
+
     if (!aname)
         aname = "ctl";
-
     if (catfiles (fd, uid, msize, aname, argv + optind, argc - optind) < 0)
         exit (1);
 

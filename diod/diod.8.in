@@ -25,8 +25,9 @@ Serve a connected client inherited on the specified read and write
 file descriptors.  For file descriptors connected bidirectionally,
 the two options may be set to the same value.
 .TP
-.I "-l, --listen IP:PORT"
-Set the listen address (default 0.0.0.0:564).
+.I "-l, --listen address"
+Set the listen address.  The address may be in the form of
+HOST:PORT, IP:PORT, or /path/to/unix_domain_socket form (default 0.0.0.0:564).
 This option may be specified more than once.
 It overrides the \fIlisten\fR config file setting.
 .TP

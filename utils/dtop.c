@@ -937,8 +937,13 @@ _reader (void *arg)
     Server *sp = (Server *)arg;
 
     while (!exiting) {
-        if (sp->fd == -1)
-            sp->fd = diod_sock_connect (sp->host, sp->port, DIOD_SOCK_QUIET);
+        if (sp->fd == -1) {
+            if (sp->host[0] == '/')
+                sp->fd = diod_sock_connect_unix (sp->host, DIOD_SOCK_QUIET);
+            else
+                sp->fd = diod_sock_connect_inet (sp->host, sp->port,
+                                                 DIOD_SOCK_QUIET);
+        }
         if (sp->fd == -1)
             goto skip;
         if (sp->root == NULL)

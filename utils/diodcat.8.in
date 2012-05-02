@@ -2,7 +2,7 @@
 .SH NAME
 diodcat \- cat files by attaching directly to diod server
 .SH SYNOPSIS
-\fBdiodcat\fR \fI[OPTIONS] [-h host] [-a aname] [file [file...]]\fR
+\fBdiodcat\fR \fI[OPTIONS] [-s IP:PORT] [-a aname] [file [file...]]\fR
 .SH DESCRIPTION
 .B diodcat
 connects to a \fBdiod\fR server on \fIhost\fR, attaches to
@@ -13,11 +13,9 @@ the specified files on stdout.
 .I "-a, --aname NAME"
 The file system name on the server (default ctl).
 .TP
-.I "-h, --hostname HOST"
-The hostname of the server (default localhost).
-.TP
-.I "-p, --port PORT"
-The port number of the server (default 564).
+.I "-s, --server NAME"
+The server in IP:PORT, HOST:PORT, or /path/to/unix_domain_socket form
+(default localhost:564).
 .TP
 .I "-m, --msize SIZE"
 The maximum request size including 9P headers (default 65536).

@@ -32,6 +32,7 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/un.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -137,20 +138,40 @@ done:
     return ret;
 }
 
+static int
+_poll_add (struct pollfd **fdsp, int *nfdsp, int fd)
+{
+    int nfds = *nfdsp;
+    struct pollfd *fds = *fdsp;
+
+    if (fds)
+        fds = realloc (fds, sizeof(struct pollfd) * (nfds + 1));
+    else
+        fds = malloc (sizeof(struct pollfd) * (nfds + 1));
+    if (!fds) 
+        goto nomem;
+    fds[nfds++].fd = fd;
+    *fdsp = fds;
+    *nfdsp = nfds;
+    return 0;
+nomem:
+    errno = ENOMEM;
+    err ("diod_sock_listen");
+    return -1;
+}
+
 /* Open/bind sockets for all addresses that can be associated with host:port,
  * and expand pollfd array (*fdsp) to contain the new file descriptors,
  * updating its size (*nfdsp) also.
  * Return the number of file descriptors added (can be 0).
- * This is a helper for diod_sock_listen_hostports ().
+ * This is a helper for diod_sock_listen ().
  */
 static int 
-_setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
+_setup_one_inet (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
 {
     struct addrinfo hints, *res = NULL, *r;
-    int opt, error, fd, nents = 0;
-    struct pollfd *fds = *fdsp;
-    int nfds = *nfdsp;
-    int ret = 0;
+    int opt, error, fd;
+    int count = 0;
 
     memset (&hints, 0, sizeof(hints));
     hints.ai_family = PF_UNSPEC;
@@ -162,16 +183,6 @@ _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
     }
     if (res == NULL) {
         msg_exit ("listen address has no addrinfo: %s:%s\n", host, port);
-        goto done;
-    }
-    for (r = res; r != NULL; r = r->ai_next)
-        nents++;
-    if (fds)
-        fds = realloc (fds, sizeof(struct pollfd) * (nents + nfds));
-    else
-        fds = malloc (sizeof(struct pollfd) * nents);
-    if (!fds) {
-        msg ("out of memory");
         goto done;
     }
     for (r = res; r != NULL; r = r->ai_next) {
@@ -186,16 +197,49 @@ _setup_one (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
             close (fd);
             continue;
         }
-        fds[nfds++].fd = fd;
+        if (_poll_add (fdsp, nfdsp, fd) < 0)
+            break;
+        count++;
     }
-
-    *fdsp = fds;
-    *nfdsp = nfds;
-    ret = nfds;
 done:
     if (res)
         freeaddrinfo (res);
-    return ret;
+    return count;
+}
+
+static int
+_setup_one_unix (char *path, struct pollfd **fdsp, int *nfdsp)
+{
+    struct sockaddr_un addr;
+    int e, fd = -1;
+    mode_t oldumask;
+ 
+    if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0) {
+        err ("socket");
+        goto error;
+    }
+    if ((remove (path) < 0 && errno != ENOENT)) {
+        err ("remove %s", path);
+        goto error;
+    }
+    memset (&addr, 0, sizeof (struct sockaddr_un));
+    addr.sun_family = AF_UNIX;
+    strncpy (addr.sun_path, path, sizeof (addr.sun_path) - 1);
+
+    oldumask = umask (0111);
+    e = bind (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr_un));
+    umask (oldumask);
+    if (e < 0) {
+        err ("bind %s", path);
+        goto error;
+    }
+    if (_poll_add (fdsp, nfdsp, fd) < 0)
+        goto error;
+    return 1;
+error:
+    if (fd != -1)
+        close (fd);
+    return 0;
 }
 
 static int
@@ -211,38 +255,41 @@ _listen_fds (struct pollfd *fds, int nfds)
     return ret;
 }
 
-/* Set up listen ports based on list of host:port strings.
- * If nport is non-NULL, use it in place of host:port ports.
+/* Set up listen ports based on list of strings, which can be either
+ * host:port or /path/to/unix_domain_socket format.
  * Return the number of file descriptors opened (can return 0).
  */
 int
-diod_sock_listen_hostports (List l, struct pollfd **fdsp, int *nfdsp,
-                                char *nport)
+diod_sock_listen (List l, struct pollfd **fdsp, int *nfdsp)
 {
     ListIterator itr;
-    char *hostport, *host, *port;
+    char *s, *host, *port;
     int n, ret = 0;
 
     if (!(itr = list_iterator_create(l))) {
         msg ("out of memory");
         goto done;
     }
-    while ((hostport = list_next(itr))) {
-        if (!(host = strdup (hostport))) {
-            msg ("out of memory");
-            goto done;
-        }
-        port = strchr (host, ':');
-        NP_ASSERT (port != NULL);
-        *port++ = '\0';
-        if (nport)
-            port = nport;
-        if ((n = _setup_one (host, port, fdsp, nfdsp)) == 0) {
+    while ((s = list_next(itr))) {
+        if (s[0] == '/') {
+            if ((n = _setup_one_unix (s, fdsp, nfdsp)) == 0)
+                goto done;
+            ret += n; 
+        } else {
+            if (!(host = strdup (s))) {
+                msg ("out of memory");
+                goto done;
+            }
+            port = strchr (host, ':');
+            NP_ASSERT (port != NULL);
+            *port++ = '\0';
+            if ((n = _setup_one_inet (host, port, fdsp, nfdsp)) == 0) {
+                free (host);
+                goto done;
+            }
+            ret += n;
             free (host);
-            goto done;
         }
-        ret += n;
-        free (host);
     }
     ret = _listen_fds (*fdsp, *nfdsp);
 done:
@@ -281,6 +328,7 @@ diod_sock_accept_one (Npsrv *srv, int fd)
 {
     struct sockaddr_storage addr;
     socklen_t addr_size = sizeof(addr);
+    struct sockaddr *sa;
     char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
     int res;
 
@@ -291,17 +339,18 @@ diod_sock_accept_one (Npsrv *srv, int fd)
             err ("accept");
         return;
     }
-    (void)_disable_nagle (fd);
-    (void)_enable_keepalive (fd);
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            ip, sizeof(ip), svc, sizeof(svc),
+    sa = (struct sockaddr *)&addr;
+    if ((res = getnameinfo (sa, addr_size, ip, sizeof(ip), svc, sizeof(svc),
                             NI_NUMERICHOST | NI_NUMERICSERV))) {
         msg ("getnameinfo: %s", gai_strerror(res));
         close (fd);
         return;
     }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            host, sizeof(host), NULL, 0, 0))) {
+    if (strlen (svc) > 0) { /* sa->sa_family != AF_UNIX */
+        (void)_disable_nagle (fd);
+        (void)_enable_keepalive (fd);
+    }
+    if ((res = getnameinfo (sa, addr_size, host, sizeof(host), NULL, 0, 0))) {
         msg ("getnameinfo: %s", gai_strerror(res));
         close (fd);
         return;
@@ -321,7 +370,7 @@ diod_sock_accept_one (Npsrv *srv, int fd)
  * Return fd on success, -1 on failure.
  */
 int
-diod_sock_connect (char *host, char *port, int flags)
+diod_sock_connect_inet (char *host, char *port, int flags)
 {
     int error, fd = -1;
     struct addrinfo hints, *res = NULL, *r;
@@ -361,6 +410,63 @@ diod_sock_connect (char *host, char *port, int flags)
     if (res)
         freeaddrinfo (res);
 done:
+    return fd;
+}
+
+int
+diod_sock_connect_unix (char *path, int flags)
+{
+    struct sockaddr_un addr;
+    int fd = -1;
+
+    if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0) {
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("socket");
+        goto error;
+    }
+    memset (&addr, 0, sizeof (struct sockaddr_un));
+    addr.sun_family = AF_UNIX;
+    strncpy (addr.sun_path, path, sizeof (addr.sun_path) - 1);
+    if (connect (fd, (struct sockaddr *)&addr, sizeof (struct sockaddr_un))<0) {
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("connect %s", path);
+        goto error;
+    }
+    return fd;
+error:
+    if (fd != -1)
+        close (fd);
+    return -1;
+}
+
+int
+diod_sock_connect (char *name, int flags)
+{
+    int fd = -1;
+    char *host = NULL;
+    char *port;
+
+    if (name[0] == '/')
+        fd = diod_sock_connect_unix (name, flags);
+    else {
+        if (!(host = strdup (name))) {
+            errno = ENOMEM;
+            if (!(flags & DIOD_SOCK_QUIET))
+                err ("diod_sock_connect %s", name);
+            goto done;
+        }
+        if (!(port = strchr (host, ':'))) {
+            errno = EINVAL;
+            if (!(flags & DIOD_SOCK_QUIET))
+                err ("diod_sock_connect %s", name);
+            goto done; 
+        }
+        *port++ = '\0';
+        fd = diod_sock_connect_inet (host, port, flags);
+    }
+done:
+    if (host)
+        free (host);
     return fd;
 }
 
