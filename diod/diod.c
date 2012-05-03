@@ -63,7 +63,7 @@
 
 #include "ops.h"
 
-typedef enum { SRV_FILEDES, SRV_NORMAL } srvmode_t;
+typedef enum { SRV_FILEDES, SRV_SOCKTEST, SRV_NORMAL } srvmode_t;
 
 static void          _daemonize (void);
 static void          _setrlimit (void);
@@ -74,7 +74,7 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fr:w:d:l:t:m:e:Eo:u:SL:npc:NU:"
+#define OPTIONS "fr:w:d:l:t:m:e:Eo:u:SL:npc:NU:s"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
@@ -97,6 +97,7 @@ static const struct option longopts[] = {
     {"squashuser",      required_argument,  0, 'U'},
     {"logdest",         required_argument,  0, 'L'},
     {"config-file",     required_argument,  0, 'c'},
+    {"socktest",        no_argument,        0, 's'},
     {0, 0, 0, 0},
 };
 #else
@@ -126,6 +127,7 @@ usage()
 "   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
 "   -d,--debug MASK        set debugging mask\n"
 "   -c,--config-file FILE  set config file path\n"
+"   -s,--socktest          run in test mode where server exits early\n"
     );
     exit (1);
 }
@@ -228,6 +230,9 @@ main(int argc, char **argv)
                 diod_conf_set_runasuid (uid);
                 break;
             }
+            case 's':   /* --socktest */
+                mode = SRV_SOCKTEST;
+                break;
             case 'L':   /* --logdest DEST */
                 diod_conf_set_logdest (optarg);
                 diod_log_set_dest (optarg);
@@ -417,6 +422,7 @@ _service_loop (void *arg)
             diod_sock_startfd (ss.srv, ss.rfdno, ss.wfdno, "stdin");
             break;
         case SRV_NORMAL:
+        case SRV_SOCKTEST:
             break;
     }
     while (!ss.shutdown) {
@@ -553,6 +559,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         case SRV_FILEDES:
             break;
         case SRV_NORMAL:
+        case SRV_SOCKTEST:
             if (!diod_sock_listen (l, &ss.fds, &ss.nfds))
                 msg_exit ("failed to set up listener");
 #if WITH_RDMATRANS
@@ -584,7 +591,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         }
     }
         
-    if (!diod_conf_get_foreground () && mode == SRV_NORMAL)
+    if (!diod_conf_get_foreground () && mode != SRV_FILEDES)
         _daemonize (); /* implicit fork - no pthreads before this */
     if (!diod_conf_get_foreground () && mode != SRV_FILEDES)
         diod_log_set_dest (diod_conf_get_logdest ());
@@ -634,6 +641,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
 #endif
     switch (mode) {
         case SRV_FILEDES:
+        case SRV_SOCKTEST:
             np_srv_wait_conncount (ss.srv, 1);
             pthread_kill (ss.t, SIGUSR1);
             break;

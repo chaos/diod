@@ -328,7 +328,6 @@ diod_sock_accept_one (Npsrv *srv, int fd)
 {
     struct sockaddr_storage addr;
     socklen_t addr_size = sizeof(addr);
-    struct sockaddr *sa;
     char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
     int res;
 
@@ -339,18 +338,19 @@ diod_sock_accept_one (Npsrv *srv, int fd)
             err ("accept");
         return;
     }
-    sa = (struct sockaddr *)&addr;
-    if ((res = getnameinfo (sa, addr_size, ip, sizeof(ip), svc, sizeof(svc),
+    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
+                            ip, sizeof(ip), svc, sizeof(svc),
                             NI_NUMERICHOST | NI_NUMERICSERV))) {
         msg ("getnameinfo: %s", gai_strerror(res));
         close (fd);
         return;
     }
-    if (strlen (svc) > 0) { /* sa->sa_family != AF_UNIX */
+    if (addr.ss_family != AF_UNIX) {
         (void)_disable_nagle (fd);
         (void)_enable_keepalive (fd);
     }
-    if ((res = getnameinfo (sa, addr_size, host, sizeof(host), NULL, 0, 0))) {
+    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
+                            host, sizeof(host), NULL, 0, 0))) {
         msg ("getnameinfo: %s", gai_strerror(res));
         close (fd);
         return;

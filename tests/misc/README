@@ -27,6 +27,7 @@ t11(*)	Show that pthreads can independently set/clear CAP_DAC_OVERRIDE
 t12     Check for memory problems in fidpool
 t13	Check for memory problems in client/server with diod ops
 t14(*)	Check for memory problems in client/server with user switching
+t15     Check actual diod server for memory probs with multiple conns
 
 (*) NOTRUN if not run as root
 (@) NOTRUN if lua is not installed

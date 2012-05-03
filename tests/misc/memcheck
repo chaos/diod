@@ -5,10 +5,10 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
+opt_gensupp='--gen-suppressions=all'
 if which valgrind >/dev/null 2>&1; then
     valgrind --error-exitcode=1 --tool=memcheck --leak-check=yes --quiet \
              --suppressions=./tcmalloc.supp $*
-#             --gen-suppressions=all $*
 else
     export MALLOC_CHECK_=3; $*
 fi

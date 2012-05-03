@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+bg_test ()
+{
+  local sockfile=$1
+  while ! test -S $sockfile; do
+    usleep 100000 # 100ms
+  done
+  ../../utils/diodload -r 2 -s $sockfile 2>/dev/null
+}
+
+TEST=$(basename $0 | cut -d- -f1)
+sockfile=$(mktemp)
+bg_test $sockfile &
+./memcheck ../../diod/diod -f -e /tmp -l $sockfile -s >$TEST.out 2>&1
+diff $TEST.exp $TEST.out >$TEST.diff
+rm -f $sockfile
+wait %1

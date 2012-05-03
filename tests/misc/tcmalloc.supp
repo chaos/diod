@@ -16,3 +16,24 @@
    fun:_ZN13TCMallocGuardC1Ev
 }
 
+{
+   <suppress_getnameinfo_strncasecmp_noise>
+   Memcheck:Cond
+   fun:__strncasecmp_l_ssse3
+   fun:do_init
+   fun:pthread_once
+   fun:gethostbyaddr_r@@GLIBC_2.2.5
+   fun:getnameinfo
+}
+
+{
+   <suppress_getnameinfo_strncpy_noise>
+   Memcheck:Cond
+   fun:__GI_strncpy
+   fun:getnameinfo
+   fun:diod_sock_accept_one
+   fun:_service_loop
+   fun:start_thread
+   obj:*
+}
+
