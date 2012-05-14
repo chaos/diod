@@ -578,7 +578,6 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	int i, n, ret = -1;
 	u32 gid;
 	uid_t authuid;
-	int dumpable = prctl (PR_GET_DUMPABLE, 0, 0, 0, 0);
 	int dumpclrd = 0;
 
 	if (np_conn_get_authuser(req->conn, &authuid) < 0)
@@ -681,7 +680,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 #endif
 	ret = 0;
 done:
-	if (dumpable && dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
+	if (dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         	np_logerr (srv, "prctl PR_SET_DUMPABLE failed");
 	return ret;
 }
