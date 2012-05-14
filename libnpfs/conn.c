@@ -163,14 +163,14 @@ np_conn_read_proc(void *a)
 
 	pthread_detach(pthread_self());
 
-	while (conn->trans) {
+	for (;;) {
 		if (np_trans_recv(conn->trans, &fc, conn->msize) < 0) {
 			np_logerr (srv, "recv error - "
 				   "dropping connection to '%s'",
 				   conn->client_id);
 			break;
 		}
-		if (!fc)
+		if (!fc) /* EOF */
 			break;
 		_debug_trace (srv, fc);
 
