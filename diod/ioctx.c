@@ -39,7 +39,6 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/fsuid.h>
-#include <sys/mman.h>
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
@@ -67,8 +66,6 @@ struct ioctx_struct {
     pthread_mutex_t lock;
     int             refcount;
     int             fd;
-    char            *mmap;
-    size_t          mmap_size;
     DIR             *dir;
     int             lock_type;
     Npqid           qid;
@@ -161,10 +158,6 @@ ioctx_close (Npfid *fid, int seterrno)
             _unlink_ioctx (&f->path->ioctx, f->ioctx);
         xpthread_mutex_unlock (&f->path->lock);
         if (n == 0) {
-            if (f->ioctx->mmap != MAP_FAILED) {
-                if (munmap (f->ioctx->mmap, f->ioctx->mmap_size) < 0)
-                    errn (errno, "munmap %s", f->path->s);
-            }
             if (f->ioctx->dir) {
                 rc = closedir(f->ioctx->dir);
                 if (rc < 0 && seterrno)
@@ -193,7 +186,6 @@ ioctx_open (Npfid *fid, u32 flags, u32 mode)
     IOCtx ip;
     int sharable = ((f->flags & DIOD_FID_FLAGS_SHAREFD)
                  && (flags & 3) == O_RDONLY);
-    int maxmmap = diod_conf_get_maxmmap ();
 
     NP_ASSERT (f->ioctx == NULL);
 
@@ -225,7 +217,6 @@ ioctx_open (Npfid *fid, u32 flags, u32 mode)
         np_user_incref (fid->user);
         f->ioctx->user = fid->user;
         f->ioctx->prev = f->ioctx->next = NULL;
-        f->ioctx->mmap = MAP_FAILED;
         f->ioctx->fd = open (f->path->s, flags, mode);
         if (f->ioctx->fd < 0) {
             np_uerror (errno);
@@ -234,13 +225,6 @@ ioctx_open (Npfid *fid, u32 flags, u32 mode)
         if (fstat (f->ioctx->fd, &sb) < 0) {
             np_uerror (errno);
             goto error;
-        }
-        if (sharable && S_ISREG(sb.st_mode) && maxmmap > 0 && sb.st_size > 0) {
-            f->ioctx->mmap_size = sb.st_size <= maxmmap ? sb.st_size : maxmmap;
-            f->ioctx->mmap = mmap (NULL, f->ioctx->mmap_size, PROT_READ,
-                                   MAP_PRIVATE, f->ioctx->fd, 0);
-            if (f->ioctx->mmap == MAP_FAILED) /* non-fatal (use pread) */
-                errn (errno, "mmap %s", f->path->s);
         }
         f->ioctx->iounit = 0; /* if iounit=0, v9fs will use msize-P9_IOHDRSZ */
         if (S_ISDIR(sb.st_mode) && !(f->ioctx->dir = fdopendir (f->ioctx->fd))) {
@@ -261,15 +245,7 @@ error:
 int
 ioctx_pread (IOCtx ioctx, void *buf, size_t count, off_t offset)
 {
-    int n;
-
-    if (ioctx->mmap != MAP_FAILED && offset + count <= ioctx->mmap_size) {
-        memcpy (buf, ioctx->mmap + offset, count);
-        n = count;
-    } else
-        n = pread (ioctx->fd, buf, count, offset);
-
-    return n;
+    return pread (ioctx->fd, buf, count, offset);
 }
 
 int

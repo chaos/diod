@@ -57,10 +57,6 @@ int     diod_conf_get_nwthreads (void);
 int     diod_conf_opt_nwthreads (void);
 void    diod_conf_set_nwthreads (int i);
 
-int     diod_conf_get_maxmmap (void);
-int     diod_conf_opt_maxmmap (void);
-void    diod_conf_set_maxmmap (int i);
-
 int     diod_conf_get_foreground (void);
 int     diod_conf_opt_foreground (void);
 void    diod_conf_set_foreground (int i);

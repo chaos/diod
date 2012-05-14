@@ -88,7 +88,6 @@
 typedef struct {
     int          debuglevel;
     int          nwthreads;
-    int          maxmmap;
     int          foreground;
     int          auth_required;
     int          statfs_passthru;
@@ -176,7 +175,6 @@ diod_conf_init (void)
 {
     config.debuglevel = DFLT_DEBUGLEVEL;
     config.nwthreads = DFLT_NWTHREADS;
-    config.maxmmap = DFLT_MAXMMAP;
     config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
     config.statfs_passthru = DFLT_STATFS_PASSTHRU;
@@ -251,16 +249,6 @@ void diod_conf_set_nwthreads (int i)
 {
     config.nwthreads = i;
     config.ro_mask |= RO_NWTHREADS;
-}
-
-/* maxmmap - maximum bytes of a shared I/O context to mmap
- */
-int diod_conf_get_maxmmap (void) { return config.maxmmap; }
-int diod_conf_opt_maxmmap (void) { return config.ro_mask & RO_MAXMMAP; }
-void diod_conf_set_maxmmap (int i)
-{
-    config.maxmmap = i;
-    config.ro_mask |= RO_MAXMMAP;
 }
 
 /* foreground - run daemon in foreground
@@ -651,10 +639,6 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         if (!(config.ro_mask & RO_NWTHREADS)) {
             config.nwthreads = DFLT_NWTHREADS;
             _lua_getglobal_int (path, L, "nwthreads", &config.nwthreads);
-        }
-        if (!(config.ro_mask & RO_MAXMMAP)) {
-            config.maxmmap = DFLT_MAXMMAP;
-            _lua_getglobal_int (path, L, "maxmmap", &config.maxmmap);
         }
         if (!(config.ro_mask & RO_AUTH_REQUIRED)) {
             config.auth_required = DFLT_AUTH_REQUIRED;
