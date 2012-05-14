@@ -1,4 +1,20 @@
 =========================================================================
+Release Notes for DIOD version 1.0.11                         14 May 2012
+=========================================================================
+
+* Return EINVAL when a file is opened with O_DIRECT flag (issue 110).
+
+* Drop unused maxmmap feature.
+
+* Fix possible race on dumpable flag (issue 105)
+
+* Allow connections on UNIX domain sockets
+
+* Additional test coverage
+  - kern/t40: scrub a file (split off from kern/t35)
+  - misc/t15: run full server under valgrind
+
+=========================================================================
 Release Notes for DIOD version 1.0.10                         30 Mar 2012
 =========================================================================
 
