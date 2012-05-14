@@ -634,6 +634,10 @@ diod_lopen (Npfid *fid, u32 flags)
 
     flags = _remap_oflags (flags);
 
+    if (flags & O_DIRECT) {
+        np_uerror (EINVAL); /* O_DIRECT not allowed - see issue 110 */
+        goto error_quiet;
+    }
     if ((flags & O_CREAT)) /* can't happen? */
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
@@ -677,8 +681,13 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
 
     flags = _remap_oflags (flags);
 
+    if (flags & O_DIRECT) {
+        np_uerror (EINVAL); /* O_DIRECT not allowed - see issue 110 */
+        goto error_quiet;
+    }
     if (!(flags & O_CREAT)) /* can't happen? */
         flags |= O_CREAT;
+
     if (f->ioctx != NULL) {
         np_uerror (EINVAL);
         goto error; 

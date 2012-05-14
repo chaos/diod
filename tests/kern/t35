@@ -1,9 +1,7 @@
 #!/bin/bash
 
-echo creating 100mb file
-dd if=/dev/zero of=$PATH_MNTDIR/file bs=1024k count=100 status=noxfer
-echo scrubbing
-scrub -s 100m $PATH_MNTDIR/file >/dev/null &
+echo dding to 500mb file
+dd if=/dev/zero of=$PATH_MNTDIR/file bs=1024k count=500 status=noxfer &
 echo interrupting
 sleep 0.5
 kill -15 %1

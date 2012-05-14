@@ -1,0 +1,8 @@
+#!/bin/bash 
+
+echo creating 100mb file
+dd if=/dev/zero of=$PATH_MNTDIR/file bs=1024k count=100 status=noxfer
+echo scrubbing
+scrub -s 100m $PATH_MNTDIR/file >/dev/null
+
+exit 0
