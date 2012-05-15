@@ -4,7 +4,7 @@ bg_test ()
 {
   local sockfile=$1
   while ! test -S $sockfile; do
-    usleep 100000 # 100ms
+    sleep 0.1
   done
   ../../utils/diodload -r 2 -s $sockfile 2>/dev/null
 }
