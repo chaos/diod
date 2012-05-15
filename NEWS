@@ -1,4 +1,14 @@
 =========================================================================
+Release Notes for DIOD version 1.0.12                         15 May 2012
+=========================================================================
+
+* Rework fdtrans somewhat for clarity (issue 109)
+
+* Test improvements:
+  - misc/t15: don't use munge auth or usleep (caused hang on build farm)
+  - misc/t15: update valgrind suppressions for 32b Ubuntu tests
+
+=========================================================================
 Release Notes for DIOD version 1.0.11                         14 May 2012
 =========================================================================
 
