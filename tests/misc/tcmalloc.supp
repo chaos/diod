@@ -31,9 +31,13 @@
    Memcheck:Cond
    fun:__GI_strncpy
    fun:getnameinfo
-   fun:diod_sock_accept_one
-   fun:_service_loop
-   fun:start_thread
-   obj:*
 }
 
+{
+   <suppress_pthread_create_tls>
+   Memcheck:Leak
+   fun:calloc
+   fun:allocate_dtv
+   fun:_dl_allocate_tls
+   fun:pthread_create@@GLIBC_2.1
+}
