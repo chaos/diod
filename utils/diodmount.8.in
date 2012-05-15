@@ -67,7 +67,7 @@ specified user.
 .TP
 .I "port=n"
 Connect to the \fIdiod\fR server on the specified port.
-The default the IANA-assigned 9pfs port 564.
+The default is the IANA-assigned 9pfs port 564.
 .TP
 .I "trans=name"
 Select a transport.
