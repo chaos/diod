@@ -401,7 +401,7 @@ int np_encode_tpools_str (char **s, int *len, Npstats *stats);
 int np_decode_tpools_str (char *s, Npstats *stats);
 
 /* np.c */
-int np_peek_size(u8 *buf, int len);
+u32 np_peek_size(u8 *buf, int len);
 Npfcall *np_alloc_fcall(int msize);
 int np_deserialize(Npfcall*);
 int np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name, u8 *buf,

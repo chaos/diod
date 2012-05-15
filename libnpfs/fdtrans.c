@@ -41,7 +41,7 @@ struct Fdtrans {
 	int 		fdin;
 	int		fdout;
 	Npfcall		*fc;
-	int		fc_msize;
+	int		fc_len;  /* used bytes in fc */
 };
 
 static int np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a);
@@ -63,7 +63,7 @@ np_fdtrans_create(int fdin, int fdout)
 	fdt->fdin = fdin;
 	fdt->fdout = fdout;
 	fdt->fc = NULL;
-	fdt->fc_msize = 0;
+	fdt->fc_len = 0;
 	npt = np_trans_create(fdt, np_fdtrans_recv,
 				   np_fdtrans_send,
 				   np_fdtrans_destroy);
@@ -92,46 +92,57 @@ np_fdtrans_destroy(void *a)
 	free(fdt);
 }
 
+/* This function must perform request framing, and return with one request
+ * or an EOF/error.  If we read some extra bytes after a full request,
+ * store the extra in fdt->fc and start reading into that next time instead
+ * of allocating a fresh buffer.
+ * N.B. msize starts out at max for the server and can shrink if client
+ * negotiates a smaller one with Tversion.  It cannot grow, therefore
+ * the allocated size of cached 'fc' from a preveious call will always be
+ * >= the msize of the current call.  See fcall.c::np_version().
+ */
 static int
 np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a)
 {
 	Fdtrans *fdt = (Fdtrans *)a;
-	Npfcall *fc = NULL;
-	int n, size, len;
+	Npfcall *fc;
+	u32 size;
+	int n, len;
 
 	if (fdt->fc) {
-		NP_ASSERT (fdt->fc_msize >= msize);
 		fc = fdt->fc;
-		len = fdt->fc->size;
 		fdt->fc = NULL;
-		size = np_peek_size (fc->pkt, len);
+		len = fdt->fc_len;
+		size = np_peek_size(fc->pkt, len); /* 0 if len < 4 */
+		if (size > msize) {
+			np_uerror(EPROTO);
+			goto error;
+		}
 	} else {
-		if (!(fc = np_alloc_fcall (msize))) {
+		if (!(fc = np_alloc_fcall(msize))) {
 			np_uerror (ENOMEM);
 			goto error;
 		}
 		len = 0;
 		size = 0;
 	}
-	while (len < size || len < 4) {
+	while (size == 0 || len < size) {
 		n = read(fdt->fdin, fc->pkt + len, msize - len);
 		if (n < 0 && errno == EINTR)
 			continue;
 		if (n < 0) {
-			np_uerror (errno);
+			np_uerror(errno);
 			goto error;
 		}	
-		if (n == 0) {	/* EOF */
-			free (fc);
-			fc = NULL;
-			goto done;
-		}
+		if (n == 0)
+			goto eof;
 		len += n;
-		if (size == 0)
+		if (size == 0) {
 			size = np_peek_size(fc->pkt, len);
-		if (size > msize) {
-			np_uerror(EPROTO);
-			goto error;
+			if (size > msize) {
+				np_uerror(EPROTO);
+				goto error;
+			}
 		}
 	}
 	if (len > size) {
@@ -139,13 +150,15 @@ np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a)
 			np_uerror(ENOMEM);
 			goto error;
 		}
-		fdt->fc_msize = msize;
-		memcpy (fdt->fc->pkt, fc->pkt + size, len - size);
-		fdt->fc->size = len - size;
+		fdt->fc_len = len - size;
+		memcpy (fdt->fc->pkt, fc->pkt + size, fdt->fc_len);
 	}
 	fc->size = size;
-done:
 	*fcp = fc;
+	return 0;
+eof:
+	free(fc);
+	*fcp = NULL;
 	return 0;
 error:
 	if (fc)
@@ -157,21 +170,22 @@ static int
 np_fdtrans_send(Npfcall *fc, void *a)
 {
 	Fdtrans *fdt = (Fdtrans *)a;
-	int n, len = 0, size = fc->size;
+	u8 *data = fc->pkt;
+	u32 size = fc->size;
+	int len = 0;
+	int n;
 
-	/* N.B. Caching fc->size avoids a race with mtfsys.c where fc
-  	 * is replaced under us before the do conditional - see issue 72.
-	 */
-	do {
-		n = write(fdt->fdout, fc->pkt + len, size - len);
+	while (len < size) {
+		n = write(fdt->fdout, data + len, size - len);
 		if (n < 0 && errno == EINTR)
 			continue;
 		if (n < 0) {
 			np_uerror(errno);
-			return -1;
+			goto error;
 		}
 		len += n;
-	} while (len < size);
-
+	}
 	return len;		
+error:
+	return -1;
 }	

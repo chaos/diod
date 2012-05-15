@@ -1351,10 +1351,10 @@ np_create_runlinkat(void)
 	return np_post_check(fc, bufp);
 }
 
-int
+u32
 np_peek_size(u8 *buf, int len)
 {
-	int size = 0;
+	u32 size = 0;
 
 	if (len >= 4)
 		size = buf[0] | (buf[1]<<8) | (buf[2]<<16) | (buf[3]<<24);
