@@ -81,7 +81,7 @@ struct path_struct {
     int             refcount;
     char            *s;
     int             len;
-    IOCtx           ioctx;
+    IOCtx           ioctx;  /* double-linked list of IOCtx opening this path */
 };
 
 struct pathpool_struct {
@@ -144,6 +144,69 @@ _ioctx_decref (IOCtx ioctx)
     return n;
 }
 
+static int
+_ioctx_close_destroy (IOCtx ioctx, int seterrno)
+{
+    int rc = 0;
+
+    if (ioctx->dir) {
+        rc = closedir(ioctx->dir);
+        if (rc < 0 && seterrno)
+            np_uerror (errno);
+    } else if (ioctx->fd != -1) {
+        rc = close (ioctx->fd);
+        if (rc < 0 && seterrno)
+            np_uerror (errno);
+    }
+    if (ioctx->user)
+        np_user_decref (ioctx->user);
+    pthread_mutex_destroy (&ioctx->lock);
+    free (ioctx);
+
+    return rc;
+}
+
+static IOCtx
+_ioctx_create_open (Npuser *user, Path path, int flags, u32 mode)
+{
+    IOCtx ioctx;
+    struct stat sb;
+
+    ioctx = malloc (sizeof (*ioctx));
+    if (!ioctx) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    pthread_mutex_init (&ioctx->lock, NULL);
+    ioctx->refcount = 1;
+    ioctx->lock_type = LOCK_UN;
+    ioctx->dir = NULL;
+    ioctx->open_flags = flags;
+    ioctx->user = user;
+    np_user_incref (user);
+    ioctx->prev = ioctx->next = NULL;
+    ioctx->fd = open (path->s, flags, mode);
+    if (ioctx->fd < 0) {
+        np_uerror (errno);
+        goto error;
+    }
+    if (fstat (ioctx->fd, &sb) < 0) {
+        np_uerror (errno);
+        goto error;
+    }
+    ioctx->iounit = 0; /* if iounit=0, v9fs will use msize-P9_IOHDRSZ */
+    if (S_ISDIR(sb.st_mode) && !(ioctx->dir = fdopendir (ioctx->fd))) {
+        np_uerror (errno);
+        goto error;
+    }
+    diod_ustat2qid (&sb, &ioctx->qid);
+    return ioctx;
+error:
+    if (ioctx)
+        _ioctx_close_destroy (ioctx, 0);
+    return NULL;
+}
+
 int
 ioctx_close (Npfid *fid, int seterrno)
 {
@@ -151,29 +214,16 @@ ioctx_close (Npfid *fid, int seterrno)
     int n;
     int rc = 0;
 
-    if (f->ioctx) {
-        xpthread_mutex_lock (&f->path->lock);
-        n = _ioctx_decref (f->ioctx);
-        if (n == 0)
-            _unlink_ioctx (&f->path->ioctx, f->ioctx);
-        xpthread_mutex_unlock (&f->path->lock);
-        if (n == 0) {
-            if (f->ioctx->dir) {
-                rc = closedir(f->ioctx->dir);
-                if (rc < 0 && seterrno)
-                    np_uerror (errno);
-            } else if (f->ioctx->fd != -1) {
-                rc = close (f->ioctx->fd);
-                if (rc < 0 && seterrno)
-                    np_uerror (errno);
-            }
-            if (f->ioctx->user)
-                np_user_decref (f->ioctx->user);
-            pthread_mutex_destroy (&f->ioctx->lock);
-            free (f->ioctx);
-        }
-        f->ioctx = NULL;
-    }
+    NP_ASSERT (f->ioctx != NULL);
+
+    xpthread_mutex_lock (&f->path->lock);
+    n = _ioctx_decref (f->ioctx);
+    if (n == 0)
+        _unlink_ioctx (&f->path->ioctx, f->ioctx);
+    xpthread_mutex_unlock (&f->path->lock);
+    if (n == 0)
+        rc = _ioctx_close_destroy (f->ioctx, seterrno);
+    f->ioctx = NULL;
 
     return rc;
 }
@@ -182,15 +232,12 @@ int
 ioctx_open (Npfid *fid, u32 flags, u32 mode)
 {
     Fid *f = fid->aux;
-    struct stat sb;
-    IOCtx ip;
-    int sharable = ((f->flags & DIOD_FID_FLAGS_SHAREFD)
-                 && (flags & 3) == O_RDONLY);
+    IOCtx ip = NULL;
 
     NP_ASSERT (f->ioctx == NULL);
 
     xpthread_mutex_lock (&f->path->lock);
-    if (sharable) {
+    if ((f->flags & DIOD_FID_FLAGS_SHAREFD) && (flags & 3) == O_RDONLY) {
         for (ip = f->path->ioctx; ip != NULL; ip = ip->next) {
             if (ip->qid.type != P9_QTFILE)
                 continue;
@@ -199,46 +246,20 @@ ioctx_open (Npfid *fid, u32 flags, u32 mode)
             if (ip->user->uid != fid->user->uid)
                 continue;
             /* NOTE: we could do a stat and check qid? */
-            f->ioctx = _ioctx_incref (ip);
+            _ioctx_incref (ip);
             break;
         }
     }
-    if (f->ioctx == NULL) {
-        f->ioctx = malloc (sizeof (*f->ioctx));
-        if (!f->ioctx) {
-            np_uerror (ENOMEM);
-            goto error;
-        }
-        pthread_mutex_init (&f->ioctx->lock, NULL);
-        f->ioctx->refcount = 1;
-        f->ioctx->lock_type = LOCK_UN;
-        f->ioctx->dir = NULL;
-        f->ioctx->open_flags = flags;
-        np_user_incref (fid->user);
-        f->ioctx->user = fid->user;
-        f->ioctx->prev = f->ioctx->next = NULL;
-        f->ioctx->fd = open (f->path->s, flags, mode);
-        if (f->ioctx->fd < 0) {
-            np_uerror (errno);
-            goto error;
-        }
-        if (fstat (f->ioctx->fd, &sb) < 0) {
-            np_uerror (errno);
-            goto error;
-        }
-        f->ioctx->iounit = 0; /* if iounit=0, v9fs will use msize-P9_IOHDRSZ */
-        if (S_ISDIR(sb.st_mode) && !(f->ioctx->dir = fdopendir (f->ioctx->fd))) {
-            np_uerror (errno);
-            goto error;
-        }
-        diod_ustat2qid (&sb, &f->ioctx->qid);
-        _link_ioctx (&f->path->ioctx, f->ioctx);
+    if (!ip) {
+        if ((ip = _ioctx_create_open (fid->user, f->path, flags, mode)))
+            _link_ioctx (&f->path->ioctx, ip);
     }
     xpthread_mutex_unlock (&f->path->lock);
+    if (!ip)
+        goto error;
+    f->ioctx = ip;
     return 0;
 error:
-    xpthread_mutex_unlock (&f->path->lock);
-    ioctx_close (fid, 0);
     return -1;
 }
 
@@ -345,6 +366,11 @@ ioctx_qid (IOCtx ioctx)
 {
     return &ioctx->qid;
 }
+
+/* N.B. When diod_fidclone() calls path_incref(), the path will not be
+ * removed from the pool even though the ppool lock is not held,
+ * because the fid being cloned holds a reference on the path.
+ */
 
 static void
 _path_free (Path path)

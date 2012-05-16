@@ -105,7 +105,6 @@ Npfcall     *diod_write  (Npfid *fid, u64 offset, u32 count, u8 *data,
                           Npreq *req);
 Npfcall     *diod_clunk  (Npfid *fid);
 Npfcall     *diod_remove (Npfid *fid);
-void         diod_fiddestroy(Npfid *fid);
 
 Npfcall     *diod_statfs (Npfid *fid);
 Npfcall     *diod_lopen  (Npfid *fid, u32 mode);
@@ -653,6 +652,7 @@ diod_lopen (Npfid *fid, u32 flags)
     }
     if (!(res = np_create_rlopen (ioctx_qid (f->ioctx),
                                   ioctx_iounit (f->ioctx)))) {
+        (void)ioctx_close (fid, 0);
         np_uerror (ENOMEM);
         goto error;
     }
@@ -662,7 +662,6 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn),
           path_s (f->path));
 error_quiet:
-    ioctx_close (fid, 0); 
     return NULL;
 }
 
@@ -704,6 +703,7 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
     }
     if (!((ret = np_create_rlcreate (ioctx_qid (f->ioctx),
                                      ioctx_iounit (f->ioctx))))) {
+        (void)ioctx_close (fid, 0);
         (void)unlink (path_s (f->path));
         np_uerror (ENOMEM);
         goto error;
@@ -715,7 +715,6 @@ error:
           fid->user->uname, np_conn_get_client_id (fid->conn),
           opath ? path_s (opath) : path_s (f->path), name->len, name->str);
 error_quiet:
-    ioctx_close (fid, 0);
     if (opath) {
         if (f->path)
             path_decref (srv, f->path);
