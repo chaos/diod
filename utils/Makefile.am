@@ -3,7 +3,7 @@ AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
 	-I../libnpfs -I../liblsd -I../libdiod -I../libnpclient
 
-sbin_PROGRAMS = diodmount diodcat dtop diodload
+sbin_PROGRAMS = diodmount diodcat dtop diodload diodls
 
 common_ldadd = \
 	$(top_builddir)/libdiod/libdiod.a \
@@ -29,8 +29,12 @@ dtop_SOURCES = dtop.c sample.c sample.h
 diodload_LDADD = $(common_ldadd)
 diodload_SOURCES = diodload.c $(common_sources)
 
+diodls_LDADD = $(common_ldadd)
+diodls_SOURCES = diodls.c $(common_sources)
+
 man8_MANS = \
 	diodmount.8 \
 	diodcat.8 \
 	dtop.8 \
-	diodload.8
+	diodload.8 \
+	diodls.8
