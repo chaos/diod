@@ -465,6 +465,7 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
     ssize_t n;
 
     if (!f->ioctx) {
+        msg ("diod_write: fid is not open");
         np_uerror (EBADF);
         goto error;
     }
@@ -641,9 +642,9 @@ diod_lopen (Npfid *fid, u32 flags)
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
     if (f->ioctx != NULL) {
+        msg ("diod_lopen: fid is already open");
         np_uerror (EINVAL);
-        errn (errno, "diod_lopen: fid is already open");
-        return NULL;
+        goto error; 
     }
     if (ioctx_open (fid, flags, 0) < 0) {
         if (np_rerror () == ENOMEM)
@@ -688,6 +689,7 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
         flags |= O_CREAT;
 
     if (f->ioctx != NULL) {
+        msg ("diod_lcreate: fid is already open");
         np_uerror (EINVAL);
         goto error; 
     }
@@ -1118,8 +1120,9 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     Npfcall *ret;
 
     if (!f->ioctx) {
+        msg ("diod_readdir: fid is not open");
         np_uerror (EBADF);
-        goto error;
+        goto error; 
     }
     if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
@@ -1150,6 +1153,7 @@ diod_fsync (Npfid *fid)
         goto error_quiet;
     }
     if (!f->ioctx) {
+        msg ("diod_fsync: fid is not open");
         np_uerror (EBADF);
         goto error;
     }
@@ -1192,6 +1196,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
         goto error;
     }
     if (!f->ioctx) {
+        msg ("diod_lock: fid is not open");
         np_uerror (EBADF);
         goto error;
     }
@@ -1243,6 +1248,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         goto error_quiet;
     }
     if (!f->ioctx) {
+        msg ("diod_getlock: fid is not open");
         np_uerror (EBADF);
         goto error;
     }
