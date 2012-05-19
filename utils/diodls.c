@@ -210,7 +210,6 @@ lsfile_l (Npcfid *dir, char *name)
     if (!(gr = getgrgid (sb.st_gid)))
         snprintf (gid, sizeof (gid), "%d", sb.st_gid);
     mtime = ctime( &sb.st_mtime);
-    /* -rwxr-xr-x. 1 garlick garlick 774551 May 18 14:56 diodcat */
     printf ("%10s %4lu %s %s %12lu %.*s %s\n",
             mode2str (sb.st_mode),
             sb.st_nlink,

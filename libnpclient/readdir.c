@@ -83,9 +83,16 @@ npc_closedir (Npcfid *fid)
 Npcfid *
 npc_opendir (Npcfid *root, char *path)
 {
-	Npcfid *fid;
+	Npcfid *fid = NULL;
+	struct stat sb;
 
 	if ((fid = npc_open_bypath (root, path, O_RDONLY))) {
+		if (npc_fstat (fid, &sb) < 0)
+			goto error;
+		if (!S_ISDIR (sb.st_mode)) {
+			np_uerror (ENOTDIR);
+			goto error;
+		}
 		fid->dbuf_size = root->fsys->msize - P9_IOHDRSZ;
 		if (!(fid->dbuf = malloc (fid->dbuf_size))) {
 			(void)npc_closedir (fid);
@@ -97,6 +104,10 @@ npc_opendir (Npcfid *root, char *path)
 		fid->dbuf_used = 0;
 	}
 	return fid;
+error:
+	if (fid)
+		npc_clunk(fid);
+	return NULL;
 }
 
 /* Returns error code > 0 on error.

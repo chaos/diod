@@ -40,6 +40,35 @@
 #include "npcimpl.h"
 
 Npcfid *
+npc_clone(Npcfid *fid)
+{
+	Npcfsys *fsys = fid->fsys;
+	Npcfid *nfid = NULL;
+	Npfcall *tc = NULL, *rc = NULL;
+
+	if (!(nfid = npc_fid_alloc(fsys)))
+		goto error;
+	if (!(tc = np_create_twalk(fid->fid, nfid->fid, 0, NULL))) {
+		np_uerror(ENOMEM);
+		goto error;
+	}
+	if (fsys->rpc(fsys, tc, &rc) < 0)
+		goto error;
+	free(tc);
+	free(rc);
+
+	return nfid;
+error:
+	if (rc)
+		free(rc);
+	if (tc)
+		free(tc);
+	if (nfid)
+		npc_fid_free (nfid);
+	return NULL;
+}
+
+Npcfid *
 npc_walk(Npcfid *nfid, char *path)
 {
 	int n;
@@ -47,6 +76,9 @@ npc_walk(Npcfid *nfid, char *path)
 	char *wnames[P9_MAXWELEM];
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
+
+	if (path == NULL)
+		return npc_clone(nfid);
 
 	while (*path == '/')
 		path++;

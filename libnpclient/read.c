@@ -151,6 +151,7 @@ error:
 
 
 /* FIXME: embed a buffer in Npcfid like stdio.
+ * Rewinding the file after each read is inefficient.
  */
 char *
 npc_gets(Npcfid *fid, char *buf, u32 count)

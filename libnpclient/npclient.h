@@ -109,10 +109,16 @@ int npc_pwrite (Npcfid *fid, void *buf, u32 count, u64 offset);
 
 /* Descend a directory represnted by 'fid' by walking successive path
  * elements in 'path'.  Multiple WALK requests will be sent depending on
- * the number of path elements.  Returns a new fid representing path,
- * or NULL on error (retrieve with np_rerror ()).
+ * the number of path elements.  If 'path' is NULL, call npc_clone().
+ * Returns a new fid representing path, or NULL on error (retrieve with
+ * np_rerror ()).
  */
 Npcfid *npc_walk (Npcfid *fid, char *path);
+
+/* Clone a fid.  Returns a new fid representing the same path as 'fid',
+ * or NULL on error (retrieve with np_rerror ()).
+ */
+Npcfid *npc_clone(Npcfid *fid);
 
 /* Send a MKDIR request to create 'name' in parent directory 'fid',
  * with 'mode' bits as in open (2).

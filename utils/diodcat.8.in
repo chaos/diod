@@ -5,7 +5,7 @@ diodcat \- cat files by attaching directly to diod server
 \fBdiodcat\fR \fI[OPTIONS] [-s IP:PORT] [-a aname] [file [file...]]\fR
 .SH DESCRIPTION
 .B diodcat
-connects to a \fBdiod\fR server on \fIhost\fR, attaches to
+connects to a \fBdiod\fR server on \fIIP:PORT\fR, attaches to
 the mount point \fIaname\fR, and concatenates the contents of
 the specified files on stdout.
 .SH OPTIONS

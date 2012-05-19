@@ -5,7 +5,7 @@ diodload \- create artificial diod load
 \fBdiodload\fR \fI[OPTIONS] [-s IP:PORT]\fR
 .SH DESCRIPTION
 .B diodload
-connects to a \fBdiod\fR server and issues requests.
+connects to a \fBdiod\fR server on \fIIP:PORT\fR and issues requests.
 Unless changed with \fI-g\fR, each thread copies from
 \fIctl:zero\fR to \fIctl:null\fR.
 .SH OPTIONS
