@@ -53,7 +53,7 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 
-#define OPTIONS "s:m:u:t:"
+#define OPTIONS "s:m:u:t:l"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -61,6 +61,7 @@ static const struct option longopts[] = {
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
     {"timeout", required_argument,      0, 't'},
+    {"long",    no_argument,            0, 'l'},
     {0, 0, 0, 0},
 };
 #else
@@ -78,6 +79,7 @@ usage (void)
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -t,--timeout SECS     give up after specified seconds\n"
+"   -l,--long             list clients one per line and don't strip domain\n"
 );
     exit (1);
 }
@@ -95,6 +97,7 @@ main (int argc, char *argv[])
     char buf[80], *host, *p;
     hostlist_t hl;
     hostlist_iterator_t itr;
+    int lopt = 0;
 
     diod_log_init (argv[0]);
 
@@ -112,6 +115,9 @@ main (int argc, char *argv[])
                 break;
             case 't':   /* --timeout SECS */
                 topt = strtoul (optarg, NULL, 10);
+                break;
+            case 'l':   /* --long */
+                lopt = 1;
                 break;
             default:
                 usage ();
@@ -143,15 +149,25 @@ main (int argc, char *argv[])
     while (npc_gets (fid, buf, sizeof(buf))) { // inefficient (fix libnpclient)
         if ((p = strchr (buf, ' ')))
             *p = '\0';
+        if (!lopt && (p = strchr (buf, '.')))
+            *p = '\0';
         if (!hostlist_push_host (hl, buf))
             err_exit ("hostlist_push_host");
     }
     hostlist_uniq (hl);
-    if (!(itr = hostlist_iterator_create (hl)))
-        err_exit ("hostlist_iterator_create");
-    while ((host = hostlist_next (itr)))
-        printf ("%s\n", host);
-    hostlist_iterator_destroy (itr);
+    if (lopt) {
+        if (!(itr = hostlist_iterator_create (hl)))
+            err_exit ("hostlist_iterator_create");
+        while ((host = hostlist_next (itr)))
+            printf ("%s\n", host);
+        hostlist_iterator_destroy (itr);
+    } else {
+        char s[1024];
+
+        if (hostlist_ranged_string (hl, sizeof (s), s) < 0)
+            msg_exit ("hostlist output would be too long (use -l)");
+        printf ("%s\n", s);
+    }
     hostlist_destroy (hl);
 
     if (npc_clunk (fid) < 0)

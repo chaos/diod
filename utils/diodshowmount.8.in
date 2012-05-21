@@ -6,7 +6,8 @@ diodshowmount \- list diod server connections
 .SH DESCRIPTION
 .B diodshowmount
 connects to a \fBdiod\fR server on \fIIP:PORT\fR and displays a list of
-clients connected to that server, one per line.
+clients connected to that server in hostlist format, with domain name
+suffixes stripped.
 .SH OPTIONS
 .TP
 .I "-s, --server NAME"
@@ -21,5 +22,8 @@ Try to attach to the server as the specified user (default your effective uid).
 .TP
 .I "-t, --timeout SECS"
 Force timeout after specified number of seconds (default no timeout).
+.TP
+.I "-l, --long"
+List clients one per line without removing domain name suffixes, if any.
 .SH "SEE ALSO"
 diod (8)
