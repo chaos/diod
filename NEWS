@@ -1,4 +1,22 @@
 =========================================================================
+Release Notes for DIOD version 1.0.13                         22 May 2012
+=========================================================================
+
+* Allow DIOD_MOUNTOPTIONS in /etc/sysconfig/auto.diod
+
+  Normalize -s,--server NAME option in diodcat, diodload, diodls,
+  and diodshowmount utilities, where NAME can be IP[:PORT], HOST[:PORT],
+  or /path/to/socket.
+
+* Add diodshowmount utility (issue 111)
+
+* Add diodls utility
+
+* Debugging/cleanup for issue 108
+  - refactor and clarify error paths in ioctx open/close functions
+  - normalize error messages when ioctx state is not as expected
+
+=========================================================================
 Release Notes for DIOD version 1.0.12                         15 May 2012
 =========================================================================
 

@@ -36,11 +36,12 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT) dtop$(EXEEXT) \
-	diodload$(EXEEXT)
+	diodload$(EXEEXT) diodls$(EXEEXT) diodshowmount$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/diodcat.8.in $(srcdir)/diodload.8.in \
-	$(srcdir)/diodmount.8.in $(srcdir)/dtop.8.in
+	$(srcdir)/diodls.8.in $(srcdir)/diodmount.8.in \
+	$(srcdir)/diodshowmount.8.in $(srcdir)/dtop.8.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/config/ax_lua.m4 \
 	$(top_srcdir)/config/dbench.m4 \
@@ -56,7 +57,8 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = $(top_builddir)/config/config.h
-CONFIG_CLEAN_FILES = diodmount.8 diodcat.8 dtop.8 diodload.8
+CONFIG_CLEAN_FILES = diodmount.8 diodcat.8 dtop.8 diodload.8 diodls.8 \
+	diodshowmount.8
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
@@ -76,9 +78,15 @@ diodcat_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodload_OBJECTS = diodload.$(OBJEXT) $(am__objects_1)
 diodload_OBJECTS = $(am_diodload_OBJECTS)
 diodload_DEPENDENCIES = $(am__DEPENDENCIES_2)
+am_diodls_OBJECTS = diodls.$(OBJEXT) $(am__objects_1)
+diodls_OBJECTS = $(am_diodls_OBJECTS)
+diodls_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodmount_OBJECTS = diodmount.$(OBJEXT) $(am__objects_1)
 diodmount_OBJECTS = $(am_diodmount_OBJECTS)
 diodmount_DEPENDENCIES = $(am__DEPENDENCIES_2)
+am_diodshowmount_OBJECTS = diodshowmount.$(OBJEXT) $(am__objects_1)
+diodshowmount_OBJECTS = $(am_diodshowmount_OBJECTS)
+diodshowmount_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_dtop_OBJECTS = dtop.$(OBJEXT) sample.$(OBJEXT)
 dtop_OBJECTS = $(am_dtop_OBJECTS)
 dtop_DEPENDENCIES = $(am__DEPENDENCIES_2)
@@ -90,10 +98,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) $(diodmount_SOURCES) \
-	$(dtop_SOURCES)
+SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) $(diodls_SOURCES) \
+	$(diodmount_SOURCES) $(diodshowmount_SOURCES) $(dtop_SOURCES)
 DIST_SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) \
-	$(diodmount_SOURCES) $(dtop_SOURCES)
+	$(diodls_SOURCES) $(diodmount_SOURCES) \
+	$(diodshowmount_SOURCES) $(dtop_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
     $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
@@ -278,11 +287,17 @@ dtop_LDADD = $(common_ldadd)
 dtop_SOURCES = dtop.c sample.c sample.h
 diodload_LDADD = $(common_ldadd)
 diodload_SOURCES = diodload.c $(common_sources)
+diodls_LDADD = $(common_ldadd)
+diodls_SOURCES = diodls.c $(common_sources)
+diodshowmount_LDADD = $(common_ldadd)
+diodshowmount_SOURCES = diodshowmount.c $(common_sources)
 man8_MANS = \
 	diodmount.8 \
 	diodcat.8 \
 	dtop.8 \
-	diodload.8
+	diodload.8 \
+	diodls.8 \
+	diodshowmount.8
 
 all: all-am
 
@@ -325,6 +340,10 @@ diodcat.8: $(top_builddir)/config.status $(srcdir)/diodcat.8.in
 dtop.8: $(top_builddir)/config.status $(srcdir)/dtop.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 diodload.8: $(top_builddir)/config.status $(srcdir)/diodload.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodls.8: $(top_builddir)/config.status $(srcdir)/diodls.8.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+diodshowmount.8: $(top_builddir)/config.status $(srcdir)/diodshowmount.8.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-sbinPROGRAMS: $(sbin_PROGRAMS)
 	@$(NORMAL_INSTALL)
@@ -369,9 +388,15 @@ diodcat$(EXEEXT): $(diodcat_OBJECTS) $(diodcat_DEPENDENCIES)
 diodload$(EXEEXT): $(diodload_OBJECTS) $(diodload_DEPENDENCIES) 
 	@rm -f diodload$(EXEEXT)
 	$(LINK) $(diodload_OBJECTS) $(diodload_LDADD) $(LIBS)
+diodls$(EXEEXT): $(diodls_OBJECTS) $(diodls_DEPENDENCIES) 
+	@rm -f diodls$(EXEEXT)
+	$(LINK) $(diodls_OBJECTS) $(diodls_LDADD) $(LIBS)
 diodmount$(EXEEXT): $(diodmount_OBJECTS) $(diodmount_DEPENDENCIES) 
 	@rm -f diodmount$(EXEEXT)
 	$(LINK) $(diodmount_OBJECTS) $(diodmount_LDADD) $(LIBS)
+diodshowmount$(EXEEXT): $(diodshowmount_OBJECTS) $(diodshowmount_DEPENDENCIES) 
+	@rm -f diodshowmount$(EXEEXT)
+	$(LINK) $(diodshowmount_OBJECTS) $(diodshowmount_LDADD) $(LIBS)
 dtop$(EXEEXT): $(dtop_OBJECTS) $(dtop_DEPENDENCIES) 
 	@rm -f dtop$(EXEEXT)
 	$(LINK) $(dtop_OBJECTS) $(dtop_LDADD) $(LIBS)
@@ -384,7 +409,9 @@ distclean-compile:
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodcat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodload.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodls.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodshowmount.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dtop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sample.Po@am__quote@
