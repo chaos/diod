@@ -2,16 +2,16 @@
 .SH NAME
 diodshowmount \- list diod server connections 
 .SH SYNOPSIS
-\fBdiodshowmount\fR \fI[OPTIONS] [-s IP:PORT]\fR
+\fBdiodshowmount\fR \fI[OPTIONS] [-s NAME]\fR
 .SH DESCRIPTION
 .B diodshowmount
-connects to a \fBdiod\fR server on \fIIP:PORT\fR and displays a list of
+connects to a \fBdiod\fR server and displays a list of
 clients connected to that server in hostlist format, with domain name
 suffixes stripped.
 .SH OPTIONS
 .TP
 .I "-s, --server NAME"
-The server in IP:PORT, HOST:PORT, or /path/to/unix_domain_socket form
+The server in IP[:PORT], HOST[:PORT], or /path/to/socket form
 (default localhost:564).
 .TP
 .I "-m, --msize SIZE"

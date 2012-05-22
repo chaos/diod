@@ -2,18 +2,18 @@
 .SH NAME
 diodls \- list files by attaching directly to diod server
 .SH SYNOPSIS
-\fBdiodls\fR \fI[OPTIONS] [-s IP:PORT] [-a aname] [file [file...]]\fR
+\fBdiodls\fR \fI[OPTIONS] [-s NAME] [-a aname] [file [file...]]\fR
 .SH DESCRIPTION
 .B diodls
-connects to a \fBdiod\fR server on \fIIP:PORT\fR, attaches to
-the mount point \fIaname\fR, and lists the specified files or directories.
+connects to a \fBdiod\fR server, attaches to the mount point \fIaname\fR,
+and lists the specified files or directories.
 .SH OPTIONS
 .TP
 .I "-a, --aname NAME"
 The file system name on the server (default ctl).
 .TP
 .I "-s, --server NAME"
-The server in IP:PORT, HOST:PORT, or /path/to/unix_domain_socket form
+The server in IP[:PORT], HOST[:PORT], or /path/to/socket form
 (default localhost:564).
 .TP
 .I "-m, --msize SIZE"

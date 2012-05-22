@@ -2,7 +2,7 @@
 .SH NAME
 dtop \- display diod performance
 .SH SYNOPSIS
-\fBdtop\fR \fI[-h hostlist] [-p pool_period]\fR
+\fBdtop\fR \fI[-h hostlist] [OPTIONS]\fR
 .SH DESCRIPTION
 .B dtop
 connects to \fBdiod\fR servers and displays performance information.

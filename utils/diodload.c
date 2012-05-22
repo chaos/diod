@@ -125,7 +125,7 @@ main (int argc, char *argv[])
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 's':   /* --server HOST:PORT or /path/to/unix_domain_socket */
+            case 's':   /* --server HOST[:PORT] or /path/to/socket */
                 server = optarg;
                 break;
             case 'm':   /* --msize SIZE */
@@ -152,7 +152,7 @@ main (int argc, char *argv[])
         msg_exit ("out of memory");
 
     for (i = 0; i < numthreads; i++) {
-        t[i].server = server ? server : "localhost:564";
+        t[i].server = server;
         t[i].msize = msize;
         t[i].stoptime = now + runtime;
         t[i].fd = -1;

@@ -446,8 +446,12 @@ diod_sock_connect (char *name, int flags)
     char *host = NULL;
     char *port;
 
-    if (name[0] == '/')
+    if (!name)
+        fd = diod_sock_connect_inet ("localhost", "564", flags);
+    else if (name[0] == '/')
         fd = diod_sock_connect_unix (name, flags);
+    else if (!strchr (name, ':'))
+        fd = diod_sock_connect_inet (name, "564", flags);
     else {
         if (!(host = strdup (name))) {
             errno = ENOMEM;

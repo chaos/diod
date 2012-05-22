@@ -74,7 +74,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodshowmount [OPTIONS] [-s HOST:PORT]\n"
+"Usage: diodshowmount [OPTIONS] [-s HOST[:PORT]]\n"
 "   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
@@ -87,7 +87,7 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    char *server = "localhost:564";
+    char *server = NULL;
     int msize = 65536;
     uid_t uid = geteuid ();
     int topt = 0;
@@ -104,7 +104,7 @@ main (int argc, char *argv[])
     opterr = 0;
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
-            case 's':   /* --server HOST:PORT or /path/to/socket */
+            case 's':   /* --server HOST[:PORT] or /path/to/socket */
                 server = optarg;
                 break;
             case 'm':   /* --msize SIZE */

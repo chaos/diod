@@ -79,7 +79,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodcat [OPTIONS] [-s HOST:PORT] [-a aname] [file [file...]]\n"
+"Usage: diodcat [OPTIONS] [-s HOST[:PORT]] [-a aname] [file [file...]]\n"
 "   -a,--aname NAME       file system (default ctl)\n"
 "   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -l,--long             show stat information too\n"
@@ -94,7 +94,7 @@ int
 main (int argc, char *argv[])
 {
     char *aname = NULL;
-    char *server = "localhost:564";
+    char *server = NULL;
     int msize = 65536;
     uid_t uid = geteuid ();
     int topt = 0;
@@ -109,7 +109,7 @@ main (int argc, char *argv[])
             case 'a':   /* --aname NAME */
                 aname = optarg;
                 break;
-            case 's':   /* --server HOST:PORT or /path/to/socket */
+            case 's':   /* --server HOST[:PORT] or /path/to/socket */
                 server = optarg;
                 break;
             case 'm':   /* --msize SIZE */
