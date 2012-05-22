@@ -146,7 +146,7 @@ main (int argc, char *argv[])
 
     if (!(hl = hostlist_create (NULL)))
         err_exit ("hostlist_create");
-    while (npc_gets (fid, buf, sizeof(buf))) { // inefficient (fix libnpclient)
+    while (npc_gets (fid, buf, sizeof(buf))) {
         if ((p = strchr (buf, ' ')))
             *p = '\0';
         if (!lopt && (p = strchr (buf, '.')))

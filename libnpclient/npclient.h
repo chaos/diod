@@ -32,10 +32,10 @@ struct Npcfid {
 	Npcfsys*	fsys;
 	u32		fid;
 	u64		offset;
-	char		*dbuf;		/* packed p9_dirents */
-	int		dbuf_size;	/* size of 'dbuf' buffer */
-	int		dbuf_len;	/* length of 'dbuf' filled */
-	int		dbuf_used;	/* amount of 'dbuf' used */
+	char		*buf;		/* packed p9_dirents or gets buffer */
+	int		buf_size;	/* size of 'buf' buffer */
+	int		buf_len;	/* length of 'buf' filled (readdir_r) */
+	int		buf_used;	/* amount of 'buf' used (readdir_r)*/
 };
 
 typedef int (*AuthFun)(Npcfid *afid, u32 uid);
@@ -259,12 +259,6 @@ int npc_remove_bypath (Npcfid *root, char *path);
  * Returns fid for file, or NULL on error (retrieve with np_rerror ()).
  */
 Npcfid *npc_opendir (Npcfid *root, char *path);
-
-/* Tell the server to forget about 'fid' with a CLUNK request,
- * and free internal data structures associated with readdir.
- * Return 0 on success, -1 on error (retrieve with np_rerror ()).
- */
-int npc_closedir (Npcfid *fid);
 
 /* Read a directory entry from directory 'fid' that was opened with
  * npc_opendir().  Entry points to dirent storage allocated by the caller.

@@ -149,31 +149,84 @@ error:
 	return NULL;
 }
 
+static int
+_buf_save (Npcfid *fid, char *buf, int len)
+{
+	if (fid->buf) {
+		if (!(fid->buf = realloc (fid->buf, fid->buf_size + len)))
+			goto nomem;
+		memcpy (fid->buf + fid->buf_size, buf, len);
+		fid->buf_size += len;
+	} else {
+		if (!(fid->buf = malloc (len)))
+			goto nomem;
+		memcpy (fid->buf, buf, len);
+		fid->buf_size = len;
+	}
+	return 0;
+nomem:
+	np_uerror (ENOMEM);
+	return -1;
+}
 
-/* FIXME: embed a buffer in Npcfid like stdio.
- * Rewinding the file after each read is inefficient.
- */
+static int
+_buf_restore (Npcfid *fid, char *buf, int len)
+{
+	int ret = 0;
+
+	if (fid->buf) {
+		ret = len > fid->buf_size ? fid->buf_size : len;
+		memcpy (buf, fid->buf, ret);
+		if (fid->buf_size > ret) {
+			memmove (fid->buf, fid->buf + ret, fid->buf_size - ret);
+			fid->buf_size -= ret;
+		} else {
+			free (fid->buf);
+			fid->buf = NULL;
+			fid->buf_size = 0;
+		}
+	}
+	return ret;
+}
+
+static char *
+_strnchr (char *s, char c, int len)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+		if (s[i] == c)
+			return &s[i];
+	return NULL;
+}
+
 char *
 npc_gets(Npcfid *fid, char *buf, u32 count)
 {
-	int n, done = 0;
-	char *p;
+	int n = 0, done = 0, extra = 0;
+	char *nlp = NULL;
 
-	while (done < count) {
-		n = npc_pread (fid, buf + done,
-			       count - done - 1, fid->offset + done);
-		if (n < 0)
-			return NULL;
-		if (n == 0)
-			break;
-		done += n;
-		buf[done] = '\0';
-		if ((p = strchr (buf, '\n'))) {
-			*p = '\0';
-			done = strlen (buf) + 1;
-			break;
+	n = _buf_restore (fid, buf, count - 1);
+	while (done < count && !nlp) {
+		if (done > 0 || n == 0) {
+			n = npc_read (fid, buf + done, count - done - 1);
+			if (n < 0)
+				goto error;
+			if (n == 0)
+				break;
 		}
+		nlp = _strnchr (buf + done, '\n', n);
+		done += n;
 	}
-	fid->offset += done;
-	return (done > 0 ? buf : NULL);
+	if (nlp) {
+		*nlp = '\0';
+		extra = done - (nlp - buf) - 1;
+		if (extra > 0 && _buf_save (fid, nlp + 1, extra) < 0)
+			goto error;
+		done = nlp - buf;
+	}
+	buf[done] = '\0';
+	return done > 0 ? buf : NULL;
+error:
+	return NULL;
 }

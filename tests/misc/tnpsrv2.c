@@ -173,8 +173,8 @@ main (int argc, char *argv[])
                 msg ("readdir found fewer than expected files: %d", i);
 
             /* close the directory */
-            if (npc_closedir (dir) < 0)
-                errn (np_rerror (), "npc_closedir foo");
+            if (npc_clunk (dir) < 0)
+                errn (np_rerror (), "npc_clunk foo");
         }
             
         /* remove files (implicit clunk) */

@@ -54,7 +54,7 @@ npc_fid_alloc(Npcfsys *fs)
 	ret->fid = npc_get_id(fs->fidpool);
 	ret->offset = 0;
 	ret->iounit = 0;
-	ret->dbuf = NULL;
+	ret->buf = NULL;
 
 	fs->incref(fs);
 	return ret;
@@ -64,6 +64,8 @@ void
 npc_fid_free(Npcfid *fid)
 {
 	if (fid) {
+		if (fid->buf)
+			free (fid->buf);
 		npc_put_id(fid->fsys->fidpool, fid->fid);
 		fid->fsys->decref(fid->fsys);
 		free(fid);

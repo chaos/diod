@@ -69,17 +69,6 @@ done:
 	return ret;
 }
 
-int
-npc_closedir (Npcfid *fid)
-{
-	if (fid->dbuf) {
-		free (fid->dbuf);
-		fid->dbuf = NULL;
-	}
-
-	return npc_clunk (fid);
-}
-
 Npcfid *
 npc_opendir (Npcfid *root, char *path)
 {
@@ -93,15 +82,15 @@ npc_opendir (Npcfid *root, char *path)
 			np_uerror (ENOTDIR);
 			goto error;
 		}
-		fid->dbuf_size = root->fsys->msize - P9_IOHDRSZ;
-		if (!(fid->dbuf = malloc (fid->dbuf_size))) {
-			(void)npc_closedir (fid);
+		fid->buf_size = root->fsys->msize - P9_IOHDRSZ;
+		if (!(fid->buf = malloc (fid->buf_size))) {
+			(void)npc_clunk (fid);
 			np_uerror (ENOMEM);
 			fid = NULL;
 		}
 		fid->offset = 0;
-		fid->dbuf_len = 0;
-		fid->dbuf_used = 0;
+		fid->buf_len = 0;
+		fid->buf_used = 0;
 	}
 	return fid;
 error:
@@ -122,21 +111,24 @@ npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result)
 	u8 type;
 	int res;
 
-	if (fid->dbuf_used >= fid->dbuf_len) {
-		fid->dbuf_len = npc_readdir (fid, fid->offset, fid->dbuf,
-					      fid->dbuf_size);
-		if (fid->dbuf_len < 0)
+	if (!fid->buf) /* not opened with npc_opendir */
+		return EINVAL;
+
+	if (fid->buf_used >= fid->buf_len) {
+		fid->buf_len = npc_readdir (fid, fid->offset, fid->buf,
+					      fid->buf_size);
+		if (fid->buf_len < 0)
 			return np_rerror ();
-		if (fid->dbuf_len == 0) {	/* EOF */
+		if (fid->buf_len == 0) {	/* EOF */
 			*result = NULL;
 			return 0;
 		}
-		fid->dbuf_used = 0;
+		fid->buf_used = 0;
 	}
 	res = np_deserialize_p9dirent (&qid, &offset, &type,
 				       entry->d_name, dname_size,
-				       (u8 *)fid->dbuf + fid->dbuf_used,
-				       fid->dbuf_len   - fid->dbuf_used);
+				       (u8 *)fid->buf + fid->buf_used,
+				       fid->buf_len   - fid->buf_used);
 	if (res == 0)
 		return EIO;
 	entry->d_off = offset;
@@ -144,7 +136,7 @@ npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result)
 	entry->d_ino = qid.path;
 	//entry->d_reclen
 	fid->offset = offset;
-	fid->dbuf_used += res;
+	fid->buf_used += res;
 	*result = entry;
 	return 0;
 }
@@ -153,7 +145,7 @@ void
 npc_seekdir (Npcfid *fid, long offset)
 {
 	fid->offset = offset;
-	fid->dbuf_used = fid->dbuf_len; /* force a 9p readdir call */
+	fid->buf_used = fid->buf_len; /* force a 9p readdir call */
 }
 
 long

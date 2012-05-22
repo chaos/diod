@@ -255,8 +255,8 @@ lsdir (int i, int count, Npcfid *root, int lopt, char *path)
                 printf ("%s\n", dp->d_name);
         }
     } while (dp != NULL);
-    if (npc_closedir (dir) < 0) {
-        errn (np_rerror (), "npc_closedir: %s", path);
+    if (npc_clunk (dir) < 0) {
+        errn (np_rerror (), "npc_clunk: %s", path);
         goto error;
     }
     if (count > 1 && i < count - 1)
@@ -264,7 +264,7 @@ lsdir (int i, int count, Npcfid *root, int lopt, char *path)
     return 0;
 error:
     if (dir)
-        (void)npc_closedir (dir);
+        (void)npc_clunk (dir);
     return -1;
 }
 
