@@ -1,5 +1,7 @@
 #!/bin/bash
 
+umask 022
+
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 if [ $# -ne 1 ]; then
     echo "Usage runtest test" 2>&1
@@ -12,6 +14,7 @@ if [ -z "$PATH_DIOD" ]; then
     echo "PATH_DIOD is not set" 2>&1
     exit 1
 fi
+
 
 # some tests require root, some require non-root
 case $(basename $TEST) in
@@ -31,13 +34,17 @@ case $(basename $TEST) in
             exit 77
         fi
         ;;
+    t16)  # PATH_EXPDIR is a regular file for this test
+	umask 022
+	PATH_EXPDIR=$(mktemp) || exit 1
+	dd if=/dev/zero count=1 bs=1024k of=$PATH_EXPDIR oflag=append >/dev/null 2>&1
+	;;
 esac
 
 rm -f $TEST.diod $TEST.out
 ulimit -c unlimited
 
-umask 022
-PATH_EXPDIR=$(mktemp -d) || exit 1
+test -n "$PATH_EXPDIR" || PATH_EXPDIR=$(mktemp -d) || exit 1
 chmod 777 $PATH_EXPDIR
 export PATH_EXPDIR
 

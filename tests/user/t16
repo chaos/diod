@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+# In this test PATH_EXPDIR is a regular file
+test -f $PATH_EXPDIR
+
+tmpfile=`mktemp`
+echo reading mounted file
+./tread "$@" $tmpfile 
+echo comparing result
+if ! cmp $tmpfile $PATH_EXPDIR; then
+    echo results differ
+    exit 1
+fi
+rm -f $tmpfile
+exit 0

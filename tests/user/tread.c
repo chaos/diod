@@ -26,7 +26,8 @@
 static void
 usage (void)
 {
-    fprintf (stderr, "Usage: tread aname infile outfile\n");
+    fprintf (stderr, "Usage: tread aname outfile [infile]\n");
+    fprintf (stderr, "  If no infile, try to read directly from aname\n");
     exit (1);
 }
 
@@ -55,28 +56,35 @@ int
 main (int argc, char *argv[])
 {
     Npcfid *root, *fid;
-    char *aname, *infile, *outfile;
+    char *aname, *outfile, *infile = NULL;
     int fd;
 
     diod_log_init (argv[0]);
 
-    if (argc != 4)
+    if (argc != 4 && argc != 3)
         usage ();
     aname = argv[1];
-    infile = argv[2];
-    outfile = argv[3];
+    outfile = argv[2]; /* UNIX */
+    if (argc == 4)
+        infile = argv[3]; /* userland 9p */
 
     if ((fd = open (outfile, O_WRONLY | O_CREAT, 0644)) < 0)
         err_exit ("open");
-
     if (!(root = npc_mount (0, 0, 65536+24, aname, diod_auth)))
         errn_exit (np_rerror (), "npc_mount");
-    if ((fid = npc_open_bypath (root, infile, O_RDONLY))) {
-        _copy_from9 (fid, fd);
-        if (npc_clunk (fid) < 0)
-            errn (np_rerror (), "npc_clunk");
-    } else
-        errn (np_rerror (), "npc_open_bypath");
+    if (infile) {
+        if ((fid = npc_open_bypath (root, infile, O_RDONLY))) {
+            _copy_from9 (fid, fd);
+            if (npc_clunk (fid) < 0)
+                errn (np_rerror (), "npc_clunk");
+        } else
+            errn (np_rerror (), "npc_open_bypath");
+    } else {
+        if ((npc_open (root, O_RDONLY)) == 0) {
+            _copy_from9 (root, fd);
+        } else
+            errn (np_rerror (), "npc_open");
+    }
     npc_umount (root);
 
     if (close (fd) < 0)

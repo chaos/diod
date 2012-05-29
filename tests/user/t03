@@ -4,9 +4,9 @@ echo creating testfile
 cp $PATH_DIOD $PATH_EXPDIR/testfile
 tmpfile=`mktemp`
 echo reading testfile
-./tread "$@" testfile $tmpfile
+./tread "$@" $tmpfile testfile
 echo comparing result
-if ! cmp $PATH_EXPDIR/testfile $tmpfile; then
+if ! cmp $tmpfile $PATH_EXPDIR/testfile; then
     echo results differ
     exit 1
 fi

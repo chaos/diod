@@ -278,10 +278,9 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
         np_uerror (errno);
         goto error;
     }
-    if (!S_ISDIR (sb.st_mode)) {
-        np_uerror (ENOTDIR);
-        goto error;
-    }
+    /* N.B. removed S_ISDIR (sb.st_mode) || return ENOTDIR check.
+     * Allow a regular file or a blcok device to be exported.
+     */
     diod_ustat2qid (&sb, &qid);
     if ((ret = np_create_rattach (&qid)) == NULL) {
         np_uerror (ENOMEM);
