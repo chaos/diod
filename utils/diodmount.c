@@ -50,6 +50,10 @@
 #include <ctype.h>
 #include <pwd.h>
 #include <libgen.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024
@@ -65,7 +69,7 @@
 #include "diod_auth.h"
 #include "opt.h"
 
-#define OPTIONS "fnvo:"
+#define OPTIONS "fnvo:ad"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -73,11 +77,20 @@ static const struct option longopts[] = {
     {"no-mtab",         no_argument,         0, 'n'},
     {"verbose",         no_argument,         0, 'v'},
     {"options",         required_argument,   0, 'o'},
+    {"9nbd-attach",     no_argument,         0, 'a'},
+    {"9nbd-detach",     no_argument,         0, 'd'},
     {0, 0, 0, 0},
 };
 #else
 #define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
 #endif
+
+#define NBD_SET_BLKSIZE _IO( 0xab, 1 )
+#define NBD_SET_TIMEOUT _IO( 0xab, 9 )
+#define NBD_SET_OPTS    _IOW( 0xab, 10, char* )
+#define NBD_SET_SPEC    _IOW( 0xab, 11, char* )
+#define NBD_START       _IO( 0xab, 12 )
+#define NBD_STOP        _IO( 0xab, 13 )
 
 #define DIOD_DEFAULT_MSIZE 65536
 static uid_t _uname2uid (char *uname);
@@ -90,15 +103,20 @@ static char *_parse_spec (char *spec, Opt o);
 static void _mount (const char *source, const char *target,
                     unsigned long mountflags, const void *data);
 
+static void _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt);
+static void _nbd_detach (Opt o, int argc, char **argv, int nopt, int vopt);
+
 static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: mount.diod [OPTIONS] host[:aname] [directory]\n"
-"   -f,--fake-mount               do everything but the actual diod mount\n"
+"Usage: mount.diod [OPTIONS] host[:aname] directory\n"
+"   -f,--fake-mount               do everything but the actual mount\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -v,--verbose                  verbose mode\n"
 "   -o,--options opt[,opt,...]    specify mount options\n" 
+//"Usage: mount.diod --9nbd-attach host[:aname] 9nbd-device\n"
+//"                  --9nbd-detach 9nbd-device\n"
 );
     exit (1);
 }
@@ -113,6 +131,8 @@ main (int argc, char *argv[])
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
+    int aopt = 0;
+    int dopt = 0;
     int rfd = -1, wfd = -1;
     Opt o; 
 
@@ -135,18 +155,37 @@ main (int argc, char *argv[])
             case 'o':   /* --options OPT[,OPT]... */
                 opt_addf (o, "%s", optarg);
                 break;
+            case 'a':   /* --9nbd-attach */
+                aopt++;
+                break;
+            case 'd':   /* --9nbd-detach */
+                dopt++;
+                break;
             default:
                 usage ();
         }
     }
+
+    /* Take care of 9nbd operations and exit.
+     */
+    if (aopt) {
+        _nbd_attach (o, argc - optind, argv + optind, nopt, vopt);
+        exit (0);
+    }
+    if (dopt) {
+        _nbd_detach (o, argc - optind, argv + optind, nopt, vopt);
+        exit (0);
+    }
+
     if (optind != argc - 2)
         usage ();
-    spec = argv[optind++];
-    dir = argv[optind++];
-    host = _parse_spec (spec, o);
 
     if (geteuid () != 0)
         msg_exit ("you must be root");
+
+    spec = argv[optind++];
+    dir = argv[optind++];
+    host = _parse_spec (spec, o);
 
     _verify_mountpoint (dir);
 
@@ -544,6 +583,131 @@ _mount (const char *source, const char *target, unsigned long mountflags,
         err_exit ("mount");
     if (seteuid (saved_euid) < 0)
         err_exit ("failed to restore effective uid to %d", saved_euid);
+}
+
+/* Convert hostname to ascii address that trans=tcp can use.
+ * Caller must free.
+ */
+static char *
+_name2addr (char *host)
+{
+    int err;
+    struct addrinfo hints, *res = NULL;
+    char s[64], *addr;
+
+    memset (&hints, 0, sizeof (hints));
+    hints.ai_family = PF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+
+    if ((err = getaddrinfo (host, NULL, &hints, &res)))
+        msg_exit ("%s: %s", host, gai_strerror (err));
+    if ((err = getnameinfo(res->ai_addr, res->ai_addrlen, s, sizeof(s),
+                           NULL, 0, NI_NUMERICHOST)))
+        msg_exit ("%s: %s", host, gai_strerror (err));
+    if (!(addr = strdup (s)))
+        msg_exit ("out of memory");
+
+    return addr;
+}
+
+/* Attach 9nbd device to remote file.
+ */
+static void
+_nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
+{
+    char *spec;
+    char *host;
+    char *addr;
+    char *dev;
+    int fd;
+    char *options;
+    int blksize = 4096;
+
+    if (argc != 2)
+        usage();
+    spec = argv[0];
+    dev = argv[1];
+
+    host = _parse_spec (spec, o);
+    addr = _name2addr (host);
+
+    if (!opt_find (o, "msize"))
+        opt_addf (o, "msize=%d", DIOD_DEFAULT_MSIZE);
+
+    if (opt_find (o, "trans=fd"))
+        err_exit ("9nbd doesn't work with trans=fd");
+    if (!opt_find (o, "trans"))
+        opt_addf (o, "trans=%s", "tcp");
+
+    if (opt_find (o, "version") && !opt_find (o, "version=9p2000.L"))
+        err_exit ("9nbd only works with version=9p2000.L");
+    if (!opt_find (o, "version"))
+        opt_addf (o, "version=%s", "9p2000.L");
+
+    if (!opt_find (o, "port"))
+        opt_addf (o, "port=564");
+   
+    options = opt_csv (o);
+
+    if (!nopt) {
+        fd = open (dev, O_RDWR);
+        if (fd < 0 && (errno == ENOENT || errno == ENXIO)) {
+            system ("/sbin/modprobe 9nbd");
+            fd = open (dev, O_RDWR);
+        }
+        if (fd < 0)
+            err_exit ("open %s", dev);
+    }
+
+    if (vopt)
+        msg ("set blocksize=%d", blksize);
+    if (!nopt && ioctl (fd, NBD_SET_BLKSIZE, blksize) < 0)
+        err_exit ("ioctl set_blksize");
+
+    if (vopt)
+        msg ("set opts=%s", options);
+    if (!nopt && ioctl (fd, NBD_SET_OPTS, options) < 0)
+        err_exit ("ioctl set_opts");
+
+    if (vopt)
+        msg ("set spec=%s", addr);
+    if (!nopt && ioctl (fd, NBD_SET_SPEC, addr) < 0)
+        err_exit ("ioctl set_spec");
+
+    if (vopt)
+        msg ("start");
+    if (!nopt && ioctl (fd, NBD_START) < 0)
+        err_exit ("ioctl start");
+    if (!nopt)
+        close (fd);
+
+    free (options);
+    free (host);
+    free (addr);
+}
+
+/* Unwire 9nbd device and disconnect transport.
+ */
+static void
+_nbd_detach (Opt o, int argc, char **argv, int nopt, int vopt)
+{
+    char *dev;
+    int fd;
+
+    if (argc != 1)
+        usage();
+    dev = argv[0];
+    if (!nopt) {
+        fd = open (dev, O_RDWR);
+        if (fd < 0)
+            err_exit ("open %s", dev);
+    }
+    if (vopt)
+        msg ("stop");
+    if (!nopt && ioctl (fd, NBD_STOP) < 0)
+        err_exit ("ioctl stop");
+    if (!nopt)
+        close (fd);
 }
 
 /*
