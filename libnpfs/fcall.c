@@ -100,7 +100,7 @@ np_auth(Npreq *req, Npfcall *tc)
 			  tc->u.tauth.aname.len, tc->u.tauth.aname.str);
 	}
 	if (!auth_required) {
-		if (!(rc = np_create_rlerror(0))) {
+		if (!(rc = np_create_rlerror(ENOENT))) {
 			np_uerror(ENOMEM);
 			np_logerr (srv, "%s: creating response", a);
 		}

@@ -103,6 +103,8 @@ npc_auth (Npcfsys *fs, char *aname, u32 uid, AuthFun auth)
         if (afid->fsys->rpc (afid->fsys, tc, &rc) < 0) {
 		npc_fid_free (afid);
 		afid = NULL;
+		if (np_rerror() == 0 || np_rerror() == ENOENT)
+			np_uerror(0); /* auth not required */
 		goto done;
 	}
 	if (auth && auth (afid, uid) < 0) {
