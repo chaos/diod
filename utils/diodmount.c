@@ -86,11 +86,13 @@ static const struct option longopts[] = {
 #endif
 
 #define NBD_SET_BLKSIZE _IO( 0xab, 1 )
-#define NBD_SET_TIMEOUT _IO( 0xab, 9 )
+#define NBD_SET_TIMEOUT _IO( 0xab, 2 )
+#define NBD_START       _IO( 0xab, 3 )
+#define NBD_STOP        _IO( 0xab, 4 )
+
 #define NBD_SET_OPTS    _IOW( 0xab, 10, char* )
-#define NBD_SET_SPEC    _IOW( 0xab, 11, char* )
-#define NBD_START       _IO( 0xab, 12 )
-#define NBD_STOP        _IO( 0xab, 13 )
+#define NBD_SET_ADDR    _IOW( 0xab, 11, char* )
+#define NBD_SET_PATH    _IOW( 0xab, 12, char* )
 
 #define DIOD_DEFAULT_MSIZE 65536
 static uid_t _uname2uid (char *uname);
@@ -610,6 +612,25 @@ _name2addr (char *host)
     return addr;
 }
 
+static void
+_parse_nbdspec (char *spec, char **hp, char **fp)
+{
+    char *host, *file;
+
+    if (!(host = strdup (spec)))
+        msg_exit ("out of memory");
+    if ((file = strchr (host, ':')))
+        *file++ = '\0';
+    if (strlen (host) == 0)
+        msg_exit ("no host specified");
+    if ((!file || strlen (file) == 0))
+        msg_exit ("no file specified");
+
+    *hp = host;
+    *fp = file;
+}
+
+
 /* Attach 9nbd device to remote file.
  */
 static void
@@ -619,6 +640,7 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
     char *host;
     char *addr;
     char *dev;
+    char *path;
     int fd;
     char *options;
     int blksize = 4096;
@@ -628,25 +650,29 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
     spec = argv[0];
     dev = argv[1];
 
-    host = _parse_spec (spec, o);
+    _parse_nbdspec (spec, &host, &path);
     addr = _name2addr (host);
 
+    if (!opt_find (o, "aname")) {
+        opt_addf (o, "aname=%s", path);
+        path = NULL;
+    }
     if (!opt_find (o, "msize"))
         opt_addf (o, "msize=%d", DIOD_DEFAULT_MSIZE);
 
     if (opt_find (o, "trans=fd"))
-        err_exit ("9nbd doesn't work with trans=fd");
+        msg_exit ("9nbd doesn't work with trans=fd");
     if (!opt_find (o, "trans"))
         opt_addf (o, "trans=%s", "tcp");
 
     if (opt_find (o, "version") && !opt_find (o, "version=9p2000.L"))
-        err_exit ("9nbd only works with version=9p2000.L");
+        msg_exit ("9nbd only works with version=9p2000.L");
     if (!opt_find (o, "version"))
         opt_addf (o, "version=%s", "9p2000.L");
 
     if (!opt_find (o, "port"))
         opt_addf (o, "port=564");
-   
+
     options = opt_csv (o);
 
     if (!nopt) {
@@ -670,9 +696,14 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
         err_exit ("ioctl set_opts");
 
     if (vopt)
-        msg ("set spec=%s", addr);
-    if (!nopt && ioctl (fd, NBD_SET_SPEC, addr) < 0)
-        err_exit ("ioctl set_spec");
+        msg ("set addr=%s", addr);
+    if (!nopt && ioctl (fd, NBD_SET_ADDR, addr) < 0)
+        err_exit ("ioctl set_addr");
+
+    if (vopt)
+        msg ("set path=%s", path ? path : "null");
+    if (!nopt && ioctl (fd, NBD_SET_PATH, path) < 0)
+            err_exit ("ioctl set_path");
 
     if (vopt)
         msg ("start");
