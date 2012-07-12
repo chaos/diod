@@ -92,6 +92,7 @@ struct diod_auth_struct {
     munge_ctx_t mungectx;
     munge_err_t mungerr;
     uid_t mungeuid;
+    gid_t mungegid;
 #endif
 };
 typedef struct diod_auth_struct *da_t;
@@ -116,6 +117,8 @@ _da_create (void)
         da = NULL;
         goto done;
     }
+    da->mungeuid = -1;
+    da->mungegid = -1;
 #endif
 done:
     return da;
@@ -148,8 +151,8 @@ startauth(Npfid *afid, char *aname, Npqid *aqid)
     int ret = 0;
 
     if (!afid || afid->aux != NULL || !aqid) {
+        msg ("startauth: invalid arguments");
         np_uerror (EIO);
-        err ("startauth: invalid arguments");
         goto done;
     }
     if (!(afid->aux = _da_create ()))
@@ -175,8 +178,8 @@ checkauth(Npfid *fid, Npfid *afid, char *aname)
     char a[128];
 
     if (!fid || !afid || !afid->aux) {
+        msg ("checkauth: invalid arguments");
         np_uerror (EIO);
-        err ("checkauth: invalid arguments");
         goto done;
     }
     da = afid->aux;
@@ -187,25 +190,27 @@ checkauth(Npfid *fid, Npfid *afid, char *aname)
 #if HAVE_LIBMUNGE
     if (!da->datastr) {
         msg ("%s: munge cred missing", a);
+        np_uerror (EPERM);
         goto done;
     }
     da->mungerr = munge_decode (da->datastr, da->mungectx, NULL, 0,
-                                &da->mungeuid, NULL);
+                                &da->mungeuid, &da->mungegid);
     if (da->mungerr != EMUNGE_SUCCESS) {
+        msg ("%s: munge cred decode: %s", a, munge_strerror (da->mungerr));
         np_uerror (EPERM);
-        err ("%s: munge cred decode: %s", a, munge_strerror (da->mungerr));
         goto done;
     }
     NP_ASSERT (afid->user->uid == fid->user->uid); /* enforced in np_attach */
     if (afid->user->uid != da->mungeuid) {
+        msg ("%s: munge cred (%d:%d) does not authenticate uid=%d", a,
+             da->mungeuid, da->mungegid, afid->user->uid);
         np_uerror (EPERM);
-        err ("%s: munge cred uid mismatch: %d", a, da->mungeuid);
         goto done;
     }
     ret = 1;
 #else
+    msg ("%s: diod was not built with support for auth services", a);
     np_uerror (EPERM);
-    err ("%s: diod was not built with support for auth services", a);
 #endif
 done:
     return ret;
@@ -214,8 +219,8 @@ done:
 static int
 readafid(Npfid *afid, u64 offset, u32 count, u8 *data)
 {
+    msg ("readafid: called unexpectedly");
     np_uerror (EIO);
-    err ("readafid: called unexpectedly");
     return -1; /* error */
 }
 
@@ -226,8 +231,8 @@ writeafid(Npfid *afid, u64 offset, u32 count, u8 *data)
     int ret = -1;
 
     if (!afid || !afid->aux || !data || count == 0) {
+        msg ("writeafid: invalid arguments");
         np_uerror (EIO);
-        err ("writeafid: invalid arguments");
         goto done;
     }
     da = afid->aux;
@@ -238,13 +243,13 @@ writeafid(Npfid *afid, u64 offset, u32 count, u8 *data)
     } else if (da->datastr && offset == strlen (da->datastr)) {
         da->datastr = realloc (da->datastr, offset + count + 1);
     } else {
+        msg ("writeafid: write at unexpected offset");
         np_uerror (EIO);
-        err ("writeafid: write at unexpected offset");
         goto done;
     }
     if (!da->datastr) {
+        msg ("writeafid: out of memory");
         np_uerror (ENOMEM);
-        err ("writeafid");
         goto done;
     }
     memcpy (da->datastr + offset, data, count);

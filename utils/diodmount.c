@@ -644,6 +644,7 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
     int fd;
     char *options;
     int blksize = 4096;
+    int uid;
 
     if (argc != 2)
         usage();
@@ -672,6 +673,20 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
 
     if (!opt_find (o, "port"))
         opt_addf (o, "port=564");
+
+    /* for 9nbd we require uid=<int> instead of uname=<str> */
+    if (!opt_scanf (o, "uid=%d", &uid)) {
+        char uname[256];
+        if (opt_scanf (o, "uname=%255s", uname)) {
+            uid = _uname2uid (uname);
+            opt_delete (o, "uname");
+        } else
+            uid = 0;
+        opt_addf (o, "uid=%d", uid);
+    }
+
+    if (!opt_find (o, "auth"))
+        opt_addf (o, "auth=%s", "munge");
 
     options = opt_csv (o);
 
