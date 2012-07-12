@@ -1,4 +1,16 @@
 =========================================================================
+Release Notes for DIOD version 1.0.14                         12 Jul 2012
+=========================================================================
+
+* Add mount.diod --attach and --detach options to support 9nbd
+  (9P network block device).
+
+* Allow non-directories to be exported (issue 113)
+
+* Return Rlerror(ENOENT) in response to Tauth if auth not required
+  instead of Rlerror(0), which confused kernel 9P code.
+    
+=========================================================================
 Release Notes for DIOD version 1.0.13                         22 May 2012
 =========================================================================
 
