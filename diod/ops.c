@@ -81,6 +81,11 @@
 #include <utime.h>
 #include <stdarg.h>
 
+/* Legacy system support */
+#ifndef O_CLOEXEC
+#define O_CLOEXEC   0
+#endif
+
 #include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
@@ -592,6 +597,7 @@ _remap_oflags (int flags)
 {
     int i;
     int rflags = 0;
+    
     struct dotl_openflag_map dotl_oflag_map[] = {
         { O_CREAT,      P9_DOTL_CREATE },
         { O_EXCL,       P9_DOTL_EXCL },
