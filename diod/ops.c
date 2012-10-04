@@ -592,6 +592,12 @@ _remap_oflags (int flags)
 {
     int i;
     int rflags = 0;
+    
+    /* Legacy system support */
+    #ifndef O_CLOEXEC
+    O_CLOEXEC = 0
+    #endif
+    
     struct dotl_openflag_map dotl_oflag_map[] = {
         { O_CREAT,      P9_DOTL_CREATE },
         { O_EXCL,       P9_DOTL_EXCL },
