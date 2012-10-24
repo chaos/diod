@@ -1,0 +1,19 @@
+#!/bin/bash 
+
+# Watch for "WARNING: at fs/inode.c:280 drop_nlink+0x43/0x50()"
+# See post to v9fs-developer Oct 24, 2012 by Mario Titas
+
+K1=$(dmesg | wc -l)
+
+cd $PATH_MNTDIR || exit 1
+echo creating dirs
+mkdir -p {1,2,3,4}/{1,2,3,4}/{1,2,3,4}/{1,2,3,4}
+echo removing dirs
+rm -rf {1,2,3,4}
+
+K2=$(dmesg | wc -l)
+
+echo console output
+dmesg | tail --lines=$(($K1 - $K2))
+
+exit 0
