@@ -867,20 +867,48 @@ done:
 Npfcall *
 np_xattrwalk(Npreq *req, Npfcall *tc)
 {
+	Npconn *conn = req->conn;
 	Npfid *fid = req->fid;
 	Npfid *attrfid = NULL;
 	Npfcall *rc = NULL;
 
 	if (!fid) {
 		np_uerror (EIO);
-		np_logerr (req->conn->srv, "xattrwalk: invalid fid");
+		np_logerr (conn->srv, "xattrwalk: invalid fid");
 		goto done;
 	}
-	if (!(attrfid = np_fid_find(req->conn, tc->u.txattrwalk.attrfid))) {
-		np_uerror(EIO);
-		np_logerr (req->conn->srv, "xattrwalk: invalid attrfid");
+
+	/* FIXME: BEGIN paste from np_walk () */
+	attrfid = np_fid_create(conn, tc->u.txattrwalk.attrfid);
+	if (!attrfid) {
+		if (np_rerror () == EEXIST) {
+			np_uerror(EIO);
+			np_logmsg (conn->srv,
+				   "%s@%s:%s: xattrwalk: invalid newfid: %d",
+				   fid->user->uname,
+				   np_conn_get_client_id (conn),
+				   fid->aname, tc->u.txattrwalk.attrfid);
+		}
 		goto done;
 	}
+	if (!conn->srv->clone) {
+		np_uerror (ENOSYS);
+		goto done;
+	}
+	if (!(*conn->srv->clone)(fid, attrfid))
+		goto done;
+	np_user_incref(fid->user);
+	attrfid->user = fid->user;
+	np_tpool_incref(fid->tpool);
+	attrfid->tpool = fid->tpool;
+	attrfid->type = fid->type;
+	if (!(attrfid->aname = strdup (fid->aname))) {
+		np_uerror (ENOMEM);
+		np_logerr (conn->srv, "walk: out of memory");
+		goto done;
+	}
+	/* FIXME: END paste from np_walk () */
+
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
