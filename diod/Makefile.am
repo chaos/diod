@@ -22,7 +22,9 @@ diod_SOURCES = \
 	ioctx.c \
 	ioctx.h \
 	fid.c \
-	fid.h
+	fid.h \
+	xattr.c \
+	xattr.h
 
 man8_MANS = \
         diod.8

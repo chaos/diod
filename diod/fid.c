@@ -58,6 +58,7 @@
 #include "diod_log.h"
 
 #include "ioctx.h"
+#include "xattr.h"
 #include "fid.h"
 
 /* Allocate local fid struct and attach to fid->aux.
@@ -71,6 +72,7 @@ diod_fidalloc (Npfid *fid, Npstr *ns)
     if (f) {
         f->flags = 0;
         f->ioctx = NULL;
+        f->xattr = NULL;
         f->path = path_create (fid->conn->srv, ns);
         if (!f->path) {
             free (f);
@@ -94,6 +96,7 @@ diod_fidclone (Npfid *newfid, Npfid *fid)
     if (nf) {
         nf->flags = f->flags;
         nf->ioctx = NULL;
+        nf->xattr = NULL;
         nf->path = path_incref (f->path);
     }
     newfid->aux = nf;
@@ -112,6 +115,8 @@ diod_fiddestroy (Npfid *fid)
     if (f) {
         if (f->ioctx)
             ioctx_close (fid, 0);
+        if (f->xattr)
+            xattr_close (fid);
         if (f->path)
             path_decref (fid->conn->srv, f->path);
         free(f);

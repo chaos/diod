@@ -50,7 +50,9 @@ diod_sources = \
 	$(top_srcdir)/diod/exp.c \
 	$(top_srcdir)/diod/exp.h \
 	$(top_srcdir)/diod/ioctx.c \
-	$(top_srcdir)/diod/ioctx.h
+	$(top_srcdir)/diod/ioctx.h \
+	$(top_srcdir)/diod/xattr.c \
+	$(top_srcdir)/diod/xattr.h
 
 tsetuid_SOURCES = tsetuid.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)

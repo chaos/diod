@@ -100,6 +100,7 @@
 #include "ops.h"
 #include "exp.h"
 #include "ioctx.h"
+#include "xattr.h"
 #include "fid.h"
 
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *aname);
@@ -131,6 +132,9 @@ Npfcall     *diod_getlock (Npfid *fid, u8 type, u64 start, u64 length,
                         u32 proc_id, Npstr *client_id);
 Npfcall     *diod_link (Npfid *dfid, Npfid *fid, Npstr *name);
 Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
+Npfcall     *diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name);
+Npfcall     *diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size,
+                               u32 flags);
 int          diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname,
                              Npstr *aname);
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
@@ -164,8 +168,8 @@ diod_init (Npsrv *srv)
     srv->readlink = diod_readlink;
     srv->getattr = diod_getattr;
     srv->setattr = diod_setattr;
-    //srv->xattrwalk = diod_xattrwalk;
-    //srv->xattrcreate = diod_xattrcreate;
+    srv->xattrwalk = diod_xattrwalk;
+    srv->xattrcreate = diod_xattrcreate;
     srv->readdir = diod_readdir;
     srv->fsync = diod_fsync;
     srv->llock = diod_lock;
@@ -433,7 +437,7 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
     Npfcall *ret = NULL;
     ssize_t n;
 
-    if (!f->ioctx) {
+    if (!f->ioctx && !(f->flags & DIOD_FID_FLAGS_XATTR)) {
         msg ("diod_read: fid is not open");
         np_uerror (EBADF);
         goto error;
@@ -442,7 +446,10 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
         np_uerror (ENOMEM);
         goto error;
     }
-    n = ioctx_pread (f->ioctx, ret->u.rread.data, count, offset);
+    if (f->flags & DIOD_FID_FLAGS_XATTR) 
+        n = xattr_pread (f->xattr, ret->u.rread.data, count, offset);
+    else
+        n = ioctx_pread (f->ioctx, ret->u.rread.data, count, offset);
     if (n < 0) {
         np_uerror (errno);
         goto error_quiet;
@@ -1359,6 +1366,54 @@ error:
 error_quiet:
     if (npath)
         path_decref (srv, npath);
+    return NULL;
+}
+
+Npfcall*
+diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name)
+{
+    //Npsrv *srv = fid->conn->srv;
+    Fid *f = fid->aux;
+    Fid *nf;
+    u64 size;
+    Npfcall *ret;
+
+    if (!(nf = diod_fidclone (attrfid, fid))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    if (xattr_open (attrfid, name, &size) < 0)
+        goto error;
+    nf->flags |= DIOD_FID_FLAGS_XATTR;
+    if (!(ret = np_create_rxattrwalk (size))) {
+        diod_fiddestroy (attrfid);
+        goto error;
+    }
+    return ret;
+error:
+    errn (np_rerror (), "diod_xattrwalk %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
+          name->len, name->str);
+    if (attrfid)
+        diod_fiddestroy (attrfid);
+    return NULL;
+}
+
+Npfcall*
+diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size, u32 flags)
+{
+    //Npsrv *srv = fid->conn->srv;
+    Fid *f = fid->aux;
+
+    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
+        np_uerror (EROFS);
+        goto error_quiet;
+    }
+//error:
+    errn (np_rerror (), "diod_xattrcreate %s@%s:%s/%.*s",
+          fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
+          name->len, name->str);
+error_quiet:
     return NULL;
 }
 

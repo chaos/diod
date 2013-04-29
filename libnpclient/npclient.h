@@ -155,13 +155,18 @@ int npc_remove (Npcfid *fid);
  */
 int npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count);
 
+ssize_t npc_xattrwalk (Npcfid *fid, Npcfid *attrfid, char *name);
+ssize_t npc_listxattr (Npcfid *root, char *path, char *buf, size_t size);
+ssize_t npc_getxattr (Npcfid *root, char *path, char *attr,
+		      char *buf, size_t size);
+
+/* FIXME: npc_xattrcreate () */
+
 /* TODO:
  * npc_statfs ()
  * npc_symlink ()
  * npc_rename ()
  * npc_readlink ()
- * npc_xattrwalk ()
- * npc_xattrcreate ()
  * npc_fsync ()
  * npc_lock ()
  * npc_getlock ()

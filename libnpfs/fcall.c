@@ -878,7 +878,6 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 
-	/* FIXME: BEGIN paste from np_walk () */
 	attrfid = np_fid_create(conn, tc->u.txattrwalk.attrfid);
 	if (!attrfid) {
 		if (np_rerror () == EEXIST) {
@@ -891,12 +890,10 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 		}
 		goto done;
 	}
-	if (!conn->srv->clone) {
-		np_uerror (ENOSYS);
-		goto done;
-	}
-	if (!(*conn->srv->clone)(fid, attrfid))
-		goto done;
+	/* FIXME: this block should be factored from here and np_walk()
+	 * into common helper function - I am rusty on diod and don't want
+	 * to touch np_walk() right now. -jg
+	 */
 	np_user_incref(fid->user);
 	attrfid->user = fid->user;
 	np_tpool_incref(fid->tpool);
@@ -904,10 +901,10 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 	attrfid->type = fid->type;
 	if (!(attrfid->aname = strdup (fid->aname))) {
 		np_uerror (ENOMEM);
-		np_logerr (conn->srv, "walk: out of memory");
+		np_logerr (conn->srv, "xattrwalk: out of memory");
 		goto done;
 	}
-	/* FIXME: END paste from np_walk () */
+	/* FIXME: end of block that should be factored */
 
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
@@ -923,7 +920,7 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 						  &tc->u.txattrwalk.name);
 	}
 done:
-	if (attrfid)
+	if (!rc && attrfid)
 		np_fid_decref (&attrfid);
 	return rc;
 }

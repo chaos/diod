@@ -57,6 +57,7 @@
 #include "diod_log.h"
 
 #include "ioctx.h"
+#include "xattr.h"
 #include "fid.h"
 #include "ops.h"
 

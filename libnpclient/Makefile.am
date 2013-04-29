@@ -21,4 +21,5 @@ libnpclient_a_SOURCES = \
 	stat.c \
 	remove.c \
 	readdir.c \
-	chmod.c
+	chmod.c \
+	xattr.c
