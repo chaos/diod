@@ -117,7 +117,6 @@ _llistxattr (const char *path, char **bp)
     char *buf;
 
     len = llistxattr (path, NULL, 0);
-    msg ("listxattr returned %ld", len);
     if (len < 0) {
         np_uerror (errno);
         return -1;
@@ -154,8 +153,6 @@ xattr_open (Npfid *fid, Npstr *name, u64 *sizep)
     f->xattr->len = 0;
 
     if (name && name->len > 0) {
-        msg ("xattr_open: will do getxattr");
-
         if (!(s = np_strdup (name))) {
             np_uerror (ENOMEM);
             goto error;
@@ -163,7 +160,6 @@ xattr_open (Npfid *fid, Npstr *name, u64 *sizep)
         f->xattr->len = _lgetxattr (path_s (f->path), s, &f->xattr->buf);
         free (s);
     } else {
-        msg ("xattr_open: will do listxattr");
         f->xattr->len = _llistxattr (path_s (f->path), &f->xattr->buf);
     }
     if (f->xattr->len < 0)
