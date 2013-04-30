@@ -1,4 +1,4 @@
-/* tmkdir.c - create a 9p directory, recursively */
+/* tgetxattr.c - get/list extended attributes */
 
 #if HAVE_CONFIG_H
 #include "config.h"

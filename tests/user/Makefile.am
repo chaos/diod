@@ -7,7 +7,8 @@ check_PROGRAMS = \
 	tstat \
 	twrite \
 	tflush \
-	tgetxattr
+	tgetxattr \
+	tsetxattr
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
@@ -47,6 +48,8 @@ tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
 tflush_SOURCES = tflush.c $(common_sources)
+tgetxattr_SOURCES = tgetxattr.c $(common_sources)
+tsetxattr_SOURCES = tsetxattr.c $(common_sources)
 
 clean: clean-am
 	-rm -rf exp.d

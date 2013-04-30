@@ -155,12 +155,11 @@ int npc_remove (Npcfid *fid);
  */
 int npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count);
 
+/* Xattr functions
+ */
 ssize_t npc_xattrwalk (Npcfid *fid, Npcfid *attrfid, char *name);
-ssize_t npc_listxattr (Npcfid *root, char *path, char *buf, size_t size);
-ssize_t npc_getxattr (Npcfid *root, char *path, char *attr,
-		      char *buf, size_t size);
+int npc_xattrcreate (Npcfid *fid, char *name, u64 attr_size, u32 flags);
 
-/* FIXME: npc_xattrcreate () */
 
 /* TODO:
  * npc_statfs ()
@@ -285,3 +284,10 @@ int npc_truncate (Npcfid *root, char *path, off_t length);
 int npc_futime (Npcfid *fid, const struct utimbuf *times);
 int npc_utime(Npcfid *root, char *path, const struct utimbuf *times);
 
+/* Wrappers for xattrwalk/xattrcreate.
+ */
+ssize_t npc_listxattr (Npcfid *root, char *path, char *buf, size_t size);
+ssize_t npc_getxattr (Npcfid *root, char *path, char *attr,
+		      char *buf, size_t size);
+int npc_setxattr (Npcfid *root, char *path, char *name, char *val, size_t size,
+              int flags);

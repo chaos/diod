@@ -44,6 +44,27 @@ done:
 	return ret;
 }
 
+int
+npc_xattrcreate (Npcfid *fid, char *name, u64 attr_size, u32 flags)
+{
+	Npfcall *tc = NULL, *rc = NULL;
+	int ret = -1;
+
+	if (!(tc = np_create_txattrcreate (fid->fid, name, attr_size, flags))) {
+		np_uerror (ENOMEM);
+		goto done;
+	}
+	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
+		goto done;
+	ret = 0;
+done:
+	if (tc)
+		free (tc);
+	if (rc)
+		free (rc);
+	return ret;
+}
+
 ssize_t
 npc_listxattr (Npcfid *root, char *path, char *buf, size_t size)
 {
@@ -114,4 +135,28 @@ done:
 	if (attrfid)
 		(void)npc_clunk (attrfid);
         return ret;
+}
+
+int
+npc_setxattr (Npcfid *root, char *path, char *name, char *val, size_t size,
+	      int flags)
+{
+	Npcfid *fid = NULL;
+	int n, tot = 0;
+	int ret = -1;
+
+	if (!(fid = npc_walk (root, path)))
+		goto done;
+	if (npc_xattrcreate (fid, name, size, flags) < 0)
+		goto done;
+	for (tot = 0; tot < size; tot += n) {
+		n = npc_write(fid, val + tot, size - tot);
+		if (n < 0)
+			goto done;
+	}
+	ret = 0;
+done:
+	if (fid)
+		(void)npc_clunk(fid);	
+	return ret;
 }
