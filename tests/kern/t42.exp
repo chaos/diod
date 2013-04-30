@@ -1,0 +1,8 @@
+kconjoin: diodmount exited with rc=0
+# file: testfile
+user.bar="barval"
+user.baz="bazval"
+user.foo="fooval"
+
+kconjoin: t42 exited with rc=0
+kconjoin: diod exited with rc=0

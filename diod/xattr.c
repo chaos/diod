@@ -23,7 +23,7 @@
 
 /* xattr.c - support setxattr(2), getxattr(2), listxattr(2) */
 
-/* FIXME: removexattr(2)? */
+/* FIXME: attr removal? */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -66,114 +66,151 @@
 #include "xattr.h"
 #include "fid.h"
 
+#define XATTR_FLAGS_GET     1
+#define XATTR_FLAGS_SET     2
+
 struct xattr_struct {
+    char *name;
     char *buf;
     ssize_t len;
+    int flags;
 };
 
-int
-xattr_pread (Xattr xattr, void *buf, size_t count, off_t offset)
+static void _xattr_destroy (Xattr *xp)
 {
-    int len = xattr->len - offset;
+    Xattr x = *xp;
+    if (x) {
+        if (x->buf)
+            free (x->buf);
+        if (x->name)
+            free (x->name);
+        free (x);
+    }
+    *xp = NULL;
+}
 
+static Xattr _xattr_create (Npstr *name, size_t size, int flags)
+{
+    Xattr x;
+
+    x = malloc (sizeof (struct xattr_struct));
+    if (!x)
+        goto nomem;
+    memset (x, 0, sizeof (struct xattr_struct));
+    x->flags = flags;
+    if (name && name->len > 0) {
+        x->name = np_strdup (name);
+        if (!x->name)
+            goto nomem;
+    }
+    if (size > 0) {
+        x->buf = malloc (size);
+        if (!x->buf)
+            goto nomem;
+        x->len = size;
+    }
+    return x;
+nomem:
+    _xattr_destroy (&x);
+    np_uerror (ENOMEM);
+    return NULL;
+}
+
+
+int
+xattr_pwrite (Xattr x, void *buf, size_t count, off_t offset)
+{
+    int len = count;
+
+    if (!(x->flags & XATTR_FLAGS_SET)) {
+        np_uerror (EINVAL);
+        return -1;
+    } 
+    if (len > x->len - offset)
+        len = x->len - offset;
+    if (len < 0)
+        len = 0;
+    memcpy (x->buf + offset, buf, len);
+    return len;
+}
+
+int
+xattr_pread (Xattr x, void *buf, size_t count, off_t offset)
+{
+    int len = x->len - offset;
+
+    if (!(x->flags & XATTR_FLAGS_GET)) {
+        np_uerror (EINVAL);
+        return -1;
+    }
     if (len > count)
         len = count;
     if (len < 0)
         len = 0;
-    memcpy (buf, xattr->buf + offset, len);
+    memcpy (buf, x->buf + offset, len);
     return len;
 }
 
-static ssize_t
-_lgetxattr (const char *path, const char *name, char **bp)
+static int
+_lgetxattr (Xattr x, const char *path)
 {
     ssize_t len;
-    char *buf = NULL;
 
-    len = lgetxattr (path, name, NULL, 0);
+    if (x->name)
+        len = lgetxattr (path, x->name, NULL, 0);
+    else
+        len = llistxattr (path, NULL, 0);
     if (len < 0) {
         np_uerror (errno);
         return -1;
     }
-    buf = malloc (len);
-    if (!buf) {
+    assert (x->buf == NULL);
+    x->buf = malloc (len);
+    if (!x->buf) {
         np_uerror (ENOMEM);
         return -1;
     }
-    len = lgetxattr (path, name, buf, len);
-    if (len < 0) {
+    if (x->name)
+        x->len = lgetxattr (path, x->name, x->buf, len);
+    else
+        x->len = llistxattr (path, x->buf, len);
+    if (x->len < 0) {
         np_uerror (errno);
-        free (buf);
         return -1; 
     }
-    *bp = buf;
-    return len;
-}
-
-static ssize_t
-_llistxattr (const char *path, char **bp)
-{
-    ssize_t len;
-    char *buf;
-
-    len = llistxattr (path, NULL, 0);
-    if (len < 0) {
-        np_uerror (errno);
-        return -1;
-    }
-    buf = malloc (len);
-    if (!buf) {
-        np_uerror (ENOMEM);
-        return -1;
-    }
-    len = llistxattr (path, buf, len);
-    if (len < 0) {
-        np_uerror (errno);
-        free (buf);
-        return -1; 
-    }
-    *bp = buf;
-    return len;
+    return 0;
 }
 
 int
 xattr_open (Npfid *fid, Npstr *name, u64 *sizep)
 {
     Fid *f = fid->aux;
-    char *s;
    
     assert (f->xattr == NULL);
- 
-    f->xattr = malloc (sizeof (struct xattr_struct));
-    if (!f->xattr) {
-        np_uerror (ENOMEM);
-        goto error;
-    }
-    f->xattr->buf = NULL;
-    f->xattr->len = 0;
 
-    if (name && name->len > 0) {
-        if (!(s = np_strdup (name))) {
-            np_uerror (ENOMEM);
-            goto error;
-        }
-        f->xattr->len = _lgetxattr (path_s (f->path), s, &f->xattr->buf);
-        free (s);
-    } else {
-        f->xattr->len = _llistxattr (path_s (f->path), &f->xattr->buf);
-    }
-    if (f->xattr->len < 0)
+    f->xattr = _xattr_create (name, 0, XATTR_FLAGS_GET);
+    if (_lgetxattr (f->xattr, path_s (f->path)) < 0)
         goto error;
     *sizep = (u64)f->xattr->len;
     return 0;
 error:
-    if (f->xattr) {
-        if (f->xattr->buf)
-            free (f->xattr->buf);
-        free (f->xattr);
-        f->xattr = NULL;
-    }
+    _xattr_destroy (&f->xattr);
     return -1;    
+}
+
+int xattr_create (Npfid *fid, Npstr *name, u64 size)
+{
+    Fid *f = fid->aux;
+
+    assert (f->xattr == NULL);
+
+    f->xattr = _xattr_create (name, size, XATTR_FLAGS_SET);
+    if (!f->xattr)
+        goto error;
+    return 0;
+error:
+    _xattr_destroy (&f->xattr);
+    return -1;
 }
 
 int
@@ -182,11 +219,15 @@ xattr_close (Npfid *fid)
     Fid *f = fid->aux;
 
     if (f->xattr) {
-        if (f->xattr->buf)
-            free (f->xattr->buf);
-        free (f->xattr);
+        if ((f->xattr->flags & XATTR_FLAGS_SET) && f->xattr->len > 0) {
+            if (lsetxattr (path_s (f->path), f->xattr->name,
+                       f->xattr->buf, f->xattr->len, 0) < 0) {
+                np_uerror (errno);
+            }
+        }
+        _xattr_destroy (&f->xattr);
     }
-    return 0;
+    return -1;
 }
 
 

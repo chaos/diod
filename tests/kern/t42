@@ -1,0 +1,11 @@
+#!/bin/bash 
+
+cd $PATH_MNTDIR
+touch testfile
+setfattr -n user.foo -v fooval testfile || exit 77
+setfattr -n user.bar -v barval testfile || exit 77
+setfattr -n user.baz -v bazval testfile || exit 77
+
+getfattr -d testfile
+
+exit 0

@@ -475,7 +475,7 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
     Npfcall *ret;
     ssize_t n;
 
-    if (!f->ioctx) {
+    if (!f->ioctx && !(f->flags & DIOD_FID_FLAGS_XATTR)) {
         msg ("diod_write: fid is not open");
         np_uerror (EBADF);
         goto error;
@@ -484,7 +484,11 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
         np_uerror (EROFS);
         goto error_quiet;
     }
-    if ((n = ioctx_pwrite (f->ioctx, data, count, offset)) < 0) {
+    if (f->flags & DIOD_FID_FLAGS_XATTR)
+        n = xattr_pwrite (f->xattr, data, count, offset);
+    else
+        n = ioctx_pwrite (f->ioctx, data, count, offset);
+    if (n < 0) {
         np_uerror (errno);
         goto error_quiet;
     }
@@ -1387,6 +1391,7 @@ diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name)
     nf->flags |= DIOD_FID_FLAGS_XATTR;
     if (!(ret = np_create_rxattrwalk (size))) {
         diod_fiddestroy (attrfid);
+        np_uerror (ENOMEM);
         goto error;
     }
     return ret;
@@ -1404,12 +1409,22 @@ diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size, u32 flags)
 {
     //Npsrv *srv = fid->conn->srv;
     Fid *f = fid->aux;
+    Npfcall *ret = NULL;
 
+    if (xattr_create (fid, name, attr_size) < 0)
+        goto error;
     if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
         np_uerror (EROFS);
         goto error_quiet;
     }
-//error:
+    f->flags |= DIOD_FID_FLAGS_XATTR;
+    if (!(ret = np_create_rxattrcreate ())) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    return ret;
+    
+error:
     errn (np_rerror (), "diod_xattrcreate %s@%s:%s/%.*s",
           fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           name->len, name->str);
