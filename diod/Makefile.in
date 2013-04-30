@@ -59,7 +59,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(sbindir)" "$(DESTDIR)$(man8dir)"
 PROGRAMS = $(sbin_PROGRAMS)
 am_diod_OBJECTS = diod.$(OBJEXT) ops.$(OBJEXT) exp.$(OBJEXT) \
-	ioctx.$(OBJEXT) fid.$(OBJEXT)
+	ioctx.$(OBJEXT) fid.$(OBJEXT) xattr.$(OBJEXT)
 diod_OBJECTS = $(am_diod_OBJECTS)
 am__DEPENDENCIES_1 =
 diod_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
@@ -261,7 +261,9 @@ diod_SOURCES = \
 	ioctx.c \
 	ioctx.h \
 	fid.c \
-	fid.h
+	fid.h \
+	xattr.c \
+	xattr.h
 
 man8_MANS = \
         diod.8
@@ -354,6 +356,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ioctx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ops.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xattr.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

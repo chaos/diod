@@ -63,7 +63,7 @@ am_libnpclient_a_OBJECTS = fid.$(OBJEXT) fsys.$(OBJEXT) \
 	mtfsys.$(OBJEXT) mount.$(OBJEXT) open.$(OBJEXT) pool.$(OBJEXT) \
 	read.$(OBJEXT) walk.$(OBJEXT) write.$(OBJEXT) mkdir.$(OBJEXT) \
 	stat.$(OBJEXT) remove.$(OBJEXT) readdir.$(OBJEXT) \
-	chmod.$(OBJEXT)
+	chmod.$(OBJEXT) xattr.$(OBJEXT)
 libnpclient_a_OBJECTS = $(am_libnpclient_a_OBJECTS)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
@@ -232,7 +232,8 @@ libnpclient_a_SOURCES = \
 	stat.c \
 	remove.c \
 	readdir.c \
-	chmod.c
+	chmod.c \
+	xattr.c
 
 all: all-am
 
@@ -296,6 +297,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/walk.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/write.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xattr.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

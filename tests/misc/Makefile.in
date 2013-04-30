@@ -131,7 +131,7 @@ tnpsrv_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
 am__objects_2 = ops.$(OBJEXT) fid.$(OBJEXT) exp.$(OBJEXT) \
-	ioctx.$(OBJEXT)
+	ioctx.$(OBJEXT) xattr.$(OBJEXT)
 am_tnpsrv2_OBJECTS = tnpsrv2.$(OBJEXT) $(am__objects_1) \
 	$(am__objects_2)
 tnpsrv2_OBJECTS = $(am_tnpsrv2_OBJECTS)
@@ -403,7 +403,9 @@ diod_sources = \
 	$(top_srcdir)/diod/exp.c \
 	$(top_srcdir)/diod/exp.h \
 	$(top_srcdir)/diod/ioctx.c \
-	$(top_srcdir)/diod/ioctx.h
+	$(top_srcdir)/diod/ioctx.h \
+	$(top_srcdir)/diod/xattr.c \
+	$(top_srcdir)/diod/xattr.h
 
 tsetuid_SOURCES = tsetuid.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
@@ -529,6 +531,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetfsuidsupp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetuid.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsuppgrp.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/xattr.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
@@ -613,6 +616,20 @@ ioctx.obj: $(top_srcdir)/diod/ioctx.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/ioctx.c' object='ioctx.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o ioctx.obj `if test -f '$(top_srcdir)/diod/ioctx.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/ioctx.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/ioctx.c'; fi`
+
+xattr.o: $(top_srcdir)/diod/xattr.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xattr.o -MD -MP -MF $(DEPDIR)/xattr.Tpo -c -o xattr.o `test -f '$(top_srcdir)/diod/xattr.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/xattr.c
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/xattr.Tpo $(DEPDIR)/xattr.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/xattr.c' object='xattr.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xattr.o `test -f '$(top_srcdir)/diod/xattr.c' || echo '$(srcdir)/'`$(top_srcdir)/diod/xattr.c
+
+xattr.obj: $(top_srcdir)/diod/xattr.c
+@am__fastdepCC_TRUE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT xattr.obj -MD -MP -MF $(DEPDIR)/xattr.Tpo -c -o xattr.obj `if test -f '$(top_srcdir)/diod/xattr.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/xattr.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/xattr.c'; fi`
+@am__fastdepCC_TRUE@	$(am__mv) $(DEPDIR)/xattr.Tpo $(DEPDIR)/xattr.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$(top_srcdir)/diod/xattr.c' object='xattr.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o xattr.obj `if test -f '$(top_srcdir)/diod/xattr.c'; then $(CYGPATH_W) '$(top_srcdir)/diod/xattr.c'; else $(CYGPATH_W) '$(srcdir)/$(top_srcdir)/diod/xattr.c'; fi`
 
 ID: $(HEADERS) $(SOURCES) $(LISP) $(TAGS_FILES)
 	list='$(SOURCES) $(HEADERS) $(LISP) $(TAGS_FILES)'; \
