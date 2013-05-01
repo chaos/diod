@@ -36,7 +36,7 @@ host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = conjoin$(EXEEXT) tattach$(EXEEXT) tattachmt$(EXEEXT) \
 	tmkdir$(EXEEXT) tread$(EXEEXT) tstat$(EXEEXT) twrite$(EXEEXT) \
-	tflush$(EXEEXT) tgetxattr$(EXEEXT)
+	tflush$(EXEEXT) tgetxattr$(EXEEXT) tsetxattr$(EXEEXT)
 subdir = tests/user
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -98,8 +98,8 @@ tflush_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
-tgetxattr_SOURCES = tgetxattr.c
-tgetxattr_OBJECTS = tgetxattr.$(OBJEXT)
+am_tgetxattr_OBJECTS = tgetxattr.$(OBJEXT) $(am__objects_1)
+tgetxattr_OBJECTS = $(am_tgetxattr_OBJECTS)
 tgetxattr_LDADD = $(LDADD)
 tgetxattr_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
@@ -122,6 +122,16 @@ am_tread_OBJECTS = tread.$(OBJEXT) $(am__objects_1)
 tread_OBJECTS = $(am_tread_OBJECTS)
 tread_LDADD = $(LDADD)
 tread_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_tsetxattr_OBJECTS = tsetxattr.$(OBJEXT) $(am__objects_1)
+tsetxattr_OBJECTS = $(am_tsetxattr_OBJECTS)
+tsetxattr_LDADD = $(LDADD)
+tsetxattr_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
@@ -157,11 +167,13 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
-	$(tflush_SOURCES) tgetxattr.c $(tmkdir_SOURCES) \
-	$(tread_SOURCES) $(tstat_SOURCES) $(twrite_SOURCES)
+	$(tflush_SOURCES) $(tgetxattr_SOURCES) $(tmkdir_SOURCES) \
+	$(tread_SOURCES) $(tsetxattr_SOURCES) $(tstat_SOURCES) \
+	$(twrite_SOURCES)
 DIST_SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
-	$(tflush_SOURCES) tgetxattr.c $(tmkdir_SOURCES) \
-	$(tread_SOURCES) $(tstat_SOURCES) $(twrite_SOURCES)
+	$(tflush_SOURCES) $(tgetxattr_SOURCES) $(tmkdir_SOURCES) \
+	$(tread_SOURCES) $(tsetxattr_SOURCES) $(tstat_SOURCES) \
+	$(twrite_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -325,6 +337,8 @@ tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
 tflush_SOURCES = tflush.c $(common_sources)
+tgetxattr_SOURCES = tgetxattr.c $(common_sources)
+tsetxattr_SOURCES = tsetxattr.c $(common_sources)
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
 all: all-am
 
@@ -384,6 +398,9 @@ tmkdir$(EXEEXT): $(tmkdir_OBJECTS) $(tmkdir_DEPENDENCIES)
 tread$(EXEEXT): $(tread_OBJECTS) $(tread_DEPENDENCIES) 
 	@rm -f tread$(EXEEXT)
 	$(LINK) $(tread_OBJECTS) $(tread_LDADD) $(LIBS)
+tsetxattr$(EXEEXT): $(tsetxattr_OBJECTS) $(tsetxattr_DEPENDENCIES) 
+	@rm -f tsetxattr$(EXEEXT)
+	$(LINK) $(tsetxattr_OBJECTS) $(tsetxattr_LDADD) $(LIBS)
 tstat$(EXEEXT): $(tstat_OBJECTS) $(tstat_DEPENDENCIES) 
 	@rm -f tstat$(EXEEXT)
 	$(LINK) $(tstat_OBJECTS) $(tstat_LDADD) $(LIBS)
@@ -404,6 +421,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tgetxattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tmkdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetxattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twrite.Po@am__quote@
 
