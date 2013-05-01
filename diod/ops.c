@@ -513,7 +513,10 @@ diod_clunk (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret;
 
-    if (f->ioctx) {
+    if (f->flags & DIOD_FID_FLAGS_XATTR) {
+        if (xattr_close (fid) < 0)
+            goto error_quiet;
+    } else if (f->ioctx) {
         if (ioctx_close (fid, 1) < 0)
             goto error_quiet;
     }
@@ -1386,8 +1389,11 @@ diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name)
         np_uerror (ENOMEM);
         goto error;
     }
-    if (xattr_open (attrfid, name, &size) < 0)
+    if (xattr_open (attrfid, name, &size) < 0) {
+        if (np_rerror () == ENODATA)
+            goto error_quiet;
         goto error;
+    }
     nf->flags |= DIOD_FID_FLAGS_XATTR;
     if (!(ret = np_create_rxattrwalk (size))) {
         diod_fiddestroy (attrfid);
@@ -1399,6 +1405,7 @@ error:
     errn (np_rerror (), "diod_xattrwalk %s@%s:%s/%.*s",
           fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           name->len, name->str);
+error_quiet:
     if (attrfid)
         diod_fiddestroy (attrfid);
     return NULL;

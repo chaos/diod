@@ -217,17 +217,19 @@ int
 xattr_close (Npfid *fid)
 {
     Fid *f = fid->aux;
+    int rc = 0;
 
     if (f->xattr) {
         if ((f->xattr->flags & XATTR_FLAGS_SET) && f->xattr->len > 0) {
             if (lsetxattr (path_s (f->path), f->xattr->name,
                        f->xattr->buf, f->xattr->len, 0) < 0) {
                 np_uerror (errno);
+                rc = -1;
             }
         }
         _xattr_destroy (&f->xattr);
     }
-    return -1;
+    return rc;
 }
 
 
