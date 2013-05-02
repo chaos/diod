@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mntopts="-owfdno=81,rfdno=80"
+
 PATH=/sbin:/usr/sbin:/bin:/usr/bin:$PATH
 if [ $# -ne 1 ]; then
     echo "Usage runtest test" 2>&1
@@ -63,9 +65,30 @@ if [ "`basename $TEST`" = "t40" ] && ! which scrub >/dev/null 2>&1; then
     echo "scrub is not installed" >$TEST.out
     exit 77
 fi
-opts="-owfdno=81,rfdno=80"
+# t42 requires setfattr/getfattr
+if [ "`basename $TEST`" = "t42" ] && ! which setfattr >/dev/null 2>&1; then
+    echo "setfattr is not installed" >$TEST.out
+    exit 77
+fi
+# t43 requires getfacl/setfacl
+if [ "`basename $TEST`" = "t43" ] && ! which setfacl >/dev/null 2>&1; then
+    echo "setfacl is not installed" >$TEST.out
+    exit 77
+fi
+# t42,t43 require xattr support in 9p file system, and in /tmp
+if [ "`basename $TEST`" = "t42" ] || [ "`basename $TEST`" = "t43" ]; then
+    if ! grep -q v9fs_xattr_set /proc/kallsyms; then
+        echo "9p not built with xattr support" >$TEST.out
+        exit 77 
+    fi
+    if ! ../user/txattr ${TMPDIR:-/tmp}; then
+        echo "${TMPDIR:-/tmp} requires xattr support" >$TEST.out
+        exit 77
+    fi
+fi
+# t43 requires posixacl mount option
 if [ "`basename $TEST`" = "t43" ]; then
-    opts="$opts,posixacl"
+    mntopts="$mntopts,posixacl"
 fi
 
 ulimit -c unlimited
@@ -83,7 +106,7 @@ export MALLOC_CHECK_=3
 if [ "`basename $TEST`" = "t00" ]; then
 ./kconjoin \
     "$PATH_DIOD -r80 -w81 -c /dev/null -n -d 1 -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n $opts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_DIODMOUNT -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST"
     [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
     [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
@@ -92,7 +115,7 @@ fi
 
 ./kconjoin \
     "$PATH_DIOD $opt -r80 -w81 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n $opts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_DIODMOUNT -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST" \
     >$TEST.out 2>&1
 rc=$?

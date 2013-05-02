@@ -39,6 +39,11 @@ case $(basename $TEST) in
 	PATH_EXPDIR=$(mktemp) || exit 1
 	dd if=/dev/zero count=1 bs=1024k of=$PATH_EXPDIR oflag=append >/dev/null 2>&1
 	;;
+    t17)  # $TMPDIR needs xattr support for this test
+        if ! ./txattr ${TMPDIR:-/tmp}; then
+            echo "${TMPDIR:-/tmp} requires xattr support" >$TEST.out
+            exit 77
+        fi
 esac
 
 rm -f $TEST.diod $TEST.out

@@ -8,7 +8,8 @@ check_PROGRAMS = \
 	twrite \
 	tflush \
 	tgetxattr \
-	tsetxattr
+	tsetxattr \
+	txattr
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"

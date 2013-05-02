@@ -2,8 +2,8 @@
 
 echo creating file with three xattrs set
 touch $PATH_EXPDIR/testfile
-setfattr -n user.foo -v fooval $PATH_EXPDIR/testfile || exit 77
-setfattr -n user.bar -v barval $PATH_EXPDIR/testfile
+./tsetxattr "$@" testfile user.foo fooval 
+./tsetxattr "$@" testfile user.bar barval 
 ./tsetxattr "$@" testfile user.baz bazval 
 ./tgetxattr "$@" testfile
 ./tgetxattr "$@" testfile user.foo user.bar user.baz
