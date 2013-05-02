@@ -63,6 +63,10 @@ if [ "`basename $TEST`" = "t40" ] && ! which scrub >/dev/null 2>&1; then
     echo "scrub is not installed" >$TEST.out
     exit 77
 fi
+opts="-owfdno=81,rfdno=80"
+if [ "`basename $TEST`" = "t43" ]; then
+    opts="$opts,posixacl"
+fi
 
 ulimit -c unlimited
 
@@ -79,7 +83,7 @@ export MALLOC_CHECK_=3
 if [ "`basename $TEST`" = "t00" ]; then
 ./kconjoin \
     "$PATH_DIOD -r80 -w81 -c /dev/null -n -d 1 -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n -owfdno=81,rfdno=80 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_DIODMOUNT -n $opts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST"
     [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
     [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
@@ -88,7 +92,7 @@ fi
 
 ./kconjoin \
     "$PATH_DIOD $opt -r80 -w81 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n -owfdno=81,rfdno=80 nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_DIODMOUNT -n $opts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "$TEST" \
     >$TEST.out 2>&1
 rc=$?
