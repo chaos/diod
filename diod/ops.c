@@ -248,7 +248,15 @@ done:
 int
 diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname)
 {
-    return diod_conf_get_auth_required ();
+    int xflags;
+
+    if (!diod_conf_get_auth_required ())
+        return 0; /* auth disabled globally */
+
+    if (diod_fetch_xflags (aname, &xflags) && (xflags & XFLAGS_NOAUTH))
+        return 0; /* auth disabled for this export */
+
+    return 1; /* auth required */
 }
 
 /* Tattach - attach a new user (fid->user) to aname.

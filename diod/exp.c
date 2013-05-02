@@ -198,6 +198,41 @@ done:
     return res;
 }
 
+/* Retrieve export flags for the given aname.
+ * We call this to determine if auth is disabled for a given mount.
+ * Don't set np_uerror() here, just return 1 on match, 0 otherwise.
+ */
+int diod_fetch_xflags (Npstr *aname, int *xfp)
+{
+    List exports = diod_conf_get_exports ();
+    ListIterator itr = NULL;
+    Export *x;
+    char *path = NULL;
+    int res = 0;
+
+    if (!(path = np_strdup (aname)))
+        goto done;
+    NP_ASSERT (exports != NULL);
+    if (strstr (path, "/..") != NULL)
+        goto done;
+    if (!(itr = list_iterator_create (exports)))
+        goto done;
+    while ((x = list_next (itr))) {
+        if (_match_export_path (x, path)) {
+            if (xfp)
+                *xfp = x->oflags;
+            res = 1;
+            break;
+        }
+    }
+done:
+    if (itr)
+        list_iterator_destroy (itr);
+    if (path)
+        free (path);
+    return res;
+}
+
 /**
  ** ctl/exports handling
  **/
