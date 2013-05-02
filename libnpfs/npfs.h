@@ -153,6 +153,10 @@ struct Npfidpool {
 	Npfid**		htable;
 };
 
+enum {
+	CONN_FLAGS_PRIVPORT =0x00000001,
+};
+
 struct Npconn {
 	pthread_mutex_t	lock;
 	pthread_mutex_t	wlock;
@@ -160,6 +164,7 @@ struct Npconn {
 	int		refcount;
 
 	char		client_id[128];
+	int		flags;
 	u32		authuser;
 	u32		msize;
 	int		shutdown;
@@ -360,7 +365,7 @@ void np_assfail (char *ass, char *file, int line);
 #define NP_ASSERT(exp) if ((exp)) ; else np_assfail(#exp, __FILE__, __LINE__ ) 
 
 /* conn.c */
-Npconn *np_conn_create(Npsrv *, Nptrans *, char *);
+Npconn *np_conn_create(Npsrv *, Nptrans *, char *, int);
 void np_conn_incref(Npconn *);
 void np_conn_decref(Npconn *);
 void np_conn_respond(Npreq *req);

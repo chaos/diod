@@ -391,6 +391,8 @@ _parse_expopt (char *s, int *fp)
             flags |= XFLAGS_SUPPRESS;
         else if (!strcmp (item, "sharefd"))
             flags |= XFLAGS_SHAREFD;
+        else if (!strcmp (item, "privport"))
+            flags |= XFLAGS_PRIVPORT;
         else
             msg_exit ("unknown export option: %s", item);
         item = strtok_r (NULL, ",", &saveptr);

@@ -414,7 +414,7 @@ _service_loop (void *arg)
 
     switch (ss.mode) {
         case SRV_FILEDES:
-            diod_sock_startfd (ss.srv, ss.rfdno, ss.wfdno, "stdin");
+            diod_sock_startfd (ss.srv, ss.rfdno, ss.wfdno, "stdin", 0);
             break;
         case SRV_NORMAL:
         case SRV_SOCKTEST:

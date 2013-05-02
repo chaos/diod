@@ -299,7 +299,7 @@ done:
 }
 
 void
-diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id)
+diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id, int flags)
 {
     Npconn *conn;
     Nptrans *trans;
@@ -313,7 +313,7 @@ diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id)
         return;
     }
                  
-    conn = np_conn_create (srv, trans, client_id);
+    conn = np_conn_create (srv, trans, client_id, flags);
     if (!conn) {
         errn (np_rerror (), "error creating connection for %s", client_id);
 	/* trans is destroyed in np_conn_create on failure */
@@ -329,7 +329,8 @@ diod_sock_accept_one (Npsrv *srv, int fd)
     struct sockaddr_storage addr;
     socklen_t addr_size = sizeof(addr);
     char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
-    int res;
+    int res, port;
+    int flags = 0;
 
     fd = accept (fd, (struct sockaddr *)&addr, &addr_size);
     if (fd < 0) {
@@ -363,7 +364,34 @@ diod_sock_accept_one (Npsrv *srv, int fd)
         return;
     }
 #endif
-    diod_sock_startfd (srv, fd, fd, strlen(host) > 0 ? host : ip);
+    port = strtoul (svc, NULL, 10);
+    if (port < IPPORT_RESERVED && port >= IPPORT_RESERVED / 2)
+        flags |= CONN_FLAGS_PRIVPORT;
+    diod_sock_startfd (srv, fd, fd, strlen(host) > 0 ? host : ip, flags);
+}
+
+/* Bind socket to a local IPv4 port < 1024.
+ */
+static int
+_bind_priv_inet4 (int sockfd)
+{
+    struct sockaddr_in in;
+    int port;
+    int rc = -1;
+
+    memset (&in, 0, sizeof(in));
+    in.sin_family = AF_INET;
+    in.sin_addr.s_addr = INADDR_ANY;
+
+    for (port = IPPORT_RESERVED - 1; port >= IPPORT_RESERVED / 2; port--) {
+        in.sin_port = htons ((ushort)port);
+        rc = bind(sockfd, (struct sockaddr *) &in, sizeof(in));
+        if (rc == 0 || (rc < 0 && errno != EADDRINUSE))
+            break;
+    }
+    if (rc < 0 && errno == EADDRINUSE)
+        errno = EAGAIN;
+    return rc;
 }
  
 /* Connect to host:port.
@@ -397,6 +425,22 @@ diod_sock_connect_inet (char *host, char *port, int flags)
             errmsg = "socket";
             continue;
         }
+        if (flags & DIOD_SOCK_PRIVPORT) {
+            if (r->ai_family != AF_INET) {
+                errnum = EINVAL;
+                errmsg = "_bind_resv_inet4";
+                (void)close (fd);
+                fd = -1;
+                continue;
+            }
+            if (_bind_priv_inet4 (fd) < 0) {
+                errnum = errno;
+                errmsg = "_bind_resv_inet4";
+                (void)close (fd);
+                fd = -1;
+                continue;
+            }
+        } 
         (void)_disable_nagle (fd);
         if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
             errnum = errno;

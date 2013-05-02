@@ -73,6 +73,12 @@ _match_export_hosts (Export *x, Npconn *conn)
     hostlist_t hl = NULL;
     int res = 0; /* no match */
 
+    /* privport is required */
+    if (x->oflags & XFLAGS_PRIVPORT && !(conn->flags & CONN_FLAGS_PRIVPORT)) {
+        np_uerror (EPERM);
+        goto done;
+    }
+
     /* no client_id restrictions */
     if (!x->hosts) {
         res = 1;

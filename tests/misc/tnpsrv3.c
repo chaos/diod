@@ -127,7 +127,7 @@ main (int argc, char *argv[])
         errn_exit (np_rerror (), "np_srv_create");
     if (diod_init (srv) < 0)
         errn_exit (np_rerror (), "diod_init");
-    diod_sock_startfd (srv, s[1], s[1], "loopback");
+    diod_sock_startfd (srv, s[1], s[1], "loopback", 0);
 
    if (!(fs = npc_start (s[0], s[0], TEST_MSIZE, 0)))
         errn_exit (np_rerror (), "npc_start");

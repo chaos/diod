@@ -44,7 +44,7 @@ static void np_conn_flush (Npconn *conn);
 static void np_conn_destroy(Npconn *conn);
 
 Npconn*
-np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
+np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id, int flags)
 {
 	Npconn *conn;
 	int err;
@@ -68,6 +68,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id)
 	}
 	snprintf(conn->client_id, sizeof(conn->client_id), "%s", client_id);
 	conn->authuser = P9_NONUNAME;
+	conn->flags = flags;
 
 	conn->trans = trans;
 	conn->aux = NULL;

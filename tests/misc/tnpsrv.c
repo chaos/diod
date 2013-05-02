@@ -43,7 +43,7 @@ main (int argc, char *argv[])
     if (!(srv = np_srv_create (16, flags)))
         errn_exit (np_rerror (), "out of memory");
     srv->logmsg = diod_log_msg;
-    diod_sock_startfd (srv, s[1], s[1], "loopback");
+    diod_sock_startfd (srv, s[1], s[1], "loopback", 0);
 
     if (!(fs = npc_start (s[0], s[0], TEST_MSIZE, 0)))
         errn_exit (np_rerror (), "npc_start");
