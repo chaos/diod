@@ -434,11 +434,6 @@ np_read(Npreq *req, Npfcall *tc)
 			np_uerror(ENOSYS);
 		goto done;
 	}
-	if ((fid->type & P9_QTDIR)) {
-		np_uerror(EIO);
-		np_logerr (conn->srv, "read: fid refers to a directory");
-		goto done;
-	}
 	if (fid->type & P9_QTTMP) {
 		rc = np_ctl_read(fid, tc->u.tread.offset,
 				 tc->u.tread.count, req);
@@ -480,11 +475,6 @@ np_write(Npreq *req, Npfcall *tc)
 
 		} else
 			np_uerror(ENOSYS);
-		goto done;
-	}
-	if ((fid->type & P9_QTDIR)) {
-		np_uerror(EIO);
-		np_logerr (conn->srv, "write: fid refers to a directory");
 		goto done;
 	}
 	if (tc->u.twrite.count + P9_IOHDRSZ > conn->msize) {
