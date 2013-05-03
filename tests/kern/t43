@@ -5,9 +5,13 @@ cd $PATH_MNTDIR
 touch testfile
 setfacl -m u:root:r testfile
 getfacl testfile
+setfacl -x u:root testfile
+getfacl testfile
 
 mkdir testdir
 setfacl -d -m u:root:r testdir
 getfacl testdir
+#setfacl -d -x u:root testfile
+#getfacl testdir
 
 exit 0

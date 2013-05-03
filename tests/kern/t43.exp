@@ -8,6 +8,14 @@ group::r--
 mask::r--
 other::r--
 
+# file: testfile
+# owner: root
+# group: root
+user::rw-
+group::r--
+mask::r--
+other::r--
+
 # file: testdir
 # owner: root
 # group: root

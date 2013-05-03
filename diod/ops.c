@@ -1426,12 +1426,12 @@ diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size, u32 flags)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
-    if (xattr_create (fid, name, attr_size) < 0)
-        goto error;
     if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
         np_uerror (EROFS);
         goto error_quiet;
     }
+    if (xattr_create (fid, name, attr_size, flags) < 0)
+        goto error;
     f->flags |= DIOD_FID_FLAGS_XATTR;
     if (!(ret = np_create_rxattrcreate ())) {
         np_uerror (ENOMEM);

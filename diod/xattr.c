@@ -74,6 +74,7 @@ struct xattr_struct {
     char *buf;
     ssize_t len;
     int flags;
+    u32 setflags;
 };
 
 static void _xattr_destroy (Xattr *xp)
@@ -89,7 +90,7 @@ static void _xattr_destroy (Xattr *xp)
     *xp = NULL;
 }
 
-static Xattr _xattr_create (Npstr *name, size_t size, int flags)
+static Xattr _xattr_create (Npstr *name, size_t size, int flags, u32 setflags)
 {
     Xattr x;
 
@@ -98,6 +99,7 @@ static Xattr _xattr_create (Npstr *name, size_t size, int flags)
         goto nomem;
     memset (x, 0, sizeof (struct xattr_struct));
     x->flags = flags;
+    x->setflags = setflags;
     if (name && name->len > 0) {
         x->name = np_strdup (name);
         if (!x->name)
@@ -188,7 +190,7 @@ xattr_open (Npfid *fid, Npstr *name, u64 *sizep)
    
     assert (f->xattr == NULL);
 
-    f->xattr = _xattr_create (name, 0, XATTR_FLAGS_GET);
+    f->xattr = _xattr_create (name, 0, XATTR_FLAGS_GET, 0);
     if (_lgetxattr (f->xattr, path_s (f->path)) < 0)
         goto error;
     *sizep = (u64)f->xattr->len;
@@ -198,13 +200,13 @@ error:
     return -1;    
 }
 
-int xattr_create (Npfid *fid, Npstr *name, u64 size)
+int xattr_create (Npfid *fid, Npstr *name, u64 size, u32 setflags)
 {
     Fid *f = fid->aux;
 
     assert (f->xattr == NULL);
 
-    f->xattr = _xattr_create (name, size, XATTR_FLAGS_SET);
+    f->xattr = _xattr_create (name, size, XATTR_FLAGS_SET, setflags);
     if (!f->xattr)
         goto error;
     return 0;
@@ -220,11 +222,18 @@ xattr_close (Npfid *fid)
     int rc = 0;
 
     if (f->xattr) {
-        if ((f->xattr->flags & XATTR_FLAGS_SET) && f->xattr->len > 0) {
-            if (lsetxattr (path_s (f->path), f->xattr->name,
-                       f->xattr->buf, f->xattr->len, 0) < 0) {
-                np_uerror (errno);
-                rc = -1;
+        if ((f->xattr->flags & XATTR_FLAGS_SET)) {
+            if (f->xattr->len > 0) {
+                if (lsetxattr (path_s (f->path), f->xattr->name, f->xattr->buf,
+                               f->xattr->len, f->xattr->setflags) < 0) {
+                    np_uerror (errno);
+                    rc = -1;
+                }
+            } else if (f->xattr->len == 0) {
+                if (lremovexattr (path_s (f->path), f->xattr->name) < 0) {
+                    np_uerror (errno);
+                    rc = -1;
+                }
             }
         }
         _xattr_destroy (&f->xattr);

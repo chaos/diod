@@ -2,6 +2,7 @@
 
 cd $PATH_MNTDIR
 touch testfile
+
 setfattr -n user.foo -v fooval testfile
 setfattr -n user.bar -v barval testfile
 setfattr -n user.baz -v bazval testfile
@@ -11,5 +12,7 @@ getfattr -d testfile
 setfattr -x user.foo testfile
 setfattr -x user.bar testfile
 setfattr -x user.baz testfile
+
+getfattr -d testfile
 
 exit 0
