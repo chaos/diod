@@ -49,6 +49,7 @@ typedef struct {
 } Fid;
 
 static char *_ctl_get_version (char *name, void *a);
+static char *_ctl_get_date (char *name, void *a);
 static char *_ctl_get_proc (char *name, void *arg);
 
 static int
@@ -257,6 +258,8 @@ np_ctl_initialize (Npsrv *srv)
 
 	if (!np_ctl_addfile (root, "version", _ctl_get_version, NULL, 0))
 		goto error;
+	if (!np_ctl_addfile (root, "date", _ctl_get_date, NULL, 0))
+		goto error;
 	if (!np_ctl_addfile (root, "zero", NULL, NULL, NP_CTL_FLAGS_ZEROSRC))
 		goto error;
 	if (!np_ctl_addfile (root, "zero100", NULL, NULL,
@@ -286,6 +289,28 @@ _ctl_get_version (char *name, void *a)
         if (aspf (&s, &len, "%s\n", META_ALIAS) < 0)
                 np_uerror (ENOMEM);
         return s;
+}
+
+static char *
+_ctl_get_date (char *name, void *a)
+{
+	struct timeval tv;
+	struct timezone tz;
+        char *s = NULL;
+        int len = 0;
+
+	if (gettimeofday (&tv, &tz) < 0) {
+		np_uerror (errno);
+		goto error;
+	}
+        if (aspf (&s, &len, "%lu.%lu %d.%d\n", tv.tv_sec, tv.tv_usec,
+					tz.tz_minuteswest, tz.tz_dsttime) < 0) {
+                np_uerror (ENOMEM);
+		goto error;
+	}
+        return s;
+error:
+	return NULL;
 }
 
 /**

@@ -67,29 +67,31 @@
 #endif
 
 /* ro_mask values to protect attribute from overwrite by config file */
-#define RO_DEBUGLEVEL       0x00000001
-#define RO_NWTHREADS        0x00000002
-#define RO_FOREGROUND       0x00000004
-#define RO_AUTH_REQUIRED    0x00000008
-#define RO_RUNASUID         0x00000010
-#define RO_USERDB           0x00000020
-#define RO_LISTEN           0x00000040
-#define RO_MAXMMAP          0x00000080
-#define RO_EXPORTS          0x00000100
-#define RO_STATSLOG         0x00000200
-#define RO_CONFIGPATH       0x00000400
-#define RO_LOGDEST          0x00000800
-#define RO_EXPORTALL        0x00001000
-#define RO_EXPORTOPTS       0x00002000
-#define RO_ALLSQUASH        0x00004000
-#define RO_SQUASHUSER       0x00008000
-#define RO_STATFS_PASSTHRU  0x00010000
+#define RO_DEBUGLEVEL           0x00000001
+#define RO_NWTHREADS            0x00000002
+#define RO_FOREGROUND           0x00000004
+#define RO_AUTH_REQUIRED        0x00000008
+#define RO_RUNASUID             0x00000010
+#define RO_USERDB               0x00000020
+#define RO_LISTEN               0x00000040
+#define RO_MAXMMAP              0x00000080
+#define RO_EXPORTS              0x00000100
+#define RO_STATSLOG             0x00000200
+#define RO_CONFIGPATH           0x00000400
+#define RO_LOGDEST              0x00000800
+#define RO_EXPORTALL            0x00001000
+#define RO_EXPORTOPTS           0x00002000
+#define RO_ALLSQUASH            0x00004000
+#define RO_SQUASHUSER           0x00008000
+#define RO_STATFS_PASSTHRU      0x00010000
+#define RO_AUTH_REQUIRED_CTL    0x00020000
 
 typedef struct {
     int          debuglevel;
     int          nwthreads;
     int          foreground;
     int          auth_required;
+    int          auth_required_ctl;
     int          statfs_passthru;
     int          userdb;
     int          allsquash;
@@ -177,6 +179,7 @@ diod_conf_init (void)
     config.nwthreads = DFLT_NWTHREADS;
     config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
+    config.auth_required_ctl = DFLT_AUTH_REQUIRED_CTL;
     config.statfs_passthru = DFLT_STATFS_PASSTHRU;
     config.userdb = DFLT_USERDB;
     config.allsquash = DFLT_ALLSQUASH;
@@ -269,6 +272,16 @@ void diod_conf_set_auth_required (int i)
 {
     config.auth_required = i;
     config.ro_mask |= RO_AUTH_REQUIRED;
+}
+
+/* auth_required_ctl - whether to accept unauthenticated attaches to 'ctl'
+ */
+int diod_conf_get_auth_required_ctl (void) { return config.auth_required_ctl; }
+int diod_conf_opt_auth_required_ctl (void) { return config.ro_mask & RO_AUTH_REQUIRED_CTL; }
+void diod_conf_set_auth_required_ctl (int i)
+{
+    config.auth_required_ctl = i;
+    config.ro_mask |= RO_AUTH_REQUIRED_CTL;
 }
 
 /* statfs_passthru - whether statfs should return host f_type or V9FS_MAGIC
@@ -648,6 +661,11 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             config.auth_required = DFLT_AUTH_REQUIRED;
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
+        }
+        if (!(config.ro_mask & RO_AUTH_REQUIRED_CTL)) {
+            config.auth_required = DFLT_AUTH_REQUIRED_CTL;
+            _lua_getglobal_int (path, L, "auth_required_ctl",
+                                &config.auth_required_ctl);
         }
         if (!(config.ro_mask & RO_STATFS_PASSTHRU)) {
             config.statfs_passthru = DFLT_STATFS_PASSTHRU;
