@@ -36,7 +36,8 @@ build_triplet = @build@
 host_triplet = @host@
 target_triplet = @target@
 sbin_PROGRAMS = diodmount$(EXEEXT) diodcat$(EXEEXT) dtop$(EXEEXT) \
-	diodload$(EXEEXT) diodls$(EXEEXT) diodshowmount$(EXEEXT)
+	diodload$(EXEEXT) diodls$(EXEEXT) diodshowmount$(EXEEXT) \
+	dioddate$(EXEEXT)
 subdir = utils
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/diodcat.8.in $(srcdir)/diodload.8.in \
@@ -75,6 +76,9 @@ am__DEPENDENCIES_2 = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 diodcat_DEPENDENCIES = $(am__DEPENDENCIES_2)
+am_dioddate_OBJECTS = dioddate.$(OBJEXT) $(am__objects_1)
+dioddate_OBJECTS = $(am_dioddate_OBJECTS)
+dioddate_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_diodload_OBJECTS = diodload.$(OBJEXT) $(am__objects_1)
 diodload_OBJECTS = $(am_diodload_OBJECTS)
 diodload_DEPENDENCIES = $(am__DEPENDENCIES_2)
@@ -98,10 +102,11 @@ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) $(diodls_SOURCES) \
-	$(diodmount_SOURCES) $(diodshowmount_SOURCES) $(dtop_SOURCES)
-DIST_SOURCES = $(diodcat_SOURCES) $(diodload_SOURCES) \
+SOURCES = $(diodcat_SOURCES) $(dioddate_SOURCES) $(diodload_SOURCES) \
 	$(diodls_SOURCES) $(diodmount_SOURCES) \
+	$(diodshowmount_SOURCES) $(dtop_SOURCES)
+DIST_SOURCES = $(diodcat_SOURCES) $(dioddate_SOURCES) \
+	$(diodload_SOURCES) $(diodls_SOURCES) $(diodmount_SOURCES) \
 	$(diodshowmount_SOURCES) $(dtop_SOURCES)
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -291,6 +296,8 @@ diodls_LDADD = $(common_ldadd)
 diodls_SOURCES = diodls.c $(common_sources)
 diodshowmount_LDADD = $(common_ldadd)
 diodshowmount_SOURCES = diodshowmount.c $(common_sources)
+dioddate_LDADD = $(common_ldadd)
+dioddate_SOURCES = dioddate.c $(common_sources)
 man8_MANS = \
 	diodmount.8 \
 	diodcat.8 \
@@ -385,6 +392,9 @@ clean-sbinPROGRAMS:
 diodcat$(EXEEXT): $(diodcat_OBJECTS) $(diodcat_DEPENDENCIES) 
 	@rm -f diodcat$(EXEEXT)
 	$(LINK) $(diodcat_OBJECTS) $(diodcat_LDADD) $(LIBS)
+dioddate$(EXEEXT): $(dioddate_OBJECTS) $(dioddate_DEPENDENCIES) 
+	@rm -f dioddate$(EXEEXT)
+	$(LINK) $(dioddate_OBJECTS) $(dioddate_LDADD) $(LIBS)
 diodload$(EXEEXT): $(diodload_OBJECTS) $(diodload_DEPENDENCIES) 
 	@rm -f diodload$(EXEEXT)
 	$(LINK) $(diodload_OBJECTS) $(diodload_LDADD) $(LIBS)
@@ -408,6 +418,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodcat.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dioddate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodload.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodls.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/diodmount.Po@am__quote@

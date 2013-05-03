@@ -36,7 +36,8 @@ host_triplet = @host@
 target_triplet = @target@
 check_PROGRAMS = conjoin$(EXEEXT) tattach$(EXEEXT) tattachmt$(EXEEXT) \
 	tmkdir$(EXEEXT) tread$(EXEEXT) tstat$(EXEEXT) twrite$(EXEEXT) \
-	tflush$(EXEEXT) tgetxattr$(EXEEXT) tsetxattr$(EXEEXT)
+	tflush$(EXEEXT) tgetxattr$(EXEEXT) tsetxattr$(EXEEXT) \
+	txattr$(EXEEXT)
 subdir = tests/user
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -158,6 +159,16 @@ twrite_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+txattr_SOURCES = txattr.c
+txattr_OBJECTS = txattr.$(OBJEXT)
+txattr_LDADD = $(LDADD)
+txattr_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)/config
 depcomp = $(SHELL) $(top_srcdir)/config/depcomp
 am__depfiles_maybe = depfiles
@@ -169,11 +180,11 @@ LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
 	$(tflush_SOURCES) $(tgetxattr_SOURCES) $(tmkdir_SOURCES) \
 	$(tread_SOURCES) $(tsetxattr_SOURCES) $(tstat_SOURCES) \
-	$(twrite_SOURCES)
+	$(twrite_SOURCES) txattr.c
 DIST_SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
 	$(tflush_SOURCES) $(tgetxattr_SOURCES) $(tmkdir_SOURCES) \
 	$(tread_SOURCES) $(tsetxattr_SOURCES) $(tstat_SOURCES) \
-	$(twrite_SOURCES)
+	$(twrite_SOURCES) txattr.c
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -407,6 +418,9 @@ tstat$(EXEEXT): $(tstat_OBJECTS) $(tstat_DEPENDENCIES)
 twrite$(EXEEXT): $(twrite_OBJECTS) $(twrite_DEPENDENCIES) 
 	@rm -f twrite$(EXEEXT)
 	$(LINK) $(twrite_OBJECTS) $(twrite_LDADD) $(LIBS)
+txattr$(EXEEXT): $(txattr_OBJECTS) $(txattr_DEPENDENCIES) 
+	@rm -f txattr$(EXEEXT)
+	$(LINK) $(txattr_OBJECTS) $(txattr_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -424,6 +438,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetxattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twrite.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/txattr.Po@am__quote@
 
 .c.o:
 @am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<

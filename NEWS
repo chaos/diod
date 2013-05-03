@@ -1,4 +1,18 @@
 =========================================================================
+Release Notes for DIOD version 1.0.13                         03 May 2013
+=========================================================================
+
+* Add xattr support (issue 95)
+
+* Support for dracut bootstrap of 9nbd network block device:
+  - New 'dioddate' utility to synchronize system time with server's,
+    and 'auth_required_ctl' config option which allows MUNGE
+    authentication to be disabled for the ctl synthetic file system.
+  - Add 'noauth' and 'privport' export options which disable MUNGE auth,
+    and require attaches to originate from a privileged port (512-1024)
+    for a specific export.    
+
+=========================================================================
 Release Notes for DIOD version 1.0.14                         12 Jul 2012
 =========================================================================
 
