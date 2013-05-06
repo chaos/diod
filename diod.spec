@@ -1,5 +1,5 @@
 Name: diod
-Version: 1.0.15
+Version: 1.0.17
 Release: 1
 
 Summary:  I/O forwarding server for 9P.
@@ -16,6 +16,7 @@ BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
 BuildRequires: libibverbs-devel librdmacm-devel
 BuildRequires: gperftools-devel
+BuildRequires: libattr-devel
 
 %description
 diod is a 9P server used in combination with the kernel v9fs file
