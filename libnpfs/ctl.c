@@ -303,12 +303,13 @@ _ctl_get_date (char *name, void *a)
 		np_uerror (errno);
 		goto error;
 	}
-        if (aspf (&s, &len, "%lu.%lu %d.%d\n", tv.tv_sec, tv.tv_usec,
+	if (aspf (&s, &len, "%lu.%lu %d.%d\n",
+					tv.tv_sec,         tv.tv_usec,
 					tz.tz_minuteswest, tz.tz_dsttime) < 0) {
-                np_uerror (ENOMEM);
+		np_uerror (ENOMEM);
 		goto error;
 	}
-        return s;
+	return s;
 error:
 	return NULL;
 }
