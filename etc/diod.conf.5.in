@@ -19,13 +19,10 @@ The default is "0.0.0.0:564".
 .I "exports = { ""/path"" [, ""/path"", ...] }"
 List the file systems that clients will be allowed to mount.
 All paths should be fully qualified.
-The exports table can include two types of element, a string element (as above),
-or a table element of the form \fI{ path="/path", opts="ro" }\fR.
-The path attribute is mandatory, and the opts attribute is an optional,
-comma-separated list of export options.  Currently the only supported
-options are "ro" (export read-only), "suppress" (no export), and
-"sharefd" (allow limited server-side file descriptor sharing for files
-opened O_RDONLY).
+The exports table can include two types of element: a string element (as above),
+or an alternate table element form \fI{ path="/path", opts="ro" }\fR.
+In the alternate form, the (optional) opts attribute is a comma-separated
+list of export options, as described below in EXPORT OPTIONS.
 The two table element forms can be mixed in the exports table.
 Note that although \fBdiod\fR will not traverse file system boundaries
 for a given mount due to inode uniqueness constraints, subdirectories of 
@@ -48,7 +45,11 @@ for a unique aname.  The default is 16 per aname.
 .TP
 .I "auth_required = 0"
 Allow clients to connect without authentication, i.e. without a valid
-munge credential.
+MUNGE credential.
+.TP
+.I "auth_required_ctl = 0"
+Allow clients to connect to the \fIctl\fR synthetic file system
+without authentication, i.e. without a valid MUNGE credential.
 .TP
 .I "userdb = 0"
 This option disables password/group lookups.
@@ -72,6 +73,30 @@ The default is \fIsyslog:daemon:err\fR.
 This option configures statfs to return the host file system's type
 rather than V9FS_MAGIC.
 The default is 0 (return V9FS_MAGIC).
+.SH "EXPORT OPTIONS"
+The following export options are defined:
+.TP
+.I ro
+Export the file system read-only.
+.TP
+.I suppress
+Exclude this file system from exports.
+Useful following \fIexportall = 1\fR.
+.TP
+.I sharefd
+Allow limited server-side file descriptor sharing for files
+opened O_RDONLY by the same user.
+.TP
+.I privport
+Reject attach request unless client is bound to a port in the privileged
+port range (512-1023).
+The \fBdiodcat\fR utility has a \fI--privport\fR option which, when run
+as root, binds to a privileged socket before connecting.
+This provides limited additional security, especially in open networks,
+as it is vulnerable to IP spoofing attacks.
+.TP
+.I noauth
+Allow attach to succeed without authentication.
 .SH "EXAMPLE"
 .nf
 --

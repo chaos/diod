@@ -68,4 +68,10 @@ fi
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 
 diff $TEST.exp $TEST.out >$TEST.diff
-exit $?
+rc=$?
+if [ $rc != 0 ]; then
+    echo "=== BEGIN $TEST.out ==="
+    cat $TEST.out
+    echo "=== END $TEST.out ==="
+fi
+exit $rc

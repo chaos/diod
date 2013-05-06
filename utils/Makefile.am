@@ -44,4 +44,5 @@ man8_MANS = \
 	dtop.8 \
 	diodload.8 \
 	diodls.8 \
-	diodshowmount.8
+	diodshowmount.8 \
+	dioddate.8

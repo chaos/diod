@@ -1,0 +1,34 @@
+.TH dioddate 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.SH NAME
+dioddate \- get server system time
+.SH SYNOPSIS
+\fBdioddate\fR \fI[OPTIONS] [-s NAME] [file [file...]]\fR
+.SH DESCRIPTION
+.B dioddate
+obtains the current system time and zone information from a \fBdiod\fR
+server by reading \fIctl:date\fR.  If the \fI--set-time\fR option
+is specified, sets the local system time on the client; otherwise
+prints the server time on stdout.
+.LP
+This is a simple way to obtain rough time synchronization before
+issuing a MUNGE-authenticated attach request, for example in a bootstrap
+environment where \fIauth_required_ctl = 0\fR is configured.
+.SH OPTIONS
+.TP
+.I "-s, --server NAME"
+The server in IP[:PORT], HOST[:PORT], or /path/to/socket form
+(default localhost:564).
+.TP
+.I "-m, --msize SIZE"
+The maximum request size including 9P headers (default 65536).
+.TP
+.I "-u, --uid UID"
+Try to attach to the server as the specified user (default your effective uid).
+.TP
+.I "-t, --timeout SECS"
+Force timeout after specified number of seconds (default no timeout).
+.TP
+.I "-S, --set-time"
+Set the local system time to match the server's time.
+.SH "SEE ALSO"
+diod (8)
