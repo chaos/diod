@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+touch $PATH_EXPDIR/testfile
+./tremovexattr "$@" testfile user.foo
+exit 0

@@ -157,6 +157,6 @@ npc_setxattr (Npcfid *root, char *path, char *name, char *val, size_t size,
 	ret = 0;
 done:
 	if (fid)
-		(void)npc_clunk(fid);	
+		ret = npc_clunk(fid);	
 	return ret;
 }
