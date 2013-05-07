@@ -93,6 +93,7 @@ AC_CONFIG_FILES( \
   utils/diodload.8 \
   utils/diodls.8 \
   utils/diodshowmount.8 \
+  utils/dioddate.8 \
   etc/diod.conf.5 \
   scripts/Makefile \
   scripts/diod.init \
