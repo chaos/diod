@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <attr/xattr.h>
+
 
 #include "9p.h"
 #include "npfs.h"
@@ -28,6 +30,8 @@ static void
 usage (void)
 {
     fprintf (stderr, "Usage: tsetxattr aname path attr value\n");
+    fprintf (stderr, "       prepend + to attr for XATTR_CREATE\n");
+    fprintf (stderr, "       prepend / to attr for XATTR_REPLACE\n");
     exit (1);
 }
 
@@ -39,6 +43,7 @@ main (int argc, char *argv[])
     uid_t uid = geteuid ();
     char *aname, *path, *attr, *value;
     int fd = 0; /* stdin */
+    int flags = 0;
 
     diod_log_init (argv[0]);
 
@@ -47,6 +52,13 @@ main (int argc, char *argv[])
     aname = argv[1];
     path = argv[2];
     attr = argv[3];
+    if (attr[0] == '+') {
+        flags |= XATTR_CREATE;
+        attr++;
+    } else if (attr[0] == '/') {
+        flags |= XATTR_REPLACE;
+        attr++;
+    }
     value = argv[4];
 
     if (!(fs = npc_start (fd, fd, 65536+24, 0)))
@@ -58,8 +70,8 @@ main (int argc, char *argv[])
     if (afid && npc_clunk (afid) < 0)
         errn (np_rerror (), "npc_clunk afid");
 
-    if (npc_setxattr (root, path, attr, value, strlen (value), 0) < 0)
-        errn_exit (np_rerror (), "npc_setxattr");
+    if (npc_setxattr (root, path, attr, value, strlen (value), flags) < 0)
+        errn_exit (np_rerror (), "npc_setxattr %s=%s", attr, value);
 
     if (npc_clunk (root) < 0)
         errn_exit (np_rerror (), "npc_clunk root");

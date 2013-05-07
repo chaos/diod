@@ -22,8 +22,9 @@ t12(+)  Attach to user A's private server with user B
 t13(*)	Attach to server with N threads, M users (N < M)
 t15	Check that flush works the way it ought to.
 t16	Attach directly to a file and perform I/O
-t17	Read and list user extended attributes
-
+t17	Read, list, remove user extended attributes
+t18	Removing nonexistent user xattrs returns ENODATA
+t19	Test setxattr flags
 
 (*) requires root (else NOTRUN)
 (+) requires non-root (else NOTRUN)

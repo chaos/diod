@@ -37,7 +37,7 @@ target_triplet = @target@
 check_PROGRAMS = conjoin$(EXEEXT) tattach$(EXEEXT) tattachmt$(EXEEXT) \
 	tmkdir$(EXEEXT) tread$(EXEEXT) tstat$(EXEEXT) twrite$(EXEEXT) \
 	tflush$(EXEEXT) tgetxattr$(EXEEXT) tsetxattr$(EXEEXT) \
-	txattr$(EXEEXT)
+	tremovexattr$(EXEEXT) txattr$(EXEEXT)
 subdir = tests/user
 DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -129,6 +129,16 @@ tread_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1)
+am_tremovexattr_OBJECTS = tremovexattr.$(OBJEXT) $(am__objects_1)
+tremovexattr_OBJECTS = $(am_tremovexattr_OBJECTS)
+tremovexattr_LDADD = $(LDADD)
+tremovexattr_DEPENDENCIES = $(top_builddir)/libdiod/libdiod.a \
+	$(top_builddir)/libnpclient/libnpclient.a \
+	$(top_builddir)/libnpfs/libnpfs.a \
+	$(top_builddir)/liblsd/liblsd.a $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
 am_tsetxattr_OBJECTS = tsetxattr.$(OBJEXT) $(am__objects_1)
 tsetxattr_OBJECTS = $(am_tsetxattr_OBJECTS)
 tsetxattr_LDADD = $(LDADD)
@@ -179,12 +189,12 @@ CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
 	$(tflush_SOURCES) $(tgetxattr_SOURCES) $(tmkdir_SOURCES) \
-	$(tread_SOURCES) $(tsetxattr_SOURCES) $(tstat_SOURCES) \
-	$(twrite_SOURCES) txattr.c
+	$(tread_SOURCES) $(tremovexattr_SOURCES) $(tsetxattr_SOURCES) \
+	$(tstat_SOURCES) $(twrite_SOURCES) txattr.c
 DIST_SOURCES = $(conjoin_SOURCES) tattach.c $(tattachmt_SOURCES) \
 	$(tflush_SOURCES) $(tgetxattr_SOURCES) $(tmkdir_SOURCES) \
-	$(tread_SOURCES) $(tsetxattr_SOURCES) $(tstat_SOURCES) \
-	$(twrite_SOURCES) txattr.c
+	$(tread_SOURCES) $(tremovexattr_SOURCES) $(tsetxattr_SOURCES) \
+	$(tstat_SOURCES) $(twrite_SOURCES) txattr.c
 ETAGS = etags
 CTAGS = ctags
 am__tty_colors = \
@@ -325,7 +335,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 TESTS_ENVIRONMENT = env "PATH_DIOD=$(top_builddir)/diod/diod" \
 	"PATH_DIODCONF=$(top_builddir)/etc/diod.conf" "./runtest"
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15 t16 t17
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15 t16 t17 t18 t19
 CLEANFILES = *.out *.diff *.diod
 AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
@@ -350,6 +360,7 @@ twrite_SOURCES = twrite.c $(common_sources)
 tflush_SOURCES = tflush.c $(common_sources)
 tgetxattr_SOURCES = tgetxattr.c $(common_sources)
 tsetxattr_SOURCES = tsetxattr.c $(common_sources)
+tremovexattr_SOURCES = tremovexattr.c $(common_sources)
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
 all: all-am
 
@@ -409,6 +420,9 @@ tmkdir$(EXEEXT): $(tmkdir_OBJECTS) $(tmkdir_DEPENDENCIES)
 tread$(EXEEXT): $(tread_OBJECTS) $(tread_DEPENDENCIES) 
 	@rm -f tread$(EXEEXT)
 	$(LINK) $(tread_OBJECTS) $(tread_LDADD) $(LIBS)
+tremovexattr$(EXEEXT): $(tremovexattr_OBJECTS) $(tremovexattr_DEPENDENCIES) 
+	@rm -f tremovexattr$(EXEEXT)
+	$(LINK) $(tremovexattr_OBJECTS) $(tremovexattr_LDADD) $(LIBS)
 tsetxattr$(EXEEXT): $(tsetxattr_OBJECTS) $(tsetxattr_DEPENDENCIES) 
 	@rm -f tsetxattr$(EXEEXT)
 	$(LINK) $(tsetxattr_OBJECTS) $(tsetxattr_LDADD) $(LIBS)
@@ -435,6 +449,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tgetxattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tmkdir.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tread.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tremovexattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsetxattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tstat.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/twrite.Po@am__quote@

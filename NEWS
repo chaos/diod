@@ -1,4 +1,14 @@
 =========================================================================
+Release Notes for DIOD version 1.0.19                         07 May 2013
+=========================================================================
+
+* Additional test coverage for xattrs:
+  - Verify that setxattr flags XATTR_CREATE, XATTR_REPLACE work.
+  - Verify that that removal of a nonexistent user xattr returns ENODATA
+
+* Fix failure of tests/user/t17 when SELinux is enabled (bug in the test)
+
+=========================================================================
 Release Notes for DIOD version 1.0.18                         06 May 2013
 =========================================================================
 
