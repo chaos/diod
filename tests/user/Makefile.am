@@ -9,6 +9,7 @@ check_PROGRAMS = \
 	tflush \
 	tgetxattr \
 	tsetxattr \
+	tremovexattr \
 	txattr
 
 TESTS_ENVIRONMENT = env
@@ -51,6 +52,7 @@ twrite_SOURCES = twrite.c $(common_sources)
 tflush_SOURCES = tflush.c $(common_sources)
 tgetxattr_SOURCES = tgetxattr.c $(common_sources)
 tsetxattr_SOURCES = tsetxattr.c $(common_sources)
+tremovexattr_SOURCES = tremovexattr.c $(common_sources)
 
 clean: clean-am
 	-rm -rf exp.d

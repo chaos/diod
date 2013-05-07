@@ -7,4 +7,8 @@ touch $PATH_EXPDIR/testfile
 ./tsetxattr "$@" testfile user.baz bazval 
 ./tgetxattr "$@" testfile
 ./tgetxattr "$@" testfile user.foo user.bar user.baz
+./tremovexattr "$@" testfile user.foo
+./tremovexattr "$@" testfile user.bar
+./tremovexattr "$@" testfile user.baz
+./tgetxattr "$@" testfile
 exit 0
