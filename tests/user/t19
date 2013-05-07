@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+touch $PATH_EXPDIR/testfile
+./tsetxattr "$@" testfile +user.foo fooval 
+./tsetxattr "$@" testfile /user.foo barval 
+./tsetxattr "$@" testfile +user.foo bazval && exit 1
+./tremovexattr "$@" testfile user.foo
+./tsetxattr "$@" testfile /user.foo bazval && exit 1
+exit 0
