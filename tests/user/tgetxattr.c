@@ -71,7 +71,14 @@ _listxattr (Npcfid *root, char *path)
     if (nlen < 0)
         goto done;
     for (i = 0, count = 0; i < len && buf[i] != '\0'; count++) {
-        msg ("%d:%.*s", count, (int)len - i, &buf[i]);
+        char *key = &buf[i];
+        int klen = (len - i);
+
+        /* N.B. Skip non-user.*, or we may see security.selinux
+         * (depending on host config) and fail test output comparison.
+         */
+        if (!strncmp (&buf[i], "user.", klen < 5 ? klen : 5))
+            msg ("%.*s", klen, key);
         while (i < len && buf[i] != '\0')
             i++;
         i++;
