@@ -92,7 +92,7 @@ main (int argc, char *argv[])
     uid_t uid = geteuid ();
     int topt = 0;
     Npcfsys *fs = NULL;
-    Npcfid *fid, *afid, *root;
+    Npcfid *fid, *afid = NULL, *root;
     int c, fd;
     char buf[80], *host, *p;
     hostlist_t hl;
@@ -174,7 +174,7 @@ main (int argc, char *argv[])
         errn_exit (np_rerror (), "clunk connections");
     if (npc_clunk (root) < 0)
         errn_exit (np_rerror (), "error clunking ctl");
-    if (npc_clunk (afid) < 0)
+    if (afid && npc_clunk (afid) < 0)
         errn_exit (np_rerror (), "error clunking afid");
     npc_finish (fs);
 
