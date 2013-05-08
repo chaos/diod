@@ -18,8 +18,6 @@
 #include <fcntl.h>
 #include <libgen.h>
 
-#include "diod_log.h"
-
 
 static void
 usage (void)
@@ -32,8 +30,6 @@ int
 main (int argc, char *argv[])
 {
     char *path;
-
-    diod_log_init (argv[0]);
 
     if (argc != 2)
         usage ();

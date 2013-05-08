@@ -170,7 +170,7 @@ static int
 _setup_one_inet (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
 {
     struct addrinfo hints, *res = NULL, *r;
-    int opt, error, fd;
+    int error, fd;
     int count = 0;
 
     memset (&hints, 0, sizeof(hints));
@@ -190,7 +190,6 @@ _setup_one_inet (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
             err ("socket: %s:%s", host, port);
             continue;
         }
-        opt = 1;
         (void)_enable_reuseaddr (fd);
         if (bind (fd, r->ai_addr, r->ai_addrlen) < 0) {
             err ("bind: %s:%s", host, port);
