@@ -49,3 +49,4 @@ t40	Run "scrub" (scrub < v2.5 O_SYNC; scrub >= v2.5 O_DIRECT+fsync)
 t41     Watch for fs/inode.c WARN_ON() triggered by rm -r dir hierarchy
 t42	Set/get user.* extended attributes
 t43	Set/get ACL attrs
+t44	Test atomic create with O_CREAT|O_EXCL

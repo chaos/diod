@@ -1,0 +1,5 @@
+#!/bin/bash  -e
+
+./tatomic $PATH_MNTDIR/testfile
+
+exit 0
