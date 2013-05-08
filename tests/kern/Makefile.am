@@ -9,7 +9,8 @@ check_PROGRAMS = \
 	tfcntl2 \
 	tfcntl3 \
 	tfsgid \
-	tcreate
+	tcreate \
+	tatomic
 
 SUBDIRS = fstest postmark fsx fsstress
 if DBENCH
@@ -23,7 +24,7 @@ TESTS_ENVIRONMENT += "./runtest"
 
 TESTS = t05 t06 t07 t12 t13 t14 t15 t16 t17 t18 t19 t22 \
 	t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 \
-	t34 t35 t36 t37 t38 t39 t40 t41 t42 t43
+	t34 t35 t36 t37 t38 t39 t40 t41 t42 t43 t44
 
 #XFAIL_TESTS =
 
@@ -52,5 +53,6 @@ tstat_SOURCES = tstat.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
 tcreate_SOURCES = tcreate.c $(common_sources)
+tatomic_SOURCES = tatomic.c $(common_sources)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest t00
