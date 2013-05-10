@@ -27,5 +27,10 @@ Force timeout after specified number of seconds (default no timeout).
 .TP
 .I "-l, --long"
 List stat information in addition to file names.
+.TP
+.I "-p, --privport"
+Connect from a socket bound to a port in the range of 512-1023,
+available to root only.  This can be used in conjunction with the
+\fIprivport\fR export option.
 .SH "SEE ALSO"
 diod (8)

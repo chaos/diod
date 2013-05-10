@@ -56,7 +56,7 @@
 #include "diod_sock.h"
 #include "diod_auth.h"
 
-#define OPTIONS "a:s:m:u:t:l"
+#define OPTIONS "a:s:m:u:t:lp"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -65,6 +65,7 @@ static const struct option longopts[] = {
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
     {"timeout", required_argument,      0, 't'},
+    {"privport",no_argument,            0, 'p'},
     {0, 0, 0, 0},
 };
 #else
@@ -86,6 +87,7 @@ usage (void)
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -t,--timeout SECS     give up after specified seconds\n"
+"   -p,--privport         connect from a privileged port (root user only)\n"
 );
     exit (1);
 }
@@ -100,6 +102,7 @@ main (int argc, char *argv[])
     int topt = 0;
     int lopt = 0;
     int fd, c;
+    int flags = 0;
 
     diod_log_init (argv[0]);
 
@@ -124,6 +127,9 @@ main (int argc, char *argv[])
             case 'l':   /* --long */
                 lopt = 1;
                 break;
+            case 'p':   /* --privport */
+                flags |= DIOD_SOCK_PRIVPORT;
+                break;
             default:
                 usage ();
         }
@@ -137,7 +143,7 @@ main (int argc, char *argv[])
     if (topt > 0)
         alarm (topt);
 
-    if ((fd = diod_sock_connect (server, 0)) < 0)
+    if ((fd = diod_sock_connect (server, flags)) < 0)
         exit (1);
 
     if (!aname)
@@ -251,7 +257,7 @@ lsdir (int i, int count, Npcfid *root, int lopt, char *path)
         if (dp) {
             if (lopt)
                 lsfile_l (dir, dp->d_name);
-            else
+            else if (strcmp (dp->d_name, ".") && strcmp (dp->d_name, ".."))
                 printf ("%s\n", dp->d_name);
         }
     } while (dp != NULL);
