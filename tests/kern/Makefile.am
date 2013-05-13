@@ -10,7 +10,8 @@ check_PROGRAMS = \
 	tfcntl3 \
 	tfsgid \
 	tcreate \
-	tatomic
+	tatomic \
+	pathwalk
 
 SUBDIRS = fstest postmark fsx fsstress
 if DBENCH
@@ -54,5 +55,6 @@ tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
 tcreate_SOURCES = tcreate.c $(common_sources)
 tatomic_SOURCES = tatomic.c $(common_sources)
+pathwalk_SOURCES = pathwalk.c $(common_sources)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest t00

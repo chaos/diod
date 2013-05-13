@@ -1,0 +1,8 @@
+#!/bin/bash  -e
+
+FILES=500
+./pathwalk $PATH_MNTDIR/pw --create --files $FILES --quiet
+./pathwalk $PATH_MNTDIR/pw --test --files $FILES --quiet
+./pathwalk $PATH_MNTDIR/pw --remove --files $FILES --quiet
+
+exit 0
