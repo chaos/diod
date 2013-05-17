@@ -1,4 +1,14 @@
 =========================================================================
+Release Notes for DIOD version 1.0.20                         17 May 2013
+=========================================================================
+
+* Fix diodshowmount segfault on exit with 'noauth'.
+
+* Add diodls --privport option.
+
+* Additional test coverage (atomic create test, pathwalk test)
+
+=========================================================================
 Release Notes for DIOD version 1.0.19                         07 May 2013
 =========================================================================
 
