@@ -5,13 +5,14 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[])
 {
         int fd;
 
         /* first create the file */
-        fd = open(argv[1], O_CREAT|O_WRONLY);
+        fd = open(argv[1], O_CREAT|O_WRONLY, 0644);
         if (fd < 0) {
                 perror("open");
                 return -1;
@@ -19,7 +20,7 @@ int main(int argc, char *argv[])
 	close(fd);
 
         /* Now opening same file with O_CREAT|O_EXCL should fail */
-        fd = open(argv[1], O_CREAT|O_EXCL);
+        fd = open(argv[1], O_CREAT|O_EXCL, 0644);
         if (fd < 0 && errno == EEXIST)
                 printf("test case pass\n");
         else
