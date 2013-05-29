@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+# read test disabled
+fsx/fsx -N 1000 -R $PATH_MNTDIR/testfile

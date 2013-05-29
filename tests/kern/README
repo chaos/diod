@@ -50,3 +50,8 @@ t41     Watch for fs/inode.c WARN_ON() triggered by rm -r dir hierarchy
 t42	Set/get user.* extended attributes
 t43	Set/get ACL attrs
 t44	Test atomic create with O_CREAT|O_EXCL
+t45	Pathwalk test
+t46	Set/get trusted.* extended attributes
+t47	Set/get security.* extended attributes
+t48	Run fsx with mmap read test enabled
+t49	Run fsx with mmap write test enabled

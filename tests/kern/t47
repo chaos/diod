@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+# setfattr fails with ENOTSUP
+
+cd $PATH_MNTDIR
+touch testfile
+
+setfattr -n security.foo -v fooval testfile
+setfattr -n security.bar -v barval testfile
+setfattr -n security.baz -v bazval testfile
+
+getfattr -m- -d testfile
+
+setfattr -x security.foo testfile
+setfattr -x security.bar testfile
+setfattr -x security.baz testfile
+
+getfattr -m- -d testfile
+
+exit 0

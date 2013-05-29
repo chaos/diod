@@ -1,0 +1,8 @@
+kconjoin: diodmount exited with rc=0
+mapped writes DISABLED
+truncating to largest ever: 0x3645e
+truncating to largest ever: 0x3f958
+truncating to largest ever: 0x3f9e9
+All operations completed A-OK!
+kconjoin: t48 exited with rc=0
+kconjoin: diod exited with rc=0

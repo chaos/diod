@@ -1,0 +1,20 @@
+#!/bin/bash -e
+
+cd $PATH_MNTDIR
+touch testfile
+
+setfattr -n trusted.foo -v fooval testfile
+setfattr -n trusted.bar -v barval testfile
+setfattr -n trusted.baz -v bazval testfile
+
+# ext4_xattr_trusted_list () returns empty if !capable(CAP_SYS_ADMIN)
+# diod dropps this capability.  Why does this work?
+getfattr -m- -d testfile
+
+setfattr -x trusted.foo testfile
+setfattr -x trusted.bar testfile
+setfattr -x trusted.baz testfile
+
+getfattr -m- -d testfile
+
+exit 0
