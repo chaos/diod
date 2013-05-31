@@ -1,4 +1,19 @@
 =========================================================================
+Release Notes for DIOD version 1.0.21                         31 May 2013
+=========================================================================
+
+* Require that "ctl" be explicitly exported.  This allows export options
+  such as "ro", "noauth", and "privport" to apply to the ctl synthetic
+  file system.
+
+* The "auth_required_ctl" config option introduced in 1.0.15 is now
+  deprecated.
+
+* Add test coverage for trusted.* and security.* xattr namespaces.
+
+* Add more mmap test coverage.
+
+=========================================================================
 Release Notes for DIOD version 1.0.20                         17 May 2013
 =========================================================================
 

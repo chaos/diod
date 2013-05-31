@@ -1,5 +1,5 @@
 Name: diod
-Version: 1.0.20
+Version: 1.0.21
 Release: 1
 
 Summary:  I/O forwarding server for 9P.
