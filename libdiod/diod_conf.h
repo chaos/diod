@@ -26,7 +26,6 @@
 #define DFLT_MAXMMAP            0
 #define DFLT_FOREGROUND         0
 #define DFLT_AUTH_REQUIRED      1
-#define DFLT_AUTH_REQUIRED_CTL  1
 #define DFLT_STATFS_PASSTHRU    0
 #define DFLT_USERDB             1
 #define DFLT_ALLSQUASH          0
@@ -65,10 +64,6 @@ void    diod_conf_set_foreground (int i);
 int     diod_conf_get_auth_required (void);
 int     diod_conf_opt_auth_required (void);
 void    diod_conf_set_auth_required (int i);
-
-int     diod_conf_get_auth_required_ctl (void);
-int     diod_conf_opt_auth_required_ctl (void);
-void    diod_conf_set_auth_required_ctl (int i);
 
 int     diod_conf_get_statfs_passthru (void);
 int     diod_conf_opt_statfs_passthru (void);

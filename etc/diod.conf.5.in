@@ -47,10 +47,6 @@ for a unique aname.  The default is 16 per aname.
 Allow clients to connect without authentication, i.e. without a valid
 MUNGE credential.
 .TP
-.I "auth_required_ctl = 0"
-Allow clients to connect to the \fIctl\fR synthetic file system
-without authentication, i.e. without a valid MUNGE credential.
-.TP
 .I "userdb = 0"
 This option disables password/group lookups.
 It allows any uid to attach and assumes gid=uid, and supplementary groups

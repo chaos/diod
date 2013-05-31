@@ -91,7 +91,6 @@ typedef struct {
     int          nwthreads;
     int          foreground;
     int          auth_required;
-    int          auth_required_ctl;
     int          statfs_passthru;
     int          userdb;
     int          allsquash;
@@ -179,7 +178,6 @@ diod_conf_init (void)
     config.nwthreads = DFLT_NWTHREADS;
     config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
-    config.auth_required_ctl = DFLT_AUTH_REQUIRED_CTL;
     config.statfs_passthru = DFLT_STATFS_PASSTHRU;
     config.userdb = DFLT_USERDB;
     config.allsquash = DFLT_ALLSQUASH;
@@ -272,16 +270,6 @@ void diod_conf_set_auth_required (int i)
 {
     config.auth_required = i;
     config.ro_mask |= RO_AUTH_REQUIRED;
-}
-
-/* auth_required_ctl - whether to accept unauthenticated attaches to 'ctl'
- */
-int diod_conf_get_auth_required_ctl (void) { return config.auth_required_ctl; }
-int diod_conf_opt_auth_required_ctl (void) { return config.ro_mask & RO_AUTH_REQUIRED_CTL; }
-void diod_conf_set_auth_required_ctl (int i)
-{
-    config.auth_required_ctl = i;
-    config.ro_mask |= RO_AUTH_REQUIRED_CTL;
 }
 
 /* statfs_passthru - whether statfs should return host f_type or V9FS_MAGIC
@@ -661,11 +649,6 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             config.auth_required = DFLT_AUTH_REQUIRED;
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
-        }
-        if (!(config.ro_mask & RO_AUTH_REQUIRED_CTL)) {
-            config.auth_required = DFLT_AUTH_REQUIRED_CTL;
-            _lua_getglobal_int (path, L, "auth_required_ctl",
-                                &config.auth_required_ctl);
         }
         if (!(config.ro_mask & RO_STATFS_PASSTHRU)) {
             config.statfs_passthru = DFLT_STATFS_PASSTHRU;

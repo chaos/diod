@@ -253,9 +253,6 @@ diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname)
     if (!diod_conf_get_auth_required ())
         return 0; /* auth disabled globally */
 
-    if (!np_strcmp(aname, "ctl") && !diod_conf_get_auth_required_ctl ())
-        return 0; /* auth disabled for this export (ctl) */
-
     if (diod_fetch_xflags (aname, &xflags) && (xflags & XFLAGS_NOAUTH))
         return 0; /* auth disabled for this export */
 
