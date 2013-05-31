@@ -11,6 +11,7 @@ and lists the specified files or directories.
 .TP
 .I "-a, --aname NAME"
 The file system name on the server (default ctl).
+Note that the "ctl" synthetic file system must be explicitly exported.
 .TP
 .I "-s, --server NAME"
 The server in IP[:PORT], HOST[:PORT], or /path/to/socket form

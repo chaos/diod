@@ -225,11 +225,26 @@ np_attach(Npreq *req, Npfcall *tc)
 			np_conn_set_authuser(conn, fid->user->uid);
 	}
 
-	if (srv->remapuser) { /* squash user handling */
-		if (srv->remapuser(fid, &tc->u.tattach.uname,
-				        tc->u.tattach.n_uname,
-				        &tc->u.tattach.aname) < 0) {
+	/* This is a hook for the server implementation to tweak
+	 * fid->user according to its policy.  For example,
+	 * it can remap all users to a "squash user".
+	 */
+	if (srv->remapuser) {
+		if (srv->remapuser(fid) < 0) {
 			np_logerr (srv, "%s: error remapping user", a);
+			goto error;
+		}
+	}
+	/* This is a hook for the server to check the aname against a
+	 * list of exports and deny the attach.  On success, as a side-effect,
+	 * it may set fid->flags, for example if an aname is exported read-only.
+	 * It will be called for "ctl" as well as for any paths that
+	 * the server implementation will subsequently receive an attach for.
+	 */
+	if (srv->exportok) {
+		if (!srv->exportok(fid)) {
+			np_logerr (srv, "%s: access denied for export", a);
+			np_uerror (EPERM);
 			goto error;
 		}
 	}
@@ -354,6 +369,7 @@ np_walk(Npreq *req, Npfcall *tc)
 		np_tpool_incref(fid->tpool);
 		newfid->tpool = fid->tpool;
 		newfid->type = fid->type;
+		newfid->flags = fid->flags;
 		if (!(newfid->aname = strdup (fid->aname))) {
 			np_uerror (ENOMEM);
 			np_logerr (conn->srv, "walk: out of memory");
@@ -477,6 +493,10 @@ np_write(Npreq *req, Npfcall *tc)
 			np_uerror(ENOSYS);
 		goto done;
 	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
+	}
 	if (tc->u.twrite.count + P9_IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		np_logerr (conn->srv, "write: count %u too large",
@@ -552,6 +572,10 @@ np_remove(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "remove: invalid fid");
 		goto done;
 	}
+	if (req->fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
+	}
 	if (req->fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -609,6 +633,13 @@ np_lopen(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "lopen: invalid fid");
 		goto done;
 	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		int flags = tc->u.tlopen.flags;
+		if ((flags & O_WRONLY) || (flags & O_RDWR)) {
+			np_uerror(EROFS);
+			goto done;
+		}
+	}
 	if (fid->type & P9_QTTMP) {
 		rc = np_ctl_lopen (fid, tc->u.tlopen.flags);
 	} else {
@@ -633,6 +664,10 @@ np_lcreate(Npreq *req, Npfcall *tc)
 	if (!fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "lcreate: invalid fid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -670,6 +705,10 @@ np_symlink(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "symlink: invalid fid");
 		goto done;
 	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
+	}
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -698,6 +737,10 @@ np_mknod(Npreq *req, Npfcall *tc)
 	if (!fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "mknod: invalid fid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -736,6 +779,10 @@ np_rename(Npreq *req, Npfcall *tc)
 	if (!(dfid = np_fid_find(req->conn, tc->u.trename.dfid))) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "rename: invalid dfid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -819,6 +866,10 @@ np_setattr(Npreq *req, Npfcall *tc)
 	if (!fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "setattr: invalid fid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -991,6 +1042,10 @@ np_fsync(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "fsync: invalid fid");
 		goto done;
 	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
+	}
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -1016,6 +1071,10 @@ np_lock(Npreq *req, Npfcall *tc)
 	if (!fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "lock: invalid fid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -1049,6 +1108,10 @@ np_getlock(Npreq *req, Npfcall *tc)
 	if (!fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "getlock: invalid fid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -1089,6 +1152,10 @@ np_link(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "link: invalid fid");
 		goto done;
 	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
+	}
 	if (fid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -1116,6 +1183,10 @@ np_mkdir(Npreq *req, Npfcall *tc)
 	if (!fid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "mkdir: invalid fid");
+		goto done;
+	}
+	if (fid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
 		goto done;
 	}
 	if (fid->type & P9_QTTMP) {
@@ -1154,6 +1225,10 @@ np_renameat (Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "renameat: invalid olddirfid");
 		goto done;
 	}
+	if (olddirfid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
+	}
 	if (olddirfid->type & P9_QTTMP) {
 		np_uerror (EPERM);
 		goto done;
@@ -1186,11 +1261,15 @@ np_unlinkat (Npreq *req, Npfcall *tc)
 	if (!dirfid) {
 		np_uerror (EIO);
 		np_logerr (req->conn->srv, "unlinkat: invalid dirfid");
-		return NULL;
+		goto done;
+	}
+	if (dirfid->flags & FID_FLAGS_ROFS) {
+		np_uerror(EROFS);
+		goto done;
 	}
 	if (dirfid->type & P9_QTTMP) {
 		np_uerror (EPERM);
-		return NULL;
+		goto done;
 	}
 	if (np_setfsid (req, dirfid->user, -1) < 0)
 		goto done;

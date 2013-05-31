@@ -102,6 +102,7 @@ listen = { "0.0.0.0:10002" }
 exports = {
 	"/home",
 	"/usr/global",
+	{ path="ctl", opts="ro,noauth" },
 	{ path="/usr/local", opts="ro" },
 }
 nwthreads = 8

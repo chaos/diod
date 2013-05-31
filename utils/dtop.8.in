@@ -13,6 +13,8 @@ Specify the lists of \fBdiod\fR servers that \fBdtop\fR monitors.
 Multiple hosts may be separated by commas, and host ranges may be included
 in the list, e.g. \fIx[1-3,42]\fR is equivalent to \fIx1,x2,x3,x42\fR.
 By default, \fBdtop\fR monitors \fIlocalhost\fR.
+Note that \fBdtop\fR uses the "ctl" synthetic file system.
+"ctl" must be explicitly exported.
 .TP
 .I "-P, --poll-period SEC"
 Set the polling period.  SEC may be a floating point number.

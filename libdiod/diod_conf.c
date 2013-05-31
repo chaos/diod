@@ -367,7 +367,7 @@ void diod_conf_validate_exports (void)
     if ((itr = list_iterator_create (config.exports)) == NULL)
         msg_exit ("out of memory");
     while ((x = list_next (itr))) {
-        if (*x->path != '/')
+        if (*x->path != '/' && strcmp (x->path, "ctl") != 0)
             msg_exit ("exports should begin with '/'");
         if (strstr (x->path, "/..") != 0)
             msg_exit ("exports should not contain '/..'"); /* FIXME */

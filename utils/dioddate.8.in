@@ -12,7 +12,8 @@ prints the server time on stdout.
 .LP
 This is a simple way to obtain rough time synchronization before
 issuing a MUNGE-authenticated attach request, for example in a bootstrap
-environment where \fIauth_required_ctl = 0\fR is configured.
+environment where the "ctl" synthetic file system is exported with
+the "noauth" option.
 .SH OPTIONS
 .TP
 .I "-s, --server NAME"

@@ -8,6 +8,7 @@ diodload \- create artificial diod load
 connects to a \fBdiod\fR server and issues requests.
 Unless changed with \fI-g\fR, each thread copies from
 \fIctl:zero\fR to \fIctl:null\fR.
+Note that the "ctl" synthetic file system must be explicitly exported.
 .SH OPTIONS
 .TP
 .I "-s, --server NAME"

@@ -135,8 +135,8 @@ Npfcall     *diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid);
 Npfcall     *diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name);
 Npfcall     *diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size,
                                u32 flags);
-int          diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname,
-                             Npstr *aname);
+int          diod_remapuser (Npfid *fid);
+int          diod_exportok (Npfid *fid);
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 char        *diod_get_path (Npfid *fid);
 char        *diod_get_files (char *name, void *a);
@@ -148,6 +148,7 @@ diod_init (Npsrv *srv)
     srv->fiddestroy = diod_fiddestroy;
     srv->logmsg = diod_log_msg;
     srv->remapuser = diod_remapuser;
+    srv->exportok = diod_exportok;
     srv->auth_required = diod_auth_required;
     srv->auth = diod_auth_functions;
     srv->get_path = diod_get_path;
@@ -225,7 +226,7 @@ _dirent2qid (struct dirent *d, Npqid *qid)
 }
 
 int
-diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname, Npstr *aname)
+diod_remapuser (Npfid *fid)
 {
     int ret = 0;
 
@@ -243,6 +244,22 @@ diod_remapuser (Npfid *fid, Npstr *uname, u32 n_uname, Npstr *aname)
     }
 done:
     return ret;
+}
+
+int
+diod_exportok (Npfid *fid)
+{
+    int xflags;
+
+    if (!fid || !fid->aname || strlen (fid->aname) == 0)
+        return 0;
+    if (fid->aname[0] != '/' && strcmp (fid->aname, "ctl") != 0)
+        return 0;
+    if (!diod_match_exports (fid->aname, fid->conn, fid->user, &xflags))
+        return 0;
+    if ((xflags & DIOD_FID_FLAGS_ROFS))
+        fid->flags |= FID_FLAGS_ROFS;
+    return 1;
 }
 
 int
@@ -271,10 +288,6 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
     struct stat sb;
     int xflags;
 
-    if (aname->len == 0 || *aname->str != '/') {
-        np_uerror (EPERM);
-        goto error;
-    }
     if (!(f = diod_fidalloc (fid, aname))) {
         np_uerror (ENOMEM);
         goto error;
@@ -285,18 +298,16 @@ diod_attach (Npfid *fid, Npfid *afid, Npstr *aname)
             goto error;
         }
     }
-    if (!diod_match_exports (path_s (f->path), fid->conn, fid->user, &xflags))
-        goto error;
-    if ((xflags & XFLAGS_RO))
-        f->flags |= DIOD_FID_FLAGS_ROFS;
-    if ((xflags & XFLAGS_SHAREFD))
-        f->flags |= DIOD_FID_FLAGS_SHAREFD;
+    if (diod_fetch_xflags (aname, &xflags)) {
+        if ((xflags & XFLAGS_SHAREFD))
+            f->flags |= DIOD_FID_FLAGS_SHAREFD;
+    }
     if (stat (path_s (f->path), &sb) < 0) { /* OK to follow symbolic links */
         np_uerror (errno);
         goto error;
     }
     /* N.B. removed S_ISDIR (sb.st_mode) || return ENOTDIR check.
-     * Allow a regular file or a blcok device to be exported.
+     * Allow a regular file or a block device to be exported.
      */
     diod_ustat2qid (&sb, &qid);
     if ((ret = np_create_rattach (&qid)) == NULL) {
@@ -488,10 +499,6 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
         np_uerror (EBADF);
         goto error;
     }
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (f->flags & DIOD_FID_FLAGS_XATTR)
         n = xattr_pwrite (f->xattr, data, count, offset);
     else
@@ -549,10 +556,6 @@ diod_remove (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (remove (path_s (f->path)) < 0) {
         np_uerror (errno);
         goto error_quiet;
@@ -653,12 +656,6 @@ diod_lopen (Npfid *fid, u32 flags)
     Fid *f = fid->aux;
     Npfcall *res;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS) && ((flags & O_WRONLY)
-                                          || (flags & O_RDWR))) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
-
     flags = _remap_oflags (flags);
 
     if (flags & O_DIRECT) {
@@ -700,11 +697,6 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
     Fid *f = fid->aux;
     Npfcall *ret;
     Path opath = NULL;
-
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
 
     flags = _remap_oflags (flags);
 
@@ -763,10 +755,6 @@ diod_symlink(Npfid *fid, Npstr *name, Npstr *symtgt, u32 gid)
     Npqid qid;
     struct stat sb;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!(npath = path_append (srv, f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
@@ -811,10 +799,6 @@ diod_mknod(Npfid *fid, Npstr *name, u32 mode, u32 major, u32 minor, u32 gid)
     Npqid qid;
     struct stat sb;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!(npath = path_append (srv, f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
@@ -854,10 +838,6 @@ diod_rename (Npfid *fid, Npfid *dfid, Npstr *name)
     Path npath = NULL;
     int renamed = 0;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!(npath = path_append (srv, d->path, name))) {
         np_uerror (ENOMEM);
         goto error;
@@ -968,10 +948,6 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     Fid *f = fid->aux;
     int ctime_updated = 0;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if ((valid & P9_ATTR_MODE)) { /* N.B. derefs symlinks */
         if (chmod (path_s (f->path), mode) < 0) {
             np_uerror(errno);
@@ -1175,10 +1151,6 @@ diod_fsync (Npfid *fid)
     Fid *f = fid->aux;
     Npfcall *ret;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!f->ioctx) {
         msg ("diod_fsync: fid is not open");
         np_uerror (EBADF);
@@ -1214,10 +1186,6 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
     Npfcall *ret;
     u8 status = P9_LOCK_ERROR;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (flags & ~P9_LOCK_FLAGS_BLOCK) { /* only one valid flag for now */
         np_uerror (EINVAL);             /*  (which we ignore) */
         goto error;
@@ -1257,7 +1225,6 @@ error:
     errn (np_rerror (), "diod_lock %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn),
           path_s (f->path));
-error_quiet:
     return NULL;
 }
 
@@ -1270,10 +1237,6 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
     char *cid = NULL;
     int ftype;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!f->ioctx) {
         msg ("diod_getlock: fid is not open");
         np_uerror (EBADF);
@@ -1300,7 +1263,6 @@ error:
     errn (np_rerror (), "diod_getlock %s@%s:%s",
           fid->user->uname, np_conn_get_client_id (fid->conn),
           path_s (f->path));
-error_quiet:
     if (cid)
         free (cid);
     return NULL;
@@ -1315,10 +1277,6 @@ diod_link (Npfid *dfid, Npfid *fid, Npstr *name)
     Fid *df = dfid->aux;
     Path npath = NULL;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!(npath = path_append (srv, df->path, name))) {
         np_uerror (ENOMEM);
         goto error;
@@ -1354,10 +1312,6 @@ diod_mkdir (Npfid *fid, Npstr *name, u32 mode, u32 gid)
     Npqid qid;
     struct stat sb;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (!(npath = path_append (srv, f->path, name))) {
         np_uerror (ENOMEM);
         goto error;
@@ -1426,10 +1380,6 @@ diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size, u32 flags)
     Fid *f = fid->aux;
     Npfcall *ret = NULL;
 
-    if ((f->flags & DIOD_FID_FLAGS_ROFS)) {
-        np_uerror (EROFS);
-        goto error_quiet;
-    }
     if (xattr_create (fid, name, attr_size, flags) < 0)
         goto error;
     f->flags |= DIOD_FID_FLAGS_XATTR;
@@ -1443,7 +1393,6 @@ error:
     errn (np_rerror (), "diod_xattrcreate %s@%s:%s/%.*s",
           fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           name->len, name->str);
-error_quiet:
     return NULL;
 }
 

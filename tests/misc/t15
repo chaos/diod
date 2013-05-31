@@ -12,7 +12,7 @@ bg_test ()
 TEST=$(basename $0 | cut -d- -f1)
 sockfile=$(mktemp)
 bg_test $sockfile &
-./memcheck ../../diod/diod -c /dev/null -n -f -e /tmp -l $sockfile -s >$TEST.out 2>&1
+./memcheck ../../diod/diod -c /dev/null -n -f -e ctl -l $sockfile -s >$TEST.out 2>&1
 diff $TEST.exp $TEST.out >$TEST.diff
 rm -f $sockfile
 wait %1

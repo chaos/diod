@@ -53,6 +53,7 @@ like NFS, or it can be specified with this option.
 \fBdiod\fR will not allow an attach to an empty aname.
 \fBdiod\fR has a built-in synthetic control file system that can be
 mounted with aname of \fIctl\fR.
+Note that "ctl" must be explicitly exported.
 .TP
 .I "uname=name"
 The user name to authenticate to the \fBdiod\fR server.

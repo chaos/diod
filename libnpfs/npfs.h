@@ -113,7 +113,10 @@ struct Npfcall {
 	} u;
 };
 
+/* Values for fid->flags
+ */
 #define FID_FLAGS_ZOMBIE	0x01
+#define FID_FLAGS_ROFS		0x02
 
 struct Npfid {
 	int		magic;
@@ -284,8 +287,9 @@ struct Npsrv {
 	Npfile*		ctlroot;
 	void*		usercache;
 	void		(*logmsg)(const char *, va_list);
-	int		(*remapuser)(Npfid *fid, Npstr *, u32, Npstr *);
+	int		(*remapuser)(Npfid *fid);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
+	int		(*exportok)(Npfid *fid);
 	char*		(*get_path)(Npfid *fid);
 	Npauth*		auth;
 	int		flags;

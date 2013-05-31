@@ -8,6 +8,8 @@ diodshowmount \- list diod server connections
 connects to a \fBdiod\fR server and displays a list of
 clients connected to that server in hostlist format, with domain name
 suffixes stripped.
+With no options, it reads "ctl:version" from "localhost".
+Note that the "ctl" synthetic file system must be explicitly exported.
 .SH OPTIONS
 .TP
 .I "-s, --server NAME"

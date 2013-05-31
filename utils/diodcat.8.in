@@ -10,7 +10,8 @@ and concatenates the contents of the specified files on stdout.
 .SH OPTIONS
 .TP
 .I "-a, --aname NAME"
-The file system name on the server (default ctl).
+The file system name on the server (default "ctl").
+Note that the "ctl" synthetic file system must be explicitly exported.
 .TP
 .I "-s, --server NAME"
 The server in IP[:PORT], HOST[:PORT], or /path/to/socket form

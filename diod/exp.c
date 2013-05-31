@@ -108,8 +108,8 @@ _match_export_path (Export *x, char *path)
     int xlen = strlen (x->path);
     int plen = strlen (path);
 
-    /* an export of / matches all */
-    if (strcmp (x->path, "/") == 0)
+    /* an export of / matches all but "ctl" */
+    if (strcmp (x->path, "/") == 0 && strcmp (path, "ctl") != 0)
         return 1;
     /* drop trailing slashes from export */
     while (xlen > 0 && x->path[xlen - 1] == '/')
@@ -157,6 +157,7 @@ done:
 }
 
 /* Called from attach to determine if aname is valid for user/conn.
+ * (Now via fcall.c::np_attach, not through diod_attach)
  */
 int
 diod_match_exports (char *path, Npconn *conn, Npuser *user, int *xfp)
@@ -199,7 +200,6 @@ done:
 }
 
 /* Retrieve export flags for the given aname.
- * We call this to determine if auth is disabled for a given mount.
  * Don't set np_uerror() here, just return 1 on match, 0 otherwise.
  */
 int diod_fetch_xflags (Npstr *aname, int *xfp)
