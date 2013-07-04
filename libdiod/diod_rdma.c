@@ -152,7 +152,7 @@ diod_rdma_accept_one (Npsrv *srv, diod_rdma_t rdma)
             msg ("rdma: connection request");
             trans = np_rdmatrans_create(cmid, rdma_qdepth, rdma_maxmsize);
             if (trans) {
-                conn = np_conn_create(srv, trans, "rdma");
+                conn = np_conn_create(srv, trans, "rdma", 0);
                 cmid->context = conn;
                 np_srv_add_conn(srv, conn);
             } else
