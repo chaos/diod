@@ -940,6 +940,7 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 	np_tpool_incref(fid->tpool);
 	attrfid->tpool = fid->tpool;
 	attrfid->type = fid->type;
+	attrfid->flags = fid->flags;
 	if (!(attrfid->aname = strdup (fid->aname))) {
 		np_uerror (ENOMEM);
 		np_logerr (conn->srv, "xattrwalk: out of memory");
