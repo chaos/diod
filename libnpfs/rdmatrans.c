@@ -120,7 +120,7 @@ np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize)
 		goto error;
 
 	rdma->next_buf = 0;
-	rdma->snd_mr = ibv_reg_mr(rdma->pd, rdma->snd_buf, rdma->msize * q_depth * 2, 0);
+	rdma->snd_mr = ibv_reg_mr(rdma->pd, rdma->snd_buf, rdma->msize * q_depth, 0);
 	if (!rdma->snd_mr)
 		goto error;
 
