@@ -56,7 +56,7 @@
 #include "diod_log.h"
 #include "diod_rdma.h"
 
-const uint16_t rdma_port = 564;
+const uint16_t rdma_port = 5640;
 const int rdma_qdepth = 64;
 const int rdma_maxmsize = 65536;
 
