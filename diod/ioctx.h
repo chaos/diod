@@ -18,6 +18,7 @@ int     ioctx_readdir_r(IOCtx ioctx, struct dirent *entry,
                         struct dirent **result);
 void    ioctx_rewinddir (IOCtx ioctx);
 void    ioctx_seekdir (IOCtx ioctx, long offset);
+long    ioctx_telldir (IOCtx ioctx);
 int     ioctx_fsync (IOCtx ioctx);
 int     ioctx_flock (IOCtx ioctx, int operation);
 int     ioctx_testlock (IOCtx ioctx, int operation);

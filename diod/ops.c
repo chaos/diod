@@ -1134,8 +1134,15 @@ _copy_dirent_linux (Fid *f, struct dirent *dp, u8 *buf, u32 buflen)
     } else  {
         _dirent2qid (dp, &qid);
     }
+#ifndef __MACH__
     ret = np_serialize_p9dirent(&qid, dp->d_off, dp->d_type,
                                       dp->d_name, buf, buflen);
+#else
+    long diroffset;
+    diroffset = ioctx_telldir(f->ioctx);
+    ret = np_serialize_p9dirent(&qid, diroffset, dp->d_type,
+                                      dp->d_name, buf, buflen);
+#endif
 done:
     return ret;
 }
