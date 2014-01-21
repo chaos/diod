@@ -45,7 +45,9 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/resource.h>
+#ifndef __MACH__
 #include <sys/prctl.h>
+#endif
 #include <string.h>
 #include <signal.h>
 #include <pthread.h>
@@ -322,8 +324,10 @@ _setrlimit (void)
             err_exit ("setrlimit RLIMIT_NOFILE");
 
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+#ifndef __MACH__
     if (setrlimit (RLIMIT_LOCKS, &r) < 0)
         err_exit ("setrlimit RLIMIT_LOCKS");
+#endif
 
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_CORE, &r) < 0)
@@ -430,11 +434,28 @@ _service_loop (void *arg)
             ss.fds[i].events = POLLIN;
             ss.fds[i].revents = 0;
         }
+#ifndef __MACH__
         if (ppoll (ss.fds, ss.nfds, NULL, &sigs) < 0) {
             if (errno == EINTR)
                 continue;
             err_exit ("ppoll");
         }
+#else
+        sigset_t oset;
+        int val;
+        val = pthread_sigmask(SIG_SETMASK, &sigs, &oset);
+        if (val) {
+            errno = val;
+            err_exit("ppoll");
+        }
+        val = poll (ss.fds, ss.nfds, -1);
+        pthread_sigmask(SIG_SETMASK, &oset, NULL);
+        if (val < 0) {
+            if (errno == EINTR)
+                continue;
+            err_exit ("ppoll");
+        }
+#endif
         for (i = 0; i < ss.nfds; i++) {
             if ((ss.fds[i].revents & POLLIN)) {
                 diod_sock_accept_one (ss.srv, ss.fds[i].fd);
@@ -618,8 +639,10 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
      * Set it here, then maintain it in user.c::np_setfsid () as uids are
      * further manipulated.
      */
+#ifndef __MACH__
     if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         err_exit ("prctl PR_SET_DUMPABLE failed");
+#endif
 
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
