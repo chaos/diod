@@ -88,6 +88,10 @@ done:
  * TCP_KEEPINTVL    75      120     interval between keepalives (s)
  * TCP_KEEPCNT      9       9       number of keepalive attempts
  */
+#ifdef __MACH__
+#define SOL_TCP IPPROTO_TCP
+#define TCP_KEEPIDLE TCP_KEEPALIVE
+#endif
 static int
 _enable_keepalive(int fd)
 {
