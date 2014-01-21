@@ -38,12 +38,23 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
+#ifndef __MACH__
 #include <attr/xattr.h>
+#else
+#include <sys/xattr.h>
+#endif
 #include <sys/stat.h>
+#ifndef __MACH__
 #include <sys/statfs.h>
+#else
+#include <sys/param.h>
+#include <sys/mount.h>
+#endif
 #include <sys/socket.h>
 #include <sys/time.h>
+#ifndef __MACH__
 #include <sys/fsuid.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>

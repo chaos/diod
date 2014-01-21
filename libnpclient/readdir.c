@@ -131,7 +131,9 @@ npc_readdir_r (Npcfid *fid, struct dirent *entry, struct dirent **result)
 				       fid->buf_len   - fid->buf_used);
 	if (res == 0)
 		return EIO;
+#ifndef __MACH__
 	entry->d_off = offset;
+#endif
 	entry->d_type = type;
 	entry->d_ino = qid.path;
 	//entry->d_reclen

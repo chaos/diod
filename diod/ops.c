@@ -58,6 +58,9 @@
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
 #define _BSD_SOURCE         /* makedev, st_atim etc */
 #define _ATFILE_SOURCE      /* utimensat */
+#ifdef __MACH__
+#define _DARWIN_C_SOURCE    /* fs stuff */
+#endif
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -69,10 +72,17 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#ifndef __MACH__
 #include <sys/statfs.h>
+#else
+#include <sys/param.h>
+#include <sys/mount.h>
+#endif
 #include <sys/socket.h>
 #include <sys/time.h>
+#ifndef __MACH__
 #include <sys/fsuid.h>
+#endif
 #include <sys/mman.h>
 #include <pwd.h>
 #include <grp.h>

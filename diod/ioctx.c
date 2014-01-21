@@ -24,6 +24,10 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#ifdef __MACH__
+#define _DARWIN_C_SOURCE    /* fs stuff */
+#define _XOPEN_SOURCE 600   /* pread/pwrite */
+#endif
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -32,13 +36,21 @@
 #include <stdint.h>
 #include <pthread.h>
 #include <errno.h>
+#include <dirent.h>
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#ifndef __MACH__
 #include <sys/statfs.h>
+#else
+#include <sys/param.h>
+#include <sys/mount.h>
+#endif
 #include <sys/socket.h>
 #include <sys/time.h>
+#ifndef __MACH__
 #include <sys/fsuid.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>

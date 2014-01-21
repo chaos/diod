@@ -33,13 +33,17 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#ifdef __linux__
 #include <sys/fsuid.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 #if HAVE_LIBCAP
 #include <sys/capability.h>
 #endif
+#ifdef __linux__
 #include <sys/prctl.h>
+#endif
 
 #include "9p.h"
 #include "npfs.h"
