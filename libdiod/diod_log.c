@@ -108,7 +108,9 @@ _rmatch (int n, match_t *m)
 void
 diod_log_init (char *p)
 {
-    prog = basename (p);
+    if (prog != NULL)
+        free(prog);
+    prog = strdup(basename (p));
     logf = stderr;
     openlog (prog, LOG_NDELAY | LOG_PID, syslog_facility);
 }
