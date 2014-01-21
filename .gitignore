@@ -1,6 +1,7 @@
 Makefile
 Makefile.in
 configure
+config.h.in
 tests/*/*.log
 tests/*/*.trs
 tests/*/*.out
