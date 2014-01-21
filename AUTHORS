@@ -5,3 +5,6 @@ Work by others imported and modified for diod:
 (bugs may not be the original authors' faults)
 - liblsd by Chris Dunlap et al
 - libnpfs, libnpclient by Latchesar Ionkov et al
+
+OSX Portability thunked in by:
+Bryon Roché kain at kain dot org

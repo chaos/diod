@@ -1,0 +1,5 @@
+* Implement a diodmount, perhaps.
+* Fix more tests
+* Implement fsuid stuff
+* Implement dumpable control stuff
+* Fix diod_conf_get_mounts 
