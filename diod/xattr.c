@@ -164,6 +164,13 @@ xattr_pread (Xattr x, void *buf, size_t count, off_t offset)
     return len;
 }
 
+#ifdef __MACH__
+#define lgetxattr(path, name, value, size) getxattr(path, name, value, size, 0, XATTR_NOFOLLOW)
+#define lsetxattr(path, name, value, size, options) setxattr(path, name, value, size, 0, XATTR_NOFOLLOW | options )
+#define llistxattr(path, name, size) listxattr(path, name, size, XATTR_NOFOLLOW)
+#define lremovexattr(path, name) removexattr(path, name, XATTR_NOFOLLOW)
+#endif
+
 static int
 _lgetxattr (Xattr x, const char *path)
 {
