@@ -1275,6 +1275,9 @@ np_unlinkat (Npreq *req, Npfcall *tc)
 	}
 	if (np_setfsid (req, dirfid->user, -1) < 0)
 		goto done;
+#ifdef __MACH__
+#define EOPNOTSUPP 95 // from linux asm-generic uapi
+#endif
 	if (!req->conn->srv->unlinkat) {
 		np_uerror (EOPNOTSUPP); /* v9fs expects this not ENOSYS for this op */
 		goto done;
