@@ -63,6 +63,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdint.h>
 #include <pthread.h>
 #include <errno.h>
