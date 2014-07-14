@@ -37,6 +37,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <limits.h>
+#include <sys/stat.h>
 
 #include "9p.h"
 #include "npfs.h"

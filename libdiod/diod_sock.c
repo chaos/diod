@@ -37,7 +37,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
-#include <sys/signal.h>
+#include <signal.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <string.h>

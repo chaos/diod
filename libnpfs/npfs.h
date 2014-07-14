@@ -21,6 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <sys/types.h>
+
 typedef struct p9_str Npstr;
 typedef struct p9_qid Npqid;
 typedef struct Npfile Npfile;
