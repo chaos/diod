@@ -1,7 +1,5 @@
 check_PROGRAMS = \
 	tfcntl \
-	tsetfsuid \
-	tsetfsuidsupp \
 	tsetuid \
 	tsuppgrp \
 	topt \
@@ -12,10 +10,19 @@ check_PROGRAMS = \
 	tnpsrv2 \
 	tnpsrv3 \
 	tlua \
-	tcap \
 	tfidpool
 
-TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14 t15
+if LINUX
+check_PROGRAMS += \
+	tcap \
+	tsetfsuid \
+	tsetfsuidsupp
+endif
+
+TESTS = t02 t03 t04 t05 t06 t07 t08 t09 t10 t12 t13 t14 t15
+if LINUX
+TESTS += t00 t01 t11
+endif
 # XFAIL_TESTS = t12
 
 CLEANFILES = *.out *.diff

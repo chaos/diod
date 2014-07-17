@@ -48,7 +48,9 @@
 #include <stdarg.h>
 #include <pthread.h>
 #include <unistd.h>
+#ifndef __MACH__
 #include <sys/fsuid.h>
+#endif
 #include <string.h>
 #include <pwd.h>
 #include <grp.h>

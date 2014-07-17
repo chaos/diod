@@ -107,6 +107,11 @@ npc_fstat (Npcfid *fid, struct stat *sb)
 			   &blksize, &blocks, &atime_sec, &atime_nsec,
 			   &mtime_sec, &mtime_nsec, &ctime_sec, &ctime_nsec,
 			   &btime_sec, &btime_nsec, &gen, &data_version);
+#ifdef __MACH__
+#define st_atim st_atimespec
+#define st_mtim st_mtimespec
+#define st_ctim st_ctimespec
+#endif
 	if (ret == 0) {
 		sb->st_dev = 0;
 		sb->st_ino = qid.path;
@@ -119,12 +124,17 @@ npc_fstat (Npcfid *fid, struct stat *sb)
 		sb->st_blksize = blksize;
 		sb->st_blocks = blocks;
 		sb->st_atime = atime_sec;
-		sb->st_atim.tv_nsec = atime_nsec;
 		sb->st_mtime = mtime_sec;
-		sb->st_mtim.tv_nsec = mtime_nsec;
 		sb->st_ctime = ctime_sec;
+		sb->st_atim.tv_nsec = atime_nsec;
+		sb->st_mtim.tv_nsec = mtime_nsec;
 		sb->st_ctim.tv_nsec = ctime_nsec;
 	}
+#ifdef __MACH__
+#undef st_atim
+#undef st_mtim
+#undef st_ctim
+#endif
 	return ret;
 }
 

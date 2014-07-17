@@ -33,6 +33,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <inttypes.h>
+#include <pthread.h>
 
 #include "9p.h"
 #include "npfs.h"

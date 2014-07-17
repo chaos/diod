@@ -3,7 +3,10 @@ AM_CFLAGS = @GCCWARN@
 AM_CPPFLAGS = \
 	-I../libnpfs -I../liblsd -I../libdiod -I../libnpclient
 
-sbin_PROGRAMS = diodmount diodcat dtop diodload diodls diodshowmount dioddate
+sbin_PROGRAMS = diodcat dtop diodload diodls diodshowmount dioddate
+if LINUX
+sbin_PROGRAMS += diodmount 
+endif
 
 common_ldadd = \
 	$(top_builddir)/libdiod/libdiod.a \

@@ -38,12 +38,23 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
+#ifndef __MACH__
 #include <attr/xattr.h>
+#else
+#include <sys/xattr.h>
+#endif
 #include <sys/stat.h>
+#ifndef __MACH__
 #include <sys/statfs.h>
+#else
+#include <sys/param.h>
+#include <sys/mount.h>
+#endif
 #include <sys/socket.h>
 #include <sys/time.h>
+#ifndef __MACH__
 #include <sys/fsuid.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
@@ -152,6 +163,13 @@ xattr_pread (Xattr x, void *buf, size_t count, off_t offset)
     memcpy (buf, x->buf + offset, len);
     return len;
 }
+
+#ifdef __MACH__
+#define lgetxattr(path, name, value, size) getxattr(path, name, value, size, 0, XATTR_NOFOLLOW)
+#define lsetxattr(path, name, value, size, options) setxattr(path, name, value, size, 0, XATTR_NOFOLLOW | options )
+#define llistxattr(path, name, size) listxattr(path, name, size, XATTR_NOFOLLOW)
+#define lremovexattr(path, name) removexattr(path, name, XATTR_NOFOLLOW)
+#endif
 
 static int
 _lgetxattr (Xattr x, const char *path)

@@ -58,6 +58,9 @@
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
 #define _BSD_SOURCE         /* makedev, st_atim etc */
 #define _ATFILE_SOURCE      /* utimensat */
+#ifdef __MACH__
+#define _DARWIN_C_SOURCE    /* fs stuff */
+#endif
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -70,10 +73,17 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#ifndef __MACH__
 #include <sys/statfs.h>
+#else
+#include <sys/param.h>
+#include <sys/mount.h>
+#endif
 #include <sys/socket.h>
 #include <sys/time.h>
+#ifndef __MACH__
 #include <sys/fsuid.h>
+#endif
 #include <sys/mman.h>
 #include <pwd.h>
 #include <grp.h>
@@ -590,14 +600,25 @@ diod_statfs (Npfid *fid)
         goto error;
     }
 
+#ifndef __MACH__
     fsid = (u64)sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
+#else
+    fsid = (u64)sb.f_fsid.val[0] | ((u64)sb.f_fsid.val[1] << 32);
+#endif
     if (diod_conf_get_statfs_passthru ())
         type = sb.f_type;
 
+#ifndef __MACH__
     if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
                                   sb.f_ffree, fsid,
                                   sb.f_namelen))) {
+#else
+    if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
+                                  sb.f_bfree, sb.f_bavail, sb.f_files,
+                                  sb.f_ffree, fsid,
+                                  PATH_MAX))) {
+#endif
         np_uerror (ENOMEM);
         goto error;
     }
@@ -633,11 +654,20 @@ _remap_oflags (int flags)
         { O_NONBLOCK,   P9_DOTL_NONBLOCK },
         { O_DSYNC,      P9_DOTL_DSYNC },
         { FASYNC,       P9_DOTL_FASYNC },
+#ifndef __MACH__
         { O_DIRECT,     P9_DOTL_DIRECT },
         { O_LARGEFILE,  P9_DOTL_LARGEFILE },
+#else
+        { 0,     P9_DOTL_DIRECT },
+        { 0,  P9_DOTL_LARGEFILE },
+#endif
         { O_DIRECTORY,  P9_DOTL_DIRECTORY },
         { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
+#ifndef __MACH__
         { O_NOATIME,    P9_DOTL_NOATIME },
+#else
+        { 0,    P9_DOTL_NOATIME },
+#endif
         { O_CLOEXEC,    P9_DOTL_CLOEXEC },
         { O_SYNC,       P9_DOTL_SYNC},
     };
@@ -659,10 +689,12 @@ diod_lopen (Npfid *fid, u32 flags)
 
     flags = _remap_oflags (flags);
 
+#ifndef __MACH__
     if (flags & O_DIRECT) {
         np_uerror (EINVAL); /* O_DIRECT not allowed - see issue 110 */
         goto error_quiet;
     }
+#endif
     if ((flags & O_CREAT)) /* can't happen? */
         flags &= ~O_CREAT; /* clear and allow to fail with ENOENT */
 
@@ -701,10 +733,12 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
 
     flags = _remap_oflags (flags);
 
+#ifndef __MACH__
     if (flags & O_DIRECT) {
         np_uerror (EINVAL); /* O_DIRECT not allowed - see issue 110 */
         goto error_quiet;
     }
+#endif
     if (!(flags & O_CREAT)) /* can't happen? */
         flags |= O_CREAT;
 
@@ -913,6 +947,11 @@ diod_getattr(Npfid *fid, u64 request_mask)
         }
     }
     diod_ustat2qid (&sb, &qid);
+#ifdef __MACH__
+#define st_atim st_atimespec
+#define st_mtim st_mtimespec
+#define st_ctim st_ctimespec
+#endif
     if (!(ret = np_create_rgetattr(request_mask, &qid,
                                     sb.st_mode,
                                     sb.st_uid,
@@ -929,6 +968,11 @@ diod_getattr(Npfid *fid, u64 request_mask)
                                     sb.st_ctim.tv_sec,
                                     sb.st_ctim.tv_nsec,
                                     0, 0, 0, 0))) {
+#ifdef __MACH__
+#undef st_atim
+#undef st_mtim
+#undef st_ctim
+#endif
         np_uerror (ENOMEM);
         goto error;
     }
@@ -1000,6 +1044,11 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             goto error_quiet;
         }
 #else /* HAVE_UTIMENSAT */
+#ifdef __MACH__
+#define st_atim st_atimespec
+#define st_mtim st_mtimespec
+#define st_ctim st_ctimespec
+#endif
         struct timeval tv[2], now, *tvp;
         struct stat sb;
         if ((valid & P9_ATTR_ATIME) && !(valid & P9_ATTR_ATIME_SET)
@@ -1037,6 +1086,11 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             }
             tvp = tv;
         }
+#ifdef __MACH__
+#undef st_atim
+#undef st_mtim
+#undef st_ctim
+#endif
         if (utimes (path_s (f->path), tvp) < 0) {
             np_uerror(errno);
             goto error_quiet;
@@ -1081,8 +1135,15 @@ _copy_dirent_linux (Fid *f, struct dirent *dp, u8 *buf, u32 buflen)
     } else  {
         _dirent2qid (dp, &qid);
     }
+#ifndef __MACH__
     ret = np_serialize_p9dirent(&qid, dp->d_off, dp->d_type,
                                       dp->d_name, buf, buflen);
+#else
+    long diroffset;
+    diroffset = ioctx_telldir(f->ioctx);
+    ret = np_serialize_p9dirent(&qid, diroffset, dp->d_type,
+                                      dp->d_name, buf, buflen);
+#endif
 done:
     return ret;
 }

@@ -32,6 +32,9 @@ AC_PROG_RANLIB
 # dbench is conditionally compiled for 'make check'
 DBENCH
 
+#will we be able to do a diodmount?
+AM_CONDITIONAL([LINUX], [test `uname` = Linux])
+
 ##
 # Checks for header files.
 ##

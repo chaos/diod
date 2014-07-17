@@ -33,13 +33,17 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#ifdef __linux__
 #include <sys/fsuid.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 #if HAVE_LIBCAP
 #include <sys/capability.h>
 #endif
+#ifdef __linux__
 #include <sys/prctl.h>
+#endif
 
 #include "9p.h"
 #include "npfs.h"
@@ -583,6 +587,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	if (np_conn_get_authuser(req->conn, &authuid) < 0)
 		authuid = P9_NONUNAME;
 
+#ifndef __MACH__ // FIXME: implment this stuff on Darwin
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		/* gid_override must be one of user's suppl. groups unless
 		 * connection was originally authed as root (trusted).
@@ -663,6 +668,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			wt->fsuid = u->uid;
 		}
 	}
+#endif
 #if HAVE_LIBCAP
 	if ((srv->flags & SRV_FLAGS_DAC_BYPASS) && wt->fsuid != 0) {
 		if (!wt->privcap && authuid == 0) {
@@ -680,7 +686,9 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 #endif
 	ret = 0;
 done:
+#ifndef __MACH__ // FIXME: implment this stuff on Darwin
 	if (dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         	np_logerr (srv, "prctl PR_SET_DUMPABLE failed");
+#endif
 	return ret;
 }
