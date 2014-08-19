@@ -1,0 +1,64 @@
+# http://www.gnu.org/software/automake
+Makefile.in
+# http://www.gnu.org/software/autoconf
+autom4te.cache
+compile
+configure
+aclocal.m4
+stamp-h1
+aclocal.m4
+config.guess
+config.sub
+depcomp
+install-sh
+ltmain.sh
+missing
+config.log
+config.status
+config.h
+libtool
+.deps/
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
+
+# Project specific build products
+scrub
+aestest
+pad
+pat
+tgetsize
+tprogress
+trand
+tsig
+tsize
+
+# autoconf-preprocessed
+Makefile
+*.1
+*.spec
+*.pc
+
+*.swp
+*.diff
+core.*
