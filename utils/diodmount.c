@@ -53,6 +53,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <paths.h>
 
 
 #ifndef PATH_MAX
