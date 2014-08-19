@@ -604,7 +604,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
 			dumpclrd = 1;
-			if ((n = setfsgid (gid)) < 0) {
+			if ((n = setfsgid (gid)) == -1) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
 					   u->uname, gid);
@@ -623,7 +623,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		}
 		if (wt->fsuid != u->uid) {
 			dumpclrd = 1;
-			if ((n = setfsuid (u->uid)) < 0) {
+			if ((n = setfsuid (u->uid)) == -1) {
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
 					   u->uname, u->uid);
