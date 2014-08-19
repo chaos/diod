@@ -1,4 +1,25 @@
 =========================================================================
+Release Notes for DIOD version 1.0.22                         19 Aug 2014
+=========================================================================
+
+* Stop tracking autotools build products in git.
+
+* Fix assertion failure at srv.c:754 (issue 122)
+
+* Portability fixes for musl libc (Felix Janda)
+
+* Change default rdma port to 5640 to match kernel
+
+* rdmatrans: only register the used buffer to the network
+  adapter (Dominique Martinet)
+
+* fix configure --with-tcmalloc logic
+
+* libnpfs: fids cloned in xattrwalk should inherit flags
+
+* rdmatrans: compilation error
+
+=========================================================================
 Release Notes for DIOD version 1.0.21                         31 May 2013
 =========================================================================
 
