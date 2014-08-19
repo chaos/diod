@@ -69,4 +69,4 @@ tnpsrv3_SOURCES = tnpsrv3.c $(common_sources) $(diod_sources)
 tlua_SOURCES = tlua.c $(common_sources) 
 tcap_SOURCES = tcap.c $(common_sources) 
 
-EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf tcmalloc.supp
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf valgrind.supp
