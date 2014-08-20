@@ -1,6 +1,8 @@
 /*
  * Copyright (C) 2005 by Latchesar Ionkov <lucho@ionkov.net>
- * * Permission is hereby granted, free of charge, to any person obtaining a
+ * Copyright (C) 2010-14 Lawrence Livermore National Security, LLC.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
  * the rights to use, copy, modify, merge, publish, distribute, sublicense,
