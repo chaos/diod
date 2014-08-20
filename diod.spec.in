@@ -5,7 +5,7 @@ Release: @META_RELEASE@
 Summary:  I/O forwarding server for 9P.
 License: GPL
 Group: Applications/System
-# URL: http://sourceforge.net/projects/npfs
+URL: http://code.google.com/p/diod
 Source0: %{name}-%{version}.tar.gz
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
