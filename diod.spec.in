@@ -14,7 +14,7 @@ BuildRequires: lua-devel
 BuildRequires: munge-devel
 BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
-BuildRequires: libibverbs-devel librdmacm-devel
+#BuildRequires: libibverbs-devel librdmacm-devel
 #BuildRequires: gperftools-devel
 BuildRequires: libattr-devel attr
 
