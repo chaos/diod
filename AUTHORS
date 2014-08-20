@@ -1,7 +1,22 @@
-Diod is the work of:
-Jim Garlick garlick at llnl dot gov
+Contributors
 
-Work by others imported and modified for diod:
-(bugs may not be the original authors' faults)
-- liblsd by Chris Dunlap et al
-- libnpfs, libnpclient by Latchesar Ionkov et al
+(Including those who have played a significnat role in design and test,
+and those who authored open source code that was pulled in here.)
+
+Hafeez Bana
+Brian Behlendorf
+Trent D'Hooge
+Chris Dunlap
+Sheila Faulkner
+Jim Garlick
+Maya Gokhale
+Mark Grondona
+Eric Hensbergen
+Latchesar Ionkov
+Felix Janda
+Rob Landley
+Dominique Martinet
+Ron Minnich
+Eugeniy Meshcheryakov
+Jim Silva
+Tom Tucker
