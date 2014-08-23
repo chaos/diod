@@ -12,7 +12,7 @@ X_AC_EXPAND_INSTALL_DIRS
 ##
 # Automake support
 ##
-AM_INIT_AUTOMAKE($META_NAME, $META_VERSION)
+AM_INIT_AUTOMAKE([subdir-objects])
 AM_CONFIG_HEADER([config/config.h])
 AM_MAINTAINER_MODE
 
