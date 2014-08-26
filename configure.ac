@@ -23,6 +23,7 @@ AC_DEFINE([_GNU_SOURCE], 1,
 # Checks for programs
 ##
 AC_PROG_CC
+AM_PROG_CC_C_O
 if test "$GCC" = yes; then
   GCCWARN="-Wall"
   AC_SUBST([GCCWARN])
