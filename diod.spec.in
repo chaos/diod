@@ -15,7 +15,7 @@ BuildRequires: munge-devel
 BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
 #BuildRequires: libibverbs-devel librdmacm-devel
-#BuildRequires: gperftools-devel
+BuildRequires: gperftools-devel
 BuildRequires: libattr-devel attr
 
 %description
@@ -26,7 +26,7 @@ system for I/O forwarding on Linux clusters.
 %setup -q
 
 %build
-%configure
+%configure --with-tcmalloc
 make CFLAGS="-Werror -O2 -g"
 
 %check
