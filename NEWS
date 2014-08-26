@@ -1,4 +1,16 @@
 =========================================================================
+Release Notes for DIOD version 1.0.23                         26 Aug 2014
+=========================================================================
+
+* Add dist tag to release (TOSS-2662)
+
+* Minor autotools forward-portability (issue 124)
+
+* Doc: AUTHORS, README, license headers updated
+
+* Stop tracking additional autotools build products.
+
+=========================================================================
 Release Notes for DIOD version 1.0.22                         19 Aug 2014
 =========================================================================
 
