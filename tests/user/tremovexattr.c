@@ -37,7 +37,7 @@ main (int argc, char *argv[])
     Npcfsys *fs;
     Npcfid *afid, *root;
     uid_t uid = geteuid ();
-    char *aname, *path, *attr, *value;
+    char *aname, *path, *attr;
     int fd = 0; /* stdin */
 
     diod_log_init (argv[0]);
@@ -47,7 +47,6 @@ main (int argc, char *argv[])
     aname = argv[1];
     path = argv[2];
     attr = argv[3];
-    value = argv[4];
 
     if (!(fs = npc_start (fd, fd, 65536+24, 0)))
         errn_exit (np_rerror (), "npc_start");
