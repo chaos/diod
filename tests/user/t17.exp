@@ -1,7 +1,4 @@
 creating file with three xattrs set
-tgetxattr: user.foo
-tgetxattr: user.bar
-tgetxattr: user.baz
 tgetxattr: user.foo="fooval"
 tgetxattr: user.bar="barval"
 tgetxattr: user.baz="bazval"
