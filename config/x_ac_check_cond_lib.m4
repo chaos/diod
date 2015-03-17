@@ -25,7 +25,7 @@ AC_DEFUN([X_AC_CHECK_COND_LIB], [
     [for $2 in default libs],
     [x_ac_cv_lib_none_$2], [
     AC_LINK_IFELSE(
-      AC_LANG_CALL([], [$2]),
+      [AC_LANG_CALL([], [$2])],
       AS_VAR_SET(x_ac_cv_lib_none_$2, yes),
       AS_VAR_SET(x_ac_cv_lib_none_$2, no)
     )]
