@@ -740,7 +740,7 @@ static void
 _nbd_detach (Opt o, int argc, char **argv, int nopt, int vopt)
 {
     char *dev;
-    int fd;
+    int fd = -1;
 
     if (argc != 1)
         usage();
@@ -754,7 +754,7 @@ _nbd_detach (Opt o, int argc, char **argv, int nopt, int vopt)
         msg ("stop");
     if (!nopt && ioctl (fd, NBD_STOP) < 0)
         err_exit ("ioctl stop");
-    if (!nopt)
+    if (fd != -1)
         close (fd);
 }
 
