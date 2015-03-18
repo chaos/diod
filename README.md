@@ -1,7 +1,7 @@
 ### diod
 
-`diod` is a multi-threaded, user space file server that speaks 9P2000.L
-protocol.
+`diod` is a multi-threaded, user space file server that speaks
+[9P2000.L protocol](protocol.md).
 
 ### Building on Debian 
 
