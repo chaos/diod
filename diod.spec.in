@@ -11,7 +11,7 @@ Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 BuildRequires: tcp_wrappers-devel
 BuildRequires: lua-devel
-#BuildRequires: munge-devel
+BuildRequires: munge-devel
 BuildRequires: ncurses-devel
 BuildRequires: libcap-devel
 #BuildRequires: libibverbs-devel librdmacm-devel

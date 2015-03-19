@@ -1,4 +1,4 @@
-AM_CFLAGS = @GCCWARN@
+AM_CFLAGS = -w
 
 # VERSION=4.00
 
