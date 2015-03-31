@@ -1,4 +1,14 @@
 =========================================================================
+Release Notes for DIOD version 1.0.24                         31 Mar 2015
+=========================================================================
+
+* Replace sysv-init script with systemd unit file
+
+* Move fully to github (including docs)
+
+* Misc. minor updates, mostly tests and build environment, for rhel7
+
+=========================================================================
 Release Notes for DIOD version 1.0.23                         26 Aug 2014
 =========================================================================
 
