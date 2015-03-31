@@ -48,12 +48,12 @@ mv $RPM_BUILD_ROOT%{_mandir}/man8/diodmount.8 \
 rm -rf ${RPM_BUILD_ROOT}
 
 %post
-if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --add diod; fi
+/usr/bin/systemctl enable diod
 
 %preun
 if [ "$1" = 0 ]; then
-  %{_sysconfdir}/init.d/diod stop >/dev/null 2>&1 || :
-  if [ -x /sbin/chkconfig ]; then /sbin/chkconfig --del diod; fi
+  /usr/bin/systemctl stop diod
+  /usr/bin/systemctl disable diod
 fi
 
 %files
@@ -63,6 +63,6 @@ fi
 /sbin/*
 %{_mandir}/man8/*
 %{_mandir}/man5/*
-%attr(0755,root,root) %{_sysconfdir}/init.d/diod
+%attr(0755,root,root) %{_sysconfdir}/systemd/system/diod.service
 %config(noreplace) %attr(0755,root,root) %{_sysconfdir}/auto.diod
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/diod.conf

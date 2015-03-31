@@ -1,0 +1,9 @@
+[Unit]
+Description=9P File Server
+
+[Service]
+Type=forking
+ExecStart=@X_SBINDIR@/diod
+
+[Install]
+WantedBy=multi-user.target

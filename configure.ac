@@ -104,6 +104,7 @@ AC_CONFIG_FILES( \
   scripts/Makefile \
   scripts/diod.init \
   scripts/auto.diod \
+  scripts/diod.service \
   diod/Makefile \
   utils/Makefile \
   tests/Makefile \
