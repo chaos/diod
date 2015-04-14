@@ -39,7 +39,7 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
-#include <attr/xattr.h>
+#include <sys/xattr.h>
 #include <sys/stat.h>
 #include <sys/statfs.h>
 #include <sys/socket.h>
