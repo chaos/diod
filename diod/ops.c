@@ -426,7 +426,7 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
         np_uerror (errno);
         goto error_quiet;
     }
-    if (lstat (path_s (f->path), &sb2) < 0) {
+    if (stat (path_s (f->path), &sb2) < 0) {
         np_uerror (errno);
         goto error;
     }
