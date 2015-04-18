@@ -481,7 +481,20 @@ _update_mtab (char *options, char *spec, char *dir)
     uid_t saved_euid = geteuid ();
     FILE *f;
     int ret = 0;
+    struct stat st;
     struct mntent mnt;
+
+    ret = lstat(_PATH_MOUNTED, &st);
+
+    /* /etc/mtab can be a symlink to /proc/mounts or
+     * /proc/self/mounts, in which case we shouldn't write to it even
+     * if /proc isn't mounted.  Return success in that case to avoid a
+     * spurious error message. */
+    if (ret != 0)
+	return 0;
+
+    if (!S_ISREG(st.st_mode))
+	return 1;
 
     mnt.mnt_fsname = spec;
     mnt.mnt_dir = dir;
