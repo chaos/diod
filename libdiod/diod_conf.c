@@ -629,7 +629,7 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             path = config.configpath;  /* missing default file is not fatal */
     }
     if (path) {
-    	lua_State *L = lua_open ();
+        lua_State *L = luaL_newstate ();
 
         luaopen_base (L);
         luaopen_table (L);
