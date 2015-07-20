@@ -3,21 +3,24 @@
 `diod` is a multi-threaded, user space file server that speaks
 [9P2000.L protocol](protocol.md).
 
-### Building on Debian 
+### Building
 
+#### On Debian
 ```
-sudo apt-get install liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev
-./configure CPPFLAGS="-I/usr/include/lua5.1" --with-lua-suffix=5.1
+sudo apt-get install build-essential libpopt-dev ncurses-dev automake autoconf
+sudo apt-get install liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev libattr1-dev
+./autogen.sh
+./configure
 make
 make check
 ```
 
-### Building on Red Hat
+#### On Red Hat
 
 ```
-sudo yum install epel-release
+sudo yum install epel-release gperftools-devel automake autoconf libattr-devel
 sudo yum install lua-devel munge-devel tcp_wrappers-devel libcap-devel
-sudo yum install gperftools-devel
+./autogen.sh
 ./configure
 make
 make check
