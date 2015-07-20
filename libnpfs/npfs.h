@@ -22,6 +22,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <stdarg.h>
 #include <sys/types.h>
 
 typedef struct p9_str Npstr;

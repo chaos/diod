@@ -1,3 +1,5 @@
+#include <stdarg.h>
+
 void diod_log_init (char *p);
 void diod_log_fini (void);
 void diod_log_set_dest (char *dest);
