@@ -36,10 +36,8 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include <sys/statfs.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/fsuid.h>
 #include <pwd.h>
 #include <grp.h>
 #include <dirent.h>
@@ -292,9 +290,27 @@ ioctx_seekdir (IOCtx ioctx, long offset)
 }
 
 int
-ioctx_readdir_r(IOCtx ioctx, struct dirent *entry, struct dirent **result)
+ioctx_readdir_r(IOCtx ioctx, struct diod_dirent *entry, struct diod_dirent **result)
 {
-    return ioctx->dir ? readdir_r (ioctx->dir, entry, result) : EINVAL;
+  int r;
+  struct dirent* rd_result;
+  if (!ioctx->dir)
+    return EINVAL;
+
+  r = readdir_r (ioctx->dir, &entry->dir_entry, &rd_result);
+  if (r==0) {  /* success */
+    /* Does the same to diod_dirent as readdir_r() does to dirent */
+    if (rd_result == NULL)
+      *result = NULL;
+    else
+      *result = entry;
+#ifdef _DIRENT_HAVE_D_OFF
+    entry->d_off = entry->dir_entry.d_off;
+#else
+    entry->d_off = telldir (ioctx->dir);
+#endif
+  }
+  return r;
 }
 
 int

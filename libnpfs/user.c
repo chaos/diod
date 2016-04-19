@@ -34,13 +34,17 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#ifndef __FreeBSD__
 #include <sys/fsuid.h>
+#endif
 #include <pwd.h>
 #include <grp.h>
 #if HAVE_LIBCAP
 #include <sys/capability.h>
 #endif
+#ifndef __FreeBSD__
 #include <sys/prctl.h>
+#endif
 
 #include "9p.h"
 #include "npfs.h"
@@ -574,6 +578,9 @@ done:
 int
 np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
+#if __FreeBSD__
+	return 0;
+#else
 	Npwthread *wt = req->wthread;
 	Npsrv *srv = req->conn->srv;
 	int i, n, ret = -1;
@@ -684,4 +691,5 @@ done:
 	if (dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         	np_logerr (srv, "prctl PR_SET_DUMPABLE failed");
 	return ret;
+#endif
 }

@@ -102,19 +102,19 @@ _enable_keepalive(int fd)
         goto done;
     }
     i = 120;
-    ret = setsockopt (fd, SOL_TCP, TCP_KEEPIDLE, &i, len);
+    ret = setsockopt (fd, IPPROTO_TCP, TCP_KEEPIDLE, &i, len);
     if (ret < 0) {
         err ("setsockopt SO_KEEPIDLE");
         goto done;
     }
     i = 120;
-    ret = setsockopt (fd, SOL_TCP, TCP_KEEPINTVL, &i, len);
+    ret = setsockopt (fd, IPPROTO_TCP, TCP_KEEPINTVL, &i, len);
     if (ret < 0) {
         err ("setsockopt SO_KEEPINTVL");
         goto done;
     }
     i = 9;
-    ret = setsockopt (fd, SOL_TCP, TCP_KEEPCNT, &i, len);
+    ret = setsockopt (fd, IPPROTO_TCP, TCP_KEEPCNT, &i, len);
     if (ret < 0) {
         err ("setsockopt SO_KEEPCNT");
         goto done;
