@@ -49,7 +49,6 @@
 #include <stdarg.h>
 #include <pthread.h>
 #include <unistd.h>
-#include <sys/fsuid.h>
 #include <string.h>
 #include <pwd.h>
 #include <grp.h>

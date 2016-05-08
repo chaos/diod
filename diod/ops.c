@@ -56,9 +56,14 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#ifndef __FreeBSD__
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
 #define _BSD_SOURCE         /* makedev, st_atim etc */
+#endif
+
 #define _ATFILE_SOURCE      /* utimensat */
+
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -69,12 +74,25 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/types.h>
+
+#ifdef __FreeBSD__
+#if !__BSD_VISIBLE
+typedef unsigned int    u_int;
+#endif
+#endif
+
 #include <sys/file.h>
 #include <sys/stat.h>
+
+#ifdef __FreeBSD__
+#include <sys/param.h>
+#include <sys/mount.h>
+#else
 #include <sys/statfs.h>
+#endif
+
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/fsuid.h>
 #include <sys/mman.h>
 #include <pwd.h>
 #include <grp.h>
@@ -98,6 +116,7 @@
 #include "diod_conf.h"
 #include "diod_log.h"
 #include "diod_auth.h"
+#include "diod_dir.h"
 
 #include "ops.h"
 #include "exp.h"
@@ -215,8 +234,10 @@ diod_ustat2qid (struct stat *st, Npqid *qid)
 }
 
 static void
-_dirent2qid (struct dirent *d, Npqid *qid)
+_dirent2qid (struct diod_dirent *d1, Npqid *qid)
 {
+    struct dirent* d = &(d1->dir_entry);
+
     NP_ASSERT (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino;
     qid->version = 0;
@@ -591,14 +612,24 @@ diod_statfs (Npfid *fid)
         goto error;
     }
 
+#ifdef __FreeBSD__
+    fsid = (u64)sb.f_fsid.val[0] | ((u64)sb.f_fsid.val[1] << 32);
+#else
     fsid = (u64)sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
+#endif
     if (diod_conf_get_statfs_passthru ())
         type = sb.f_type;
-
+#ifdef __FreeBSD__
+    if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
+                                  sb.f_bfree, sb.f_bavail, sb.f_files,
+                                  sb.f_ffree, fsid,
+                                  sb.f_namemax))) {
+#else
     if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
                                   sb.f_ffree, fsid,
                                   sb.f_namelen))) {
+#endif
         np_uerror (ENOMEM);
         goto error;
     }
@@ -632,13 +663,19 @@ _remap_oflags (int flags)
         { O_TRUNC,      P9_DOTL_TRUNC },
         { O_APPEND,     P9_DOTL_APPEND },
         { O_NONBLOCK,   P9_DOTL_NONBLOCK },
+#ifndef __FreeBSD__
         { O_DSYNC,      P9_DOTL_DSYNC },
+#endif
         { FASYNC,       P9_DOTL_FASYNC },
         { O_DIRECT,     P9_DOTL_DIRECT },
+#ifndef __FreeBSD__
         { O_LARGEFILE,  P9_DOTL_LARGEFILE },
+#endif
         { O_DIRECTORY,  P9_DOTL_DIRECTORY },
         { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
+#ifndef __FreeBSD__
         { O_NOATIME,    P9_DOTL_NOATIME },
+#endif
         { O_CLOEXEC,    P9_DOTL_CLOEXEC },
         { O_SYNC,       P9_DOTL_SYNC},
     };
@@ -1065,15 +1102,15 @@ error_quiet:
 }
 
 static u32
-_copy_dirent_linux (Fid *f, struct dirent *dp, u8 *buf, u32 buflen)
+_copy_dirent_linux (Fid *f, struct diod_dirent *dp, u8 *buf, u32 buflen)
 {
     Npqid qid;
     u32 ret = 0;
 
-    if (dp->d_type == DT_UNKNOWN) {
+    if (dp->dir_entry.d_type == DT_UNKNOWN) {
         char path[PATH_MAX + 1];
         struct stat sb;
-        snprintf (path, sizeof(path), "%s/%s", path_s (f->path), dp->d_name);
+        snprintf (path, sizeof(path), "%s/%s", path_s (f->path), dp->dir_entry.d_name);
         if (lstat (path, &sb) < 0) {
             np_uerror (errno);
             goto done;
@@ -1082,8 +1119,8 @@ _copy_dirent_linux (Fid *f, struct dirent *dp, u8 *buf, u32 buflen)
     } else  {
         _dirent2qid (dp, &qid);
     }
-    ret = np_serialize_p9dirent(&qid, dp->d_off, dp->d_type,
-                                      dp->d_name, buf, buflen);
+    ret = np_serialize_p9dirent(&qid, dp->d_off, dp->dir_entry.d_type,
+                                      dp->dir_entry.d_name, buf, buflen);
 done:
     return ret;
 }
@@ -1091,7 +1128,7 @@ done:
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
-    struct dirent dbuf, *dp;
+    struct diod_dirent dbuf, *dp;
     int i, n = 0, err;
 
     if (offset == 0)
@@ -1106,8 +1143,8 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
         }
         if (err == 0 && dp == NULL)
             break;
-        if ((f->flags & DIOD_FID_FLAGS_MOUNTPT) && strcmp (dp->d_name, ".")
-                                                && strcmp (dp->d_name, ".."))
+        if ((f->flags & DIOD_FID_FLAGS_MOUNTPT) && strcmp (dp->dir_entry.d_name, ".")
+                                                && strcmp (dp->dir_entry.d_name, ".."))
                 continue;
         i = _copy_dirent_linux (f, dp, buf + n, count - n);
         if (i == 0)
@@ -1354,8 +1391,10 @@ diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name)
         goto error;
     }
     if (xattr_open (attrfid, name, &size) < 0) {
+#ifndef __FreeBSD__
         if (np_rerror () == ENODATA)
             goto error_quiet;
+#endif
         goto error;
     }
     nf->flags |= DIOD_FID_FLAGS_XATTR;

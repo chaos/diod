@@ -36,10 +36,8 @@
 #include <sys/types.h>
 #include <sys/file.h>
 #include <sys/stat.h>
-#include <sys/statfs.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/fsuid.h>
 #include <sys/mman.h>
 #include <pwd.h>
 #include <grp.h>

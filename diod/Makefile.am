@@ -24,7 +24,8 @@ diod_SOURCES = \
 	fid.c \
 	fid.h \
 	xattr.c \
-	xattr.h
+	xattr.h \
+	diod_dir.h
 
 man8_MANS = \
         diod.8

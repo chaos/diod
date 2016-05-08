@@ -46,7 +46,9 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/resource.h>
+#ifndef __FreeBSD__
 #include <sys/prctl.h>
+#endif
 #include <string.h>
 #include <signal.h>
 #include <pthread.h>
@@ -323,9 +325,10 @@ _setrlimit (void)
             err_exit ("setrlimit RLIMIT_NOFILE");
 
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
+#ifndef __FreeBSD__
     if (setrlimit (RLIMIT_LOCKS, &r) < 0)
         err_exit ("setrlimit RLIMIT_LOCKS");
-
+#endif
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_CORE, &r) < 0)
         err_exit ("setrlimit RLIMIT_CORE");
@@ -399,6 +402,7 @@ _sighand (int sig)
             break;
     }
 }
+
 
 /* Thread to handle SIGHUP, SIGTERM, and new connections on listen ports.
  */
@@ -619,8 +623,10 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
      * Set it here, then maintain it in user.c::np_setfsid () as uids are
      * further manipulated.
      */
+#ifndef __FreeBSD__
     if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         err_exit ("prctl PR_SET_DUMPABLE failed");
+#endif
 
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;

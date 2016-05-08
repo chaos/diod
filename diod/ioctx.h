@@ -1,3 +1,5 @@
+#include "diod_dir.h"
+
 typedef struct path_struct *Path;
 typedef struct ioctx_struct *IOCtx;
 
@@ -14,8 +16,8 @@ int     ioctx_open (Npfid *fid, u32 flags, u32 mode);
 int     ioctx_close (Npfid *fid, int seterrno);
 int     ioctx_pread (IOCtx ioctx, void *buf, size_t count, off_t offset);
 int     ioctx_pwrite (IOCtx ioctx, const void *buf, size_t count, off_t offset);
-int     ioctx_readdir_r(IOCtx ioctx, struct dirent *entry,
-                        struct dirent **result);
+int     ioctx_readdir_r(IOCtx ioctx, struct diod_dirent *entry,
+                        struct diod_dirent **result);
 void    ioctx_rewinddir (IOCtx ioctx);
 void    ioctx_seekdir (IOCtx ioctx, long offset);
 int     ioctx_fsync (IOCtx ioctx);
