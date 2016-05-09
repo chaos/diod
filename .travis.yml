@@ -1,0 +1,24 @@
+language: c
+
+sudo: false
+
+compiler:
+  - gcc
+  - clang
+
+addons:
+  apt:
+    sources:
+    packages:
+      - libpopt-dev
+      - ncurses-dev
+      - liblua5.1-0-dev
+      - libmunge-dev
+      - libwrap0-dev
+      - libcap-dev
+      - libattr1-dev
+
+script:
+  - ./autogen.sh
+  - ./configure
+  - make distcheck
