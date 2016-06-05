@@ -35,7 +35,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <sys/syscall.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
@@ -47,7 +46,9 @@
 #include <sys/param.h>
 #include <sys/resource.h>
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
 #include <sys/prctl.h>
+#endif
 #endif
 #include <string.h>
 #include <signal.h>
@@ -297,7 +298,7 @@ _become_user (char *name, uid_t uid, int realtoo)
     nsg = sizeof (sg) / sizeof(sg[0]);
     if (getgrouplist(pwd->pw_name, pwd->pw_gid, sg, &nsg) == -1)
         err_exit ("user is in too many groups");
-    if (syscall(SYS_setgroups, nsg, sg) < 0)
+    if (setgroups( nsg, sg) < 0)
         err_exit ("setgroups");
     if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
         err_exit ("setreuid");
@@ -326,8 +327,10 @@ _setrlimit (void)
 
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
     if (setrlimit (RLIMIT_LOCKS, &r) < 0)
         err_exit ("setrlimit RLIMIT_LOCKS");
+#endif
 #endif
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
     if (setrlimit (RLIMIT_CORE, &r) < 0)
@@ -501,7 +504,7 @@ _test_setgroups_thread (void *arg)
 {
     gid_t sg[] = { 42, 37, 63 };
 
-    if (syscall(SYS_setgroups, 3, sg) < 0)
+    if (setgroups( 3, sg) < 0)
         err_exit ("setgroups");
     return NULL;
 }
@@ -521,7 +524,7 @@ _test_setgroups (void)
         msg_exit ("out of memory");
     if ((nsg = getgroups (ngroups_max, sg)) < 0)
         err_exit ("getgroups");
-    if (syscall(SYS_setgroups, 0, NULL) < 0) /* clear groups */
+    if (setgroups(0, NULL) < 0) /* clear groups */
         err_exit ("setgroups");
     if ((err = pthread_create (&t, NULL, _test_setgroups_thread, NULL)))
         err_exit ("pthread_create"); 
@@ -531,7 +534,7 @@ _test_setgroups (void)
         err_exit ("getgroups");
     if (n == 0)
         rc = 1;
-    if (syscall(SYS_setgroups, nsg, sg) < 0)
+    if (setgroups(nsg, sg) < 0)
         err_exit ("setgroups");
     free (sg);
     return rc;
@@ -624,8 +627,10 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
      * further manipulated.
      */
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
     if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         err_exit ("prctl PR_SET_DUMPABLE failed");
+#endif
 #endif
 
     if (!diod_conf_get_userdb ())

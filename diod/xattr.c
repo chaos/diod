@@ -42,7 +42,9 @@
 #ifndef __FreeBSD__
 #include <sys/xattr.h>
 #include <sys/statfs.h>
+#ifndef __CYGWIN__
 #include <sys/fsuid.h>
+#endif
 #endif
 #include <sys/stat.h>
 #include <sys/socket.h>

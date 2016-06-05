@@ -73,6 +73,7 @@ AX_LUA_HEADERS(501)
 AX_LUA_LIBS
 X_AC_RDMATRANS
 
+
 ##
 # For list.c, hostlist.c, hash.c
 ##
@@ -81,6 +82,8 @@ AC_DEFINE(WITH_LSD_NOMEM_ERROR_FUNC, 1, [Define lsd_nomem_error])
 AC_DEFINE(WITH_PTHREADS, 1, [Make liblsd thread safe])
 
 AC_SYS_LARGEFILE
+
+AM_CONDITIONAL(BUILD_OS_IS_CYGWIN, [test "$build_os" = cygwin])
 
 ##
 # Epilogue

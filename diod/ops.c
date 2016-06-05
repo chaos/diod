@@ -74,6 +74,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/vfs.h>
 
 #ifdef __FreeBSD__
 #if !__BSD_VISIBLE
@@ -614,6 +615,8 @@ diod_statfs (Npfid *fid)
 
 #ifdef __FreeBSD__
     fsid = (u64)sb.f_fsid.val[0] | ((u64)sb.f_fsid.val[1] << 32);
+#elif __CYGWIN__
+    fsid = (u64)sb.f_fsid;
 #else
     fsid = (u64)sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
 #endif
@@ -669,12 +672,16 @@ _remap_oflags (int flags)
         { FASYNC,       P9_DOTL_FASYNC },
         { O_DIRECT,     P9_DOTL_DIRECT },
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
         { O_LARGEFILE,  P9_DOTL_LARGEFILE },
+#endif
 #endif
         { O_DIRECTORY,  P9_DOTL_DIRECTORY },
         { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
         { O_NOATIME,    P9_DOTL_NOATIME },
+#endif
 #endif
         { O_CLOEXEC,    P9_DOTL_CLOEXEC },
         { O_SYNC,       P9_DOTL_SYNC},

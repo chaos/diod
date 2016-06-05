@@ -21,7 +21,6 @@
  *  Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
  *  See also: http://www.gnu.org/licenses
  *****************************************************************************/
-
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -33,9 +32,10 @@
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/syscall.h>
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
 #include <sys/fsuid.h>
+#endif
 #endif
 #include <pwd.h>
 #include <grp.h>
@@ -43,7 +43,9 @@
 #include <sys/capability.h>
 #endif
 #ifndef __FreeBSD__
+#ifndef __CYGWIN__
 #include <sys/prctl.h>
+#endif
 #endif
 
 #include "9p.h"
@@ -578,7 +580,7 @@ done:
 int
 np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
-#if __FreeBSD__
+#if __FreeBSD__ || __CYGWIN__
 	return 0;
 #else
 	Npwthread *wt = req->wthread;
@@ -660,7 +662,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			 * per-process, so for now bypass glibc. See issue 53.
 			 */
 			if ((srv->flags & SRV_FLAGS_SETGROUPS)) {
-				if (syscall(SYS_setgroups, u->nsg, u->sg) < 0) {
+				if (setgroups(u->nsg, u->sg) < 0) {
 					np_uerror (errno);
 					np_logerr (srv, "setgroups(%s) nsg=%d failed",
 						   u->uname, u->nsg);
