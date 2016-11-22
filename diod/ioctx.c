@@ -66,6 +66,7 @@ struct ioctx_struct {
     pthread_mutex_t lock;
     int             refcount;
     int             fd;
+    off_t           off;
     DIR             *dir;
     int             lock_type;
     Npqid           qid;
@@ -181,6 +182,7 @@ _ioctx_create_open (Npuser *user, Path path, int flags, u32 mode)
     ioctx->refcount = 1;
     ioctx->lock_type = LOCK_UN;
     ioctx->dir = NULL;
+    ioctx->off = 0;
     ioctx->open_flags = flags;
     ioctx->user = user;
     np_user_incref (user);
@@ -266,7 +268,27 @@ error:
 int
 ioctx_pread (IOCtx ioctx, void *buf, size_t count, off_t offset)
 {
-    return pread (ioctx->fd, buf, count, offset);
+    ssize_t ret;
+    int has_read = 0;
+
+    // claim read() if fd is at this offset
+    xpthread_mutex_lock (&ioctx->lock);
+    if (ioctx->off != -1 && ioctx->off == offset) {
+        ioctx->off = -1;
+        has_read = 1;
+    }
+    xpthread_mutex_unlock (&ioctx->lock);
+
+    if (!has_read) {
+        return pread (ioctx->fd, buf, count, offset);
+    }
+    ret = read (ioctx->fd, buf, count);
+
+    // next read() operation will follow the end of this one
+    xpthread_mutex_lock (&ioctx->lock);
+    ioctx->off = (ret < 0) ? offset : offset + ret;
+    xpthread_mutex_unlock (&ioctx->lock);
+    return ret;
 }
 
 int
