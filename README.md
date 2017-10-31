@@ -28,7 +28,7 @@ make check
 
 ### Kernel Client
 
-The kernel 9P client, sometiems referred to as "v9fs", consists
+The kernel 9P client, sometimes referred to as "v9fs", consists
 of the `9p.ko` file system module, and its network transport module,
 `9pnet.ko`.
 
@@ -94,6 +94,6 @@ report issues!
 
 # Support
 
-Use github!
+Use GitHub!
 
 Diod can also be discussed on the [v9fs-users mailing list](https://lists.sourceforge.net/lists/listinfo/v9fs-users)
