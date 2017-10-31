@@ -13,7 +13,7 @@ For a general introduction to 9P see the Plan 9
 ### Data Structures
 
 1, 2, 4, and 8 byte integers, denoted `name[1]`, `name[2]`, `name[4]`,
-and `name[8]` respectively, are represend on the wire in little-endian
+and `name[8]` respectively, are represented on the wire in little-endian
 format (least significant byte first).
 
 A string, denoted `name[s]`, is sent on the wire as
@@ -58,7 +58,7 @@ See the Plan 9 manual page for flush(5).
 size[4] Twalk tag[2] fid[4] newfid[4] nwname[2] nwname*(wname[s])
 size[4] Rwalk tag[2] nwqid[2] nwqid*(wqid[13])
 ```
-walk is used to descend a directory represented by fid using successive path elements provided in the wname array. If succesful, newfid represents the new path.
+walk is used to descend a directory represented by fid using successive path elements provided in the wname array. If successful, newfid represents the new path.
 
 fid can be cloned to newfid by calling walk with nwname set to zero.
 
@@ -72,7 +72,7 @@ size[4] Rread tag[2] count[4] data[count]
 size[4] Twrite tag[2] fid[4] offset[8] count[4] data[count]
 size[4] Rwrite tag[2] count[4]
 ```
-read and write perform I/O on the file represented by fid. Note that in v9fs, a read(2) or write(2) system call for a chunk of the file that wont fit in a single request is broken up into multiple requests.
+read and write perform I/O on the file represented by fid. Note that in v9fs, a read(2) or write(2) system call for a chunk of the file that won't fit in a single request is broken up into multiple requests.
 
 Under 9P2000.L, read cannot be used on directories. See readdir below.
 
@@ -119,7 +119,7 @@ n_uname, if not set to `P9_NONUNAME` (~0), is the uid of the user and is used in
 
 v9fs has several modes of access which determine how it uses attach. In the default access=user, an initial attach is sent for the user provided in the uname=name mount option, and for each user that accesses the file system thereafter. For access=<uid>, only the initial attach is sent for <uid> and all other users are denied access by the client.
 
-See the Plan 9 manual page for attach(5) and the 9P2000.u experimetental-draft RFC entry for auth/attach.
+See the Plan 9 manual page for attach(5) and the 9P2000.u experimental-draft RFC entry for auth/attach.
 
 ### 9P2000.L Operations
 
@@ -361,7 +361,7 @@ type has one of the values:
 #define P9_LOCK_TYPE_WRLCK 1
 #define P9_LOCK_TYPE_UNLCK 2
 ````
-start, length, and proc_id correspond to the analagous fields passed to Linux fcntl(F_SETLK):
+start, length, and proc_id correspond to the analogous fields passed to Linux fcntl(F_SETLK):
 ```
 struct flock {
     short l_type;  /* Type of lock: F_RDLCK, F_WRLCK, F_UNLCK */
@@ -398,7 +398,7 @@ size[4] Rgetlock tag[2] type[1] start[8] length[8] proc_id[4] client_id[s]
 ```
 getlock tests for the existence of a POSIX record lock and has semantics similar to Linux fcntl(F_GETLK).
 
-As with lock, type has one of the values defined above, and start, length, and proc_id correspond to the analagous fields in struct flock passed to Linux fcntl(F_GETLK), and client_Id is an additional mechanism for uniquely identifying the lock requester and is set to the nodename by the Linux v9fs client.
+As with lock, type has one of the values defined above, and start, length, and proc_id correspond to the analogous fields in struct flock passed to Linux fcntl(F_GETLK), and client_Id is an additional mechanism for uniquely identifying the lock requester and is set to the nodename by the Linux v9fs client.
 
 #### link - create hard link
 ```
