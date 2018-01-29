@@ -42,7 +42,7 @@ _getxattr (Npcfid *root, char *path, char *attr)
         return len;
     buf = malloc (len);
     if (!buf)
-        msg_exit ("out of memory"); 
+        msg_exit ("out of memory");
     memset (buf, 0, len);
     nlen = npc_getxattr (root, path, attr, buf, len);
     if (nlen < 0)
@@ -65,7 +65,7 @@ _listxattr (Npcfid *root, char *path)
         return len;
     buf = malloc (len);
     if (!buf)
-        msg_exit ("out of memory"); 
+        msg_exit ("out of memory");
     memset (buf, 0, len);
     nlen = npc_listxattr (root, path, buf, len);
     if (nlen < 0)

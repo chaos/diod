@@ -46,11 +46,11 @@ _copy_from9 (Npcfid *fid, int fd)
             }
             done += m;
         } while (done < n);
-    
+
     }
     if (n < 0)
         err ("npc_read");
-}            
+}
 
 int
 main (int argc, char *argv[])

@@ -36,7 +36,7 @@ main (int argc, char *argv[])
         fprintf (stderr, "mode %.4o\n", nmode);
     else
         fprintf (stderr, "mode %.4o != %.4o\n", nmode, mode);
-    
+
     exit (0);
 }
 

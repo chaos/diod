@@ -89,10 +89,10 @@ main (int argc, char *argv[])
 
     if (argc != 6)
         usage ();
-    numusers = strtoul (argv[1], NULL, 10); 
-    numthreads = strtoul (argv[2], NULL, 10); 
-    numgetattrs = strtoul (argv[3], NULL, 10); 
-    iterations = strtoul (argv[4], NULL, 10); 
+    numusers = strtoul (argv[1], NULL, 10);
+    numthreads = strtoul (argv[2], NULL, 10);
+    numgetattrs = strtoul (argv[3], NULL, 10);
+    iterations = strtoul (argv[4], NULL, 10);
     aname = argv[5];
 
     if (!(t = malloc (sizeof(*t) * numthreads)))
@@ -111,9 +111,9 @@ main (int argc, char *argv[])
     } else if (numusers == 1) {
         uids[0] = geteuid();
     } else {
-        msg_exit ("numusers must be >= 1"); 
+        msg_exit ("numusers must be >= 1");
     }
-    
+
     if (!(fs = npc_start (fd, fd, 8192+24, NPC_MULTI_RPC)))
         errn_exit (np_rerror (), "npc_start");
 
@@ -126,7 +126,7 @@ main (int argc, char *argv[])
         err = pthread_create (&t[i].t, NULL, client, &t[i]);
         if (err)
             errn_exit (err, "pthread_create");
-    } 
+    }
 
     for (i = 0; i < numthreads; i++) {
         pthread_join (t[i].t, NULL);
