@@ -282,7 +282,7 @@ struct p9_qid {
 #define P9_ATTR_ATIME_SET	0x00000080UL
 #define P9_ATTR_MTIME_SET	0x00000100UL
 
-/* 
+/*
  * Bit values for lopen flags.
  */
 #define P9_DOTL_RDONLY        00000000

@@ -1,4 +1,4 @@
-.TH diodcat 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.TH diodcat 8 "@PACKAGE_VERSION@" "@PACKAGE_NAME@" "@PACKAGE_NAME@"
 .SH NAME
 diodcat \- cat files by attaching directly to diod server
 .SH SYNOPSIS

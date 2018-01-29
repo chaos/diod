@@ -100,7 +100,7 @@ vaspf (char **sp, int *lp, const char *fmt, va_list ap)
 
 	if (!s) {
 		len = CHUNKSIZE;
-		if (!(s = malloc(len))) 
+		if (!(s = malloc(len)))
 			goto done;
 	}
 	for (;;) {

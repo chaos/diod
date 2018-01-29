@@ -23,7 +23,7 @@
  *****************************************************************************/
 
 /* diodmount.c - diod file system mount helper
- * 
+ *
  * Usage: /sbin/mount.diod spec dir [-sfnv] [-o options]
  */
 
@@ -118,7 +118,7 @@ usage (void)
 "   -f,--fake-mount               do everything but the actual mount\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -v,--verbose                  verbose mode\n"
-"   -o,--options opt[,opt,...]    specify mount options\n" 
+"   -o,--options opt[,opt,...]    specify mount options\n"
 //"Usage: mount.diod --9nbd-attach host[:aname] 9nbd-device\n"
 //"                  --9nbd-detach 9nbd-device\n"
 );
@@ -138,7 +138,7 @@ main (int argc, char *argv[])
     int aopt = 0;
     int dopt = 0;
     int rfd = -1, wfd = -1;
-    Opt o; 
+    Opt o;
 
     diod_log_init (argv[0]);
 
@@ -266,7 +266,7 @@ main (int argc, char *argv[])
     } else {
         char *port = opt_find (o, "port");
         hostlist_iterator_t hi;
-        hostlist_t hl; 
+        hostlist_t hl;
         char *h;
 
         if (!port)
@@ -293,7 +293,7 @@ main (int argc, char *argv[])
         if (rfd < 0)
             msg_exit ("could not connect to server(s), giving up");
         wfd = rfd;
-        
+
         opt_delete (o, "port");
         opt_addf (o, "rfdno=%d", rfd);
         opt_addf (o, "wfdno=%d", wfd);
@@ -371,7 +371,7 @@ _parse_uname_access (Opt o)
     int access_uid = -1;
     char *access_name = NULL;
     struct passwd *pw;
-    
+
     if (uname) {
         if (!(pw = getpwnam (uname)))
             msg_exit ("could not look up uname='%s'", uname);
@@ -385,7 +385,7 @@ _parse_uname_access (Opt o)
     }
 
     if (!uname && !access) {
-        opt_addf (o, "uname=%s", "root");        
+        opt_addf (o, "uname=%s", "root");
         opt_addf (o, "access=%s", "user");
 
     } else if (uname && !access) {
@@ -410,7 +410,7 @@ _parse_uname_access (Opt o)
                 msg_exit ("-oaccess=<uid> requires matching -ouname=<name>");
         } else
             msg_exit ("unsupported -oaccess=%s", access);
-    } 
+    }
     if (access_name)
         free (access_name);
 }
@@ -448,13 +448,13 @@ _getflags (Opt o, unsigned long *flags)
 
     for (i = 0; i < sizeof (setopt) / sizeof (map_t); i++) {
         if (opt_find (o, setopt[i].opt)) {
-            *flags |= setopt[i].flag;            
+            *flags |= setopt[i].flag;
             opt_delete (o, setopt[i].opt);
         }
     }
     for (i = 0; i < sizeof (clropt) / sizeof (map_t); i++) {
         if (opt_find (o, clropt[i].opt)) {
-            *flags &= ~clropt[i].flag;            
+            *flags &= ~clropt[i].flag;
             opt_delete (o, clropt[i].opt);
         }
     }

@@ -60,7 +60,7 @@ done:
 	if (tc)
 		free(tc);
 	if (rc)
-		free(rc);	
+		free(rc);
 	return ret;
 }
 
@@ -91,7 +91,7 @@ npc_mkdir_bypath (Npcfid *root, char *path, u32 mode)
 	if (npc_mkdir (fid, fname, mode) < 0) {
 		int saved_err = np_rerror ();
 		(void)npc_clunk (fid);
-		free (cpy);		
+		free (cpy);
 		np_uerror (saved_err);
 		return -1;
 	}

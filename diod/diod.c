@@ -109,7 +109,7 @@ static const struct option longopts[] = {
 static void
 usage()
 {
-    fprintf (stderr, 
+    fprintf (stderr,
 "Usage: diod [OPTIONS]\n"
 "   -f,--foreground        do not fork and disassociate with tty\n"
 "   -r,--rfdno             service connected client on read file descriptor\n"
@@ -140,8 +140,8 @@ main(int argc, char **argv)
     char *copt = NULL;
     srvmode_t mode = SRV_NORMAL;
     int rfdno = -1, wfdno = -1;
-   
-    diod_log_init (argv[0]); 
+
+    diod_log_init (argv[0]);
     diod_conf_init ();
 
     /* config file overrides defaults */
@@ -524,7 +524,7 @@ _test_setgroups (void)
     if (syscall(SYS_setgroups, 0, NULL) < 0) /* clear groups */
         err_exit ("setgroups");
     if ((err = pthread_create (&t, NULL, _test_setgroups_thread, NULL)))
-        err_exit ("pthread_create"); 
+        err_exit ("pthread_create");
     if ((err = pthread_join (t, NULL)))
         err_exit ("pthread_join");
     if ((n = getgroups (ngroups_max, sg)) < 0)
@@ -590,7 +590,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
             diod_conf_set_runasuid (euid);
         }
     }
-        
+
     if (!diod_conf_get_foreground () && mode != SRV_FILEDES)
         _daemonize (); /* implicit fork - no pthreads before this */
     if (!diod_conf_get_foreground () && mode != SRV_FILEDES)

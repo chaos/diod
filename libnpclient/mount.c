@@ -59,7 +59,7 @@ npc_start (int rfd, int wfd, int msize, int flags)
 
 	if ((flags & NPC_MULTI_RPC))
 		fs = npc_create_mtfsys (rfd, wfd, msize, flags);
-	else 
+	else
 		fs = npc_create_fsys (rfd, wfd, msize, flags);
 	if (!fs)
 		goto done;
@@ -83,7 +83,7 @@ done:
 	if (np_rerror () && fs) {
 		npc_finish (fs);
 		fs = NULL;
-	}			
+	}
 	return fs;
 }
 

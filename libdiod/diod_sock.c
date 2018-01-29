@@ -149,7 +149,7 @@ _poll_add (struct pollfd **fdsp, int *nfdsp, int fd)
         fds = realloc (fds, sizeof(struct pollfd) * (nfds + 1));
     else
         fds = malloc (sizeof(struct pollfd) * (nfds + 1));
-    if (!fds) 
+    if (!fds)
         goto nomem;
     fds[nfds++].fd = fd;
     *fdsp = fds;
@@ -167,7 +167,7 @@ nomem:
  * Return the number of file descriptors added (can be 0).
  * This is a helper for diod_sock_listen ().
  */
-static int 
+static int
 _setup_one_inet (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
 {
     struct addrinfo hints, *res = NULL, *r;
@@ -213,7 +213,7 @@ _setup_one_unix (char *path, struct pollfd **fdsp, int *nfdsp)
     struct sockaddr_un addr;
     int e, fd = -1;
     mode_t oldumask;
- 
+
     if ((fd = socket (AF_UNIX, SOCK_STREAM, 0)) < 0) {
         err ("socket");
         goto error;
@@ -274,7 +274,7 @@ diod_sock_listen (List l, struct pollfd **fdsp, int *nfdsp)
         if (s[0] == '/') {
             if ((n = _setup_one_unix (s, fdsp, nfdsp)) == 0)
                 goto done;
-            ret += n; 
+            ret += n;
         } else {
             if (!(host = strdup (s))) {
                 msg ("out of memory");
@@ -312,7 +312,7 @@ diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id, int flags)
             (void)close (fdout);
         return;
     }
-                 
+
     conn = np_conn_create (srv, trans, client_id, flags);
     if (!conn) {
         errn (np_rerror (), "error creating connection for %s", client_id);
@@ -393,7 +393,7 @@ _bind_priv_inet4 (int sockfd)
         errno = EAGAIN;
     return rc;
 }
- 
+
 /* Connect to host:port.
  * Return fd on success, -1 on failure.
  */
@@ -440,7 +440,7 @@ diod_sock_connect_inet (char *host, char *port, int flags)
                 fd = -1;
                 continue;
             }
-        } 
+        }
         (void)_disable_nagle (fd);
         if (connect (fd, r->ai_addr, r->ai_addrlen) < 0) {
             errnum = errno;
@@ -507,7 +507,7 @@ diod_sock_connect (char *name, int flags)
             errno = EINVAL;
             if (!(flags & DIOD_SOCK_QUIET))
                 err ("diod_sock_connect %s", name);
-            goto done; 
+            goto done;
         }
         *port++ = '\0';
         fd = diod_sock_connect_inet (host, port, flags);

@@ -131,7 +131,7 @@ xattr_pwrite (Xattr x, void *buf, size_t count, off_t offset)
     if (!(x->flags & XATTR_FLAGS_SET)) {
         np_uerror (EINVAL);
         return -1;
-    } 
+    }
     if (len > x->len - offset)
         len = x->len - offset;
     if (len < 0)
@@ -185,7 +185,7 @@ _lgetxattr (Xattr x, const char *path)
         x->len = llistxattr (path, x->buf, len);
     if (x->len < 0) {
         np_uerror (errno);
-        return -1; 
+        return -1;
     }
     return 0;
 #endif
@@ -195,7 +195,7 @@ int
 xattr_open (Npfid *fid, Npstr *name, u64 *sizep)
 {
     Fid *f = fid->aux;
-   
+
     assert (f->xattr == NULL);
 
     f->xattr = _xattr_create (name, 0, XATTR_FLAGS_GET, 0);
@@ -205,7 +205,7 @@ xattr_open (Npfid *fid, Npstr *name, u64 *sizep)
     return 0;
 error:
     _xattr_destroy (&f->xattr);
-    return -1;    
+    return -1;
 }
 
 int xattr_create (Npfid *fid, Npstr *name, u64 size, u32 setflags)

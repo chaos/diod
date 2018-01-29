@@ -387,7 +387,7 @@ np_tpool_cleanup (Npsrv *srv)
 	xpthread_mutex_unlock (&srv->lock);
 	for (tp = dead; tp != NULL; tp = next) {
 		next = tp->next;
-		np_tpool_destroy (tp);	
+		np_tpool_destroy (tp);
 	}
 }
 
@@ -681,7 +681,7 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 	}
 	/* In case this was Tclunk or Tremove, fid must be discarded
 	 * prior to reply, or we could find it reused before we're done.
-	 */ 
+	 */
 	if (req->fid) {
 		np_fid_decref (&req->fid);
 		req->fid = NULL;
@@ -734,7 +734,7 @@ np_wthread_proc(void *a)
 
 		rc = np_process_request(req, tp);
 		np_postprocess_request (req, rc);
-			
+
 		xpthread_mutex_lock(&tp->srv->lock);
 		np_srv_remove_workreq(tp, req);
 		xpthread_mutex_unlock(&tp->srv->lock);

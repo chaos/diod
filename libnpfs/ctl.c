@@ -99,14 +99,14 @@ np_ctl_delfile (Npfile *file)
 
 	if (file) {
 		for (ff = file->child; ff != NULL; ) {
-			tmp = ff->next; 
+			tmp = ff->next;
 			np_ctl_delfile (ff);
 			ff = tmp;
 		}
 		if (file->name)
 			free (file->name);
 		free (file);
-	}	
+	}
 }
 
 static Npfile *
@@ -140,7 +140,7 @@ _alloc_file (char *name, u8 type)
 	(void)gettimeofday (&file->mtime, NULL);
 	(void)gettimeofday (&file->ctime, NULL);
 
-	return file;	
+	return file;
 error:
 	np_ctl_delfile (file);
 	return NULL;
@@ -158,7 +158,7 @@ _ctl_get_proc (char *name, void *arg)
 	snprintf (path, sizeof(path), "/proc/%s", name);
 	for (n = 0; n < strlen (path); n++) {
 		if (path[n] == '.')
-			path[n] = '/';	
+			path[n] = '/';
 	}
 	if ((fd = open (path, O_RDONLY)) < 0) {
 		np_uerror (errno);
@@ -194,7 +194,7 @@ error:
 		free (s);
 	if (fd >= 0)
 		(void)close (fd);
-	return NULL;	
+	return NULL;
 }
 
 Npfile *
@@ -247,7 +247,7 @@ np_ctl_finalize (Npsrv *srv)
 
 	if (root)
 		np_ctl_delfile (root);
-	srv->ctlroot = NULL;		
+	srv->ctlroot = NULL;
 }
 
 int
@@ -289,7 +289,7 @@ _ctl_get_version (char *name, void *a)
         char *s = NULL;
         int len = 0;
 
-        if (aspf (&s, &len, "%s\n", META_ALIAS) < 0)
+        if (aspf (&s, &len, "%s-%s\n", PACKAGE_NAME, PACKAGE_VERSION) < 0)
                 np_uerror (ENOMEM);
         return s;
 }
@@ -446,7 +446,7 @@ np_ctl_read(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	if ((f->file->flags & NP_CTL_FLAGS_ZEROSRC)) {
 		if ((rc = np_alloc_rread (count)))
 			memset (rc->u.rread.data, 0, count);
-		else 
+		else
 			np_uerror (ENOMEM);
 		goto done;
 	}
@@ -533,7 +533,7 @@ Npfcall *
 np_ctl_write(Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
 {
 	Fid *f = fid->aux;
-	Npfcall *rc = NULL;	
+	Npfcall *rc = NULL;
 
 	/* limited write capability for now */
 	if (!(f->file->flags & NP_CTL_FLAGS_SINK)) {

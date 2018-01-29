@@ -107,7 +107,7 @@ int
 diod_rdma_listen (diod_rdma_t rdma)
 {
     int n;
-    
+
     rdma->addr.sin_family = AF_INET;
     rdma->addr.sin_port = htons(rdma_port);
     rdma->addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -118,7 +118,7 @@ diod_rdma_listen (diod_rdma_t rdma)
     n = rdma_listen(rdma->listen_id, 1);
     if (n)
         errn (n, "rdma_listen");
-  
+
     return 0;
 }
 

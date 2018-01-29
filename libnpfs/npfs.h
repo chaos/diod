@@ -196,7 +196,7 @@ struct Npreq {
 	Npfcall*	tcall;
 	Npfcall*	rcall;
 	Npfid*		fid;
-	time_t		birth;	
+	time_t		birth;
 
 	Npreq*		next;	/* list of all outstanding requests */
 	Npreq*		prev;	/* used for requests that are worked on */
@@ -205,7 +205,7 @@ struct Npreq {
 
 #define NPSTATS_RWCOUNT_BINS 12
 struct Npstats {
-	char		*name;	
+	char		*name;
 	int		numfids;
 	int		numreqs;
 	u64		nreqs[P9_RWSTAT+1];
@@ -246,7 +246,7 @@ struct Npauth {
 	int	(*read)(Npfid *fid, u64 offset, u32 count, u8 *data);
 	int	(*write)(Npfid *fid, u64 offset, u32 count, u8 *data);
 	int	(*clunk)(Npfid *fid);
-};	
+};
 
 enum {
 	/* debug */
@@ -347,7 +347,7 @@ struct Npuser {
 	char*		uname;
 	uid_t		uid;
 	gid_t		gid;
-	int		nsg;	
+	int		nsg;
 	gid_t		*sg;
 	Npuser*		next;
 	time_t		t;

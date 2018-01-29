@@ -216,7 +216,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 
 			req->next = ureqs;
 			ureqs = req;
-		} 
+		}
 		req = req1;
 	}
 
@@ -268,7 +268,7 @@ npc_cancel_fid_requests(Npcfid *fid)
 
 			if (req) {
 				req->ecode = EIO;
-				if (req->cb) 
+				if (req->cb)
 					(*req->cb)(req, req->cba);
 				npc_reqfree(req);
 			}
@@ -315,7 +315,7 @@ npc_read_proc(void *a)
 					req->ecode = EIO;
 				}
 				fc = NULL;
-				if (req->cb) 
+				if (req->cb)
 					(*req->cb)(req, req->cba);
 
 				if (!req->flushed)
@@ -428,7 +428,7 @@ npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba)
 	}
 
 	req = npc_reqalloc();
-	if (!req) 
+	if (!req)
 		return -1;
 
 	if (tc->type != P9_TVERSION) {
@@ -485,7 +485,7 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc)
 	pthread_cond_init(&r.cond, NULL);
 
 	n = npc_rpcnb(fs, tc, npc_rpc_cb, &r);
-	if (n < 0) 
+	if (n < 0)
 		return n;
 
 	xpthread_mutex_lock(&r.lock);

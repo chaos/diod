@@ -207,7 +207,7 @@ np_rdmatrans_create(struct rdma_cm_id *cmid, int q_depth, int msize)
 	rdma_reject(cmid, NULL, 0);
 	return NULL;
 }
- 
+
 static void
 rdma_trans_destroy(void *a)
 {

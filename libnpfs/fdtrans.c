@@ -134,7 +134,7 @@ np_fdtrans_recv(Npfcall **fcp, u32 msize, void *a)
 		if (n < 0) {
 			np_uerror(errno);
 			goto error;
-		}	
+		}
 		if (n == 0)
 			goto eof;
 		len += n;
@@ -186,7 +186,7 @@ np_fdtrans_send(Npfcall *fc, void *a)
 		}
 		len += n;
 	}
-	return len;		
+	return len;
 error:
 	return -1;
-}	
+}

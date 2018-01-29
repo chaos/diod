@@ -51,7 +51,7 @@ npc_pwrite(Npcfid *fid, void *buf, u32 count, u64 offset)
 	int ret = -1;
 
 	if (count > maxio)
-		count = maxio;	
+		count = maxio;
 	if (!(tc = np_create_twrite(fid->fid, offset, count, buf))) {
 		np_uerror (ENOMEM);
 		goto done;

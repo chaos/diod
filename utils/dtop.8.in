@@ -1,4 +1,4 @@
-.TH dtop 8 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.TH dtop 8 "@PACKAGE_VERSION@" "@PACKAGE_NAME@" "@PACKAGE_NAME@"
 .SH NAME
 dtop \- display diod performance
 .SH SYNOPSIS
@@ -18,7 +18,7 @@ Note that \fBdtop\fR uses the "ctl" synthetic file system.
 .TP
 .I "-P, --poll-period SEC"
 Set the polling period.  SEC may be a floating point number.
-The default is 1 second. 
+The default is 1 second.
 .TP
 .I "-p, --port PORT"
 Specify the server port number for all monitored servers (default 564).
