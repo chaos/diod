@@ -42,19 +42,21 @@ LDADD = $(top_builddir)/utils/opt.o \
         $(top_builddir)/liblsd/liblsd.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
-tsetuid_SOURCES = tsetuid.c
-tsuppgrp_SOURCES = tsuppgrp.c
-tsetfsuid_SOURCES = tsetfsuid.c
-tsetfsuidsupp_SOURCES = tsetfsuidsupp.c
-tfcntl_SOURCES = tfcntl.c
-topt_SOURCES = topt.c
-tconf_SOURCES = tconf.c
-tserialize_SOURCES = tserialize.c
-tlist_SOURCES = tlist.c
-tnpsrv_SOURCES = tnpsrv.c
-tnpsrv2_SOURCES = tnpsrv2.c
-tnpsrv3_SOURCES = tnpsrv3.c
-tlua_SOURCES = tlua.c
-tcap_SOURCES = tcap.c
+common_sources = test.h
+
+tsetuid_SOURCES = tsetuid.c $(common_sources)
+tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
+tsetfsuid_SOURCES = tsetfsuid.c $(common_sources)
+tsetfsuidsupp_SOURCES = tsetfsuidsupp.c $(common_sources)
+tfcntl_SOURCES = tfcntl.c $(common_sources)
+topt_SOURCES = topt.c $(common_sources)
+tconf_SOURCES = tconf.c $(common_sources)
+tserialize_SOURCES = tserialize.c $(common_sources)
+tlist_SOURCES = tlist.c $(common_sources)
+tnpsrv_SOURCES = tnpsrv.c $(common_sources)
+tnpsrv2_SOURCES = tnpsrv2.c $(common_sources)
+tnpsrv3_SOURCES = tnpsrv3.c $(common_sources)
+tlua_SOURCES = tlua.c $(common_sources)
+tcap_SOURCES = tcap.c $(common_sources)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf valgrind.supp
