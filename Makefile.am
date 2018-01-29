@@ -9,4 +9,4 @@ SUBDIRS = \
 	etc \
 	tests
 
-EXTRA_DIST = META diod.spec
+EXTRA_DIST = diod.spec

@@ -1,21 +1,20 @@
 ##
 # Prologue
 ##
-AC_INIT(m4_esyscmd([awk '/Name:/ {printf "%s",$2; exit}' META]),
-        m4_esyscmd([awk '/Version:/ {printf "%s",$2; exit}' META]))
+AC_INIT([diod],
+        m4_esyscmd([git describe --always | awk '/.*/ {sub(/^v/, ""); printf "%s",$1; exit}']))
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
 AC_CANONICAL_SYSTEM
-X_AC_META
 X_AC_EXPAND_INSTALL_DIRS
 
 ##
 # Automake support
 ##
 AM_INIT_AUTOMAKE([subdir-objects]
-		m4_esyscmd([case `automake --version | head -n 1` in 
-                             *1.11*);; 
-                             *) echo serial-tests;; 
+		m4_esyscmd([case `automake --version | head -n 1` in
+                             *1.11*);;
+                             *) echo serial-tests;;
                              esac]))
 AM_SILENT_RULES([yes])
 AM_CONFIG_HEADER([config/config.h])
@@ -49,7 +48,7 @@ AC_CHECK_HEADERS( \
 
 ##
 # Checks for typedefs, structures, and compiler characteristics
-## 
+##
 AC_C_BIGENDIAN
 AC_C_CONST
 
