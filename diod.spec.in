@@ -1,11 +1,11 @@
-Name: @META_NAME@
-Version: @META_VERSION@
-Release: @META_RELEASE@%{?dist}
+Name: @PACKAGE_NAME@
+Version: @PACKAGE_VERSION@
+Release: 1%{?dist}
 
 Summary:  I/O forwarding server for 9P.
 License: GPL
 Group: Applications/System
-URL: http://code.google.com/p/diod
+URL: http://github.com/chaos/diod
 Source0: %{name}-%{version}.tar.gz
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
