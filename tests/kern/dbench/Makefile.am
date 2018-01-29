@@ -2,7 +2,9 @@ AM_CFLAGS = -w
 
 # VERSION=4.00
 
-AM_CPPFLAGS = -DDATADIR=\"$(X_DATADIR)\"
+AM_CPPFLAGS = \
+	-DDATADIR=\"$(X_DATADIR)\" \
+	-I$(builddir)
 
 LDADD = $(LIBPOPT)
 
@@ -17,6 +19,9 @@ dbench_SOURCES = \
 	snprintf.c \
 	dbench.h
 
+check_SCRIPTS = \
+	mkproto.pl
+
 nodist_dbench_SOURCES = \
 	proto.h
 
@@ -24,7 +29,7 @@ BUILT_SOURCES = proto.h
 
 CLEANFILES = proto.h
 
-proto.h: $(dbench_SOURCES) mkproto.pl
-	perl mkproto.pl $(dbench_SOURCES) > proto.h
+proto.h: $(dbench_SOURCES)
+	perl $(srcdir)/mkproto.pl $^ >$@
 
-EXTRA_DIST = mkproto.pl
+EXTRA_DIST = $(check_SCRIPTS)
