@@ -66,7 +66,7 @@ _destroy_fid (Npfid *f)
 	} else {
 		if (srv->fiddestroy)
 			(*srv->fiddestroy)(f);
-	}	
+	}
 	if (f->user)
 		np_user_decref(f->user);
 	if (f->tpool)
@@ -222,7 +222,7 @@ np_fid_find (Npconn *conn, u32 fid)
 	if ((f = _lookup_fid (&pool->htable[hash], fid)))
 		np_fid_incref (f);
 	xpthread_mutex_unlock (&pool->lock);
-	
+
 	return f;
 }
 

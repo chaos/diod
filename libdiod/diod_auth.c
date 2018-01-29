@@ -239,7 +239,7 @@ writeafid(Npfid *afid, u64 offset, u32 count, u8 *data)
     NP_ASSERT (da->magic == DIOD_AUTH_MAGIC);
 
     if (offset == 0 && !da->datastr) {
-        da->datastr = malloc (count + 1); 
+        da->datastr = malloc (count + 1);
     } else if (da->datastr && offset == strlen (da->datastr)) {
         da->datastr = realloc (da->datastr, offset + count + 1);
     } else {
@@ -281,7 +281,7 @@ clunkafid(Npfid *afid)
 int
 diod_auth (Npcfid *afid, u32 uid)
 {
-    int ret = -1; 
+    int ret = -1;
 #if HAVE_LIBMUNGE
     char *cred = NULL;
     munge_ctx_t ctx = NULL;

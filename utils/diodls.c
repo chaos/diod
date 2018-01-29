@@ -250,7 +250,7 @@ lsdir (int i, int count, Npcfid *root, int lopt, char *path)
     }
     if (count > 1)
         printf ("%s:\n", path);
-    do { 
+    do {
         if ((npc_readdir_r (dir, &d, &dp)) > 0) {
             errn (np_rerror (), "npc_readdir: %s", path);
             goto error;

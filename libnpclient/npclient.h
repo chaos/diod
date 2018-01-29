@@ -92,7 +92,7 @@ int npc_open (Npcfid *fid, u32 flags);
  * with specified 'name', 'flags', and 'mode'.
  * Afterward, 'fid' will represent the new file, which can be used for I/O.
  * Returns 0 on success, -1 on error (retrieve with np_rerror ()).
- */ 
+ */
 int npc_create (Npcfid *fid, char *name, u32 flags, u32 mode, gid_t gid);
 
 /* Read 'count' bytes to 'buf' at 'offset' using READ requests.

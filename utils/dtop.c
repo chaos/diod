@@ -86,7 +86,7 @@ static const struct option longopts[] = {
 typedef struct {
     char host[MAXHOSTNAMELEN];
     char aname[PATH_MAX];
-} Tpoolkey; 
+} Tpoolkey;
 
 /* Tpool view.
  * This is the actual data we sample.
@@ -271,7 +271,7 @@ _update_display_topwin (WINDOW *win)
 
     xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((tp = list_next (itr))) {
         statfs   += sample_rate (tp->nreqs[P9_TSTATFS], now);
         lopen    += sample_rate (tp->nreqs[P9_TLOPEN], now);
@@ -303,7 +303,7 @@ _update_display_topwin (WINDOW *win)
     }
     list_iterator_destroy (itr);
     if (!(itr = list_iterator_create (servers)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((sp = list_next (itr))) {
         if (now - sp->last_poll < stale_secs)
             upservers++;
@@ -316,7 +316,7 @@ _update_display_topwin (WINDOW *win)
     wclear (win);
     mvwprintw (win, y, 0, "%s", "DIOD - Distributed I/O Daemon");
     mvwprintw (win, y++, 55, "%*s", (int)(strlen (ts) - 1), ts);
-    y++; 
+    y++;
 
     mvwprintw (win, y++, 0,
       "Ops/s: %5.0f statfs  %6.0f lopen    %6.0f lcreate %6.0f symlink %6.0f mknod",
@@ -362,7 +362,7 @@ _update_display_tpool (WINDOW *win)
 
     xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((tp = list_next (itr))) {
         if (sample_val (tp->numfids, now) == 0)
             continue;
@@ -466,7 +466,7 @@ _update_display_rwcount (WINDOW *win)
     wmove (win, y++, 0);
 
     wattron (win, A_REVERSE);
-    wprintw (win, 
+    wprintw (win,
              "%9.9s %10.10s "
              "%5.5s %5.5s %5.5s %5.5s %5.5s "
              "%5.5s %5.5s %5.5s %5.5s %5.5s",
@@ -477,7 +477,7 @@ _update_display_rwcount (WINDOW *win)
 
     xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (tpools)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((tp = list_next (itr))) {
         if (sample_val (tp->numfids, now) == 0)
             continue;
@@ -532,7 +532,7 @@ _update_display_server (WINDOW *win)
     /* zero server stats */
     xpthread_mutex_lock (&dtop_lock);
     if (!(itr = list_iterator_create (servers)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((sp = list_next (itr))) {
         sp->numanames = sp->numfids = sp->numreqs = sp->totreqs = 0;
         sp->rmbps = sp->wmbps = 0;
@@ -540,7 +540,7 @@ _update_display_server (WINDOW *win)
     list_iterator_destroy (itr);
 
     if (!(itr = list_iterator_create (tpools)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((tp = list_next (itr))) {
         if (sample_val (tp->numfids, now) == 0)
             continue;
@@ -559,7 +559,7 @@ _update_display_server (WINDOW *win)
 
     /* iterate thru servers displaying data */
     if (!(itr = list_iterator_create (servers)))
-        msg_exit ("out of memory");    
+        msg_exit ("out of memory");
     while ((sp = list_next (itr))) {
         mvwprintw (win, y, 0, "%10.10s %5.0d %5.0f ",
                    sp->host, sp->numanames, sp->numconns);
@@ -624,7 +624,7 @@ _curses_watcher (double update_secs)
         err_exit ("error initializing parent window");
     if (!(subwin = newwin (256, 80, 9, 0)))
         err_exit ("error initializing subwindow");
-    
+
     raw ();
     noecho ();
     timeout (update_secs * 1000);
@@ -1008,9 +1008,9 @@ _destroy_server (Server *sp)
 
     if ((err = pthread_join (sp->thread, NULL)))
         errn_exit (err, "pthread_join");
-    sample_destroy (sp->nfs_ops); 
-    sample_destroy (sp->mem_dirty); 
-    sample_destroy (sp->mem_cached); 
+    sample_destroy (sp->nfs_ops);
+    sample_destroy (sp->mem_dirty);
+    sample_destroy (sp->mem_cached);
     free (sp->port);
     free (sp->host);
     free (sp);

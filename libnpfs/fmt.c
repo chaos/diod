@@ -101,7 +101,7 @@ np_timestr(const u64 sec, const u64 nsec)
 static void
 np_printdents(char *s, int len, u8 *buf, int buflen)
 {
-	if (buflen > 0)	
+	if (buflen > 0)
 		spf (s, len, "\n");
 	/* FIXME: decode directory entries here */
 	np_sndump(s, len, buf, buflen < 64 ? buflen : 64);
@@ -110,7 +110,7 @@ np_printdents(char *s, int len, u8 *buf, int buflen)
 static void
 np_printdata(char *s, int len, u8 *buf, int buflen)
 {
-	if (buflen > 0)	
+	if (buflen > 0)
 		spf (s, len, "\n");
 	np_sndump(s, len, buf, buflen < 64 ? buflen : 64);
 }
@@ -157,7 +157,7 @@ np_printlockstatus(char *s, int len, u8 status)
 }
 
 void
-np_snprintfcall(char *s, int len, Npfcall *fc) 
+np_snprintfcall(char *s, int len, Npfcall *fc)
 {
 	int i;
 
@@ -489,7 +489,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, " name '%.*s'", fc->u.tunlinkat.name.len,
 					     fc->u.tunlinkat.name.str);
 		spf (s, len, " flags %"PRIu32, fc->u.tunlinkat.flags);
-		break;	
+		break;
 	case P9_RUNLINKAT:
 		spf (s, len, "P9_RUNLINKAT tag %u", fc->tag);
 		break;
@@ -518,7 +518,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 			spf (s, len, " n_uname P9_NONUNAME");
 		break;
 	case P9_RAUTH:
-		spf (s, len, "P9_RAUTH tag %u qid ", fc->tag); 
+		spf (s, len, "P9_RAUTH tag %u qid ", fc->tag);
 		np_printqid(s, len, &fc->u.rauth.qid);
 		break;
 	case P9_TATTACH:
@@ -535,7 +535,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 			spf (s, len, " n_uname P9_NONUNAME");
 		break;
 	case P9_RATTACH:
-		spf (s, len, "P9_RATTACH tag %u qid ", fc->tag); 
+		spf (s, len, "P9_RATTACH tag %u qid ", fc->tag);
 		np_printqid(s, len, &fc->u.rattach.qid);
 		break;
 	case P9_TFLUSH:
@@ -546,7 +546,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 		spf (s, len, "P9_RFLUSH tag %u", fc->tag);
 		break;
 	case P9_TWALK:
-		spf (s, len, "P9_TWALK tag %u fid %d newfid %d nwname %d", 
+		spf (s, len, "P9_TWALK tag %u fid %d newfid %d nwname %d",
 			fc->tag, fc->u.twalk.fid, fc->u.twalk.newfid,
 			fc->u.twalk.nwname);
 		for(i = 0; i < fc->u.twalk.nwname; i++)
@@ -560,7 +560,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 			np_printqid(s, len, &fc->u.rwalk.wqids[i]);
 		break;
 	case P9_TREAD:
-		spf (s, len, "P9_TREAD tag %u fid %d offset %"PRIu64" count %u", 
+		spf (s, len, "P9_TREAD tag %u fid %d offset %"PRIu64" count %u",
 			fc->tag, fc->u.tread.fid, fc->u.tread.offset,
 			fc->u.tread.count);
 		break;

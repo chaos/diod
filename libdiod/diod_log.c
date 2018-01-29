@@ -196,7 +196,7 @@ diod_log_get_dest (void)
             break;
         case DEST_LOGF:
             snprintf (res, len, "%s", logf == stdout ? "stdout" :
-                                      logf == stderr ? "stderr" : 
+                                      logf == stderr ? "stderr" :
                                       logf == NULL   ? "unknown" : filename);
             break;
     }

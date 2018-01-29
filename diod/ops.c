@@ -24,7 +24,7 @@
 
 /* diod_ops.c - 9P operations for diod distributed I/O daemon */
 
-/* Initial code borrowed from npfs/fs/ufs.c which is 
+/* Initial code borrowed from npfs/fs/ufs.c which is
  *   Copyright (C) 2005-2008 by Latchesar Ionkov <lucho@ionkov.net>
  */
 
@@ -34,10 +34,10 @@
  * When a 9P T-message is received, np_wthread_proc () calls
  * np_process_request (), which calls the registered srv->operation
  * (if any) through its wrapper in npfs/libnpfs/fcall.c.
- * 
+ *
  * The R-message sent in reply is determined by the operation's (or actually
  * its wrapper's) return value and thread-specific error state:
- * 
+ *
  * (Npfcall *) reply structure returned and error state clear
  *     The reply is returned in a R-message.  This structure is allocated with
  *     an operation-specific np_create_r<op> () function (see npfs.h)
@@ -48,7 +48,7 @@
  * Error state set
  *     An Rlerror message is sent, constructed from the thread-specific error
  *     state which is set with np_uerror ().  Any (Npfcall *)returned is freed.
- *  
+ *
  * Normally the wrapper passes through the registered srv->operation's return
  * value, except in special cases noted below (diod_walk).
  */
@@ -263,7 +263,7 @@ diod_remapuser (Npfid *fid)
         }
         if (fid->user)
             np_user_decref (fid->user);
-        fid->user = user; 
+        fid->user = user;
     }
 done:
     return ret;
@@ -457,7 +457,7 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
         f->flags |= DIOD_FID_FLAGS_MOUNTPT;
     }
     path_decref (srv, f->path);
-    f->path = npath; 
+    f->path = npath;
     diod_ustat2qid (&sb, wqid);
     return 1;
 error:
@@ -488,7 +488,7 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
         np_uerror (ENOMEM);
         goto error;
     }
-    if (f->flags & DIOD_FID_FLAGS_XATTR) 
+    if (f->flags & DIOD_FID_FLAGS_XATTR)
         n = xattr_pread (f->xattr, ret->u.rread.data, count, offset);
     else
         n = ioctx_pread (f->ioctx, ret->u.rread.data, count, offset);
@@ -505,7 +505,7 @@ error:
 error_quiet:
     if (ret)
         free (ret);
-    return NULL; 
+    return NULL;
 }
 
 /* Twrite - write to a file.
@@ -655,7 +655,7 @@ _remap_oflags (int flags)
 {
     int i;
     int rflags = 0;
-    
+
     struct dotl_openflag_map dotl_oflag_map[] = {
         { O_CREAT,      P9_DOTL_CREATE },
         { O_EXCL,       P9_DOTL_EXCL },
@@ -707,7 +707,7 @@ diod_lopen (Npfid *fid, u32 flags)
     if (f->ioctx != NULL) {
         msg ("diod_lopen: fid is already open");
         np_uerror (EINVAL);
-        goto error; 
+        goto error;
     }
     if (ioctx_open (fid, flags, 0) < 0) {
         if (np_rerror () == ENOMEM)
@@ -749,7 +749,7 @@ diod_lcreate(Npfid *fid, Npstr *name, u32 flags, u32 mode, u32 gid)
     if (f->ioctx != NULL) {
         msg ("diod_lcreate: fid is already open");
         np_uerror (EINVAL);
-        goto error; 
+        goto error;
     }
     opath = f->path;
     if (!(f->path = path_append (srv, opath, name))) {
@@ -1164,7 +1164,7 @@ diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
     if (!f->ioctx) {
         msg ("diod_readdir: fid is not open");
         np_uerror (EBADF);
-        goto error; 
+        goto error;
     }
     if (!(ret = np_create_rreaddir (count))) {
         np_uerror (ENOMEM);
@@ -1246,7 +1246,7 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
                 status = P9_LOCK_BLOCKED;
             break;
         case P9_LOCK_TYPE_WRLCK:
-            if (ioctx_flock (f->ioctx, LOCK_EX | LOCK_NB) == 0) 
+            if (ioctx_flock (f->ioctx, LOCK_EX | LOCK_NB) == 0)
                 status = P9_LOCK_SUCCESS;
             else if (errno == EWOULDBLOCK)
                 status  = P9_LOCK_BLOCKED;
@@ -1290,7 +1290,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         goto error;
     }
     ftype = (type == P9_LOCK_TYPE_RDLCK) ? LOCK_SH : LOCK_EX;
-    ftype = ioctx_testlock (f->ioctx, ftype);    
+    ftype = ioctx_testlock (f->ioctx, ftype);
     type = (ftype == LOCK_EX) ? P9_LOCK_TYPE_WRLCK : P9_LOCK_TYPE_UNLCK;
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
@@ -1429,7 +1429,7 @@ diod_xattrcreate (Npfid *fid, Npstr *name, u64 attr_size, u32 flags)
         goto error;
     }
     return ret;
-    
+
 error:
     errn (np_rerror (), "diod_xattrcreate %s@%s:%s/%.*s",
           fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),

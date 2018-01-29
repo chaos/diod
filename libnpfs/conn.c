@@ -200,9 +200,9 @@ np_conn_read_proc(void *a)
 			srv->tpool->stats.nreqs[P9_TFLUSH]++;
 			xpthread_mutex_unlock (&srv->lock);
 		} else {
-			xpthread_mutex_lock(&srv->lock);	
+			xpthread_mutex_lock(&srv->lock);
 			np_srv_add_req(srv, req);
-			xpthread_mutex_unlock(&srv->lock);	
+			xpthread_mutex_unlock(&srv->lock);
 		}
 	}
 	/* Just got EOF on read, or some other fatal error for the

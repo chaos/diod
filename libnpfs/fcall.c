@@ -92,7 +92,7 @@ np_auth(Npreq *req, Npfcall *tc)
 	if (tc->u.tauth.n_uname != P9_NONUNAME) {
 		snprintf (a, sizeof(a), "auth(%d@%s:%.*s)",
 			  tc->u.tauth.n_uname,
-			  np_conn_get_client_id (conn), 
+			  np_conn_get_client_id (conn),
 			  tc->u.tauth.aname.len, tc->u.tauth.aname.str);
 	} else {
 		snprintf (a, sizeof(a), "auth(%.*s@%s:%.*s)",
@@ -149,7 +149,7 @@ np_attach(Npreq *req, Npfcall *tc)
 	if (tc->u.tattach.n_uname != P9_NONUNAME) {
 		snprintf (a, sizeof(a), "attach(%d@%s:%.*s)",
 			  tc->u.tattach.n_uname,
-			  np_conn_get_client_id (conn), 
+			  np_conn_get_client_id (conn),
 			  tc->u.tattach.aname.len, tc->u.tattach.aname.str);
 	} else {
 		snprintf (a, sizeof(a), "attach(%.*s@%s:%.*s)",
@@ -441,7 +441,7 @@ np_read(Npreq *req, Npfcall *tc)
 				goto done;
 
 			n = conn->srv->auth->read(fid, tc->u.tread.offset, tc->u.tread.count, rc->u.rread.data);
-			if (n >= 0) 
+			if (n >= 0)
 				np_set_rread_count(rc, n);
 			else {
 				free(rc);

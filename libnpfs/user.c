@@ -111,7 +111,7 @@ _usercache_lookup (Npsrv *srv, char *uname, uid_t uid)
 	for (u = uc->users; u != NULL; u = u->next) {
 		if (!uname && uid == u->uid)
 			break;
-		if (uname && !strcmp (uname, u->uname)) 
+		if (uname && !strcmp (uname, u->uname))
 			break;
 	}
 	return u;
@@ -289,7 +289,7 @@ _alloc_user (Npsrv *srv, struct passwd *pwd)
 error:
 	if (u)
 		_free_user (u);
-	return NULL; 
+	return NULL;
 }
 
 /* Create an Npuser struct for a user, without requiring
@@ -350,7 +350,7 @@ _real_lookup_byuid (Npsrv *srv, uid_t uid)
 	Npuser *u;
 	int err, len;
 	struct passwd pw, *pwd;
-	char *buf = NULL; 
+	char *buf = NULL;
 
 	if (srv->flags & SRV_FLAGS_NOUSERDB) {
 		if (!(u = _alloc_nouserdb (srv, uid, NULL)))
@@ -566,7 +566,7 @@ done:
 	if (cap != NULL && cap_free (cap) < 0) {
 		np_uerror (errno);
 		np_logerr (srv, "cap_free failed");
-	}	
+	}
 	return ret;
 }
 #endif

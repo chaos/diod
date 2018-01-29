@@ -36,7 +36,7 @@
 
 Nptrans *
 np_trans_create(void *aux,
-		int (*recv)(Npfcall **, u32, void *), 
+		int (*recv)(Npfcall **, u32, void *),
 		int (*send)(Npfcall *, void *),
 		void (*destroy)(void *))
 {

@@ -137,7 +137,7 @@ opt_addf (Opt o, const char *fmt, ...)
     while (item) {
         if (!(cpy = strdup (item)))
             msg_exit ("out of memory");
-        (void)list_delete_all (o->list, (ListFindF)_match_key, cpy);   
+        (void)list_delete_all (o->list, (ListFindF)_match_key, cpy);
         if (!list_append (o->list, cpy))
             msg_exit ("out of memory");
         item = strtok_r (NULL, ",", &saveptr);
@@ -178,7 +178,7 @@ opt_delete (Opt o, char *key)
 {
     NP_ASSERT (o->magic == OPT_MAGIC);
 
-    return list_delete_all (o->list, (ListFindF)_match_key, key);   
+    return list_delete_all (o->list, (ListFindF)_match_key, key);
 }
 
 int

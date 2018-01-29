@@ -199,7 +199,7 @@ buf_get_int32(struct cbuf *buf)
 	u32 ret = 0;
 
 	if (buf_check_size(buf, 4)) {
-		ret = buf->p[0] | (buf->p[1] << 8) | (buf->p[2] << 16) | 
+		ret = buf->p[0] | (buf->p[1] << 8) | (buf->p[2] << 16) |
 			(buf->p[3] << 24);
 		buf->p += 4;
 	}
@@ -213,13 +213,13 @@ buf_get_int64(struct cbuf *buf)
 	u64 ret = 0;
 
 	if (buf_check_size(buf, 8)) {
-		ret = (u64) buf->p[0] | 
+		ret = (u64) buf->p[0] |
 			((u64) buf->p[1] << 8) |
-			((u64) buf->p[2] << 16) | 
+			((u64) buf->p[2] << 16) |
 			((u64) buf->p[3] << 24) |
-			((u64) buf->p[4] << 32) | 
+			((u64) buf->p[4] << 32) |
 			((u64) buf->p[5] << 40) |
-			((u64) buf->p[6] << 48) | 
+			((u64) buf->p[6] << 48) |
 			((u64) buf->p[7] << 56);
 		buf->p += 8;
 	}
@@ -673,11 +673,11 @@ np_create_tstatfs(u32 fid)
 	int size = sizeof(u32);
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
-	Npfcall *fc; 
+	Npfcall *fc;
 
 	if (!(fc = np_create_common(bufp, size, P9_TSTATFS)))
 		return NULL;
-	buf_put_int32(bufp, fid,    &fc->u.tstatfs.fid);	
+	buf_put_int32(bufp, fid,    &fc->u.tstatfs.fid);
 
 	return np_post_check(fc, bufp);
 }
@@ -689,11 +689,11 @@ np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 fi
 	int size = 2*sizeof(u32) + 6*sizeof(u64) + sizeof(u32);
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
-	Npfcall *fc; 
+	Npfcall *fc;
 
 	if (!(fc = np_create_common(bufp, size, P9_RSTATFS)))
 		return NULL;
-	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);	
+	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);
 	buf_put_int32(bufp, bsize,   &fc->u.rstatfs.bsize);
 	buf_put_int64(bufp, blocks,  &fc->u.rstatfs.blocks);
 	buf_put_int64(bufp, bfree,   &fc->u.rstatfs.bfree);
@@ -741,7 +741,7 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 Npfcall *
 np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
 {
-        int size = sizeof(u32) + sizeof(u16) + strlen(name) 
+        int size = sizeof(u32) + sizeof(u16) + strlen(name)
 		 + sizeof(u32) + sizeof(u32) + sizeof(u32);
         struct cbuf buffer;
         struct cbuf *bufp = &buffer;
@@ -1582,14 +1582,14 @@ np_deserialize(Npfcall *fc)
 	case P9_TXATTRWALK:
 		fc->u.txattrwalk.fid = buf_get_int32(bufp);
 		fc->u.txattrwalk.attrfid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->u.txattrwalk.name);	
+		buf_get_str(bufp, &fc->u.txattrwalk.name);
 		break;
 	case P9_RXATTRWALK:
 		fc->u.rxattrwalk.size = buf_get_int64(bufp);
 		break;
 	case P9_TXATTRCREATE:
 		fc->u.txattrcreate.fid = buf_get_int32(bufp);
-		buf_get_str(bufp, &fc->u.txattrcreate.name);	
+		buf_get_str(bufp, &fc->u.txattrcreate.name);
 		fc->u.txattrcreate.size = buf_get_int64(bufp);
 		fc->u.txattrcreate.flag = buf_get_int32(bufp);
 		break;
@@ -1611,30 +1611,30 @@ np_deserialize(Npfcall *fc)
 		break;
 	case P9_TLOCK:
 		fc->u.tlock.fid = buf_get_int32(bufp);
-		fc->u.tlock.type = buf_get_int8(bufp);	
-		fc->u.tlock.flags = buf_get_int32(bufp);	
-		fc->u.tlock.start = buf_get_int64(bufp);	
-		fc->u.tlock.length = buf_get_int64(bufp);	
-		fc->u.tlock.proc_id = buf_get_int32(bufp);	
-		buf_get_str(bufp, &fc->u.tlock.client_id);	
+		fc->u.tlock.type = buf_get_int8(bufp);
+		fc->u.tlock.flags = buf_get_int32(bufp);
+		fc->u.tlock.start = buf_get_int64(bufp);
+		fc->u.tlock.length = buf_get_int64(bufp);
+		fc->u.tlock.proc_id = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tlock.client_id);
 		break;
 	case P9_RLOCK:
 		fc->u.rlock.status = buf_get_int8(bufp);
 		break;
 	case P9_TGETLOCK:
 		fc->u.tgetlock.fid = buf_get_int32(bufp);
-		fc->u.tgetlock.type = buf_get_int8(bufp);	
-		fc->u.tgetlock.start = buf_get_int64(bufp);	
-		fc->u.tgetlock.length = buf_get_int64(bufp);	
-		fc->u.tgetlock.proc_id = buf_get_int32(bufp);	
-		buf_get_str(bufp, &fc->u.tgetlock.client_id);	
+		fc->u.tgetlock.type = buf_get_int8(bufp);
+		fc->u.tgetlock.start = buf_get_int64(bufp);
+		fc->u.tgetlock.length = buf_get_int64(bufp);
+		fc->u.tgetlock.proc_id = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.tgetlock.client_id);
 		break;
 	case P9_RGETLOCK:
-		fc->u.rgetlock.type = buf_get_int8(bufp);	
-		fc->u.rgetlock.start = buf_get_int64(bufp);	
-		fc->u.rgetlock.length = buf_get_int64(bufp);	
-		fc->u.rgetlock.proc_id = buf_get_int32(bufp);	
-		buf_get_str(bufp, &fc->u.rgetlock.client_id);	
+		fc->u.rgetlock.type = buf_get_int8(bufp);
+		fc->u.rgetlock.start = buf_get_int64(bufp);
+		fc->u.rgetlock.length = buf_get_int64(bufp);
+		fc->u.rgetlock.proc_id = buf_get_int32(bufp);
+		buf_get_str(bufp, &fc->u.rgetlock.client_id);
 		break;
 	case P9_TLINK:
 		fc->u.tlink.dfid = buf_get_int32(bufp);
@@ -1666,7 +1666,7 @@ np_deserialize(Npfcall *fc)
 		fc->u.tunlinkat.flags = buf_get_int32(bufp);
 		break;
 	case P9_RUNLINKAT:
-		break;	
+		break;
 	}
 
 	if (buf_check_overflow(bufp))
@@ -1696,7 +1696,7 @@ np_serialize_p9dirent(Npqid *qid, u64 offset, u8 type, char *name,
 	buf_put_int64(bufp, offset, NULL);
 	buf_put_int8(bufp, type, NULL);
 	buf_put_str(bufp, name, &nstr);
-	
+
 	if (buf_check_overflow(bufp))
 		return 0;
 

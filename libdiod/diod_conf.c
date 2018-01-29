@@ -103,7 +103,7 @@ typedef struct {
     List         exports;
     char        *configpath;
     char        *logdest;
-    int          ro_mask; 
+    int          ro_mask;
 } Conf;
 
 static Conf config;

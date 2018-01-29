@@ -368,7 +368,7 @@ ioctx_testlock (IOCtx ioctx, int type)
                 else
                     ret = LOCK_EX; /* could also be LOCK_SH actually */
                 break;
-        }   
+        }
     }
     return ret;
 }

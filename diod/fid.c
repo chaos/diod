@@ -79,7 +79,7 @@ diod_fidalloc (Npfid *fid, Npstr *ns)
         }
     }
     fid->aux = f;
-  
+
     return f;
 }
 
@@ -99,7 +99,7 @@ diod_fidclone (Npfid *newfid, Npfid *fid)
         nf->path = path_incref (f->path);
     }
     newfid->aux = nf;
-  
+
     return nf;
 }
 

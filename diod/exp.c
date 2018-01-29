@@ -272,7 +272,7 @@ _get_mounts (char **sp, int *lp, List seen)
                   x->path,
                   x->opts ? x->opts : "-",
                   x->users ? x->users : "-",
-                  x->hosts ? x->hosts : "-") < 0) { 
+                  x->hosts ? x->hosts : "-") < 0) {
             np_uerror (ENOMEM);
             goto done;
         }
@@ -319,7 +319,7 @@ diod_get_exports (char *name, void *a)
                       x->path,
                       x->opts ? x->opts : "-",
                       x->users ? x->users : "-",
-                      x->hosts ? x->hosts : "-") < 0) { 
+                      x->hosts ? x->hosts : "-") < 0) {
                 np_uerror (ENOMEM);
                 goto done;
             }
