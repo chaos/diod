@@ -1,4 +1,4 @@
-.TH diod.conf 5 "@META_DATE@" "@META_ALIAS@" "@META_NAME@"
+.TH diod.conf 5 "@PACKAGE_VERSION@" "@PACKAGE_NAME@" "@PACKAGE_NAME@"
 .SH NAME
 diod.conf \- distributed I/O daemon configuration file
 .SH DESCRIPTION
@@ -25,7 +25,7 @@ In the alternate form, the (optional) opts attribute is a comma-separated
 list of export options, as described below in EXPORT OPTIONS.
 The two table element forms can be mixed in the exports table.
 Note that although \fBdiod\fR will not traverse file system boundaries
-for a given mount due to inode uniqueness constraints, subdirectories of 
+for a given mount due to inode uniqueness constraints, subdirectories of
 a file system can be separately exported.
 .TP
 .I "exportall = 1"
