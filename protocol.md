@@ -117,7 +117,7 @@ afid can be `P9_NOFID` (~0) or the fid from a previous auth handshake. The afid 
 
 n_uname, if not set to `P9_NONUNAME` (~0), is the uid of the user and is used in preference to uname.
 
-v9fs has several modes of access which determine how it uses attach. In the default access=user, an initial attach is sent for the user provided in the uname=name mount option, and for each user that accesses the file system thereafter. For access=<uid>, only the initial attach is sent for <uid> and all other users are denied access by the client.
+v9fs has several modes of access which determine how it uses attach. In the default access=user, an initial attach is sent for the user provided in the uname=name mount option, and for each user that accesses the file system thereafter. For access=_uid_, only the initial attach is sent for _uid_ and all other users are denied access by the client.
 
 See the Plan 9 manual page for attach(5) and the 9P2000.u experimental-draft RFC entry for auth/attach.
 
@@ -443,7 +443,7 @@ diod server is started:
 ```
 diod client (v9fs) is mounted:
 ```
-mount -t 9p 192.168.50.135 /tmp/9 -ouname=root,port=1942,aname=/tmp/9,msize=65560,version=9p2000.L,debug=0x0,user=access
+mount -t 9p 192.168.50.135 /tmp/9 -ouname=root,port=1942,aname=/tmp/9,msize=65560,version=9p2000.L,debug=0x0,access=user
 ```
 The client negotiates the protocol version and msize with version, then introduces itself with an attach as root. This attach is for the uname=root mount option. The client then runs a getattr on the mount point.
 ```
@@ -454,7 +454,7 @@ P9_RATTACH tag 1 qid (00000000002c1fac 0 'd')
 P9_TGETATTR tag 1 fid 0 request_mask 0x7ff
 P9_RGETATTR tag 1 valid 0x7ff qid (00000000002c1fac 0 'd') mode 040755 uid 500 gid 500 nlink 56 rdev 0 size 0 blksize 4096 blocks 2664 atime Fri Feb  4 17:57:18 2011 mtime Fri Feb  4 17:45:07 2011 ctime Mon Feb  7 03:07:04 2011 btime X gen X data_version X
 ```
-User uid=500 runs /bin/ls on the mount point. This triggers another attach on behalf of uid=500 (due to v9fs user=access default mode). The new user has a different fid (1) for the mount point, which it getattrs:
+User uid=500 runs /bin/ls on the mount point. This triggers another attach on behalf of uid=500 (due to v9fs access=user default mode). The new user has a different fid (1) for the mount point, which it getattrs:
 ```
 P9_TATTACH tag 1 fid 1 afid -1 uname '' aname '/tmp/9' n_uname 500
 P9_RATTACH tag 1 qid (00000000002c1fac 0 'd')
