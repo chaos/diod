@@ -289,7 +289,7 @@ _ctl_get_version (char *name, void *a)
         char *s = NULL;
         int len = 0;
 
-        if (aspf (&s, &len, "%s\n", META_ALIAS) < 0)
+        if (aspf (&s, &len, "%s-%s\n", PACKAGE_NAME, PACKAGE_VERSION) < 0)
                 np_uerror (ENOMEM);
         return s;
 }
