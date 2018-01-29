@@ -597,7 +597,7 @@ _update_display_help (WINDOW *win)
 
     wclear (win);
     mvwprintw (win, y++, 0, "Help for Interactive Commands - dtop "
-               "version %s.%s", META_VERSION, META_RELEASE);
+               "version %s", PACKAGE_VERSION);
     y++;
     mvwprintw (win, y++, 2, "a   (default) Aname view");
     mvwprintw (win, y++, 2, "t             Tpool server/aname view");
