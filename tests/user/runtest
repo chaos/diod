@@ -7,7 +7,7 @@ if [ $# -ne 1 ]; then
     echo "Usage runtest test" 2>&1
     exit 1
 fi
-TEST=$1
+TEST=$(basename $1)
 rm -f $TEST.out $TEST.diod
 
 if [ -z "$PATH_DIOD" ]; then
@@ -58,7 +58,7 @@ export MALLOC_CHECK_=3
 
 ./conjoin \
     "$PATH_DIOD -r0 -w0 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
-    "$TEST $PATH_EXPDIR" \
+    "$USER_SRCDIR/$TEST $PATH_EXPDIR" \
     >$TEST.out 2>&1
 rc=$?
 if [ $rc != 0 ]; then
@@ -68,7 +68,7 @@ fi
 
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 
-diff $TEST.exp $TEST.out >$TEST.diff
+diff $USER_SRCDIR/$TEST.exp $TEST.out >$TEST.diff
 rc=$?
 if [ $rc != 0 ]; then
     echo "=== BEGIN $TEST.out ==="
