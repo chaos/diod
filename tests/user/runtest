@@ -7,7 +7,7 @@ if [ $# -ne 1 ]; then
     echo "Usage runtest test" 2>&1
     exit 1
 fi
-TEST=$1
+TEST=$(basename $1)
 rm -f $TEST.out $TEST.diod
 
 if [ -z "$PATH_DIOD" ]; then
@@ -39,11 +39,12 @@ case $(basename $TEST) in
 	PATH_EXPDIR=$(mktemp) || exit 1
 	dd if=/dev/zero count=1 bs=1024k of=$PATH_EXPDIR oflag=append >/dev/null 2>&1
 	;;
-    t17)  # $TMPDIR needs xattr support for this test
+    t17|t18|t19)  # $TMPDIR needs xattr support for tests tests
         if ! ./txattr ${TMPDIR:-/tmp}; then
             echo "${TMPDIR:-/tmp} requires xattr support" >$TEST.out
             exit 77
         fi
+	;;
 esac
 
 rm -f $TEST.diod $TEST.out
@@ -57,7 +58,7 @@ export MALLOC_CHECK_=3
 
 ./conjoin \
     "$PATH_DIOD -r0 -w0 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
-    "$TEST $PATH_EXPDIR" \
+    "$USER_SRCDIR/$TEST $PATH_EXPDIR" \
     >$TEST.out 2>&1
 rc=$?
 if [ $rc != 0 ]; then
@@ -67,7 +68,7 @@ fi
 
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 
-diff $TEST.exp $TEST.out >$TEST.diff
+diff $USER_SRCDIR/$TEST.exp $TEST.out >$TEST.diff
 rc=$?
 if [ $rc != 0 ]; then
     echo "=== BEGIN $TEST.out ==="

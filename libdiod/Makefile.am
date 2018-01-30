@@ -1,7 +1,9 @@
 AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
-	-I../libnpfs -I../libnpclient -I../liblsd
+	-I$(top_srcdir)/libnpfs \
+	-I$(top_srcdir)/libnpclient \
+	-I$(top_srcdir)/liblsd
 
 noinst_LIBRARIES = libdiod.a
 

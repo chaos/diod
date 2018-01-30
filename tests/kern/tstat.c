@@ -82,7 +82,7 @@ main (int argc, char *argv[])
         diff++;
     }
     fprintf (stderr, "%d differences\n", diff);
-    
+
     exit (0);
 }
 

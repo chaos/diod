@@ -1,7 +1,7 @@
 AM_CFLAGS = @GCCWARN@
 
 AM_CPPFLAGS = \
-	-I../libnpfs
+	-I$(top_srcdir)/libnpfs
 
 noinst_LIBRARIES = libnpclient.a
 

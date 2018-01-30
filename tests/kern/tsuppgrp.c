@@ -116,7 +116,7 @@ int main(int argc, char *argv[])
     _join (t1, NULL);
 
     show_groups ("task0");
-    
+
     exit (0);
 }
 

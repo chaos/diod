@@ -115,10 +115,10 @@ main (int argc, char *argv[])
     while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
         switch (c) {
             case 'l':   /* --length N */
-                length = strtoul (optarg, NULL, 10); 
+                length = strtoul (optarg, NULL, 10);
                 break;
             case 'f':   /* --files N */
-                files = strtoul (optarg, NULL, 10); 
+                files = strtoul (optarg, NULL, 10);
                 break;
             case 'c':   /* --create */
                 cflag = 1;
@@ -288,7 +288,7 @@ fsobj_create (char **searchpath, int length, int files)
             err_exit ("mkdir %s", searchpath[i]);
         for (j = 0; j < files; j++) {
             snprintf (path, sizeof (path), "%s/%d.%d", searchpath[i], i, j);
-            if ((fd = creat (path, 0644)) < 0) 
+            if ((fd = creat (path, 0644)) < 0)
                 err_exit ("creat %s", path);
             if (close (fd) < 0)
                 err_exit ("close %s", path);
@@ -305,7 +305,7 @@ fsobj_destroy (char **searchpath, int length, int files)
     for (i = 0; i < length; i++) {
         for (j = 0; j < files; j++) {
             snprintf (path, sizeof (path), "%s/%d.%d", searchpath[i], i, j);
-            if ((unlink (path)) < 0) 
+            if ((unlink (path)) < 0)
                 err_exit ("unlink %s", path);
         }
         if (rmdir (searchpath[i]) < 0)

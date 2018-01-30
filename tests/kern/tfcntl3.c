@@ -96,7 +96,7 @@ main (int argc, char *argv[])
     if (close (fd) < 0)
         err_exit ("close fd");
     msg ("fd: closed");
-   
+
     msg ("3. Upgrade byte range of write lock (one fd)");
     if ((fd = open (argv[1], O_RDWR)) < 0)
         err_exit ("fd: open %s", argv[1]);
@@ -158,7 +158,7 @@ main (int argc, char *argv[])
     if (close (fd) < 0)
         err_exit ("close fd");
     msg ("fd: closed");
-    
+
     msg ("7. Read lock with O_WRONLY should fail");
     if ((fd = open (argv[1], O_WRONLY)) < 0)
         err_exit ("fd: open %s", argv[1]);

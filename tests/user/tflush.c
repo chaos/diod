@@ -115,7 +115,7 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         free(tc);
     }
     msg ("sent 100 Tfsyncs");
-        
+
     for (i = 0; i < 200 + orig_reply_received; i++) {
         const int size = sizeof(rc->size)+sizeof(rc->type)+sizeof(rc->tag);
 

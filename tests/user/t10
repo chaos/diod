@@ -2,4 +2,4 @@
 
 # args: users, threads, gettattrs, iterations, aname
 
-./tattachmt 1 256 16 8 "$@"
+./tattachmt 1 16 16 8 "$@"

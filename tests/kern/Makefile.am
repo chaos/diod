@@ -21,7 +21,11 @@ endif
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
 TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/utils/diodmount"
-TESTS_ENVIRONMENT += "./runtest"
+TESTS_ENVIRONMENT += "KERN_SRCDIR=$(top_srcdir)/tests/kern"
+TESTS_ENVIRONMENT += "KERN_BUILDDIR=$(top_builddir)/tests/kern"
+TESTS_ENVIRONMENT += "TOP_SRCDIR=$(top_srcdir)"
+TESTS_ENVIRONMENT += "TOP_BUILDDIR=$(top_builddir)"
+TESTS_ENVIRONMENT += "${srcdir}/runtest"
 
 TESTS = t05 t06 t07 t12 t13 t14 t15 t16 t17 t18 t19 t22 \
 	t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 \

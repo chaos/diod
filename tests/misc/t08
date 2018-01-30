@@ -2,5 +2,5 @@
 
 TEST=$(basename $0 | cut -d- -f1)
 ./tlua || exit 77 #skip if no lua
-./memcheck ./tconf -c $TEST.conf >$TEST.out 2>&1
-diff $TEST.exp $TEST.out >$TEST.diff
+${MISC_SRCDIR}/memcheck ./tconf -c $TEST.conf >$TEST.out 2>&1
+diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff

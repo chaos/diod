@@ -49,7 +49,7 @@ _copy_to9 (int fd, Npcfid *fid)
     }
     if (n < 0)
         err ("read");
-}            
+}
 
 int
 main (int argc, char *argv[])
