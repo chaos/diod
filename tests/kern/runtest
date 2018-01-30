@@ -7,7 +7,7 @@ if [ $# -ne 1 ]; then
     echo "Usage runtest test" 2>&1
     exit 1
 fi
-TEST=$1
+TEST=$(basename $1)
 rm -f $TEST.out $TEST.diod
 
 if [ -z "$PATH_DIODMOUNT" ]; then
@@ -34,60 +34,60 @@ if ! modprobe 9p 2>/dev/null; then
 fi
 rm -f $TEST.diod $TEST.out
 # t29 requires tclsh
-if [ "`basename $TEST`" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
+if [ "$TEST" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
     echo "tclsh is not installed" >$TEST.out
     exit 77
 fi
 # t30 needs tests the diod -S,--allsquash option
-if [ "`basename $TEST`" = "t30" ]; then
-    opt="-S" 
+if [ "$TEST" = "t30" ]; then
+    opt="-S"
 fi
 # t31 (fstest) needs diod -N,--no-userdb and 'prove' (perl-Test-Harness)
-if [ "`basename $TEST`" = "t31" ]; then
+if [ "$TEST" = "t31" ]; then
     if ! which prove >/dev/null 2>&1; then
         echo "prove is not installed" >$TEST.out
         exit 77
     fi
-    opt="-N" 
+    opt="-N"
 fi
 # t32 requires dbench which we build conditionally
-if [ "`basename $TEST`" = "t32" ] && ! [ -x dbench/dbench ]; then
+if [ "$TEST" = "t32" ] && ! [ -x dbench/dbench ]; then
     echo "dbench was not built" >$TEST.out
     exit 77
 fi
 # t34 requires svnadmin
-if [ "`basename $TEST`" = "t34" ] && ! which svnadmin >/dev/null 2>&1; then
+if [ "$TEST" = "t34" ] && ! which svnadmin >/dev/null 2>&1; then
     echo "svnadmin is not installed" >$TEST.out
     exit 77
 fi
 # t40 requires scrub
-if [ "`basename $TEST`" = "t40" ] && ! which scrub >/dev/null 2>&1; then
+if [ "$TEST" = "t40" ] && ! which scrub >/dev/null 2>&1; then
     echo "scrub is not installed" >$TEST.out
     exit 77
 fi
 # t42 requires setfattr/getfattr
-if [ "`basename $TEST`" = "t42" ] && ! which setfattr >/dev/null 2>&1; then
+if [ "$TEST" = "t42" ] && ! which setfattr >/dev/null 2>&1; then
     echo "setfattr is not installed" >$TEST.out
     exit 77
 fi
 # t43 requires getfacl/setfacl
-if [ "`basename $TEST`" = "t43" ] && ! which setfacl >/dev/null 2>&1; then
+if [ "$TEST" = "t43" ] && ! which setfacl >/dev/null 2>&1; then
     echo "setfacl is not installed" >$TEST.out
     exit 77
 fi
 # t42,t43 require xattr support in 9p file system, and in /tmp
-if [ "`basename $TEST`" = "t42" ] || [ "`basename $TEST`" = "t43" ]; then
+if [ "$TEST" = "t42" ] || [ "$TEST" = "t43" ]; then
     if ! grep -q v9fs_xattr_set /proc/kallsyms; then
         echo "9p not built with xattr support" >$TEST.out
-        exit 77 
+        exit 77
     fi
-    if ! ../user/txattr ${TMPDIR:-/tmp}; then
+    if ! ${TOP_BUILDDIR}/tests/user/txattr ${TMPDIR:-/tmp}; then
         echo "${TMPDIR:-/tmp} requires xattr support" >$TEST.out
         exit 77
     fi
 fi
 # t43 requires posixacl mount option
-if [ "`basename $TEST`" = "t43" ]; then
+if [ "$TEST" = "t43" ]; then
     mntopts="$mntopts,posixacl"
 fi
 
@@ -107,7 +107,7 @@ if [ "`basename $TEST`" = "t00" ]; then
 ./kconjoin \
     "$PATH_DIOD -r80 -w81 -c /dev/null -n -d 1 -e $PATH_EXPDIR" \
     "$PATH_DIODMOUNT -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
-    "$TEST"
+    "${KERN_SRCDIR}/$TEST"
     [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
     [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
     exit 0
@@ -116,7 +116,7 @@ fi
 ./kconjoin \
     "$PATH_DIOD $opt -r80 -w81 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
     "$PATH_DIODMOUNT -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
-    "$TEST" \
+    "${KERN_SRCDIR}/$TEST" \
     >$TEST.out 2>&1
 rc=$?
 if [ $rc != 0 ]; then
@@ -127,5 +127,5 @@ fi
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
 [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
 
-diff $TEST.exp $TEST.out >$TEST.diff
+diff ${KERN_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
 exit $?
