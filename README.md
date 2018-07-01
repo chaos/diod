@@ -7,7 +7,7 @@
 
 #### On Debian
 ```
-sudo apt-get install build-essential libpopt-dev ncurses-dev automake autoconf
+sudo apt-get install build-essential libpopt-dev ncurses-dev automake autoconf git
 sudo apt-get install liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev libattr1-dev
 ./autogen.sh
 ./configure
