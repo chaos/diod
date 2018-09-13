@@ -74,6 +74,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <sys/sysmacros.h>
 
 #ifdef __FreeBSD__
 #if !__BSD_VISIBLE
