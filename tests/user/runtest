@@ -23,6 +23,8 @@ case $(basename $TEST) in
             echo "requires non-root" >$TEST.out
             exit 77
         fi
+	# requires daemon user
+	id -u daemon > /dev/null 2>&1 || exit 77
         ;;
     t11|t13|t14)
         if [ -n "$FAKEROOTEKEY" ]; then

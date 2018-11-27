@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+# skip if uid 1 doesn't exist
+getent passwd 1 >/dev/null 2>&1 || exit 77
+
 TEST=$(basename $0 | cut -d- -f1)
 ${MISC_SRCDIR}/memcheck ./tnpsrv >$TEST.out 2>&1
 diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
