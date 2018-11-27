@@ -13,7 +13,11 @@
 #include <inttypes.h>
 #include <stdarg.h>
 #include <sys/types.h>
-#include <attr/xattr.h>
+#if HAVE_SYS_XATTR_H
+    #include <sys/xattr.h>
+#else
+    #include <attr/xattr.h>
+#endif
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <libgen.h>

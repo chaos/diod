@@ -16,7 +16,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <libgen.h>
-#include <attr/xattr.h>
+#if HAVE_SYS_XATTR_H
+    #include <sys/xattr.h>
+#else
+    #include <attr/xattr.h>
+#endif
 
 
 #include "9p.h"
