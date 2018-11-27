@@ -23,7 +23,7 @@ P9_TMKNOD tag 42 fid 1 name 'xyz' mode 03 major 4 minor 5 gid 6
 test_rmknod(19): 20
 P9_RMKNOD tag 42 qid (0000000000000003 2 '')
 test_trename(20): 20
-P9_TRENAME tag 42 fid 1 dfid2 name 'xyz'
+P9_TRENAME tag 42 fid 1 dfid 2 name 'xyz'
 test_rrename(21): 7
 P9_RRENAME tag 42
 test_treadlink(22): 11
