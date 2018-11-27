@@ -245,7 +245,7 @@ np_snprintfcall(char *s, int len, Npfcall *fc)
 	case P9_TRENAME:
 		spf (s, len, "P9_TRENAME tag %u", fc->tag);
 		spf (s, len, " fid %"PRIu32, fc->u.trename.fid);
-		spf (s, len, " dfid%"PRIu32, fc->u.trename.dfid);
+		spf (s, len, " dfid %"PRIu32, fc->u.trename.dfid);
 		spf (s, len, " name '%.*s'", fc->u.trename.name.len,
 					     fc->u.trename.name.str);
 		break;
