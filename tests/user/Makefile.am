@@ -10,7 +10,8 @@ check_PROGRAMS = \
 	tgetxattr \
 	tsetxattr \
 	tremovexattr \
-	txattr
+	txattr \
+	testopenfid
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
@@ -19,7 +20,7 @@ TESTS_ENVIRONMENT += "USER_SRCDIR=$(top_srcdir)/tests/user"
 TESTS_ENVIRONMENT += "USER_BUILDDIR=$(top_builddir)/tests/user"
 TESTS_ENVIRONMENT += "${srcdir}/runtest"
 
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15 t16 t17 t18 t19
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15 t16 t17 t18 t19 t20
 
 $(TESTS): exp.d
 
@@ -55,6 +56,7 @@ tflush_SOURCES = tflush.c $(common_sources)
 tgetxattr_SOURCES = tgetxattr.c $(common_sources)
 tsetxattr_SOURCES = tsetxattr.c $(common_sources)
 tremovexattr_SOURCES = tremovexattr.c $(common_sources)
+testopenfid_SOURCES = testopenfid.c $(common_sources)
 
 clean: clean-am
 	-rm -rf exp.d
