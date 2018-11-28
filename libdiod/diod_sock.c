@@ -326,7 +326,7 @@ diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id, int flags)
 void
 diod_sock_accept_one (Npsrv *srv, int fd)
 {
-    struct sockaddr_storage addr;
+    struct sockaddr_storage addr = {0};
     socklen_t addr_size = sizeof(addr);
     char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
     int res, port;
