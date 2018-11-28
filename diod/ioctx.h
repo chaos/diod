@@ -24,6 +24,17 @@ int     ioctx_fsync (IOCtx ioctx);
 int     ioctx_flock (IOCtx ioctx, int operation);
 int     ioctx_testlock (IOCtx ioctx, int operation);
 
+int     ioctx_stat (IOCtx ioctx, struct stat *sb);
+int     ioctx_chmod (IOCtx ioctx, u32 mode);
+int     ioctx_chown (IOCtx ioctx, u32 uid, u32 gid);
+int     ioctx_truncate (IOCtx ioctx, u64 size);
+#if HAVE_UTIMENSAT
+int     ioctx_utimensat (IOCtx ioctx, const struct timespec ts[2], int flags);
+#else
+int     ioctx_utimes (IOCtx ioctx, const utimbuf *times);
+#endif
+
+
 u32     ioctx_iounit (IOCtx ioctx);
 Npqid   *ioctx_qid (IOCtx ioctx);
 

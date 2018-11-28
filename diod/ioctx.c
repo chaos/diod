@@ -275,6 +275,45 @@ ioctx_pwrite (IOCtx ioctx, const void *buf, size_t count, off_t offset)
     return pwrite (ioctx->fd, buf, count, offset);
 }
 
+int
+ioctx_stat (IOCtx ioctx, struct stat *sb)
+{
+    return fstat (ioctx->fd, sb);
+}
+
+int
+ioctx_chmod (IOCtx ioctx, u32 mode)
+{
+    return fchmod (ioctx->fd, mode);
+}
+
+int
+ioctx_chown (IOCtx ioctx, u32 uid, u32 gid)
+{
+    return fchown (ioctx->fd, uid, gid);
+}
+
+int
+ioctx_truncate (IOCtx ioctx, u64 size)
+{
+    return ftruncate (ioctx->fd, size);
+}
+
+#if HAVE_UTIMENSAT
+int
+ioctx_utimensat (IOCtx ioctx, const struct timespec ts[2], int flags)
+{
+    return futimens (ioctx->fd, ts);
+}
+
+#else /* HAVE_UTIMENSAT */
+int
+ioctx_utimes (IOCtx ioctx, const utimbuf *times)
+{
+    return futimes (ioctx->fd, times);
+}
+#endif
+
 void
 ioctx_rewinddir (IOCtx ioctx)
 {
