@@ -941,6 +941,16 @@ error_quiet:
     return NULL;
 }
 
+static int
+_lstat (Fid *f, struct stat *sb)
+{
+    if (f->ioctx != NULL) {
+        return ioctx_stat(f->ioctx, sb);
+    }
+    return lstat(path_s (f->path), sb);
+}
+
+
 Npfcall*
 diod_getattr(Npfid *fid, u64 request_mask)
 {
@@ -955,7 +965,7 @@ diod_getattr(Npfid *fid, u64 request_mask)
             goto error_quiet;
         }
     } else {
-        if (lstat (path_s (f->path), &sb) < 0) {
+        if (_lstat (f, &sb) < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
@@ -989,6 +999,53 @@ error_quiet:
     return NULL;
 }
 
+static int
+_chmod (Fid *f, u32 mode)
+{
+    if (f->ioctx != NULL) {
+        return ioctx_chmod (f->ioctx, mode);
+    }
+    return chmod (path_s (f->path), mode);
+}
+
+static int
+_lchown (Fid *f, u32 uid, u32 gid)
+{
+    if (f->ioctx != NULL) {
+        return ioctx_chown (f->ioctx, uid, gid);
+    }
+    return lchown (path_s (f->path), uid, gid);
+}
+
+static int
+_truncate (Fid *f, u64 size)
+{
+    if (f->ioctx != NULL) {
+        return ioctx_truncate (f->ioctx, size);
+    }
+    return truncate(path_s (f->path), size);
+}
+
+#if HAVE_UTIMENSAT
+static int
+_utimensat (Fid *f, const struct timespec ts[2], int flags)
+{
+    if (f->ioctx != NULL) {
+        return ioctx_utimensat (f->ioctx, ts, flags);
+    }
+    return utimensat (-1, path_s (f->path), ts, flags);
+}
+#else /* HAVE_UTIMENSAT */
+static int
+_utimens (Fid *f, const struct utimbuf *times)
+{
+    if (f->ioctx != NULL) {
+        return ioctx_utimes(f, times);
+    }
+    return utimes (path_s (f->path), times);
+}
+#endif
+
 Npfcall*
 diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
               u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec)
@@ -998,14 +1055,14 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     int ctime_updated = 0;
 
     if ((valid & P9_ATTR_MODE)) { /* N.B. derefs symlinks */
-        if (chmod (path_s (f->path), mode) < 0) {
+        if (_chmod (f, mode) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
     if ((valid & P9_ATTR_UID) || (valid & P9_ATTR_GID)) {
-        if (lchown (path_s (f->path), (valid & P9_ATTR_UID) ? uid : -1,
+        if (_lchown (f, (valid & P9_ATTR_UID) ? uid : -1,
                                       (valid & P9_ATTR_GID) ? gid : -1) < 0){
             np_uerror(errno);
             goto error_quiet;
@@ -1013,7 +1070,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         ctime_updated = 1;
     }
     if ((valid & P9_ATTR_SIZE)) {
-        if (truncate (path_s (f->path), size) < 0) {
+        if (_truncate (f, size) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
@@ -1043,7 +1100,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             ts[1].tv_sec = mtime_sec;
             ts[1].tv_nsec = mtime_nsec;
         }
-        if (utimensat(-1, path_s (f->path), ts, AT_SYMLINK_NOFOLLOW) < 0) {
+        if (_utimensat(f, ts, AT_SYMLINK_NOFOLLOW) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
@@ -1054,7 +1111,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
          && (valid & P9_ATTR_MTIME) && !(valid & P9_ATTR_MTIME_SET)) {
             tvp = NULL; /* set both to now */
         } else {
-            if (lstat(path_s (f->path), &sb) < 0) {
+            if (_lstat(f, &sb) < 0) {
                 np_uerror (errno);
                 goto error_quiet;
             }
@@ -1085,7 +1142,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
             }
             tvp = tv;
         }
-        if (utimes (path_s (f->path), tvp) < 0) {
+        if (_utimes (f, tvp) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
@@ -1093,7 +1150,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
         ctime_updated = 1;
     }
     if ((valid & P9_ATTR_CTIME) && !ctime_updated) {
-        if (lchown (path_s (f->path), -1, -1) < 0) {
+        if (_lchown (f, -1, -1) < 0) {
             np_uerror (errno);
             goto error_quiet;
         }
