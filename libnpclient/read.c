@@ -58,6 +58,10 @@ npc_pread(Npcfid *fid, void *buf, u32 count, u64 offset)
 	}
 	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
+	if (rc->u.rread.count > count) {
+		np_uerror (EPROTO);
+		goto done;
+	}
 	memmove(buf, rc->u.rread.data, rc->u.rread.count);
 	ret = rc->u.rread.count;
 done:
