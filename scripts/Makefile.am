@@ -1,4 +1,4 @@
-systemddir=$(sysconfdir)/systemd/system
+systemddir=$(libdir)/systemd/system
 
 install-data-local:
 	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/auto.diod \
