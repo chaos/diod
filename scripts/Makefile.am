@@ -1,9 +1,9 @@
-systemddir=$(libdir)/systemd/system
+systemddir=$(prefix)/lib/systemd/system
 
 install-data-local:
 	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/auto.diod \
 		$(DESTDIR)$(sysconfdir)/auto.diod
-	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/diod.service \
+	$(top_srcdir)/config/install-sh -m 644 $(srcdir)/diod.service \
 		$(DESTDIR)$(systemddir)/diod.service
 
 uninstall-local:
