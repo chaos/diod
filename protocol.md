@@ -8,7 +8,7 @@ Linux VFS in a straightforward way. The v9fs client in linux kernel version
 2.6.38 onward includes a more or less complete 9P2000.L implementation.
 
 For a general introduction to 9P see the Plan 9
-[intro(5)](http://plan9.bell-labs.com/magic/man2html/5/0intro) manual page.
+[intro(5)](http://9p.io/magic/man2html/5/0intro) manual page.
 
 ### Data Structures
 
@@ -42,7 +42,7 @@ It also establishes the protocol version. For 9P2000.L version must be the
 string `9P2000.L`.
 
 See the Plan 9 manual page for
-[version(5)](http://plan9.bell-labs.com/magic/man2html/5/version).
+[version(5)](http://9p.io/magic/man2html/5/version).
 
 ### flush -- abort a message
 ```
