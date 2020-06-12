@@ -209,7 +209,13 @@ _verr (int errnum, const char *fmt, va_list ap)
 {
     char buf[128];
     char errbuf[64];
+
+#ifndef STRERROR_R_CHAR_P
+    strerror_r (errnum, errbuf, sizeof (errbuf)); /* XSI version */
+    char *s = errbuf;
+#else
     char *s = strerror_r (errnum, errbuf, sizeof (errbuf)); /* GNU version */
+#endif
 
     vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
     switch (dest) {

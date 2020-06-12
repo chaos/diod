@@ -159,7 +159,7 @@ np_decode_tpools_str (char *s, Npstats *stats)
 {
 	int n;
 
-	n = sscanf (s, "%as %d %d " \
+	n = sscanf (s, "%ms %d %d " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \
 		"%"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" %"PRIu64" " \

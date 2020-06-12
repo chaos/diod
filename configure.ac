@@ -46,6 +46,7 @@ AC_CHECK_HEADERS( \
   getopt.h \
   pthread.h \
   sys/xattr.h \
+  sys/sysmacros.h \
 )
 
 ##
@@ -63,6 +64,7 @@ AC_CHECK_FUNCS( \
   vsscanf \
   utimensat \
 )
+AC_FUNC_STRERROR_R
 X_AC_CHECK_PTHREADS
 X_AC_WRAP
 X_AC_CURSES

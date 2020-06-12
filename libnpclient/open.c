@@ -59,7 +59,7 @@ npc_create (Npcfid *fid, char *name, u32 flags, u32 mode, gid_t gid)
 	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
 	fid->iounit = rc->u.rlcreate.iounit;
-	if (!fid->iounit == 0 || fid->iounit > maxio)
+	if (fid->iounit == 0 || fid->iounit > maxio)
 		fid->iounit = maxio;
 	ret = 0;
 done:
