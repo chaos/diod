@@ -875,7 +875,15 @@ np_logerr(Npsrv *srv, const char *fmt, ...)
 	if (srv->logmsg) {
 		char buf[128];
 		char ebuf[64];
+
+#ifndef STRERROR_R_CHAR_P
+		/* XSI version */
+                strerror_r (np_rerror (), ebuf, sizeof (ebuf));
+                char *s = ebuf;
+#else
+		/* GNU version */
 		char *s = strerror_r (np_rerror (), ebuf, sizeof (ebuf));
+#endif
 
 		va_start (ap, fmt);
 		vsnprintf (buf, sizeof(buf), fmt, ap);
