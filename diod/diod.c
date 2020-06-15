@@ -46,7 +46,7 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/resource.h>
-#ifndef __FreeBSD__
+#if HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
 #include <string.h>
@@ -623,7 +623,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
      * Set it here, then maintain it in user.c::np_setfsid () as uids are
      * further manipulated.
      */
-#ifndef __FreeBSD__
+#if HAVE_SYS_PRCTL_H
     if (prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
         err_exit ("prctl PR_SET_DUMPABLE failed");
 #endif

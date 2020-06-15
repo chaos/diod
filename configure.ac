@@ -45,8 +45,10 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS( \
   getopt.h \
   pthread.h \
-  sys/xattr.h \
+  sys/prctl.h \
+  sys/statfs.h \
   sys/sysmacros.h \
+  sys/xattr.h \
 )
 
 ##

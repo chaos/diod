@@ -39,9 +39,13 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/file.h>
-#ifndef __FreeBSD__
+#if HAVE_SYS_XATTR_H
 #include <sys/xattr.h>
+#endif
+#if HAVE_SYS_STATFS_H
 #include <sys/statfs.h>
+#endif
+#ifndef __FreeBSD__
 #include <sys/fsuid.h>
 #endif
 #include <sys/stat.h>
@@ -160,7 +164,7 @@ xattr_pread (Xattr x, void *buf, size_t count, off_t offset)
 static int
 _lgetxattr (Xattr x, const char *path)
 {
-#ifdef __FreeBSD__
+#if !HAVE_SYS_XATTR_H
   return 0;
 #else
     ssize_t len;
@@ -226,7 +230,7 @@ error:
 int
 xattr_close (Npfid *fid)
 {
-#ifdef __FreeBSD__
+#if !HAVE_SYS_XATTR_H
   return 0;
 #else
     Fid *f = fid->aux;

@@ -87,11 +87,11 @@ typedef unsigned int    u_int;
 #include <sys/file.h>
 #include <sys/stat.h>
 
-#ifdef __FreeBSD__
+#if HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#else
 #include <sys/param.h>
 #include <sys/mount.h>
-#else
-#include <sys/statfs.h>
 #endif
 
 #include <sys/socket.h>
