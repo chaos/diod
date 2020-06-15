@@ -94,6 +94,10 @@ AC_ARG_ENABLE([diodmount],
   [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])],
   [],
   [enable_diodmount=auto])
+AC_ARG_ENABLE([tests],
+  [AS_HELP_STRING([--disable-tests], [do not build tests])],
+  [],
+  [enable_tests=auto])
 
 case "${enable_diodmount}" in
   no)
@@ -101,8 +105,15 @@ case "${enable_diodmount}" in
   *)
     enable_diodmount=yes;;
 esac
+case "${enable_tests}" in
+  no)
+    ;;
+  *)
+    enable_tests=yes;;
+esac
 
 AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
+AM_CONDITIONAL([ENABLE_TESTS], [test "x${enable_tests}" = "xyes"])
 
 ##
 # Epilogue

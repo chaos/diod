@@ -6,7 +6,10 @@ SUBDIRS = \
 	diod \
 	utils \
 	scripts \
-	etc \
-	tests
+	etc
+
+if ENABLE_TESTS
+  SUBDIRS += tests
+endif
 
 EXTRA_DIST = diod.spec
