@@ -98,6 +98,10 @@ AC_ARG_ENABLE([tests],
   [AS_HELP_STRING([--disable-tests], [do not build tests])],
   [],
   [enable_tests=auto])
+AC_ARG_ENABLE([impersonation],
+  [AS_HELP_STRING([--enable-impersonation], [allow access=user])],
+  [],
+  [enable_impersonation=auto])
 
 case "${host_os}" in
   linux*)
@@ -113,6 +117,14 @@ case "${host_os}" in
       *)
         enable_tests=yes;;
     esac
+    case "${enable_impersonation}" in
+      no)
+        ;;
+      yes|linux|auto)
+        enable_impersonation=linux;;
+      *)
+        AC_MSG_FAILURE([unsupported impersonation model]);;
+    esac
     ;;
   *)
     case "${enable_diodmount}" in
@@ -127,11 +139,18 @@ case "${host_os}" in
       *)
         enable_tests=no;;
     esac
+    case "${enable_impersonation}" in
+      no|auto)
+        enable_impersonation=no;;
+      *)
+        AC_MSG_FAILURE([unsupported impersonation model]);;
+    esac
     ;;
 esac
 
 AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x${enable_tests}" = "xyes"])
+AM_CONDITIONAL([USE_IMPERSONATION_LINUX], [test "x${enable_impersonation}" = "xlinux"])
 
 ##
 # Epilogue
