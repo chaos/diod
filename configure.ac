@@ -88,6 +88,23 @@ AC_DEFINE(WITH_PTHREADS, 1, [Make liblsd thread safe])
 AC_SYS_LARGEFILE
 
 ##
+# Optional features
+##
+AC_ARG_ENABLE([diodmount],
+  [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])],
+  [],
+  [enable_diodmount=auto])
+
+case "${enable_diodmount}" in
+  no)
+    ;;
+  *)
+    enable_diodmount=yes;;
+esac
+
+AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
+
+##
 # Epilogue
 ##
 AC_CONFIG_FILES( \

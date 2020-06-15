@@ -6,7 +6,11 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libdiod \
 	-I$(top_srcdir)/libnpclient
 
-sbin_PROGRAMS = diodmount diodcat dtop diodload diodls diodshowmount dioddate
+sbin_PROGRAMS = diodcat dtop diodload diodls diodshowmount dioddate
+
+if ENABLE_DIODMOUNT
+sbin_PROGRAMS += diodmount
+endif
 
 common_ldadd = \
 	$(top_builddir)/libdiod/libdiod.a \
@@ -42,10 +46,13 @@ dioddate_LDADD = $(common_ldadd)
 dioddate_SOURCES = dioddate.c $(common_sources)
 
 man8_MANS = \
-	diodmount.8 \
 	diodcat.8 \
 	dtop.8 \
 	diodload.8 \
 	diodls.8 \
 	diodshowmount.8 \
 	dioddate.8
+
+if ENABLE_DIODMOUNT
+man8_MANS += diodmount.8
+endif
