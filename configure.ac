@@ -6,7 +6,7 @@ AC_INIT([diod],
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_HOST
 X_AC_EXPAND_INSTALL_DIRS
 
 ##
@@ -99,17 +99,35 @@ AC_ARG_ENABLE([tests],
   [],
   [enable_tests=auto])
 
-case "${enable_diodmount}" in
-  no)
+case "${host_os}" in
+  linux*)
+    case "${enable_diodmount}" in
+      no)
+        ;;
+      *)
+        enable_diodmount=yes;;
+    esac
+    case "${enable_tests}" in
+      no)
+        ;;
+      *)
+        enable_tests=yes;;
+    esac
     ;;
   *)
-    enable_diodmount=yes;;
-esac
-case "${enable_tests}" in
-  no)
+    case "${enable_diodmount}" in
+      yes)
+        ;;
+      *)
+        enable_diodmount=no;;
+    esac
+    case "${enable_tests}" in
+      yes)
+        ;;
+      *)
+        enable_tests=no;;
+    esac
     ;;
-  *)
-    enable_tests=yes;;
 esac
 
 AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
