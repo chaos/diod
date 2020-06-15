@@ -22,6 +22,12 @@ libnpfs_a_SOURCES = \
 	ctl.c \
 	xpthread.h
 
+if USE_IMPERSONATION_LINUX
+libnpfs_a_SOURCES += user-linux.c
+else
+libnpfs_a_SOURCES += user-stub.c
+endif
+
 if RDMATRANS
 libnpfs_a_SOURCES += rdmatrans.c
 endif
