@@ -25,7 +25,11 @@ libnpfs_a_SOURCES = \
 if USE_IMPERSONATION_LINUX
 libnpfs_a_SOURCES += user-linux.c
 else
+if USE_IMPERSONATION_GANESHA
+libnpfs_a_SOURCES += user-freebsd.c
+else
 libnpfs_a_SOURCES += user-stub.c
+endif
 endif
 
 if RDMATRANS

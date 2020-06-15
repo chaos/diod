@@ -126,6 +126,28 @@ case "${host_os}" in
         AC_MSG_FAILURE([unsupported impersonation model]);;
     esac
     ;;
+  freebsd*)
+    case "${enable_diodmount}" in
+      yes)
+        ;;
+      *)
+        enable_diodmount=no;;
+    esac
+    case "${enable_tests}" in
+      yes)
+        ;;
+      *)
+        enable_tests=no;;
+    esac
+    case "${enable_impersonation}" in
+      no|auto)
+        enable_impersonation=no;;
+      yes|ganesha)
+        enable_impersonation=ganesha;;
+      *)
+        AC_MSG_FAILURE([unsupported impersonation model]);;
+    esac
+    ;;
   *)
     case "${enable_diodmount}" in
       yes)
@@ -151,6 +173,14 @@ esac
 AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
 AM_CONDITIONAL([ENABLE_TESTS], [test "x${enable_tests}" = "xyes"])
 AM_CONDITIONAL([USE_IMPERSONATION_LINUX], [test "x${enable_impersonation}" = "xlinux"])
+AM_CONDITIONAL([USE_IMPERSONATION_GANESHA], [test "x${enable_impersonation}" = "xganesha"])
+
+if test "x${enable_impersonation}" = "xlinux"; then
+  AC_DEFINE([USE_IMPERSONATION_LINUX], [1], [Use Linux setfsuid])
+fi
+if test "x${enable_impersonation}" = "xganesha"; then
+  AC_DEFINE([USE_IMPERSONATION_GANESHA], [1], [Use nfs-ganesha-kmod syscalls])
+fi
 
 ##
 # Epilogue

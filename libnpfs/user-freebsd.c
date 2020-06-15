@@ -33,82 +33,89 @@
 #include <pthread.h>
 #include <errno.h>
 #include <unistd.h>
-#include <sys/syscall.h>
-#include <sys/fsuid.h>
 #include <pwd.h>
 #include <grp.h>
-#if HAVE_LIBCAP
-#include <sys/capability.h>
-#endif
-#include <sys/prctl.h>
+
+#include <sys/param.h>
+#include <sys/module.h>
+#include <sys/syscall.h>
 
 #include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"
+#include "ganesha-syscalls.h"
 
-#if HAVE_LIBCAP
-/* When handling requests on connections authenticated as root, we consider
- * it safe to disable DAC checks on the server and presume the client is
- * doing it.  This is only done if the server sets SRV_FLAGS_DAC_BYPASS.
- */
+/* Load syscall from nfs-ganesha-kmod */
+
+static int sysn_setthreaduid = -1;
+static int sysn_setthreadgid = -1;
+static int sysn_setthreadgroups = -1;
+
 static int
-_chg_privcap (Npsrv *srv, cap_flag_value_t val)
+_get_syscall(const char *modname)
 {
-	cap_t cap;
-	cap_flag_value_t cur;
-	cap_value_t cf[] = { CAP_DAC_OVERRIDE, CAP_CHOWN, CAP_FOWNER };
-	int need_set = 0;
-	int i, ret = -1;
+	int modid;
+	struct module_stat stat;
 
-	if (!(cap = cap_get_proc ())) {
-		np_uerror (errno);
-		np_logerr (srv, "cap_get_proc failed");
-		goto done;
-	}
-	for (i = 0; i < sizeof(cf) / sizeof(cf[0]); i++) {
-		if (cap_get_flag (cap, cf[i], CAP_EFFECTIVE, &cur) < 0) {
-			np_uerror (errno);
-			np_logerr (srv, "cap_get_flag failed");
-			goto done;
-		}
-		if (cur == val)
-			continue;
-		need_set = 1;
-		if (cap_set_flag (cap, CAP_EFFECTIVE, 1, &cf[i], val) < 0) {
-			np_uerror (errno);
-			np_logerr (srv, "cap_set_flag failed");
-			goto done;
-		}
-	}
-	if (need_set && cap_set_proc (cap) < 0) {
-		np_uerror (errno);
-		np_logerr (srv, "cap_set_proc failed");
-		goto done;
-	}
-	ret = 0;
-done:
-	if (cap != NULL && cap_free (cap) < 0) {
-		np_uerror (errno);
-		np_logerr (srv, "cap_free failed");
-	}
-	return ret;
+	stat.version = sizeof(stat);
+	if ((modid = modfind(modname)) == -1)
+		return -1;
+	if (modstat(modid, &stat) != 0)
+		return -1;
+	return stat.data.intval;
 }
-#endif
 
-/* Note: it is possible for setfsuid/setfsgid to fail silently,
- * e.g. if user doesn't have CAP_SETUID/CAP_SETGID.
- * That should be checked at server startup.
- */
+int
+init_ganesha_syscalls(void)
+{
+	if ((sysn_setthreaduid = _get_syscall("sys/setthreaduid")) == -1)
+		return -1;
+	if ((sysn_setthreadgid = _get_syscall("sys/setthreadgid")) == -1)
+		return -1;
+	if ((sysn_setthreadgroups = _get_syscall("sys/setthreadgroups")) == -1)
+		return -1;
+	return 0;
+}
+
+int
+fbsd_setthreaduid(uid_t uid)
+{
+	if (sysn_setthreaduid == -1) {
+		errno = ENOSYS;  /* some sensible error code */
+		return -1;
+	}
+	return syscall(sysn_setthreaduid, uid);
+}
+
+int
+fbsd_setthreadgid(gid_t gid)
+{
+	if (sysn_setthreadgid == -1) {
+		errno = ENOSYS;
+		return -1;
+	}
+	return syscall(sysn_setthreadgid, gid);
+}
+
+int
+fbsd_setthreadgroups(unsigned int gidsetsize, gid_t *gidset)
+{
+	if (sysn_setthreadgroups == -1) {
+		errno = ENOSYS;
+		return -1;
+	}
+	return syscall(sysn_setthreadgroups, gidsetsize, gidset);
+}
+
 int
 np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 {
 	Npwthread *wt = req->wthread;
 	Npsrv *srv = req->conn->srv;
-	int i, n, ret = -1;
+	int i, ret = -1;
 	u32 gid;
 	uid_t authuid;
-	int dumpclrd = 0;
 
 	if (np_conn_get_authuser(req->conn, &authuid) < 0)
 		authuid = P9_NONUNAME;
@@ -133,84 +140,64 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 		}
 		gid = (gid_override == -1 ? u->gid : gid_override);
 		if (wt->fsgid != gid) {
-			dumpclrd = 1;
-			if ((n = setfsgid (gid)) == -1) {
-				np_uerror (errno);
-				np_logerr (srv, "setfsgid(%s) gid=%d failed",
-					   u->uname, gid);
-				wt->fsgid = P9_NONUNAME;
-				goto done;
+			if (! wt->privcap) {
+				/* restore privileged uid */
+				if (fbsd_setthreaduid (0) == -1) {
+					np_uerror (errno);
+					np_logerr (srv, "setthreaduid(0) failed");
+					wt->fsuid = P9_NONUNAME;
+					goto done;
+				}
+				wt->privcap = 1;
+				wt->fsuid = 0;
 			}
-			if (n != wt->fsgid) {
+			if (fbsd_setthreadgid (gid) == -1) {
 				np_uerror (errno);
-				np_logerr (srv, "setfsgid(%s) gid=%d failed"
-					   "returned %d, expected %d",
-					   u->uname, gid, n, wt->fsgid);
+				np_logerr (srv, "setthreadgid(%s) gid=%d failed",
+					   u->uname, gid);
 				wt->fsgid = P9_NONUNAME;
 				goto done;
 			}
 			wt->fsgid = gid;
 		}
 		if (wt->fsuid != u->uid) {
-			dumpclrd = 1;
-			if ((n = setfsuid (u->uid)) == -1) {
-				np_uerror (errno);
-				np_logerr (srv, "setfsuid(%s) uid=%d failed",
-					   u->uname, u->uid);
-				wt->fsuid = P9_NONUNAME;
-				goto done;
-			}
-			if (n != wt->fsuid) {
-				np_uerror (EPERM);
-				np_logerr (srv, "setfsuid(%s) uid=%d failed: "
-					   "returned %d, expected %d",
-					   u->uname, u->uid, n, wt->fsuid);
-				wt->fsuid = P9_NONUNAME;
-				goto done;
-			}
-			/* Track CAP side effects of setfsuid.
-			 */
-			if (u->uid == 0)
-				wt->privcap = 1; /* transiton to 0 sets caps */
-			else if (wt->fsuid == 0)
-				wt->privcap = 0; /* trans from 0 clears caps */
-
+			/* Set suppl groups first! */
 			/* Suppl groups need to be part of cred for NFS
-			 * forwarding even with DAC_BYPASS.  However only
-			 * do it if kernel treats sg's per-thread not process.
-			 * Addendum: late model glibc attempts to make this
-			 * per-process, so for now bypass glibc. See issue 53.
+			 * forwarding even with DAC_BYPASS.
 			 */
-			if ((srv->flags & SRV_FLAGS_SETGROUPS)) {
-				if (syscall(SYS_setgroups, u->nsg, u->sg) < 0) {
+			if (! wt->privcap) {
+				/* restore privileged uid */
+				if (fbsd_setthreaduid (0) == -1) {
 					np_uerror (errno);
-					np_logerr (srv, "setgroups(%s) nsg=%d failed",
-						   u->uname, u->nsg);
+					np_logerr (srv, "setthreaduid(0) failed");
 					wt->fsuid = P9_NONUNAME;
 					goto done;
 				}
+				wt->privcap = 1;
+				wt->fsuid = 0;
 			}
-			wt->fsuid = u->uid;
+			if (fbsd_setthreadgroups (u->nsg, u->sg) == -1) {
+				np_uerror (errno);
+				np_logerr (srv, "setthreadgroups(%s) nsg=%d failed",
+					   u->uname, u->nsg);
+				wt->fsuid = P9_NONUNAME;
+				goto done;
+			}
+			if (wt->fsuid != u->uid) {
+				if (fbsd_setthreaduid (u->uid) == -1) {
+					np_uerror (errno);
+					np_logerr (srv, "setthreaduid(%s) uid=%d failed",
+						   u->uname, u->uid);
+					wt->fsuid = P9_NONUNAME;
+					goto done;
+				}
+				/* Track CAP side effects. */
+				wt->privcap = (u->uid != 0) ? 0 : 1;
+				wt->fsuid = u->uid;
+			}
 		}
 	}
-#if HAVE_LIBCAP
-	if ((srv->flags & SRV_FLAGS_DAC_BYPASS) && wt->fsuid != 0) {
-		if (!wt->privcap && authuid == 0) {
-			if (_chg_privcap (srv, CAP_SET) < 0)
-				goto done;
-			wt->privcap = 1;
-			dumpclrd = 1;
-		} else if (wt->privcap && authuid != 0) {
-			if (_chg_privcap (srv, CAP_CLEAR) < 0)
-				goto done;
-			wt->privcap = 0;
-			dumpclrd = 1;
-		}
-	}
-#endif
 	ret = 0;
 done:
-	if (dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)
-        	np_logerr (srv, "prctl PR_SET_DUMPABLE failed");
 	return ret;
 }
