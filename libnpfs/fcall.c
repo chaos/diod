@@ -1243,12 +1243,8 @@ np_renameat (Npreq *req, Npfcall *tc)
 	if (np_setfsid (req, newdirfid->user, -1) < 0)
 		goto done;
 	if (!req->conn->srv->renameat) {
-#ifdef __FreeBSD__
-	  /* hardcoded linux errno for EOPNOTSUPP */
+		/* hardcoded linux errno for EOPNOTSUPP */
 		np_uerror (95); /* v9fs expects this not ENOSYS for this op */
-#else
-		np_uerror (EOPNOTSUPP); /* v9fs expects this not ENOSYS for this op */
-#endif
 		goto done;
 	}
 	rc = (*req->conn->srv->renameat)(olddirfid, &tc->u.trenameat.oldname,
@@ -1281,12 +1277,8 @@ np_unlinkat (Npreq *req, Npfcall *tc)
 	if (np_setfsid (req, dirfid->user, -1) < 0)
 		goto done;
 	if (!req->conn->srv->unlinkat) {
-#ifdef __FreeBSD__
-	  /* hardcoded linux errno for EOPNOTSUPP */
+		/* hardcoded linux errno for EOPNOTSUPP */
 		np_uerror (95); /* v9fs expects this not ENOSYS for this op */
-#else
-		np_uerror (EOPNOTSUPP); /* v9fs expects this not ENOSYS for this op */
-#endif
 		goto done;
 	}
 	rc = (*req->conn->srv->unlinkat)(dirfid, &tc->u.tunlinkat.name);
