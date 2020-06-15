@@ -78,20 +78,14 @@
 #include <sys/sysmacros.h>
 #endif
 
-#ifdef __FreeBSD__
-#if !__BSD_VISIBLE
-typedef unsigned int    u_int;
-#endif
-#endif
-
 #include <sys/file.h>
 #include <sys/stat.h>
 
-#ifdef __FreeBSD__
+#if HAVE_SYS_STATFS_H
+#include <sys/statfs.h>
+#else
 #include <sys/param.h>
 #include <sys/mount.h>
-#else
-#include <sys/statfs.h>
 #endif
 
 #include <sys/socket.h>
@@ -675,17 +669,17 @@ _remap_oflags (int flags)
         { O_TRUNC,      P9_DOTL_TRUNC },
         { O_APPEND,     P9_DOTL_APPEND },
         { O_NONBLOCK,   P9_DOTL_NONBLOCK },
-#ifndef __FreeBSD__
+#ifdef O_DSYNC
         { O_DSYNC,      P9_DOTL_DSYNC },
 #endif
         { FASYNC,       P9_DOTL_FASYNC },
         { O_DIRECT,     P9_DOTL_DIRECT },
-#ifndef __FreeBSD__
+#ifdef O_LARGEFILE
         { O_LARGEFILE,  P9_DOTL_LARGEFILE },
 #endif
         { O_DIRECTORY,  P9_DOTL_DIRECTORY },
         { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
-#ifndef __FreeBSD__
+#ifdef O_NOATIME
         { O_NOATIME,    P9_DOTL_NOATIME },
 #endif
         { O_CLOEXEC,    P9_DOTL_CLOEXEC },
@@ -1460,7 +1454,7 @@ diod_xattrwalk (Npfid *fid, Npfid *attrfid, Npstr *name)
         goto error;
     }
     if (xattr_open (attrfid, name, &size) < 0) {
-#ifndef __FreeBSD__
+#ifdef ENODATA
         if (np_rerror () == ENODATA)
             goto error_quiet;
 #endif

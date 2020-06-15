@@ -6,7 +6,7 @@ AC_INIT([diod],
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
-AC_CANONICAL_SYSTEM
+AC_CANONICAL_HOST
 X_AC_EXPAND_INSTALL_DIRS
 
 ##
@@ -45,8 +45,10 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS( \
   getopt.h \
   pthread.h \
-  sys/xattr.h \
+  sys/prctl.h \
+  sys/statfs.h \
   sys/sysmacros.h \
+  sys/xattr.h \
 )
 
 ##
@@ -84,6 +86,71 @@ AC_DEFINE(WITH_LSD_NOMEM_ERROR_FUNC, 1, [Define lsd_nomem_error])
 AC_DEFINE(WITH_PTHREADS, 1, [Make liblsd thread safe])
 
 AC_SYS_LARGEFILE
+
+##
+# Optional features
+##
+AC_ARG_ENABLE([diodmount],
+  [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])],
+  [],
+  [enable_diodmount=auto])
+AC_ARG_ENABLE([tests],
+  [AS_HELP_STRING([--disable-tests], [do not build tests])],
+  [],
+  [enable_tests=auto])
+AC_ARG_ENABLE([impersonation],
+  [AS_HELP_STRING([--enable-impersonation], [allow access=user])],
+  [],
+  [enable_impersonation=auto])
+
+case "${host_os}" in
+  linux*)
+    case "${enable_diodmount}" in
+      no)
+        ;;
+      *)
+        enable_diodmount=yes;;
+    esac
+    case "${enable_tests}" in
+      no)
+        ;;
+      *)
+        enable_tests=yes;;
+    esac
+    case "${enable_impersonation}" in
+      no)
+        ;;
+      yes|linux|auto)
+        enable_impersonation=linux;;
+      *)
+        AC_MSG_FAILURE([unsupported impersonation model]);;
+    esac
+    ;;
+  *)
+    case "${enable_diodmount}" in
+      yes)
+        ;;
+      *)
+        enable_diodmount=no;;
+    esac
+    case "${enable_tests}" in
+      yes)
+        ;;
+      *)
+        enable_tests=no;;
+    esac
+    case "${enable_impersonation}" in
+      no|auto)
+        enable_impersonation=no;;
+      *)
+        AC_MSG_FAILURE([unsupported impersonation model]);;
+    esac
+    ;;
+esac
+
+AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
+AM_CONDITIONAL([ENABLE_TESTS], [test "x${enable_tests}" = "xyes"])
+AM_CONDITIONAL([USE_IMPERSONATION_LINUX], [test "x${enable_impersonation}" = "xlinux"])
 
 ##
 # Epilogue
