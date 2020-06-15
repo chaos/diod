@@ -325,7 +325,7 @@ _setrlimit (void)
             err_exit ("setrlimit RLIMIT_NOFILE");
 
     r.rlim_cur = r.rlim_max = RLIM_INFINITY;
-#ifndef __FreeBSD__
+#ifdef RLIMIT_LOCKS
     if (setrlimit (RLIMIT_LOCKS, &r) < 0)
         err_exit ("setrlimit RLIMIT_LOCKS");
 #endif

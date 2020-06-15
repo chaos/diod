@@ -675,17 +675,17 @@ _remap_oflags (int flags)
         { O_TRUNC,      P9_DOTL_TRUNC },
         { O_APPEND,     P9_DOTL_APPEND },
         { O_NONBLOCK,   P9_DOTL_NONBLOCK },
-#ifndef __FreeBSD__
+#ifdef O_DSYNC
         { O_DSYNC,      P9_DOTL_DSYNC },
 #endif
         { FASYNC,       P9_DOTL_FASYNC },
         { O_DIRECT,     P9_DOTL_DIRECT },
-#ifndef __FreeBSD__
+#ifdef O_LARGEFILE
         { O_LARGEFILE,  P9_DOTL_LARGEFILE },
 #endif
         { O_DIRECTORY,  P9_DOTL_DIRECTORY },
         { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
-#ifndef __FreeBSD__
+#ifdef O_NOATIME
         { O_NOATIME,    P9_DOTL_NOATIME },
 #endif
         { O_CLOEXEC,    P9_DOTL_CLOEXEC },
