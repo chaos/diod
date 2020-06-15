@@ -42,12 +42,6 @@
 #if HAVE_SYS_XATTR_H
 #include <sys/xattr.h>
 #endif
-#if HAVE_SYS_STATFS_H
-#include <sys/statfs.h>
-#endif
-#ifndef __FreeBSD__
-#include <sys/fsuid.h>
-#endif
 #include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/time.h>

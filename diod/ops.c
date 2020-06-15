@@ -78,12 +78,6 @@
 #include <sys/sysmacros.h>
 #endif
 
-#ifdef __FreeBSD__
-#if !__BSD_VISIBLE
-typedef unsigned int    u_int;
-#endif
-#endif
-
 #include <sys/file.h>
 #include <sys/stat.h>
 
