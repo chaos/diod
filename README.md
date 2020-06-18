@@ -26,6 +26,19 @@ make
 make check
 ```
 
+#### On FreeBSD
+
+```
+portmaster security/munge
+portmaster lang/lua53
+./autogen.sh
+./configure
+make
+```
+
+See also the remarks below if you want a server that supports impersonation
+(access=user in v9fs).
+
 ### Kernel Client
 
 The kernel 9P client, sometimes referred to as "v9fs", consists
@@ -91,6 +104,23 @@ ln -s /d/g.g0 /g/g0
 Note that at this point diod is only being tested with NFS file systems.
 Use it with Lustre or GPFS at your own peril - but if you do, please
 report issues!
+
+### Impersonation on FreeBSD
+
+FreeBSD does not support per-thread credentials.  If you want a diod server 
+that supports v9fs' access=user, you can:
+ * build diod with `--enable-impersonation` (disabled by default on FreeBSD)
+ * install `net/nfs-ganesha-kmod` from ports (or at least the modules
+   `setthreadgid`, `setthreadgroups` and `setthreaduid`) or from
+   [source](https://github.com/nfs-ganesha/nfs-ganesha)
+ * before stating diod, load the modules providing additional syscalls:
+```
+kldload /path/to/nfs-ganesha-kmod/setthreaduid/setthreaduid.ko
+kldload /path/to/nfs-ganesha-kmod/setthreadgid/setthreadgid.ko
+kldload /path/to/nfs-ganesha-kmod/setthreadgroups/setthreadgroups.ko
+```
+
+Please read nfs-ganesha-kmod's README first, and use at your own risk.
 
 # Support
 
