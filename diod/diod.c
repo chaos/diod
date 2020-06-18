@@ -115,7 +115,7 @@ usage()
 "   -r,--rfdno             service connected client on read file descriptor\n"
 "   -w,--wfdno             service connected client on write file descriptor\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
-"   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
+"   -t,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -E,--export-all        export all mounted file systems\n"
 "   -o,--export-opts       set global export options (comma-seperated)\n"
