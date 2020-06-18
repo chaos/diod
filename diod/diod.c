@@ -35,7 +35,9 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
+#if USE_IMPERSONATION_LINUX
 #include <sys/syscall.h>
+#endif
 #include <stdio.h>
 #if HAVE_GETOPT_H
 #include <getopt.h>
@@ -65,6 +67,10 @@
 #endif
 
 #include "ops.h"
+
+#if USE_IMPERSONATION_GANESHA
+#include "ganesha-syscalls.h"
+#endif
 
 typedef enum { SRV_FILEDES, SRV_SOCKTEST, SRV_NORMAL } srvmode_t;
 
@@ -115,7 +121,7 @@ usage()
 "   -r,--rfdno             service connected client on read file descriptor\n"
 "   -w,--wfdno             service connected client on write file descriptor\n"
 "   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
-"   -w,--nwthreads INT     set number of I/O worker threads to spawn\n"
+"   -t,--nwthreads INT     set number of I/O worker threads to spawn\n"
 "   -e,--export PATH       export PATH (multiple -e allowed)\n"
 "   -E,--export-all        export all mounted file systems\n"
 "   -o,--export-opts       set global export options (comma-seperated)\n"
@@ -297,8 +303,13 @@ _become_user (char *name, uid_t uid, int realtoo)
     nsg = sizeof (sg) / sizeof(sg[0]);
     if (getgrouplist(pwd->pw_name, pwd->pw_gid, sg, &nsg) == -1)
         err_exit ("user is in too many groups");
+#if USE_IMPERSONATION_LINUX
     if (syscall(SYS_setgroups, nsg, sg) < 0)
         err_exit ("setgroups");
+#else
+    if (setgroups (nsg, sg) < 0)
+        err_exit ("setgroups");
+#endif
     if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
         err_exit ("setreuid");
     if (setreuid (realtoo ? pwd->pw_uid : -1, pwd->pw_uid) < 0)
@@ -492,6 +503,7 @@ _service_sigsetup (void)
         err_exit ("sigprocmask");
 }
 
+#if USE_IMPERSONATION_LINUX
 /* Test whether setgroups applies to thread or process.
  * On RHEL6 (2.6.32 based) it applies to threads and we can use it.
  * On Ubuntu 11 (2.6.38 based) it applies to the whole process and we can't.
@@ -536,6 +548,7 @@ _test_setgroups (void)
     free (sg);
     return rc;
 }
+#endif /* USE_IMPERSONATION_LINUX */
 
 static void
 _service_run (srvmode_t mode, int rfdno, int wfdno)
@@ -613,10 +626,18 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     if (geteuid () == 0) {
         flags |= SRV_FLAGS_SETFSID;
         flags |= SRV_FLAGS_DAC_BYPASS;
+#if USE_IMPERSONATION_LINUX
         if (_test_setgroups ())
             flags |= SRV_FLAGS_SETGROUPS;
         else
             msg ("test_setgroups: groups are per-process (disabling)");
+#elif USE_IMPERSONATION_GANESHA
+        if (init_ganesha_syscalls() < 0)
+            msg ("nfs-ganesha-kmod not loaded: changing user/group will fail");
+        /* SRV_FLAGS_SETGROUPS is ignored in user-freebsd.c */
+#else
+        msg ("warning: cannot change user/group (built with --disable-impersonation)");
+#endif
     }
 
     /* Process dumpable flag may have been cleared by uid manipulation above.
