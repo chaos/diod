@@ -17,6 +17,7 @@ BuildRequires: libcap-devel
 #BuildRequires: libibverbs-devel librdmacm-devel
 #BuildRequires: gperftools-devel
 BuildRequires: libattr-devel attr
+BuildRequires: systemd
 
 %description
 diod is a 9P server used in combination with the kernel v9fs file
