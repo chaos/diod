@@ -60,10 +60,24 @@ fi
 %files
 %defattr(-,root,root)
 %doc AUTHORS COPYING README INSTALL ChangeLog
-%{_sbindir}/*
-/sbin/*
-%{_mandir}/man8/*
-%{_mandir}/man5/*
-%attr(0755,root,root) %{_sysconfdir}/systemd/system/diod.service
+%{_sbindir}/diod
+%{_mandir}/man8/diod.*
+%{_mandir}/man5/diod.*
+%attr(0755,root,root) %{_unitdir}/diod.service
 %config(noreplace) %attr(0755,root,root) %{_sysconfdir}/auto.diod
 %config(noreplace) %attr(0644,root,root) %{_sysconfdir}/diod.conf
+
+%package utils
+Summary:  Utilities for diod, a I/O forwarding server for 9P
+
+%description utils
+Utilities related to the diod 9P file server.
+
+%files utils
+%defattr(-,root,root)
+/sbin/mount.diod
+%{_sbindir}/diod?*
+%{_sbindir}/dtop
+%{_mandir}/man8/diod?*.8.gz
+%{_mandir}/man8/dtop.8.gz
+%{_mandir}/man8/mount.diod.8.gz
