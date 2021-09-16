@@ -104,6 +104,7 @@ static void _diod_remount (Opt o, char *spec, char *dir, int vopt, int fopt);
 static void _verify_mountpoint (char *path);
 static void _parse_uname_access (Opt o);
 static char *_parse_spec (char *spec, Opt o);
+static const char *_get_spec_suffix (const char *spec);
 static void _mount (const char *source, const char *target,
                     unsigned long mountflags, const void *data);
 
@@ -282,7 +283,7 @@ main (int argc, char *argv[])
                 break;
         }
         if (h) { /* create new 'spec' string identifying successful host */
-            char *p = strchr (spec , ':');
+            const char *p = _get_spec_suffix (spec);
             int len = strlen (h) + (p ? strlen (p) : 0) + 1;
 
             if (!(nspec = malloc (len)))
@@ -329,11 +330,25 @@ _uname2uid (char *uname)
 static char *
 _parse_spec (char *spec, Opt o)
 {
-    char *host, *aname;
+    char *host, *hostend, *aname;
+    int ipv6 = 0;
+
+    if (spec[0] == '[') {
+        ipv6 = 1;
+        spec++;
+    }
 
     if (!(host = strdup (spec)))
         msg_exit ("out of memory");
-    if ((aname = strchr (host, ':')))
+    if (ipv6) {
+        hostend = strchr(host, ']');
+        if (!hostend)
+            msg_exit ("invalid IPv6 address");
+        *hostend++ = '\0';
+    } else {
+        hostend = host;
+    }
+    if ((aname = strchr (hostend, ':')))
         *aname++ = '\0';
     if (strlen (host) == 0)
         msg_exit ("no host specified");
@@ -343,6 +358,17 @@ _parse_spec (char *spec, Opt o)
         msg_exit ("you cannot have both -oaname and spec=host:aname");
 
     return host;
+}
+
+static const char *
+_get_spec_suffix (const char *spec)
+{
+    if (spec[0] == '[') {
+        spec = strchr(spec, ']');
+        NP_ASSERT (spec);
+    }
+
+    return strchr(spec, ':');
 }
 
 /* Verify that directory exists, exiting on failure.
