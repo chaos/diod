@@ -188,6 +188,12 @@ main(int argc, char **argv)
                     diod_conf_clr_listen ();
                 if (!strchr (optarg, ':') && optarg[0] != '/')
                     usage ();
+                if (optarg[0] == '[') {
+                    char *end = strchr (optarg, ']');
+
+                    if (!end || !strchr (end, ':'))
+                        usage ();
+                }
                 diod_conf_add_listen (optarg);
                 break;
             case 't':   /* --nwthreads INT */
