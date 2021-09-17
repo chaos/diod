@@ -12,7 +12,7 @@ X_AC_EXPAND_INSTALL_DIRS
 ##
 # Automake support
 ##
-AM_INIT_AUTOMAKE([subdir-objects]
+AM_INIT_AUTOMAKE([subdir-objects foreign]
 		m4_esyscmd([case `automake --version | head -n 1` in
                              *1.11*);;
                              *) echo serial-tests;;
