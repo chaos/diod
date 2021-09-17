@@ -28,6 +28,7 @@ the two options may be set to the same value.
 .I "-l, --listen address"
 Set the listen address.  The address may be in the form of
 HOST:PORT, IP:PORT, or /path/to/unix_domain_socket form (default 0.0.0.0:564).
+IPv6 addresses must be enclosed in square brackets.
 This option may be specified more than once.
 It overrides the \fIlisten\fR config file setting.
 .TP

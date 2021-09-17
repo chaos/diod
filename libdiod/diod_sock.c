@@ -276,11 +276,26 @@ diod_sock_listen (List l, struct pollfd **fdsp, int *nfdsp)
                 goto done;
             ret += n;
         } else {
+            char *hostend;
+            int ipv6 = 0;
+
+            if (s[0] == '[') {
+                ipv6 = 1;
+                s++;
+            }
+
             if (!(host = strdup (s))) {
                 msg ("out of memory");
                 goto done;
             }
-            port = strchr (host, ':');
+            if (ipv6) {
+                hostend = strchr (host, ']');
+                NP_ASSERT (hostend != NULL);
+                *hostend++ = '\0';
+            } else {
+                hostend = host;
+            }
+            port = strchr (hostend, ':');
             NP_ASSERT (port != NULL);
             *port++ = '\0';
             if ((n = _setup_one_inet (host, port, fdsp, nfdsp)) == 0) {
