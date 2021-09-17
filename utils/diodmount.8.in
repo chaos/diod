@@ -29,6 +29,9 @@ Post-connect mount errors are immediately fatal.
 .LP
 If the \fIhost\fR portion of the mount spec begins with a forward-slash (/),
 it refers to the path to a UNIX domain socket.
+.LP
+IPv6 addresses may be used for the \fIhost\fR portion of the mount spec if they
+are enclosed in square brackets.
 .SH COMMAND LINE OPTIONS
 .TP
 .I "-f, --fake-mount"
