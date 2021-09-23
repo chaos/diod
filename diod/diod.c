@@ -83,29 +83,30 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fr:w:d:l:t:e:Eo:u:SL:npc:NU:s"
+#define OPTIONS "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:s"
 
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
-    {"foreground",      no_argument,        0, 'f'},
-    {"rfdno",           required_argument,  0, 'r'},
-    {"wfdno",           required_argument,  0, 'w'},
-    {"debug",           required_argument,  0, 'd'},
-    {"listen",          required_argument,  0, 'l'},
-    {"nwthreads",       required_argument,  0, 't'},
-    {"export",          required_argument,  0, 'e'},
-    {"export-all",      no_argument,        0, 'E'},
-    {"export-opts",     required_argument,  0, 'o'},
-    {"no-auth",         no_argument,        0, 'n'},
-    {"statfs-passthru", no_argument,        0, 'p'},
-    {"no-userdb",       no_argument,        0, 'N'},
-    {"runas-uid",       required_argument,  0, 'u'},
-    {"allsquash",       no_argument,        0, 'S'},
-    {"squashuser",      required_argument,  0, 'U'},
-    {"logdest",         required_argument,  0, 'L'},
-    {"config-file",     required_argument,  0, 'c'},
-    {"socktest",        no_argument,        0, 's'},
+    {"foreground",         no_argument,        0, 'f'},
+    {"rfdno",              required_argument,  0, 'r'},
+    {"wfdno",              required_argument,  0, 'w'},
+    {"debug",              required_argument,  0, 'd'},
+    {"listen",             required_argument,  0, 'l'},
+    {"nwthreads",          required_argument,  0, 't'},
+    {"export",             required_argument,  0, 'e'},
+    {"export-all",         no_argument,        0, 'E'},
+    {"export-opts",        required_argument,  0, 'o'},
+    {"no-auth",            no_argument,        0, 'n'},
+    {"no-hostname-lookup", no_argument,        0, 'H'},
+    {"statfs-passthru",    no_argument,        0, 'p'},
+    {"no-userdb",          no_argument,        0, 'N'},
+    {"runas-uid",          required_argument,  0, 'u'},
+    {"allsquash",          no_argument,        0, 'S'},
+    {"squashuser",         required_argument,  0, 'U'},
+    {"logdest",            required_argument,  0, 'L'},
+    {"config-file",        required_argument,  0, 'c'},
+    {"socktest",           no_argument,        0, 's'},
     {0, 0, 0, 0},
 };
 #else
@@ -117,24 +118,25 @@ usage()
 {
     fprintf (stderr,
 "Usage: diod [OPTIONS]\n"
-"   -f,--foreground        do not fork and disassociate with tty\n"
-"   -r,--rfdno             service connected client on read file descriptor\n"
-"   -w,--wfdno             service connected client on write file descriptor\n"
-"   -l,--listen IP:PORT    set interface to listen on (multiple -l allowed)\n"
-"   -t,--nwthreads INT     set number of I/O worker threads to spawn\n"
-"   -e,--export PATH       export PATH (multiple -e allowed)\n"
-"   -E,--export-all        export all mounted file systems\n"
-"   -o,--export-opts       set global export options (comma-seperated)\n"
-"   -n,--no-auth           disable authentication check\n"
-"   -p,--statfs-passthru   statfs should return underly f_type not V9FS_MAGIC\n"
-"   -N,--no-userdb         bypass password/group file lookup\n"
-"   -u,--runas-uid UID     only allow UID to attach\n"
-"   -S,--allsquash         map all users to the squash user\n"
-"   -U,--squashuser USER   set the squash user (default nobody)\n"
-"   -L,--logdest DEST      log to DEST, can be syslog, stderr, or file\n"
-"   -d,--debug MASK        set debugging mask\n"
-"   -c,--config-file FILE  set config file path\n"
-"   -s,--socktest          run in test mode where server exits early\n"
+"   -f,--foreground         do not fork and disassociate with tty\n"
+"   -r,--rfdno              service connected client on read file descriptor\n"
+"   -w,--wfdno              service connected client on write file descriptor\n"
+"   -l,--listen IP:PORT     set interface to listen on (multiple -l allowed)\n"
+"   -t,--nwthreads INT      set number of I/O worker threads to spawn\n"
+"   -e,--export PATH        export PATH (multiple -e allowed)\n"
+"   -E,--export-all         export all mounted file systems\n"
+"   -o,--export-opts        set global export options (comma-seperated)\n"
+"   -n,--no-auth            disable authentication check\n"
+"   -H,--no-hostname-lookup disable hostname lookups\n"
+"   -p,--statfs-passthru    statfs should return underly f_type not V9FS_MAGIC\n"
+"   -N,--no-userdb          bypass password/group file lookup\n"
+"   -u,--runas-uid UID      only allow UID to attach\n"
+"   -S,--allsquash          map all users to the squash user\n"
+"   -U,--squashuser USER    set the squash user (default nobody)\n"
+"   -L,--logdest DEST       log to DEST, can be syslog, stderr, or file\n"
+"   -d,--debug MASK         set debugging mask\n"
+"   -c,--config-file FILE   set config file path\n"
+"   -s,--socktest           run in test mode where server exits early\n"
     );
     exit (1);
 }
@@ -214,6 +216,9 @@ main(int argc, char **argv)
                 break;
             case 'n':   /* --no-auth */
                 diod_conf_set_auth_required (0);
+                break;
+            case 'H':   /* --no-hostname-lookup */
+                diod_conf_set_hostname_lookup (0);
                 break;
             case 'p':   /* --statfs-passthru */
                 diod_conf_set_statfs_passthru (0);
@@ -426,6 +431,7 @@ _sighand (int sig)
 static void *
 _service_loop (void *arg)
 {
+    int lookup = diod_conf_get_hostname_lookup ();
     sigset_t sigs;
     int i;
 
@@ -459,7 +465,7 @@ _service_loop (void *arg)
         }
         for (i = 0; i < ss.nfds; i++) {
             if ((ss.fds[i].revents & POLLIN)) {
-                diod_sock_accept_one (ss.srv, ss.fds[i].fd);
+                diod_sock_accept_one (ss.srv, ss.fds[i].fd, lookup);
             }
         }
     }

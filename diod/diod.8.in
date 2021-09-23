@@ -54,6 +54,10 @@ This option overrides the \fIexportopts\fR setting in diod.conf (5).
 This option allows users to attach without security credentials.
 It overrides  the \fIauth_required\fR setting in diod.conf (5).
 .TP
+.I "-H, --no-hostname-lookup"
+This option disables hostname lookups.
+It overrides the \fIhostname_lookup\fR setting in diod.conf (5).
+.TP
 .I "-N, --no-userdb"
 This option disables password/group lookups.
 It allows any uid to attach and assumes gid=uid, and supplementary groups

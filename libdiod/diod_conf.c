@@ -86,12 +86,14 @@
 #define RO_SQUASHUSER           0x00008000
 #define RO_STATFS_PASSTHRU      0x00010000
 #define RO_AUTH_REQUIRED_CTL    0x00020000
+#define RO_HOSTNAME_LOOKUP      0x00040000
 
 typedef struct {
     int          debuglevel;
     int          nwthreads;
     int          foreground;
     int          auth_required;
+    int          hostname_lookup;
     int          statfs_passthru;
     int          userdb;
     int          allsquash;
@@ -179,6 +181,7 @@ diod_conf_init (void)
     config.nwthreads = DFLT_NWTHREADS;
     config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
+    config.hostname_lookup = DFLT_HOSTNAME_LOOKUP;
     config.statfs_passthru = DFLT_STATFS_PASSTHRU;
     config.userdb = DFLT_USERDB;
     config.allsquash = DFLT_ALLSQUASH;
@@ -271,6 +274,16 @@ void diod_conf_set_auth_required (int i)
 {
     config.auth_required = i;
     config.ro_mask |= RO_AUTH_REQUIRED;
+}
+
+/* hostname_lookup - whether hostnames should be looked up
+ */
+int diod_conf_get_hostname_lookup (void) { return config.hostname_lookup; }
+int diod_conf_opt_hostname_lookup (void) { return config.ro_mask & RO_HOSTNAME_LOOKUP; }
+void diod_conf_set_hostname_lookup (int i)
+{
+    config.hostname_lookup = i;
+    config.ro_mask |= RO_HOSTNAME_LOOKUP;
 }
 
 /* statfs_passthru - whether statfs should return host f_type or V9FS_MAGIC
@@ -650,6 +663,11 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             config.auth_required = DFLT_AUTH_REQUIRED;
             _lua_getglobal_int (path, L, "auth_required",
                                 &config.auth_required);
+        }
+        if (!(config.ro_mask & RO_HOSTNAME_LOOKUP)) {
+            config.hostname_lookup = DFLT_HOSTNAME_LOOKUP;
+            _lua_getglobal_int (path, L, "hostname_lookup",
+                                &config.hostname_lookup);
         }
         if (!(config.ro_mask & RO_STATFS_PASSTHRU)) {
             config.statfs_passthru = DFLT_STATFS_PASSTHRU;
