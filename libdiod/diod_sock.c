@@ -339,7 +339,7 @@ diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id, int flags)
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
  */
 void
-diod_sock_accept_one (Npsrv *srv, int fd)
+diod_sock_accept_one (Npsrv *srv, int fd, int lookup)
 {
     struct sockaddr_storage addr = {0};
     socklen_t addr_size = sizeof(addr);
@@ -365,8 +365,9 @@ diod_sock_accept_one (Npsrv *srv, int fd)
         (void)_disable_nagle (fd);
         (void)_enable_keepalive (fd);
     }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            host, sizeof(host), NULL, 0, 0))) {
+    host[0] = '\0';
+    if (lookup && (res = getnameinfo ((struct sockaddr *)&addr, addr_size,
+                                      host, sizeof(host), NULL, 0, 0))) {
         msg ("getnameinfo: %s", gai_strerror(res));
         close (fd);
         return;

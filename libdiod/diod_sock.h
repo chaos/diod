@@ -1,6 +1,6 @@
 struct pollfd;
 
-void diod_sock_accept_one (Npsrv *srv, int fd);
+void diod_sock_accept_one (Npsrv *srv, int fd, int lookup);
 
 void diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id,
                         int flags);

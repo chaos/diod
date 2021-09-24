@@ -47,6 +47,9 @@ for a unique aname.  The default is 16 per aname.
 Allow clients to connect without authentication, i.e. without a valid
 MUNGE credential.
 .TP
+.I "hostname_lookup = 0"
+This option disables hostname lookups.
+.TP
 .I "userdb = 0"
 This option disables password/group lookups.
 It allows any uid to attach and assumes gid=uid, and supplementary groups
