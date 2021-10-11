@@ -121,6 +121,8 @@
 #include "xattr.h"
 #include "fid.h"
 
+#define DIOD_SRV_MAX_MSIZE 1048576
+
 Npfcall     *diod_attach (Npfid *fid, Npfid *afid, Npstr *aname);
 int          diod_clone  (Npfid *fid, Npfid *newfid);
 int          diod_walk   (Npfid *fid, Npstr *wname, Npqid *wqid);
@@ -162,7 +164,7 @@ char        *diod_get_files (char *name, void *a);
 int
 diod_init (Npsrv *srv)
 {
-    srv->msize = 65536;
+    srv->msize = DIOD_SRV_MAX_MSIZE;
     srv->fiddestroy = diod_fiddestroy;
     srv->logmsg = diod_log_msg;
     srv->remapuser = diod_remapuser;
