@@ -35,6 +35,17 @@ if test "$GCC" = yes; then
 fi
 AC_PROG_RANLIB
 
+##
+# Checks for pkg.m4 from pkgconf package
+##
+m4_ifndef([PKG_PROG_PKG_CONFIG],
+  [AC_MSG_ERROR([PKG_PROG_PKG_CONFIG not found, please install pkgconf package before configuring.])])
+
+##
+# Checks for ncurses
+##
+PKG_CHECK_MODULES([ncurses], [ncurses])
+
 # dbench is conditionally compiled for 'make check'
 DBENCH
 
@@ -69,7 +80,6 @@ AC_CHECK_FUNCS( \
 AC_FUNC_STRERROR_R
 X_AC_CHECK_PTHREADS
 X_AC_WRAP
-X_AC_CURSES
 X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC

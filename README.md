@@ -7,7 +7,7 @@
 
 #### On Debian
 ```
-sudo apt-get install build-essential libpopt-dev ncurses-dev automake autoconf git
+sudo apt-get install build-essential libpopt-dev ncurses-dev automake autoconf git pkgconf
 sudo apt-get install liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev libattr1-dev
 ./autogen.sh
 ./configure
@@ -18,8 +18,8 @@ make check
 #### On Red Hat
 
 ```
-sudo yum install epel-release gperftools-devel automake autoconf libattr-devel
-sudo yum install lua-devel munge-devel tcp_wrappers-devel libcap-devel
+sudo yum install epel-release gperftools-devel ncurses-devel automake autoconf libattr-devel
+sudo yum install lua-devel munge-devel tcp_wrappers-devel libcap-devel pkgconf
 ./autogen.sh
 ./configure
 make
