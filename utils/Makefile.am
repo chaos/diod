@@ -5,6 +5,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/liblsd \
 	-I$(top_srcdir)/libdiod \
 	-I$(top_srcdir)/libnpclient
+AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 
 sbin_PROGRAMS = diodcat dtop diodload diodls diodshowmount dioddate
 
@@ -17,8 +18,8 @@ common_ldadd = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBCURSES) \
-	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC)
+	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) \
+	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC) $(ncurses_LIBS)
 
 common_sources = \
 	opt.c \
