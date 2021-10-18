@@ -48,7 +48,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#if defined(HAVE_lua)
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -482,7 +482,7 @@ void diod_conf_set_exportopts(char *opts)
     config.ro_mask |= RO_EXPORTOPTS;
 }
 
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#if defined(HAVE_lua)
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
@@ -743,7 +743,7 @@ diod_conf_init_config_file (char *path)
             msg_exit ("no LUA suport - cannot parse contents of %s", path);
     }
 }
-#endif /* HAVE_LUA_H */
+#endif /* HAVE_lua */
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

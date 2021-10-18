@@ -46,6 +46,22 @@ m4_ifndef([PKG_PROG_PKG_CONFIG],
 ##
 PKG_CHECK_MODULES([ncurses], [ncurses])
 
+##
+# Checks for lua implementation
+##
+AC_ARG_WITH(lua_impl,
+            [AS_HELP_STRING([--with-lua-impl=luajit|lua5.1|lua5.4],
+                            [Add preferred Lua implementation [default=no]])],
+            [use_lua=$withval],
+            [use_lua=no])
+AM_CONDITIONAL(WITH_LUA_IMPL,test "x$use_lua_impl" != xno)
+
+if test "x$use_lua_impl" != xno; then
+    if test "x$use_lua_impl" != xyes; then
+        PKG_HAVE_DEFINE_WITH_MODULES([lua], ["$with_lua_impl"])
+    fi
+fi
+
 # dbench is conditionally compiled for 'make check'
 DBENCH
 
@@ -83,9 +99,6 @@ X_AC_WRAP
 X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC
-AX_LUA_HEADERS
-AX_LUA_HEADERS(501)
-AX_LUA_LIBS
 X_AC_RDMATRANS
 
 ##

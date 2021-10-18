@@ -11,7 +11,7 @@
 #define DFLT_RUNASUID           0
 #define DFLT_LISTEN             "0.0.0.0:564"
 #define DFLT_EXPORTALL          0
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#if defined(HAVE_lua)
 #define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
 #endif
 #define DFLT_LOGDEST            "syslog:daemon:err"

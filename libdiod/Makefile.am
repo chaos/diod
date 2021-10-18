@@ -4,6 +4,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libnpfs \
 	-I$(top_srcdir)/libnpclient \
 	-I$(top_srcdir)/liblsd
+AM_CPPFLAGS += $(lua_CFLAGS)
 
 noinst_LIBRARIES = libdiod.a
 
