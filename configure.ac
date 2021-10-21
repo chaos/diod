@@ -36,10 +36,15 @@ fi
 AC_PROG_RANLIB
 
 ##
-# Checks for pkg.m4 from pkgconf package
+# Checks for PKG_HAVE_DEFINE_WITH_MODULES macro from 'pkgconf' package
 ##
-m4_ifndef([PKG_PROG_PKG_CONFIG],
-  [AC_MSG_ERROR([PKG_PROG_PKG_CONFIG not found, please install pkgconf package before configuring.])])
+m4_ifndef([PKG_HAVE_DEFINE_WITH_MODULES],
+         [m4_fatal([
+            PKG_HAVE_DEFINE_WITH_MODULES not found, please install
+            'pkgconf' package before configuring. See README.md for
+            the complete list of prerequisites for building diod.
+           ])
+          ])
 
 ##
 # Checks for ncurses
