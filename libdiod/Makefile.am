@@ -3,7 +3,8 @@ AM_CFLAGS = @WARNING_CFLAGS@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libnpfs \
 	-I$(top_srcdir)/libnpclient \
-	-I$(top_srcdir)/liblsd
+	-I$(top_srcdir)/liblsd \
+	$(LUA_INCLUDE)
 
 noinst_LIBRARIES = libdiod.a
 

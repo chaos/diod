@@ -35,14 +35,15 @@ AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \
 	-I$(top_srcdir)/libnpclient \
 	-I$(top_srcdir)/liblsd \
-	-I$(top_srcdir)/libdiod
+	-I$(top_srcdir)/libdiod \
+	$(LUA_INCLUDE)
 
 
 LDADD = $(top_builddir)/libdiod/libdiod.a \
         $(top_builddir)/libnpclient/libnpclient.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
+        $(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 common_sources =
 

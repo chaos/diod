@@ -34,7 +34,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/liblsd \
 	-I$(top_srcdir)/libdiod \
 	-I$(top_srcdir)/utils \
-	-I$(top_srcdir)/diod
+	-I$(top_srcdir)/diod \
+	$(LUA_INCLUDE)
 
 LDADD = $(top_builddir)/utils/opt.o \
 	$(top_builddir)/diod/ops.o \
@@ -46,7 +47,7 @@ LDADD = $(top_builddir)/utils/opt.o \
 	$(top_builddir)/libnpclient/libnpclient.a \
         $(top_builddir)/libnpfs/libnpfs.a \
         $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
+        $(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 common_sources = test.h
 
