@@ -29,10 +29,17 @@ AC_DEFINE([_GNU_SOURCE], 1,
 ##
 AC_PROG_CC
 AM_PROG_CC_C_O
-if test "$GCC" = yes; then
-  GCCWARN="-Wall -Werror"
-  AC_SUBST([GCCWARN])
-fi
+AX_COMPILER_VENDOR
+AS_CASE($ax_cv_c_compiler_vendor,
+  [gnu], [
+      WARNING_CFLAGS="-Wall -Werror"
+  ]
+  [clang], [
+      WARNING_CFLAGS="-Wall -Werror -Wno-unknown-warning-option -Wno-error=unknown-warning-option"
+  ]
+)
+AC_SUBST([WARNING_CFLAGS])
+
 AC_PROG_RANLIB
 
 ##
