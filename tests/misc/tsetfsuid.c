@@ -1,3 +1,13 @@
+/************************************************************\
+ * Copyright 2010 Lawrence Livermore National Security, LLC
+ * (c.f. AUTHORS, NOTICE.LLNS, COPYING)
+ *
+ * This file is part of the diod 9P server project.
+ * For details, see https://github.com/chaos/diod.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+\************************************************************/
+
 /* tsetfsuid.c - check that pthreads can independently setfsuid */
 
 /* N.B. error handling for setfsuid/setfsgid is broken in the kernel.

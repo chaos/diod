@@ -1,3 +1,13 @@
+/************************************************************\
+ * Copyright 2010 Lawrence Livermore National Security, LLC
+ * (c.f. AUTHORS, NOTICE.LLNS, COPYING)
+ *
+ * This file is part of the diod 9P server project.
+ * For details, see https://github.com/chaos/diod.
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+\************************************************************/
+
 /* tlist.c - exercise list package (valgrind me) */
 
 /* Internal memory allocation in list.c hangs on to some memory that's not
