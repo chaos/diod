@@ -126,4 +126,6 @@ Please read nfs-ganesha-kmod's README first, and use at your own risk.
 
 Use GitHub!
 
-Diod can also be discussed on the [v9fs-users mailing list](https://lists.sourceforge.net/lists/listinfo/v9fs-users)
+### Release
+
+SPDX-License-Identifier: GPL-2.0-or-later
