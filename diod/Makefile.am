@@ -3,7 +3,8 @@ AM_CFLAGS = @WARNING_CFLAGS@
 AM_CPPFLAGS = \
 	-I$(top_srcdir)/libnpfs \
 	-I$(top_srcdir)/liblsd \
-	-I$(top_srcdir)/libdiod
+	-I$(top_srcdir)/libdiod \
+	$(LUA_INCLUDE)
 
 sbin_PROGRAMS = diod
 
@@ -12,7 +13,7 @@ diod_LDADD = \
 	$(top_builddir)/libnpclient/libnpclient.a \
 	$(top_builddir)/libnpfs/libnpfs.a \
 	$(top_builddir)/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LIBLUA) $(LIBMUNGE) $(LIBCAP) \
+	$(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) \
 	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC)
 
 diod_SOURCES = \

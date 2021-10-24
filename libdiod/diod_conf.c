@@ -48,7 +48,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <limits.h>
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#if HAVE_CONFIG_FILE
 #include <lua.h>
 #include <lauxlib.h>
 #include <lualib.h>
@@ -482,7 +482,7 @@ void diod_conf_set_exportopts(char *opts)
     config.ro_mask |= RO_EXPORTOPTS;
 }
 
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#if HAVE_CONFIG_FILE
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
@@ -720,7 +720,7 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
 #else
 /* Allow no lua config + empty config file.
  * This is to allow regression tests to specify -c /dev/null and work
- * even if there is no LUA installed.
+ * even if config support is disabled.
  */
 void
 diod_conf_init_config_file (char *path)
@@ -740,10 +740,10 @@ diod_conf_init_config_file (char *path)
         if (stat (path, &sb) < 0)
             err_exit ("%s", path);
         if (sb.st_size > 0)
-            msg_exit ("no LUA suport - cannot parse contents of %s", path);
+            msg_exit ("no config suport - cannot parse contents of %s", path);
     }
 }
-#endif /* HAVE_LUA_H */
+#endif /* HAVE_CONFIG_FILE */
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

@@ -1,4 +1,4 @@
-/* tlua.c - is lua configured? */
+/* tlua.c - is config file support configured? */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -7,7 +7,7 @@
 int
 main (int argc, char *argv[])
 {
-#if defined(HAVE_LUA_H) && defined(HAVE_LUALIB_H)
+#if HAVE_CONFIG_FILE
 	return 0;
 #else
 	return 1;

@@ -2,6 +2,6 @@
 
 TEST=$(basename $0 | cut -d- -f1)
 # test $(id -u) == 0 || exit 77 #skip if not root
-./tlua || exit 77 #skip if no lua
-./tconf -c $TEST.conf -e >$TEST.out 2>&1
+${MISC_BUILDDIR}/tlua || exit 77 #skip if no lua
+${MISC_BUILDDIR}/tconf -c ${MISC_SRCDIR}/$TEST.conf -e >$TEST.out 2>&1
 diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
