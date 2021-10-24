@@ -51,7 +51,8 @@ size[4] Rflush tag[2]
 ```
 flush aborts an in-flight request referenced by oldtag, if any.
 
-See the Plan 9 manual page for flush(5).
+See the Plan 9 manual page for
+[flush(5)](http://9p.io/magic/man2html/5/flush).
 
 ### walk -- descend a directory hierarchy
 ```
@@ -62,7 +63,8 @@ walk is used to descend a directory represented by fid using successive path ele
 
 fid can be cloned to newfid by calling walk with nwname set to zero.
 
-See the Plan 9 manual page for walk(5).
+See the Plan 9 manual page for
+[walk(5)](http://9p.io/magic/man2html/5/walk).
 
 ### read, write -- transfer data from and to a file
 ```
@@ -76,7 +78,8 @@ read and write perform I/O on the file represented by fid. Note that in v9fs, a 
 
 Under 9P2000.L, read cannot be used on directories. See readdir below.
 
-See the Plan 9 manual page for read(5).
+See the Plan 9 manual page for
+[read(5)](http://9p.io/magic/man2html/5/read).
 
 #### clunk -- destroy a fid
 ```
@@ -85,7 +88,8 @@ size[4] Rclunk tag[2]
 ```
 clunk signifies that fid is no longer needed by the client.
 
-See the Plan 9 manual page for clunk(5).
+See the Plan 9 manual page for
+[clunk(5)](http://9p.io/magic/man2html/5/clunk).
 
 ### remove -- remove a file system object
 ```
@@ -94,7 +98,8 @@ size[4] Rremove tag[2]
 ```
 remove removes the file system object represented by fid.
 
-See the Plan 9 manual page for remove(5).
+See the Plan 9 manual page for.
+[remove(5)](http://9p.io/magic/man2html/5/remove).
 
 This operation will eventually be replaced by unlinkat (see below).
 
@@ -119,7 +124,9 @@ n_uname, if not set to `P9_NONUNAME` (~0), is the uid of the user and is used in
 
 v9fs has several modes of access which determine how it uses attach. In the default access=user, an initial attach is sent for the user provided in the uname=name mount option, and for each user that accesses the file system thereafter. For access=_uid_, only the initial attach is sent for _uid_ and all other users are denied access by the client.
 
-See the Plan 9 manual page for attach(5) and the 9P2000.u experimental-draft RFC entry for auth/attach.
+See the Plan 9 manual page for
+[attach(5)](http://9p.io/magic/man2html/5/attach).
+and the 9P2000.u experimental-draft RFC entry for auth/attach.
 
 ### 9P2000.L Operations
 
@@ -129,7 +136,8 @@ size[4] Rlerror tag[2] ecode[4]
 ```
 lerror replaces the reply message used in a successful call. ecode is a numerical Linux errno.
 
-See the Plan 9 manual page for error(5),
+See the Plan 9 manual page for
+[error(5)](http://9p.io/magic/man2html/5/error).
 
 #### statfs -- get file system information
 ```
@@ -159,7 +167,8 @@ size[4] Rlopen tag[2] qid[13] iounit[4]
 ```
 lopen prepares fid for file I/O. flags contains Linux open(2) flags bits, e.g. O_RDONLY, O_RDWR, O_WRONLY.
 
-See the Plan 9 manual page for open(5).
+See the Plan 9 manual page for
+[open(5)](http://9p.io/magic/man2html/5/open).
 
 #### lcreate -- create regular file
 ```
@@ -176,7 +185,8 @@ flags is used to pass Linux kernel intent bits (FIXME: diod ignores flags)
 
 gid is the effective gid of the caller.
 
-See the Plan 9 manual page for create(5),
+See the Plan 9 manual page for
+[create(5)](http://9p.io/magic/man2html/5/create).
 
 #### symlink -- create symbolic link
 ```
