@@ -1,4 +1,5 @@
-AM_CFLAGS = @GCCWARN@
+AM_CFLAGS = @GCCWARN@ \
+	    -Wno-parentheses -Wno-error=parentheses
 
 AM_CPPFLAGS = -I$(top_srcdir)/libdiod
 
