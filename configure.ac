@@ -90,9 +90,6 @@ X_AC_WRAP
 X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC
-AX_PROG_LUA([5.1],[5.5])
-AX_LUA_HEADERS
-AX_LUA_LIBS
 X_AC_RDMATRANS
 
 ##
@@ -119,6 +116,20 @@ AC_ARG_ENABLE([impersonation],
   [AS_HELP_STRING([--enable-impersonation], [allow access=user])],
   [],
   [enable_impersonation=auto])
+
+AC_ARG_ENABLE([config],
+  [AS_HELP_STRING([--disable-config], [disable lua config file support])])
+
+AS_IF([test "x$enable_config" != "xno"], [
+  AX_PROG_LUA([5.1],[5.5])
+  AX_LUA_HEADERS([],[
+    AC_MSG_ERROR([Install lua headers or configure with --disable-config])
+  ])
+  AX_LUA_LIBS([],[
+    AC_MSG_ERROR([Install lua libs or configure with --disable-config])
+  ])
+  AC_DEFINE([HAVE_CONFIG_FILE], [1], [lua config file support])
+])
 
 case "${host_os}" in
   linux*)
