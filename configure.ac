@@ -30,7 +30,7 @@ AC_DEFINE([_GNU_SOURCE], 1,
 AC_PROG_CC
 AM_PROG_CC_C_O
 if test "$GCC" = yes; then
-  GCCWARN="-Wall"
+  GCCWARN="-Wall -Werror"
   AC_SUBST([GCCWARN])
 fi
 AC_PROG_RANLIB
