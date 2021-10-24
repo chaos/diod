@@ -17,7 +17,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
             libpopt-dev ncurses-dev automake autoconf pkgconf \
-            liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev \
+            lua5.3 liblua5.3-dev libmunge-dev libwrap0-dev libcap-dev \
             libattr1-dev ${{matrix.cc}}
     - name: Display configuration
       run: |
