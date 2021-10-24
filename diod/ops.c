@@ -378,11 +378,10 @@ _statmnt (char *path, struct stat *sb)
 {
     DIR *dir = NULL;
     struct stat sbp;
-    struct dirent dbuf, *dp;
+    struct dirent *dp;
     char *ppath = NULL;
     int plen = strlen (path) + 4;
     char *name;
-    int err;
 
     if (stat (path, sb) < 0) {
         np_uerror (errno);
@@ -404,9 +403,10 @@ _statmnt (char *path, struct stat *sb)
     name = strrchr (path, '/');
     name = name ? name + 1 : path;
     do {
-        err = readdir_r (dir, &dbuf, &dp);
-        if (err > 0) {
-            np_uerror (err);
+        errno = 0;
+        dp = readdir (dir);
+        if (!dp && errno != 0) {
+            np_uerror (errno);
             goto error;
         }
     } while (dp != NULL && strcmp (name, dp->d_name) != 0);
