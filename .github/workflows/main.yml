@@ -1,8 +1,22 @@
 name: ci
 
-on: [ workflow_dispatch ]
+on: [ pull_request, push ]
 
 jobs:
-  dummyjob:
+  build:
+    runs-on: ubuntu-latest
+
     steps:
-    - name: dummystep
+    - uses: actions/checkout@v2
+    - name: apt-get dependencies
+      run: sudo apt-get install -y libpopt-dev ncurses-dev automake autoconf pkgconf liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev libattr1-dev
+    - name: autogen
+      run: ./autogen.sh
+    - name: configure
+      run: ./configure
+    - name: make
+      run: make
+    - name: make check
+      run: make check
+    - name: make distcheck
+      run: make distcheck
