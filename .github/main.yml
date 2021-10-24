@@ -1,0 +1,8 @@
+name: ci
+
+on: [ workflow_dispatch ]
+
+jobs:
+  dummyjob:
+    steps:
+    - name: dummystep
