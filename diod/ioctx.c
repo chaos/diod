@@ -331,25 +331,26 @@ ioctx_seekdir (IOCtx ioctx, long offset)
 int
 ioctx_readdir_r(IOCtx ioctx, struct diod_dirent *entry, struct diod_dirent **result)
 {
-  int r;
-  struct dirent* rd_result;
-  if (!ioctx->dir)
-    return EINVAL;
+    int r;
+    struct dirent* rd_result;
 
-  r = readdir_r (ioctx->dir, &entry->dir_entry, &rd_result);
-  if (r==0) {  /* success */
-    /* Does the same to diod_dirent as readdir_r() does to dirent */
-    if (rd_result == NULL)
-      *result = NULL;
-    else
-      *result = entry;
+    if (!ioctx->dir)
+        return EINVAL;
+
+    r = readdir_r (ioctx->dir, &entry->dir_entry, &rd_result);
+    if (r==0) {  /* success */
+        /* Does the same to diod_dirent as readdir_r() does to dirent */
+        if (rd_result == NULL)
+            *result = NULL;
+        else
+            *result = entry;
 #ifdef _DIRENT_HAVE_D_OFF
-    entry->d_off = entry->dir_entry.d_off;
+        entry->d_off = entry->dir_entry.d_off;
 #else
-    entry->d_off = telldir (ioctx->dir);
+        entry->d_off = telldir (ioctx->dir);
 #endif
-  }
-  return r;
+    }
+    return r;
 }
 
 int
