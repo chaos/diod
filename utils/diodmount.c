@@ -682,7 +682,7 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
     char *addr;
     char *dev;
     char *path;
-    int fd;
+    int fd = -1;
     char *options;
     int blksize = 4096;
     int uid;
