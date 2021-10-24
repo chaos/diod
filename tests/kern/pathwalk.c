@@ -224,7 +224,8 @@ _search (char **searchpath, int length, char *name)
     int i;
 
     for (i = 0; i < length; i++) {
-        snprintf (path, sizeof (path), "%s/%s", searchpath[i], name);
+        if (snprintf (path, sizeof (path), "%s/%s", searchpath[i], name) >= sizeof (path))
+            return -1;
         if (stat (path, &sb) == 0)
             break;
     }

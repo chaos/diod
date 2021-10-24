@@ -36,12 +36,6 @@ static const struct flock sf_wrlock = {
     .l_start = 0,
     .l_len = 0
 };
-static const struct flock sf_unlock = {
-    .l_type = F_UNLCK,
-    .l_whence = SEEK_SET,
-    .l_start = 0,
-    .l_len = 0
-};
 
 int
 main (int argc, char *argv[])

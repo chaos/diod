@@ -328,28 +328,37 @@ ioctx_seekdir (IOCtx ioctx, long offset)
         seekdir (ioctx->dir, offset);
 }
 
-int
-ioctx_readdir_r(IOCtx ioctx, struct diod_dirent *entry, struct diod_dirent **result)
+/* Modern readdir() is thread-safe, however, if d->off_t is not available,
+ * take a lock over readdir() + telldir() so that if there are two threads
+ * walking the directory, telldir() returns the offset after this readdir()
+ * and not that of a racing thread.  If d->off_t is available, we can avoid
+ * taking the lock.
+ */
+struct dirent *
+ioctx_readdir(IOCtx ioctx, long *offset)
 {
-  int r;
-  struct dirent* rd_result;
-  if (!ioctx->dir)
-    return EINVAL;
+    struct dirent *d;
 
-  r = readdir_r (ioctx->dir, &entry->dir_entry, &rd_result);
-  if (r==0) {  /* success */
-    /* Does the same to diod_dirent as readdir_r() does to dirent */
-    if (rd_result == NULL)
-      *result = NULL;
-    else
-      *result = entry;
-#ifdef _DIRENT_HAVE_D_OFF
-    entry->d_off = entry->dir_entry.d_off;
-#else
-    entry->d_off = telldir (ioctx->dir);
+    if (!ioctx->dir) {
+        errno = EINVAL;
+        return NULL;
+    }
+#ifndef _DIRENT_HAVE_D_OFF
+    xpthread_mutex_lock (&ioctx->lock);
 #endif
-  }
-  return r;
+    if (!(d = readdir (ioctx->dir)))
+        goto done;
+#ifndef _DIRENT_HAVE_D_OFF
+    *offset = telldir (ioctx->dir);
+#else
+    *offset = d->d_off;
+#endif
+    xpthread_mutex_unlock (&ioctx->lock);
+done:
+#ifndef _DIRENT_HAVE_D_OFF
+    xpthread_mutex_unlock (&ioctx->lock);
+#endif
+    return d;
 }
 
 int

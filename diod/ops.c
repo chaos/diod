@@ -59,7 +59,7 @@
 
 #ifndef __FreeBSD__
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
-#define _BSD_SOURCE         /* makedev, st_atim etc */
+#define _DEFAULT_SOURCE     /* makedev, st_atim etc */
 #endif
 
 #define _ATFILE_SOURCE      /* utimensat */
@@ -113,7 +113,6 @@
 #include "diod_conf.h"
 #include "diod_log.h"
 #include "diod_auth.h"
-#include "diod_dir.h"
 
 #include "ops.h"
 #include "exp.h"
@@ -233,10 +232,8 @@ diod_ustat2qid (struct stat *st, Npqid *qid)
 }
 
 static void
-_dirent2qid (struct diod_dirent *d1, Npqid *qid)
+_dirent2qid (struct dirent *d, Npqid *qid)
 {
-    struct dirent* d = &(d1->dir_entry);
-
     NP_ASSERT (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino;
     qid->version = 0;
@@ -378,11 +375,10 @@ _statmnt (char *path, struct stat *sb)
 {
     DIR *dir = NULL;
     struct stat sbp;
-    struct dirent dbuf, *dp;
+    struct dirent *dp;
     char *ppath = NULL;
     int plen = strlen (path) + 4;
     char *name;
-    int err;
 
     if (stat (path, sb) < 0) {
         np_uerror (errno);
@@ -404,9 +400,10 @@ _statmnt (char *path, struct stat *sb)
     name = strrchr (path, '/');
     name = name ? name + 1 : path;
     do {
-        err = readdir_r (dir, &dbuf, &dp);
-        if (err > 0) {
-            np_uerror (err);
+        errno = 0;
+        dp = readdir (dir);
+        if (!dp && errno != 0) {
+            np_uerror (errno);
             goto error;
         }
     } while (dp != NULL && strcmp (name, dp->d_name) != 0);
@@ -1167,25 +1164,25 @@ error_quiet:
 }
 
 static u32
-_copy_dirent_linux (Fid *f, struct diod_dirent *dp, u8 *buf, u32 buflen)
+_copy_dirent_linux (Fid *f, struct dirent *d, long offset, u8 *buf, u32 buflen)
 {
     Npqid qid;
     u32 ret = 0;
 
-    if (dp->dir_entry.d_type == DT_UNKNOWN) {
+    if (d->d_type == DT_UNKNOWN) {
         char path[PATH_MAX + 1];
         struct stat sb;
-        snprintf (path, sizeof(path), "%s/%s", path_s (f->path), dp->dir_entry.d_name);
+        snprintf (path, sizeof(path), "%s/%s", path_s (f->path), d->d_name);
         if (lstat (path, &sb) < 0) {
             np_uerror (errno);
             goto done;
         }
         diod_ustat2qid (&sb, &qid);
     } else  {
-        _dirent2qid (dp, &qid);
+        _dirent2qid (d, &qid);
     }
-    ret = np_serialize_p9dirent(&qid, dp->d_off, dp->dir_entry.d_type,
-                                      dp->dir_entry.d_name, buf, buflen);
+    ret = np_serialize_p9dirent(&qid, offset, d->d_type, d->d_name,
+                                buf, buflen);
 done:
     return ret;
 }
@@ -1193,25 +1190,27 @@ done:
 static u32
 _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
-    struct diod_dirent dbuf, *dp;
-    int i, n = 0, err;
+    struct dirent *d;
+    int i, n = 0;
+    long new_offset;
 
     if (offset == 0)
         ioctx_rewinddir (f->ioctx);
     else
         ioctx_seekdir (f->ioctx, offset);
     do {
-        err = ioctx_readdir_r (f->ioctx, &dbuf, &dp);
-        if (err > 0) {
-            np_uerror (err);
+        errno = 0;
+        d = ioctx_readdir (f->ioctx, &new_offset);
+        if (!d && errno != 0) { // error
+            np_uerror (errno);
             break;
         }
-        if (err == 0 && dp == NULL)
+        if (!d) // directory EOF
             break;
-        if ((f->flags & DIOD_FID_FLAGS_MOUNTPT) && strcmp (dp->dir_entry.d_name, ".")
-                                                && strcmp (dp->dir_entry.d_name, ".."))
+        if ((f->flags & DIOD_FID_FLAGS_MOUNTPT) && strcmp (d->d_name, ".")
+                                                && strcmp (d->d_name, ".."))
                 continue;
-        i = _copy_dirent_linux (f, dp, buf + n, count - n);
+        i = _copy_dirent_linux (f, d, new_offset, buf + n, count - n);
         if (i == 0)
             break;
         n += i;

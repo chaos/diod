@@ -682,7 +682,7 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
     char *addr;
     char *dev;
     char *path;
-    int fd;
+    int fd = -1;
     char *options;
     int blksize = 4096;
     int uid;
@@ -734,7 +734,8 @@ _nbd_attach (Opt o, int argc, char **argv, int nopt, int vopt)
     if (!nopt) {
         fd = open (dev, O_RDWR);
         if (fd < 0 && (errno == ENOENT || errno == ENXIO)) {
-            system ("/sbin/modprobe 9nbd");
+            if (system ("/sbin/modprobe 9nbd") <= 0)
+                msg_exit ("modprobe 9nbd failed");
             fd = open (dev, O_RDWR);
         }
         if (fd < 0)
