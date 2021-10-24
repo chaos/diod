@@ -19,7 +19,7 @@ AM_INIT_AUTOMAKE([subdir-objects foreign]
                              esac]))
 AM_SILENT_RULES([yes])
 AM_CONFIG_HEADER([config/config.h])
-AM_MAINTAINER_MODE
+AM_MAINTAINER_MODE([enable])
 
 AC_DEFINE([_GNU_SOURCE], 1,
           [Define _GNU_SOURCE so that we get all necessary prototypes])
