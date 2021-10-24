@@ -35,7 +35,7 @@ XFAIL_TESTS = t48 t49
 
 CLEANFILES = *.out *.diff *.diod *.postmark *.dbench
 
-AM_CFLAGS = @GCCWARN@
+AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \

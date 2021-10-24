@@ -1,5 +1,5 @@
 AM_CFLAGS = \
-	@GCCWARN@ \
+	@WARNING_CFLAGS@ \
 	-Wno-unused-result -Wno-error=unused-result \
 	-Wno-stringop-truncation -Wno-error-stringop-truncation
 

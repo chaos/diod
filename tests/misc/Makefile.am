@@ -26,7 +26,7 @@ TESTS = t00 t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t14 t15
 
 CLEANFILES = *.out *.diff
 
-AM_CFLAGS = @GCCWARN@
+AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
         -I$(top_srcdir)/libnpfs \
