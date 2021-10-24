@@ -6,10 +6,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        cc: [gcc, clang]
+
     steps:
     - uses: actions/checkout@v2
-    - name: apt-get dependencies
-      run: sudo apt-get install -y libpopt-dev ncurses-dev automake autoconf pkgconf liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev libattr1-dev
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            libpopt-dev ncurses-dev automake autoconf pkgconf \
+            liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev \
+            libattr1-dev ${{matrix.cc}}
+    - name: Display configuration
+      run: |
+        echo "C compiler:"
+        ${CC} --version
+      env:
+        CC: ${{matrix.cc}}
     - name: autogen
       run: ./autogen.sh
     - name: configure
