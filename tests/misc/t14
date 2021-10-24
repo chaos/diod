@@ -2,5 +2,5 @@
 
 TEST=$(basename $0 | cut -d- -f1)
 test $(id -u) == 0 || exit 77 #skip if not root
-${MISC_SRCDIR}/memcheck ./tnpsrv3 >$TEST.out 2>&1
+${MISC_SRCDIR}/memcheck ${MISC_BUILDDIR}/tnpsrv3 >$TEST.out 2>&1
 diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff

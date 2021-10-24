@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
 TEST=$(basename $0 | cut -d- -f1)
-./tlua || exit 77 #skip if no lua
-${MISC_SRCDIR}/memcheck ./tconf -c $TEST.conf >$TEST.out 2>&1
+${MISC_BUILDDIR}/tlua || exit 77 #skip if no lua
+${MISC_SRCDIR}/memcheck ${MISC_BUILDDIR}/tconf -c ${MISC_SRCDIR}/$TEST.conf >$TEST.out 2>&1
 diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
