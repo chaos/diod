@@ -1,3 +1,13 @@
+/*************************************************************\
+ * Copyright (C) 2005 by Latchesar Ionkov <lucho@ionkov.net>
+ * Copyright (C) 2010 by Lawrence Livermore National Security, LLC.
+ *
+ * This file is part of npfs, a framework for 9P synthetic file systems.
+ * For details see https://sourceforge.net/projects/npfs.
+ *
+ * SPDX-License-Identifier: MIT
+ *************************************************************/
+
 /* pthread wrappers */
 #define xpthread_mutex_lock(a) do { \
     int pthread_mutex_lock_result = pthread_mutex_lock(a); \
