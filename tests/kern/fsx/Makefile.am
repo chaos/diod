@@ -1,4 +1,6 @@
-AM_CFLAGS = @GCCWARN@
+AM_CFLAGS = \
+	@GCCWARN@ \
+	-Wno-unused-result -Wno-error=unused-result
 
 check_PROGRAMS = fsx
 
