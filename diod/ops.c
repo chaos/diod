@@ -59,7 +59,7 @@
 
 #ifndef __FreeBSD__
 #define _XOPEN_SOURCE 600   /* pread/pwrite */
-#define _BSD_SOURCE         /* makedev, st_atim etc */
+#define _DEFAULT_SOURCE     /* makedev, st_atim etc */
 #endif
 
 #define _ATFILE_SOURCE      /* utimensat */
