@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-./testopenfid "$@" open_walk 
+# ./testopenfid "$@" open_walk
 ./testopenfid "$@" open_remove_read
 ./testopenfid "$@" open_remove_getattr
 ./testopenfid "$@" open_remove_setattr
