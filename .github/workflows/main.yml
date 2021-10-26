@@ -4,11 +4,12 @@ on: [ pull_request, push ]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{matrix.os}}
 
     strategy:
       matrix:
         cc: [gcc, clang]
+        os: [ubuntu-latest, ubuntu-18.04]
 
     steps:
     - uses: actions/checkout@v2
