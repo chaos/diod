@@ -336,11 +336,6 @@ diod_clone (Npfid *fid, Npfid *newfid)
 {
     Fid *f = fid->aux;
 
-    if (f->ioctx != NULL) {
-        np_uerror(EBADF);
-        goto error;
-    }
-
     if (!(diod_fidclone (newfid, fid))) {
         np_uerror (ENOMEM);
         goto error;
@@ -422,10 +417,6 @@ diod_walk (Npfid *fid, Npstr* wname, Npqid *wqid)
     struct stat sb, sb2;
     Path npath = NULL;
 
-    if (f->ioctx != NULL) {
-        np_uerror (EBADF);
-        goto error_quiet;
-    }
     if ((f->flags & DIOD_FID_FLAGS_MOUNTPT)) {
         np_uerror (ENOENT);
         goto error_quiet;

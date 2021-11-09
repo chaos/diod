@@ -1,4 +1,3 @@
-testopenfid: testing 'open_walk'
 testopenfid: testing 'open_remove_read'
 testopenfid: testing 'open_remove_getattr'
 testopenfid: testing 'open_remove_setattr'
