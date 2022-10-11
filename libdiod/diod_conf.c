@@ -351,30 +351,6 @@ void diod_conf_clr_exports (void)
     config.exports = _xlist_create ((ListDelF)_destroy_export);
     config.ro_mask |= RO_EXPORTS;
 }
-void diod_conf_add_exports (char *path)
-{
-    Export *x = _xcreate_export (path);
-    _xlist_append (config.exports, x);
-    config.ro_mask |= RO_EXPORTS;
-}
-void diod_conf_validate_exports (void)
-{
-    ListIterator itr;
-    Export *x;
-
-    if (config.exportall == 0 && list_count (config.exports) == 0)
-        msg_exit ("no exports defined");
-    if ((itr = list_iterator_create (config.exports)) == NULL)
-        msg_exit ("out of memory");
-    while ((x = list_next (itr))) {
-        if (*x->path != '/' && strcmp (x->path, "ctl") != 0)
-            msg_exit ("exports should begin with '/'");
-        if (strstr (x->path, "/..") != 0)
-            msg_exit ("exports should not contain '/..'"); /* FIXME */
-    }
-    list_iterator_destroy (itr);
-}
-
 static void
 _parse_expopt (char *s, int *fp)
 {
@@ -402,6 +378,34 @@ _parse_expopt (char *s, int *fp)
     }
     free (cpy);
     *fp = flags;
+}
+void diod_conf_add_exports (char *path)
+{
+    Export *x = _xcreate_export (path);
+    if (config.exportopts)
+	x->opts = _xstrdup (config.exportopts);
+    if (x->opts)
+	_parse_expopt (x->opts, &x->oflags);
+    _xlist_append (config.exports, x);
+    config.ro_mask |= RO_EXPORTS;
+
+}
+void diod_conf_validate_exports (void)
+{
+    ListIterator itr;
+    Export *x;
+
+    if (config.exportall == 0 && list_count (config.exports) == 0)
+        msg_exit ("no exports defined");
+    if ((itr = list_iterator_create (config.exports)) == NULL)
+        msg_exit ("out of memory");
+    while ((x = list_next (itr))) {
+        if (*x->path != '/' && strcmp (x->path, "ctl") != 0)
+            msg_exit ("exports should begin with '/'");
+        if (strstr (x->path, "/..") != 0)
+            msg_exit ("exports should not contain '/..'"); /* FIXME */
+    }
+    list_iterator_destroy (itr);
 }
 
 /* exportall - export everything in /proc/mounts
