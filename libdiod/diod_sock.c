@@ -518,6 +518,30 @@ error:
     return -1;
 }
 
+static int _diod_sock_connect_inet6(char *name, int flags)
+{
+    char *hoststart;
+    char *hostend;
+    char *port;
+
+    hoststart = name + 1;
+    if ((hostend = strchr (hoststart, ']'))) {
+	port = strchr (hostend, ':');
+	*hostend = '\0';
+    } else {
+	errno = EINVAL;
+	if (!(flags & DIOD_SOCK_QUIET))
+	    err ("diod_sock_connect invalid address %s", name);
+	return -1;
+    }
+    if (port) {
+	port++;
+	return diod_sock_connect_inet (hoststart, port, flags);
+    } else {
+	return diod_sock_connect_inet (hoststart, "564", flags);
+    }
+}
+
 int
 diod_sock_connect (char *name, int flags)
 {
@@ -538,6 +562,10 @@ diod_sock_connect (char *name, int flags)
                 err ("diod_sock_connect %s", name);
             goto done;
         }
+	if (host[0] == '[') {
+	    fd = _diod_sock_connect_inet6(host, flags);
+	    goto done;
+	}
         if (!(port = strchr (host, ':'))) {
             errno = EINVAL;
             if (!(flags & DIOD_SOCK_QUIET))
