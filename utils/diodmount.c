@@ -57,7 +57,7 @@
 #include "diod_auth.h"
 #include "opt.h"
 
-#define OPTIONS "fnvo:ad"
+#define OPTIONS "fnvo:adp"
 #if HAVE_GETOPT_LONG
 #define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
@@ -67,6 +67,7 @@ static const struct option longopts[] = {
     {"options",         required_argument,   0, 'o'},
     {"9nbd-attach",     no_argument,         0, 'a'},
     {"9nbd-detach",     no_argument,         0, 'd'},
+    {"privport",        no_argument,         0, 'p'},
     {0, 0, 0, 0},
 };
 #else
@@ -106,6 +107,7 @@ usage (void)
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -v,--verbose                  verbose mode\n"
 "   -o,--options opt[,opt,...]    specify mount options\n"
+"   -p,--privport                 bind localy to a privileged port\n"
 //"Usage: mount.diod --9nbd-attach host[:aname] 9nbd-device\n"
 //"                  --9nbd-detach 9nbd-device\n"
 );
@@ -124,6 +126,7 @@ main (int argc, char *argv[])
     int fopt = 0;
     int aopt = 0;
     int dopt = 0;
+    int privport = 0;
     int rfd = -1, wfd = -1;
     Opt o;
 
@@ -151,6 +154,9 @@ main (int argc, char *argv[])
                 break;
             case 'd':   /* --9nbd-detach */
                 dopt++;
+                break;
+            case 'p':   /* --privport */
+                privport++;
                 break;
             default:
                 usage ();
@@ -263,9 +269,12 @@ main (int argc, char *argv[])
         if (!(hi = hostlist_iterator_create (hl)))
             msg_exit ("out of memory");
         while ((h = hostlist_next (hi))) {
+            int flags = DIOD_SOCK_QUIET;
+            if (privport)
+                flags |= DIOD_SOCK_PRIVPORT;
             if (vopt)
                 msg ("trying to connect to %s:%s", h, port);
-            if ((rfd = diod_sock_connect_inet (h, port, DIOD_SOCK_QUIET)) >= 0)
+            if ((rfd = diod_sock_connect_inet (h, port, flags )) >= 0)
                 break;
         }
         if (h) { /* create new 'spec' string identifying successful host */

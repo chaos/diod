@@ -45,6 +45,11 @@ Set verbose mode.
 .TP
 .I "-o, --options opt[,opt,...]"
 Set mount options (see below).
+.TP
+.I "-p, --privport"
+Connect from a socket bound to a port in the range of 512-1023,
+available to root only.  This can be used in conjunction with the
+\fIprivport\fR export option.
 .SH MOUNT OPTIONS
 The following file system specific mount options are handled by
 \fBmount.diod\fR.

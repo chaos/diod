@@ -396,6 +396,30 @@ _bind_priv_inet4 (int sockfd)
     return rc;
 }
 
+/* Bind socket to a local IPv6 port < 1024.
+ */
+static int
+_bind_priv_inet6 (int sockfd)
+{
+    struct sockaddr_in6 in;
+    int port;
+    int rc = -1;
+
+    memset (&in, 0, sizeof(in));
+    in.sin6_family = AF_INET6;
+    in.sin6_addr = in6addr_any;
+
+    for (port = IPPORT_RESERVED - 1; port >= IPPORT_RESERVED / 2; port--) {
+        in.sin6_port = htons ((ushort)port);
+        rc = bind(sockfd, (struct sockaddr *) &in, sizeof(in));
+        if (rc == 0 || (rc < 0 && errno != EADDRINUSE))
+            break;
+    }
+    if (rc < 0 && errno == EADDRINUSE)
+        errno = EAGAIN;
+    return rc;
+}
+
 /* Connect to host:port.
  * Return fd on success, -1 on failure.
  */
@@ -428,16 +452,25 @@ diod_sock_connect_inet (char *host, char *port, int flags)
             continue;
         }
         if (flags & DIOD_SOCK_PRIVPORT) {
-            if (r->ai_family != AF_INET) {
+            if (r->ai_family == AF_INET) {
+                if (_bind_priv_inet4 (fd) < 0) {
+                    errnum = errno;
+                    errmsg = "_bind_resv_inet4";
+                    (void)close (fd);
+                    fd = -1;
+                    continue;
+                }
+            } else if (r->ai_family == AF_INET6) {
+                if (_bind_priv_inet6 (fd) < 0) {
+                    errnum = errno;
+                    errmsg = "_bind_resv_inet6";
+                    (void)close (fd);
+                    fd = -1;
+                    continue;
+                }
+            } else {
                 errnum = EINVAL;
-                errmsg = "_bind_resv_inet4";
-                (void)close (fd);
-                fd = -1;
-                continue;
-            }
-            if (_bind_priv_inet4 (fd) < 0) {
-                errnum = errno;
-                errmsg = "_bind_resv_inet4";
+                errmsg = "protocol";
                 (void)close (fd);
                 fd = -1;
                 continue;
@@ -485,6 +518,30 @@ error:
     return -1;
 }
 
+static int _diod_sock_connect_inet6(char *name, int flags)
+{
+    char *hoststart;
+    char *hostend;
+    char *port;
+
+    hoststart = name + 1;
+    if ((hostend = strchr (hoststart, ']'))) {
+	port = strchr (hostend, ':');
+	*hostend = '\0';
+    } else {
+	errno = EINVAL;
+	if (!(flags & DIOD_SOCK_QUIET))
+	    err ("diod_sock_connect invalid address %s", name);
+	return -1;
+    }
+    if (port) {
+	port++;
+	return diod_sock_connect_inet (hoststart, port, flags);
+    } else {
+	return diod_sock_connect_inet (hoststart, "564", flags);
+    }
+}
+
 int
 diod_sock_connect (char *name, int flags)
 {
@@ -505,6 +562,10 @@ diod_sock_connect (char *name, int flags)
                 err ("diod_sock_connect %s", name);
             goto done;
         }
+	if (host[0] == '[') {
+	    fd = _diod_sock_connect_inet6(host, flags);
+	    goto done;
+	}
         if (!(port = strchr (host, ':'))) {
             errno = EINVAL;
             if (!(flags & DIOD_SOCK_QUIET))
