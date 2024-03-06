@@ -33,7 +33,7 @@ AX_COMPILER_VENDOR
 AS_CASE($ax_cv_c_compiler_vendor,
   [gnu], [
       WARNING_CFLAGS="-Wall -Werror"
-  ]
+  ],
   [clang], [
       WARNING_CFLAGS="-Wall -Werror -Wno-unknown-warning-option -Wno-error=unknown-warning-option"
   ]

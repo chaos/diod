@@ -1,13 +1,8 @@
 systemddir=$(prefix)/lib/systemd/system
 
-install-data-local:
-	$(top_srcdir)/config/install-sh -m 755 $(srcdir)/auto.diod \
-		$(DESTDIR)$(sysconfdir)/auto.diod
-	$(top_srcdir)/config/install-sh -m 644 $(srcdir)/diod.service \
-		$(DESTDIR)$(systemddir)/diod.service
+## Automake wont install SCRIPTS to sysconfdir, but any user defined
+## dir containing the letters 'exec' will work
+sysconfexecdir=$(sysconfdir)
+sysconfexec_SCRIPTS = auto.diod
 
-uninstall-local:
-	$(RM) $(DESTDIR)$(sysconfdir)/auto.diod
-	$(RM) $(DESTDIR)$(systemddir)/diod.service
-
-EXTRA_DIST = diod.init auto.diod diod.service
+systemd_DATA = diod.service
