@@ -1253,6 +1253,137 @@ error_quiet:
     return NULL;
 }
 
+#if HAVE_DECL_F_OFD_SETLK
+
+/* Locking note:
+ * Implement POSIX locks in terms of OFD locks, it will
+ * at least work for some use cases, but may still deadlock others.
+ */
+
+Npfcall*
+diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
+           Npstr *client_id)
+{
+    Fid *f = fid->aux;
+    Npfcall *ret;
+    u8 status = P9_LOCK_ERROR;
+    struct flock lock;
+
+    if (flags & ~P9_LOCK_FLAGS_BLOCK) { /* only one valid flag for now */
+        np_uerror (EINVAL);             /*  (which we ignore) */
+        goto error;
+    }
+    if (!f->ioctx) {
+        msg ("diod_lock: fid is not open");
+        np_uerror (EBADF);
+        goto error;
+    }
+
+    lock.l_whence = SEEK_SET;
+    lock.l_start = start;
+    lock.l_len = length;
+    lock.l_pid = 0;
+
+    switch (type) {
+        case P9_LOCK_TYPE_UNLCK:
+            lock.l_type = F_UNLCK;
+            if (ioctx_fcntl_lock(f->ioctx, F_OFD_SETLK, &lock) == 0)
+                status = P9_LOCK_SUCCESS;
+            break;
+        case P9_LOCK_TYPE_RDLCK:
+            lock.l_type = F_RDLCK;
+            if (ioctx_fcntl_lock(f->ioctx, F_OFD_SETLK, &lock) == 0)
+                status = P9_LOCK_SUCCESS;
+            else if (errno == EWOULDBLOCK)
+                status = P9_LOCK_BLOCKED;
+            break;
+        case P9_LOCK_TYPE_WRLCK:
+            lock.l_type = F_WRLCK;
+            if (ioctx_fcntl_lock(f->ioctx, F_OFD_SETLK, &lock) == 0)
+                status = P9_LOCK_SUCCESS;
+            else if (errno == EWOULDBLOCK)
+                status  = P9_LOCK_BLOCKED;
+            break;
+        default:
+            np_uerror (EINVAL);
+            goto error;
+    }
+    if (!((ret = np_create_rlock (status)))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    return ret;
+error:
+    errn (np_rerror (), "diod_lock %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
+    return NULL;
+}
+
+Npfcall*
+diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
+             Npstr *client_id)
+{
+    Fid *f = fid->aux;
+    Npfcall *ret;
+    char *cid = NULL;
+    struct flock lock;
+
+    if (!f->ioctx) {
+        msg ("diod_getlock: fid is not open");
+        np_uerror (EBADF);
+        goto error;
+    }
+    if (!(cid = np_strdup (client_id))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    if (type != P9_LOCK_TYPE_RDLCK && type != P9_LOCK_TYPE_WRLCK) {
+        np_uerror (EINVAL);
+        goto error;
+    }
+
+    lock.l_whence = SEEK_SET;
+    lock.l_start = start;
+    lock.l_len = length;
+    lock.l_pid = 0;
+
+    switch (type) {
+        case P9_LOCK_TYPE_UNLCK:
+            lock.l_type = F_UNLCK;
+        case P9_LOCK_TYPE_RDLCK:
+            lock.l_type = F_RDLCK;
+        case P9_LOCK_TYPE_WRLCK:
+            lock.l_type = F_WRLCK;
+        default:
+            np_uerror (EINVAL);
+            goto error;
+    }
+
+    if (ioctx_fcntl_lock(f->ioctx, F_OFD_GETLK, &lock) != 0) {
+        np_uerror (errno);
+        goto error;
+    }
+
+    type = (lock.l_type == F_UNLCK) ? P9_LOCK_TYPE_UNLCK : type;
+    if (!((ret = np_create_rgetlock(type, start, length, lock.l_pid, cid)))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+    free (cid);
+    return ret;
+error:
+    errn (np_rerror (), "diod_getlock %s@%s:%s",
+          fid->user->uname, np_conn_get_client_id (fid->conn),
+          path_s (f->path));
+    if (cid)
+        free (cid);
+    return NULL;
+}
+
+#else
+
+
 /* Locking note:
  * Implement POSIX locks in terms of BSD flock locks.
  * This at least gets distributed whole-file locking to work.
@@ -1331,7 +1462,7 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         goto error;
     }
     ftype = (type == P9_LOCK_TYPE_RDLCK) ? LOCK_SH : LOCK_EX;
-    ftype = ioctx_testlock (f->ioctx, ftype);
+    ftype = ioctx_test_flock (f->ioctx, ftype);
     type = (ftype == LOCK_EX) ? P9_LOCK_TYPE_WRLCK : P9_LOCK_TYPE_UNLCK;
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
@@ -1347,6 +1478,8 @@ error:
         free (cid);
     return NULL;
 }
+
+#endif
 
 Npfcall*
 diod_link (Npfid *dfid, Npfid *fid, Npstr *name)

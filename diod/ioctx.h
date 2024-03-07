@@ -28,9 +28,12 @@ struct dirent *ioctx_readdir(IOCtx ioctx, long *new_offset);
 void    ioctx_rewinddir (IOCtx ioctx);
 void    ioctx_seekdir (IOCtx ioctx, long offset);
 int     ioctx_fsync (IOCtx ioctx);
+#if HAVE_DECL_F_OFD_SETLK
+int     ioctx_fcntl_lock(IOCtx ioctx, int cmd, struct flock *l);
+#else
 int     ioctx_flock (IOCtx ioctx, int operation);
-int     ioctx_testlock (IOCtx ioctx, int operation);
-
+int     ioctx_test_flock (IOCtx ioctx, int operation);
+#endif
 int     ioctx_stat (IOCtx ioctx, struct stat *sb);
 int     ioctx_chmod (IOCtx ioctx, u32 mode);
 int     ioctx_chown (IOCtx ioctx, u32 uid, u32 gid);
