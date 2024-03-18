@@ -86,8 +86,8 @@ np_conn_decref(Npconn *conn)
 	xpthread_mutex_lock(&conn->lock);
 	NP_ASSERT(conn->refcount > 0);
 	conn->refcount--;
-	xpthread_mutex_unlock(&conn->lock);
 	xpthread_cond_signal(&conn->refcond);
+	xpthread_mutex_unlock(&conn->lock);
 }
 
 static void
