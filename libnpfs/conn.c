@@ -140,6 +140,20 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 	}
 }
 
+static void
+np_conn_cleanup(void *a)
+{
+	Npconn *conn = (Npconn *)a;
+
+	np_conn_flush (conn);
+
+	xpthread_mutex_lock(&conn->lock);
+	while (conn->refcount > 0)
+		xpthread_cond_wait(&conn->refcond, &conn->lock);
+	xpthread_mutex_unlock(&conn->lock);
+	np_conn_destroy(conn);
+}
+
 /* Per-connection read thread.
  */
 static void *
@@ -151,8 +165,10 @@ np_conn_read_proc(void *a)
 	Npfcall *fc;
 
 	pthread_detach(pthread_self());
+	pthread_cleanup_push(np_conn_cleanup, a);
 
 	for (;;) {
+
 		if (np_trans_recv(conn->trans, &fc, conn->msize) < 0) {
 			np_logerr (srv, "recv error - "
 				   "dropping connection to '%s'",
@@ -195,15 +211,7 @@ np_conn_read_proc(void *a)
 	/* Just got EOF on read, or some other fatal error for the
 	 * connection like out of memory.
 	 */
-
-	np_conn_flush (conn);
-
-	xpthread_mutex_lock(&conn->lock);
-	while (conn->refcount > 0)
-		xpthread_cond_wait(&conn->refcond, &conn->lock);
-	xpthread_mutex_unlock(&conn->lock);
-	np_conn_destroy(conn);
-
+	pthread_cleanup_pop(1);
 	return NULL;
 }
 
