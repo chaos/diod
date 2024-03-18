@@ -78,6 +78,23 @@ error:
 	return NULL;
 }
 
+/* Shut down all connection */
+void
+np_srv_shutdown(Npsrv *srv)
+{
+	Npconn *cc;
+
+	/* Shut down all connections */
+	xpthread_mutex_lock(&srv->lock);
+	for (cc = srv->conns; cc != NULL; cc = cc->next)
+		pthread_cancel(cc->rthread);
+
+	/* Wait for all connections to shutdown... */
+	while (srv->conncount > 0)
+		xpthread_cond_wait(&srv->conncountcond, &srv->lock);
+	xpthread_mutex_unlock(&srv->lock);
+}
+
 void
 np_srv_destroy(Npsrv *srv)
 {
