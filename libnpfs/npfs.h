@@ -342,7 +342,9 @@ struct Npuser {
 /* srv.c */
 Npsrv *np_srv_create(int nwthread, int flags);
 void np_srv_destroy(Npsrv *srv);
-void np_srv_remove_conn(Npsrv *, Npconn *);
+void np_srv_shutdown(Npsrv *srv);
+void np_srv_remove_conn_pre(Npsrv *, Npconn *);
+void np_srv_remove_conn_post(Npsrv *);
 int np_srv_add_conn(Npsrv *, Npconn *);
 void np_srv_wait_conncount(Npsrv *srv, int count);
 void np_req_respond(Npreq *req, Npfcall *rc);
