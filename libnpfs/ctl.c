@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <pthread.h>
 #include <errno.h>
@@ -291,9 +292,9 @@ _ctl_get_date (char *name, void *a)
 		np_uerror (errno);
 		goto error;
 	}
-	if (aspf (&s, &len, "%lu.%lu %d.%d\n",
-					tv.tv_sec,         tv.tv_usec,
-					tz.tz_minuteswest, tz.tz_dsttime) < 0) {
+	if (aspf (&s, &len, "%"PRIdMAX".%"PRIdMAX" %d.%d\n",
+					(uintmax_t)tv.tv_sec, (uintmax_t)tv.tv_usec,
+					tz.tz_minuteswest,    tz.tz_dsttime) < 0) {
 		np_uerror (ENOMEM);
 		goto error;
 	}
