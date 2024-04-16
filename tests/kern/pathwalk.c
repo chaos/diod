@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -149,8 +150,8 @@ main (int argc, char *argv[])
             err_exit ("gettimeofday");
         timersub (&t2, &t1, &elapsed);
         if (!qflag)
-            msg ("Created %d objects in %lu.%.3lus", length * files + 1,
-                 elapsed.tv_sec, elapsed.tv_usec / 1000);
+            msg ("Created %d objects in %jd.%.3jds", length * files + 1,
+                 (intmax_t)elapsed.tv_sec, (intmax_t)elapsed.tv_usec / 1000);
     }
 
     /* Test
@@ -164,9 +165,9 @@ main (int argc, char *argv[])
                 err_exit ("gettimeofday");
             timersub (&t2, &t1, &elapsed);
             if (!qflag)
-                msg ("Found %d/%d files in %d directories in %lu.%.3lus",
+                msg ("Found %d/%d files in %d directories in %jd.%.3jds",
                      count, 1, length,
-                     elapsed.tv_sec, elapsed.tv_usec / 1000);
+                     (intmax_t)elapsed.tv_sec, (intmax_t)elapsed.tv_usec / 1000);
         }
         if (gettimeofday (&t1, NULL) < 0)
             err_exit ("gettimeofday");
@@ -175,8 +176,8 @@ main (int argc, char *argv[])
             err_exit ("gettimeofday");
         timersub (&t2, &t1, &elapsed);
         if (!qflag)
-            msg ("Found %d/%d files in %d directories in %lu.%.3lus",
-                 count, files, length, elapsed.tv_sec, elapsed.tv_usec / 1000);
+            msg ("Found %d/%d files in %d directories in %jd.%.3jds",
+                 count, files, length, (intmax_t)elapsed.tv_sec, (intmax_t)elapsed.tv_usec / 1000);
     }
 
     /* Remove root + fs objects.
@@ -191,8 +192,8 @@ main (int argc, char *argv[])
             err_exit ("gettimeofday");
         timersub (&t2, &t1, &elapsed);
         if (!qflag)
-            msg ("Removed %d objects in %lu.%.3lus", length * files + 1,
-                 elapsed.tv_sec, elapsed.tv_usec / 1000);
+            msg ("Removed %d objects in %jd.%.3jds", length * files + 1,
+                 (intmax_t)elapsed.tv_sec, (intmax_t)elapsed.tv_usec / 1000);
     }
 
     searchpath_destroy (searchpath, length);
