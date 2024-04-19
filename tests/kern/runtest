@@ -33,6 +33,11 @@ if ! modprobe 9p 2>/dev/null; then
     exit 77
 fi
 rm -f $TEST.diod $TEST.out
+# t28 requires rsync
+if [ "$TEST" = "t28" ] && ! which rsync >/dev/null 2>&1; then
+    echo "rsync is not installed" >$TEST.out
+    exit 77
+fi
 # t29 requires tclsh
 if [ "$TEST" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
     echo "tclsh is not installed" >$TEST.out
