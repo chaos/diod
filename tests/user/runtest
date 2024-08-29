@@ -69,6 +69,7 @@ if [ $rc != 0 ]; then
 fi
 
 [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
+[ ! -f "$PATH_EXPDIR" ] || rm -f "$PATH_EXPDIR"
 
 diff $USER_SRCDIR/$TEST.exp $TEST.out >$TEST.diff
 rc=$?
