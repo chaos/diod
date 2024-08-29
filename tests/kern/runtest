@@ -124,13 +124,14 @@ fi
     "${KERN_SRCDIR}/$TEST" \
     >$TEST.out 2>&1
 rc=$?
+
+[ -d "$PATH_EXPDIR" ] && rm -rf "$PATH_EXPDIR"
+[ -d "$PATH_MNTDIR" ] && rm -rf "$PATH_MNTDIR"
+
 if [ $rc != 0 ]; then
     echo "test exited with $rc" >>$TEST.out
     exit $rc
 fi
-
-[ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
-[ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
 
 diff ${KERN_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
 exit $?
