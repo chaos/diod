@@ -122,3 +122,4 @@ test_tremove(122): 11
 P9_TREMOVE tag 42 fid 1
 test_rremove(123): 7
 P9_RREMOVE tag 42
+OK np_deserialize failed on truncated Tlink (issue#109)
