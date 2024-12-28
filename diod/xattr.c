@@ -21,6 +21,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -106,39 +107,36 @@ nomem:
     return NULL;
 }
 
+static bool
+bounds_check (size_t bufsize, size_t count, off_t offset)
+{
+    if (offset < 0 || offset > bufsize || count > bufsize - offset)
+        return false;
+    return true;
+}
 
 int
 xattr_pwrite (Xattr x, void *buf, size_t count, off_t offset)
 {
-    int len = count;
-
-    if (!(x->flags & XATTR_FLAGS_SET)) {
+    if (!(x->flags & XATTR_FLAGS_SET)
+        || !bounds_check (x->len, count, offset)) {
         errno = EINVAL;
         return -1;
     }
-    if (len > x->len - offset)
-        len = x->len - offset;
-    if (len < 0)
-        len = 0;
-    memcpy (x->buf + offset, buf, len);
-    return len;
+    memcpy (x->buf + offset, buf, count);
+    return count;
 }
 
 int
 xattr_pread (Xattr x, void *buf, size_t count, off_t offset)
 {
-    int len = x->len - offset;
-
-    if (!(x->flags & XATTR_FLAGS_GET)) {
+    if (!(x->flags & XATTR_FLAGS_GET)
+        || !bounds_check (x->len, count, offset)) {
         errno = EINVAL;
         return -1;
     }
-    if (len > count)
-        len = count;
-    if (len < 0)
-        len = 0;
-    memcpy (buf, x->buf + offset, len);
-    return len;
+    memcpy (buf, x->buf + offset, count);
+    return count;
 }
 
 static int
