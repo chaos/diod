@@ -70,10 +70,12 @@ if [ "$TEST" = "t40" ] && ! which scrub >/dev/null 2>&1; then
     echo "scrub is not installed" >$TEST.out
     exit 77
 fi
-# t42 requires setfattr/getfattr
-if [ "$TEST" = "t42" ] && ! which setfattr >/dev/null 2>&1; then
-    echo "setfattr is not installed" >$TEST.out
-    exit 77
+# t42,t46,t47 require setfattr/getfattr
+if [ "$TEST" = "t42" ] || [ "$TEST" = "t46" ] || [ "$TEST" = "t47" ]; then
+    if ! which setfattr >/dev/null 2>&1; then
+        echo "setfattr is not installed" >$TEST.out
+        exit 77
+    fi
 fi
 # t43 requires getfacl/setfacl
 if [ "$TEST" = "t43" ] && ! which setfacl >/dev/null 2>&1; then
