@@ -1,4 +1,0 @@
-#!/bin/bash -e
-
-echo creating svn repo in diod fs
-svnadmin create $PATH_MNTDIR/svnroot

@@ -60,11 +60,6 @@ if [ "$TEST" = "t32" ] && ! which dbench >/dev/null 2>&1; then
     echo "dbench is unavailable" >$TEST.out
     exit 77
 fi
-# t34 requires svnadmin
-if [ "$TEST" = "t34" ] && ! which svnadmin >/dev/null 2>&1; then
-    echo "svnadmin is not installed" >$TEST.out
-    exit 77
-fi
 # t40 requires scrub
 if [ "$TEST" = "t40" ] && ! which scrub >/dev/null 2>&1; then
     echo "scrub is not installed" >$TEST.out
