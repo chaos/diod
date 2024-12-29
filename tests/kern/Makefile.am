@@ -28,7 +28,7 @@ TESTS = t05 t06 t07 t12 t13 t14 t15 t16 t17 t18 t19 t22 \
 	t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 \
 	t34 t35 t36 t37 t38 t39 t40 t41 t42 t43 t44 t45 t46 t47
 
-XFAIL_TESTS = t19 t23 t37 t43 t47 t48 t49
+XFAIL_TESTS = t19 t23 t37 t43 t48 t49
 
 CLEANFILES = *.out *.diff *.diod *.postmark *.dbench
 
