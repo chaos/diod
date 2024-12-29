@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdio.h>
 #if HAVE_GETOPT_H
@@ -142,11 +143,16 @@ main (int argc, char *argv[])
         errn (np_rerror (), "error reading date");
         goto done;
     }
-    if (sscanf (buf, "%lu.%lu %d.%d", &tv.tv_sec, &tv.tv_usec,
+
+    int64_t sec = 0, usec = 0;
+    if (sscanf (buf, "%"SCNd64".%"SCNd64" %d.%d", &sec, &usec,
                                     &tz.tz_minuteswest, &tz.tz_dsttime) != 4) {
         msg ("error scanning returned date: %s", buf);
         goto done;
     }
+    tv.tv_sec = sec;
+    tv.tv_usec = usec;
+
     if (Sopt) {
         if (settimeofday (&tv, &tz) < 0)
             err_exit ("settimeofday");

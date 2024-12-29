@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <errno.h>
 #include <pthread.h>
@@ -132,8 +133,8 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 				(void)gettimeofday(&b, NULL);
 			(void)gettimeofday(&a, NULL);
 			timersub(&a, &b, &c);
-			np_logmsg(srv, "[%lu.%-3lu] %s",
-				  c.tv_sec, c.tv_usec/1000, s);
+			np_logmsg(srv, "[%"PRIdMAX".%-3"PRIdMAX"] %s",
+				  (intmax_t)c.tv_sec, (intmax_t)c.tv_usec/1000, s);
 		} else
 			np_logmsg(srv, "%s", s);
 	}
