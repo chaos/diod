@@ -86,8 +86,8 @@ np_conn_decref(Npconn *conn)
 	xpthread_mutex_lock(&conn->lock);
 	NP_ASSERT(conn->refcount > 0);
 	conn->refcount--;
-	xpthread_mutex_unlock(&conn->lock);
 	xpthread_cond_signal(&conn->refcond);
+	xpthread_mutex_unlock(&conn->lock);
 }
 
 static void
@@ -99,7 +99,7 @@ np_conn_destroy(Npconn *conn)
 	NP_ASSERT(conn->refcount == 0);
 	/* issue 83: remove from srv->conns before destroying fidpool
  	 */
-	np_srv_remove_conn (conn->srv, conn);
+	np_srv_remove_conn_pre(conn->srv, conn);
 	if (conn->fidpool) {
 		if ((n = np_fidpool_destroy(conn->fidpool)) > 0) {
 			np_logmsg (conn->srv, "%s: connection closed with "
@@ -116,6 +116,7 @@ np_conn_destroy(Npconn *conn)
 	pthread_mutex_destroy(&conn->wlock);
 	pthread_cond_destroy(&conn->refcond);
 
+	np_srv_remove_conn_post(conn->srv);
 	free(conn);
 }
 
@@ -140,6 +141,20 @@ _debug_trace (Npsrv *srv, Npfcall *fc)
 	}
 }
 
+static void
+np_conn_cleanup(void *a)
+{
+	Npconn *conn = (Npconn *)a;
+
+	np_conn_flush (conn);
+
+	xpthread_mutex_lock(&conn->lock);
+	while (conn->refcount > 0)
+		xpthread_cond_wait(&conn->refcond, &conn->lock);
+	xpthread_mutex_unlock(&conn->lock);
+	np_conn_destroy(conn);
+}
+
 /* Per-connection read thread.
  */
 static void *
@@ -151,8 +166,10 @@ np_conn_read_proc(void *a)
 	Npfcall *fc;
 
 	pthread_detach(pthread_self());
+	pthread_cleanup_push(np_conn_cleanup, a);
 
 	for (;;) {
+
 		if (np_trans_recv(conn->trans, &fc, conn->msize) < 0) {
 			np_logerr (srv, "recv error - "
 				   "dropping connection to '%s'",
@@ -195,15 +212,7 @@ np_conn_read_proc(void *a)
 	/* Just got EOF on read, or some other fatal error for the
 	 * connection like out of memory.
 	 */
-
-	np_conn_flush (conn);
-
-	xpthread_mutex_lock(&conn->lock);
-	while (conn->refcount > 0)
-		xpthread_cond_wait(&conn->refcond, &conn->lock);
-	xpthread_mutex_unlock(&conn->lock);
-	np_conn_destroy(conn);
-
+	pthread_cleanup_pop(1);
 	return NULL;
 }
 

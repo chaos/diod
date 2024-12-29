@@ -78,6 +78,23 @@ error:
 	return NULL;
 }
 
+/* Shut down all connection */
+void
+np_srv_shutdown(Npsrv *srv)
+{
+	Npconn *cc;
+
+	/* Shut down all connections */
+	xpthread_mutex_lock(&srv->lock);
+	for (cc = srv->conns; cc != NULL; cc = cc->next)
+		pthread_cancel(cc->rthread);
+
+	/* Wait for all connections to shutdown... */
+	while (srv->conncount > 0)
+		xpthread_cond_wait(&srv->conncountcond, &srv->lock);
+	xpthread_mutex_unlock(&srv->lock);
+}
+
 void
 np_srv_destroy(Npsrv *srv)
 {
@@ -105,7 +122,7 @@ np_srv_add_conn(Npsrv *srv, Npconn *conn)
 }
 
 void
-np_srv_remove_conn(Npsrv *srv, Npconn *conn)
+np_srv_remove_conn_pre(Npsrv *srv, Npconn *conn)
 {
 	Npconn *c, **pc;
 
@@ -122,12 +139,18 @@ np_srv_remove_conn(Npsrv *srv, Npconn *conn)
 		pc = &c->next;
 		c = *pc;
 	}
-
-	srv->conncount--;
-	xpthread_cond_signal(&srv->conncountcond);
 	xpthread_mutex_unlock(&srv->lock);
 
 	np_tpool_cleanup (srv);
+}
+
+void
+np_srv_remove_conn_post(Npsrv *srv)
+{
+	xpthread_mutex_lock(&srv->lock);
+	srv->conncount--;
+	xpthread_cond_signal(&srv->conncountcond);
+	xpthread_mutex_unlock(&srv->lock);
 }
 
 /* Block the caller until the server has no active connections,

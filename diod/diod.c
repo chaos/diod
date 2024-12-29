@@ -676,6 +676,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         errn_exit (n, "pthread_join _service_loop_rdma");
 #endif
 
+    np_srv_shutdown(ss.srv);
     diod_fini (ss.srv);
     np_srv_destroy (ss.srv);
 }
