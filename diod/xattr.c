@@ -113,7 +113,7 @@ xattr_pwrite (Xattr x, void *buf, size_t count, off_t offset)
     int len = count;
 
     if (!(x->flags & XATTR_FLAGS_SET)) {
-        np_uerror (EINVAL);
+        errno = EINVAL;
         return -1;
     }
     if (len > x->len - offset)
@@ -130,7 +130,7 @@ xattr_pread (Xattr x, void *buf, size_t count, off_t offset)
     int len = x->len - offset;
 
     if (!(x->flags & XATTR_FLAGS_GET)) {
-        np_uerror (EINVAL);
+        errno = EINVAL;
         return -1;
     }
     if (len > count)
