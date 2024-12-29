@@ -18,7 +18,7 @@ AM_INIT_AUTOMAKE([subdir-objects foreign]
                              *) echo serial-tests;;
                              esac]))
 AM_SILENT_RULES([yes])
-AM_CONFIG_HEADER([config/config.h])
+AC_CONFIG_HEADERS([config/config.h])
 AM_MAINTAINER_MODE([enable])
 
 AC_DEFINE([_GNU_SOURCE], 1,
