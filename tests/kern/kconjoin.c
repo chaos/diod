@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
+#include <sys/mount.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -114,6 +115,9 @@ main (int argc, char *argv[])
             _movefd (fromsrv[0], RFDNO);
             if (unshare (CLONE_NEWNS) < 0)
                 err_exit ("unshare");
+            /* set mount propagation recursively to private */
+            if (mount ("none", "/", NULL, MS_REC | MS_PRIVATE, NULL) < 0)
+                err_exit ("cannot change root filesystem propagation");
             if ((cs = system (mntcmd)) == -1)
                 err_exit ("failed to run %s", _cmd (mntcmd));
             if (_interpret_status (cs, _cmd (mntcmd)))
