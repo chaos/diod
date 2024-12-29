@@ -55,9 +55,9 @@ if [ "$TEST" = "t31" ]; then
     fi
     opt="-N"
 fi
-# t32 requires dbench which we build conditionally
-if [ "$TEST" = "t32" ] && ! [ -x dbench/dbench ]; then
-    echo "dbench was not built" >$TEST.out
+# t32 requires dbench, which is installed externally
+if [ "$TEST" = "t32" ] && ! which dbench >/dev/null 2>&1; then
+    echo "dbench is unavailable" >$TEST.out
     exit 77
 fi
 # t34 requires svnadmin

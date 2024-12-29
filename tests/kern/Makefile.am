@@ -14,9 +14,6 @@ check_PROGRAMS = \
 	pathwalk
 
 SUBDIRS = fstest postmark fsx fsstress
-if DBENCH
-SUBDIRS += dbench
-endif
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
