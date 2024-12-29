@@ -9,6 +9,7 @@ echo reading mounted file
 echo comparing result
 if ! cmp $tmpfile $PATH_EXPDIR; then
     echo results differ
+	rm -f "$tmpfile"
     exit 1
 fi
 rm -f $tmpfile

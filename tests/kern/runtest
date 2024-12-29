@@ -33,6 +33,11 @@ if ! modprobe 9p 2>/dev/null; then
     exit 77
 fi
 rm -f $TEST.diod $TEST.out
+# t28 requires rsync
+if [ "$TEST" = "t28" ] && ! which rsync >/dev/null 2>&1; then
+    echo "rsync is not installed" >$TEST.out
+    exit 77
+fi
 # t29 requires tclsh
 if [ "$TEST" = "t29" ] && ! which tclsh >/dev/null 2>&1; then
     echo "tclsh is not installed" >$TEST.out
@@ -100,6 +105,21 @@ chmod 755 $PATH_MNTDIR $PATH_EXPDIR
 export PATH_EXPDIR
 export PATH_MNTDIR
 
+# t35 and t40 requires a certain amount of disk space
+# It's not possible to check until $PATH_MNTDIR is created
+case "$TEST" in
+	t35|t40)
+		avail=$(df -B1024K --output=avail "$PATH_MNTDIR" | tail -n1)
+		case "$TEST" in
+			t35) required=500;;
+			t40) required=100;;
+		esac
+		if [ "$avail" -lt "$required" ]; then
+			echo "Requires ${required}MB free space on $PATH_MNTDIR, only ${avail}MB available" >"$TEST.out"
+			exit 77
+		fi;;
+esac
+
 export MALLOC_CHECK_=3
 
 # t00 is a special interactive test, not normally run
@@ -119,13 +139,14 @@ fi
     "${KERN_SRCDIR}/$TEST" \
     >$TEST.out 2>&1
 rc=$?
+
+[ -d "$PATH_EXPDIR" ] && rm -rf "$PATH_EXPDIR"
+[ -d "$PATH_MNTDIR" ] && rm -rf "$PATH_MNTDIR"
+
 if [ $rc != 0 ]; then
     echo "test exited with $rc" >>$TEST.out
     exit $rc
 fi
-
-[ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
-[ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
 
 diff ${KERN_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
 exit $?

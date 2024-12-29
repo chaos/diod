@@ -7,7 +7,7 @@ rsync -a /etc $PATH_MNTDIR/
 # will not report (but silently fix) an incorrect mode
 
 echo rsync /etc to mntdir again - should be silent
-rsync -avc /etc $PATH_MNTDIR/ | egrep -v '^(sent|total).*'
+rsync -avc /etc $PATH_MNTDIR/ | grep -E -v '^(sent|total).*'
 
 echo rsync /etc to expdir - should be silent
-rsync -avc /etc $PATH_EXPDIR/ | egrep -v '^(sent|total).*'
+rsync -avc /etc $PATH_EXPDIR/ | grep -E -v '^(sent|total).*'
