@@ -4,11 +4,8 @@ systemdsystemunit_DATA = \
 man5_MANS = \
 	diod.conf.5
 
-install-data-local:
-	$(top_srcdir)/config/install-sh -m 644 $(srcdir)/diod.conf \
-		$(DESTDIR)$(sysconfdir)/diod.conf
+sysconf_DATA = \
+	diod.conf \
+	auto.diod
 
-uninstall-local:
-	$(RM) $(DESTDIR)$(sysconfdir)/diod.conf
-
-EXTRA_DIST = diod.conf $(man5_MANS)
+EXTRA_DIST = diod.conf

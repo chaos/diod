@@ -231,9 +231,7 @@ AC_CONFIG_FILES( \
   utils/dioddate.8 \
   etc/diod.conf.5 \
   etc/diod.service \
-  scripts/Makefile \
-  scripts/diod.init \
-  scripts/auto.diod \
+  etc/auto.diod \
   diod/Makefile \
   utils/Makefile \
   tests/Makefile \
