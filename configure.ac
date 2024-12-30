@@ -221,15 +221,16 @@ AC_CONFIG_FILES( \
   liblsd/Makefile \
   libnpfs/Makefile \
   libnpclient/Makefile \
-  diod/diod.8 \
-  utils/diodmount.8 \
-  utils/diodcat.8 \
-  utils/dtop.8 \
-  utils/diodload.8 \
-  utils/diodls.8 \
-  utils/diodshowmount.8 \
-  utils/dioddate.8 \
-  etc/diod.conf.5 \
+  man/Makefile \
+  man/diod.8 \
+  man/diodmount.8 \
+  man/diodcat.8 \
+  man/dtop.8 \
+  man/diodload.8 \
+  man/diodls.8 \
+  man/diodshowmount.8 \
+  man/dioddate.8 \
+  man/diod.conf.5 \
   etc/diod.service \
   etc/auto.diod \
   diod/Makefile \

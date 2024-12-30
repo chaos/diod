@@ -46,15 +46,3 @@ diodshowmount_SOURCES = diodshowmount.c $(common_sources)
 
 dioddate_LDADD = $(common_ldadd)
 dioddate_SOURCES = dioddate.c $(common_sources)
-
-man8_MANS = \
-	diodcat.8 \
-	dtop.8 \
-	diodload.8 \
-	diodls.8 \
-	diodshowmount.8 \
-	dioddate.8
-
-if ENABLE_DIODMOUNT
-man8_MANS += diodmount.8
-endif

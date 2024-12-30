@@ -5,6 +5,7 @@ SUBDIRS = \
 	libdiod \
 	diod \
 	utils \
+	man \
 	etc
 
 if ENABLE_TESTS
