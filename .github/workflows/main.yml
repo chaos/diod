@@ -19,11 +19,15 @@ jobs:
         sudo apt-get install -y \
             libpopt-dev ncurses-dev automake autoconf pkgconf \
             lua5.3 liblua5.3-dev libmunge-dev libwrap0-dev libcap-dev \
-            libattr1-dev ${{matrix.cc}}
+            libattr1-dev dbench attr scrub ${{matrix.cc}}
     - name: Display configuration
       run: |
         echo "C compiler:"
         ${CC} --version
+        echo "Kernel:"
+        uname -r
+        echo "/tmp file system:"
+        df /tmp
       env:
         CC: ${{matrix.cc}}
     - name: autogen
@@ -34,5 +38,7 @@ jobs:
       run: make
     - name: make check
       run: make check
+    - name: check with linux/9p
+      run: sudo make check -C tests/kern
     - name: make distcheck
       run: make distcheck

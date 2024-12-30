@@ -53,9 +53,6 @@ m4_ifndef([PKG_PROG_PKG_CONFIG],
 ##
 PKG_CHECK_MODULES([ncurses], [ncurses])
 
-# dbench is conditionally compiled for 'make check'
-DBENCH
-
 ##
 # Checks for header files.
 ##
@@ -239,7 +236,6 @@ AC_CONFIG_FILES( \
   tests/misc/Makefile \
   tests/kern/Makefile \
   tests/kern/fstest/Makefile \
-  tests/kern/dbench/Makefile \
   tests/kern/postmark/Makefile \
   tests/kern/fsx/Makefile \
   tests/kern/fsstress/Makefile \

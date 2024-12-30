@@ -55,14 +55,9 @@ if [ "$TEST" = "t31" ]; then
     fi
     opt="-N"
 fi
-# t32 requires dbench which we build conditionally
-if [ "$TEST" = "t32" ] && ! [ -x dbench/dbench ]; then
-    echo "dbench was not built" >$TEST.out
-    exit 77
-fi
-# t34 requires svnadmin
-if [ "$TEST" = "t34" ] && ! which svnadmin >/dev/null 2>&1; then
-    echo "svnadmin is not installed" >$TEST.out
+# t32 requires dbench, which is installed externally
+if [ "$TEST" = "t32" ] && ! which dbench >/dev/null 2>&1; then
+    echo "dbench is unavailable" >$TEST.out
     exit 77
 fi
 # t40 requires scrub
@@ -70,10 +65,12 @@ if [ "$TEST" = "t40" ] && ! which scrub >/dev/null 2>&1; then
     echo "scrub is not installed" >$TEST.out
     exit 77
 fi
-# t42 requires setfattr/getfattr
-if [ "$TEST" = "t42" ] && ! which setfattr >/dev/null 2>&1; then
-    echo "setfattr is not installed" >$TEST.out
-    exit 77
+# t42,t46,t47 require setfattr/getfattr
+if [ "$TEST" = "t42" ] || [ "$TEST" = "t46" ] || [ "$TEST" = "t47" ]; then
+    if ! which setfattr >/dev/null 2>&1; then
+        echo "setfattr is not installed" >$TEST.out
+        exit 77
+    fi
 fi
 # t43 requires getfacl/setfacl
 if [ "$TEST" = "t43" ] && ! which setfacl >/dev/null 2>&1; then
