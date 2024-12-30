@@ -9,6 +9,7 @@ check_PROGRAMS = \
 	tflush \
 	tgetxattr \
 	tsetxattr \
+	tsetxattr_wildoffset \
 	tremovexattr \
 	txattr \
 	testopenfid

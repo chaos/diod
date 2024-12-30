@@ -65,6 +65,8 @@ static void test_twrite (void);         static void test_rwrite (void);
 static void test_tclunk (void);         static void test_rclunk (void);
 static void test_tremove (void);        static void test_rremove (void);
 
+static void test_truncated_tlink (void);
+
 static void
 usage (void)
 {
@@ -111,6 +113,8 @@ main (int argc, char *argv[])
     test_twrite ();     test_rwrite ();
     test_tclunk ();     test_rclunk ();
     test_tremove ();    test_rremove ();
+
+    test_truncated_tlink ();
 
     exit (0);
 }
@@ -1192,6 +1196,28 @@ test_rremove (void)
 
     free (fc);
     free (fc2);
+}
+
+static void test_truncated_tlink (void)
+{
+    Npfcall *fc;
+
+    if (!(fc = np_create_tlink (1, 2, "xyz")))
+        msg_exit ("out of memory");
+
+    // truncate fc->pkt so entire name is missing
+    fc->size -= 3;
+    fc->pkt[0] = fc->size;
+    fc->pkt[1] = fc->size >> 8;
+    fc->pkt[2] = fc->size >> 16;
+    fc->pkt[3] = fc->size >> 24;
+
+    if (np_deserialize (fc) == 0)
+        printf ("OK np_deserialize failed on truncated Tlink (issue#109)\n");
+    else
+        printf ("FAIL np_deserialize worked on truncated Tlink (issue#109)\n");
+
+    free (fc);
 }
 
 /*

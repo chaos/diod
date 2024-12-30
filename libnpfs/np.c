@@ -47,7 +47,7 @@ static inline int
 buf_check_size(struct cbuf *buf, int len)
 {
 	if (buf->p+len > buf->ep) {
-		if (buf->p < buf->ep)
+		if (buf->p <= buf->ep)
 			buf->p = buf->ep + 1;
 
 		return 0;
