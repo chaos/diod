@@ -207,6 +207,11 @@ if test "x${enable_impersonation}" = "xganesha"; then
 fi
 
 ##
+# Check for systemd
+##
+RRA_WITH_SYSTEMD_UNITDIR
+
+##
 # Epilogue
 ##
 AC_CONFIG_FILES( \
@@ -225,10 +230,10 @@ AC_CONFIG_FILES( \
   utils/diodshowmount.8 \
   utils/dioddate.8 \
   etc/diod.conf.5 \
+  etc/diod.service \
   scripts/Makefile \
   scripts/diod.init \
   scripts/auto.diod \
-  scripts/diod.service \
   diod/Makefile \
   utils/Makefile \
   tests/Makefile \
