@@ -71,6 +71,8 @@ AC_CHECK_HEADERS( \
 AC_C_BIGENDIAN
 AC_C_CONST
 
+AC_CHECK_DECLS([F_OFD_SETLK], [], [], [[#include <fcntl.h>]])
+
 ##
 # Checks for library functions
 ##

@@ -53,7 +53,9 @@ struct ioctx_struct {
     int             refcount;
     int             fd;
     DIR             *dir;
+    #if !HAVE_DECL_F_OFD_SETLK
     int             lock_type;
+    #endif
     Npqid           qid;
     u32             iounit;
     u32             open_flags;
@@ -165,7 +167,9 @@ _ioctx_create_open (Npuser *user, Path path, int flags, u32 mode)
     }
     pthread_mutex_init (&ioctx->lock, NULL);
     ioctx->refcount = 1;
+    #if !HAVE_DECL_F_OFD_SETLK
     ioctx->lock_type = LOCK_UN;
+    #endif
     ioctx->dir = NULL;
     ioctx->open_flags = flags;
     ioctx->user = user;
@@ -353,6 +357,18 @@ ioctx_fsync(IOCtx ioctx)
     return fsync (ioctx->fd);
 }
 
+#if HAVE_DECL_F_OFD_SETLK
+
+int
+ioctx_fcntl_lock(IOCtx ioctx, int cmd, struct flock *l)
+{
+    if (fcntl(ioctx->fd, cmd, l) < 0)
+        return -1;
+    return 0;
+}
+
+#else
+
 int
 ioctx_flock (IOCtx ioctx, int operation)
 {
@@ -370,7 +386,7 @@ ioctx_flock (IOCtx ioctx, int operation)
 /* If lock of 'type' could be obtained, return LOCK_UN, otherwise LOCK_EX.
  */
 int
-ioctx_testlock (IOCtx ioctx, int type)
+ioctx_test_flock (IOCtx ioctx, int type)
 {
     int ret = LOCK_UN;
 
@@ -406,6 +422,8 @@ ioctx_testlock (IOCtx ioctx, int type)
     }
     return ret;
 }
+
+#endif
 
 u32
 ioctx_iounit (IOCtx ioctx)
