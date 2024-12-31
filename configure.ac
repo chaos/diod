@@ -18,7 +18,7 @@ AM_INIT_AUTOMAKE([subdir-objects foreign]
                              *) echo serial-tests;;
                              esac]))
 AM_SILENT_RULES([yes])
-AM_CONFIG_HEADER([config/config.h])
+AC_CONFIG_HEADERS([config/config.h])
 AM_MAINTAINER_MODE([enable])
 
 AC_DEFINE([_GNU_SOURCE], 1,
@@ -56,7 +56,6 @@ PKG_CHECK_MODULES([ncurses], [ncurses])
 ##
 # Checks for header files.
 ##
-AC_HEADER_STDC
 AC_CHECK_HEADERS( \
   getopt.h \
   pthread.h \
@@ -208,6 +207,11 @@ if test "x${enable_impersonation}" = "xganesha"; then
 fi
 
 ##
+# Check for systemd
+##
+RRA_WITH_SYSTEMD_UNITDIR
+
+##
 # Epilogue
 ##
 AC_CONFIG_FILES( \
@@ -226,10 +230,8 @@ AC_CONFIG_FILES( \
   utils/diodshowmount.8 \
   utils/dioddate.8 \
   etc/diod.conf.5 \
-  scripts/Makefile \
-  scripts/diod.init \
-  scripts/auto.diod \
-  scripts/diod.service \
+  etc/diod.service \
+  etc/auto.diod \
   diod/Makefile \
   utils/Makefile \
   tests/Makefile \
