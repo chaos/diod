@@ -34,7 +34,7 @@
 #include <grp.h>
 #include <sys/fsuid.h>
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 
 #include "test.h"
 

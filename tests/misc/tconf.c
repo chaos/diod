@@ -23,10 +23,10 @@
 #include <errno.h>
 #include <assert.h>
 
-#include "list.h"
+#include "src/liblsd/list.h"
 
-#include "diod_log.h"
-#include "diod_conf.h"
+#include "src/libdiod/diod_log.h"
+#include "src/libdiod/diod_conf.h"
 
 #define OPTIONS "c:em"
 

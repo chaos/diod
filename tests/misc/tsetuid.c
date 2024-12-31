@@ -31,7 +31,7 @@
 #include <sys/stat.h>
 #include <grp.h>
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 #include "test.h"
 
 #define TEST_UID 100

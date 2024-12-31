@@ -6,13 +6,13 @@ bg_test ()
   while ! test -S $sockfile; do
     sleep 0.1
   done
-  ${TOP_BUILDDIR}/utils/diodload -r 2 -s $sockfile 2>/dev/null
+  ${TOP_BUILDDIR}/src/cmd/diodload -r 2 -s $sockfile 2>/dev/null
 }
 
 TEST=$(basename $0 | cut -d- -f1)
 sockfile=$(mktemp)
 bg_test $sockfile &
-${MISC_SRCDIR}/memcheck ${TOP_BUILDDIR}/diod/diod -c /dev/null -n -f -e ctl -l $sockfile -s >$TEST.out 2>&1
+${MISC_SRCDIR}/memcheck ${TOP_BUILDDIR}/src/daemon/diod -c /dev/null -n -f -e ctl -l $sockfile -s >$TEST.out 2>&1
 diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
 rm -f $sockfile
 wait %1

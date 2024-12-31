@@ -217,10 +217,10 @@ RRA_WITH_SYSTEMD_UNITDIR
 AC_CONFIG_FILES( \
   Makefile \
   diod.spec \
-  libdiod/Makefile \
-  liblsd/Makefile \
-  libnpfs/Makefile \
-  libnpclient/Makefile \
+  src/libdiod/Makefile \
+  src/liblsd/Makefile \
+  src/libnpfs/Makefile \
+  src/libnpclient/Makefile \
   man/Makefile \
   man/diod.8 \
   man/diodmount.8 \
@@ -233,8 +233,9 @@ AC_CONFIG_FILES( \
   man/diod.conf.5 \
   etc/diod.service \
   etc/auto.diod \
-  diod/Makefile \
-  utils/Makefile \
+  src/daemon/Makefile \
+  src/cmd/Makefile \
+  src/Makefile \
   tests/Makefile \
   tests/misc/Makefile \
   tests/kern/Makefile \

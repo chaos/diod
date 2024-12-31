@@ -24,13 +24,13 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#include "9p.h"
-#include "npfs.h"
-#include "npclient.h"
-#include "npcimpl.h"
+#include "src/libnpfs/9p.h"
+#include "src/libnpfs/npfs.h"
+#include "src/libnpclient/npclient.h"
+#include "src/libnpclient/npcimpl.h"
 
-#include "diod_log.h"
-#include "diod_auth.h"
+#include "src/libdiod/diod_log.h"
+#include "src/libdiod/diod_auth.h"
 
 static void
 _flush_series (Npcfsys *fs, Npcfid *root);

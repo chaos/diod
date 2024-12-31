@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 
 int
 main (int argc, char *argv[])

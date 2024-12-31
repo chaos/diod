@@ -1,10 +1,5 @@
 SUBDIRS = \
-	liblsd \
-	libnpfs \
-	libnpclient \
-	libdiod \
-	diod \
-	utils \
+	src \
 	man \
 	etc
 

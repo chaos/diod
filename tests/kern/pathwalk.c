@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <libgen.h>
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 
 #define OPTIONS "l:f:crtCFq"
 

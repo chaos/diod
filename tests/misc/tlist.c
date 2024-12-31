@@ -25,7 +25,7 @@
 #include <string.h>
 #include <assert.h>
 
-#include "list.h"
+#include "src/liblsd/list.h"
 
 #define ITERATIONS  1024
 
