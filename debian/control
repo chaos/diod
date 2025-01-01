@@ -1,0 +1,17 @@
+Source: diod
+Section: devel
+Priority: optional
+Maintainer: Jim Garlick <garlick.jim@gmail.com>
+Standards-Version: 4.1.2
+Build-Depends:
+  debhelper (>= 10),
+  libncurses-dev,
+  libpopt-dev,
+  lua5.1,
+  liblua5.1-dev
+
+Homepage: https://github.com/chaos/diod
+Package: diod
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description:  9P server
