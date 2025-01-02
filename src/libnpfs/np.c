@@ -1704,14 +1704,11 @@ np_deserialize_p9dirent(Npqid *qid, u64 *offset, u8 *type,
 	*type = buf_get_int8(bufp);
 	buf_get_str(bufp, &s9);
 
-	if (s9.len > 0)
-		snprintf (name, namelen, "%.*s", s9.len, s9.str);
-	else
-		name[0] = '\0';
-
-
-	if (buf_check_overflow (bufp))
+	if (buf_check_overflow (bufp) || s9.len >= namelen)
 		return 0;
+
+	memcpy (name, s9.str, s9.len);
+	name[s9.len] = '\0';
 
 	return bufp->p - bufp->sp;
 }
