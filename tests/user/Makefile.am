@@ -15,7 +15,7 @@ check_PROGRAMS = \
 	testopenfid
 
 TESTS_ENVIRONMENT = env
-TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
+TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/daemon/diod"
 TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
 TESTS_ENVIRONMENT += "USER_SRCDIR=$(top_srcdir)/tests/user"
 TESTS_ENVIRONMENT += "USER_BUILDDIR=$(top_builddir)/tests/user"
@@ -33,17 +33,14 @@ CLEANFILES = *.out *.diff *.diod
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir)/libnpfs \
-	-I$(top_srcdir)/libnpclient \
-	-I$(top_srcdir)/liblsd \
-	-I$(top_srcdir)/libdiod \
+        -I$(top_srcdir)
 	$(LUA_INCLUDE)
 
 
-LDADD = $(top_builddir)/libdiod/libdiod.a \
-        $(top_builddir)/libnpclient/libnpclient.a \
-        $(top_builddir)/libnpfs/libnpfs.a \
-        $(top_builddir)/liblsd/liblsd.a \
+LDADD = $(top_builddir)/src/libdiod/libdiod.a \
+        $(top_builddir)/src/libnpclient/libnpclient.a \
+        $(top_builddir)/src/libnpfs/libnpfs.a \
+        $(top_builddir)/src/liblsd/liblsd.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 common_sources =

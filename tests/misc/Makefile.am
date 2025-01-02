@@ -29,25 +29,20 @@ CLEANFILES = *.out *.diff
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir)/libnpfs \
-        -I$(top_srcdir)/libnpclient \
-	-I$(top_srcdir)/liblsd \
-	-I$(top_srcdir)/libdiod \
-	-I$(top_srcdir)/utils \
-	-I$(top_srcdir)/diod \
+        -I$(top_srcdir)
 	$(LUA_INCLUDE)
 
-LDADD = $(top_builddir)/utils/opt.o \
-	$(top_builddir)/diod/ops.o \
-	$(top_builddir)/diod/fid.o \
-	$(top_builddir)/diod/exp.o \
-	$(top_builddir)/diod/ioctx.o \
-	$(top_builddir)/diod/xattr.o \
-	$(top_builddir)/libdiod/libdiod.a \
-	$(top_builddir)/libnpclient/libnpclient.a \
-        $(top_builddir)/libnpfs/libnpfs.a \
-        $(top_builddir)/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
+LDADD = $(top_builddir)/src/cmd/opt.o \
+	$(top_builddir)/src/daemon/ops.o \
+	$(top_builddir)/src/daemon/fid.o \
+	$(top_builddir)/src/daemon/exp.o \
+	$(top_builddir)/src/daemon/ioctx.o \
+	$(top_builddir)/src/daemon/xattr.o \
+	$(top_builddir)/src/libdiod/libdiod.a \
+	$(top_builddir)/src/libnpclient/libnpclient.a \
+	$(top_builddir)/src/libnpfs/libnpfs.a \
+	$(top_builddir)/src/liblsd/liblsd.a \
+	$(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 common_sources = test.h
 

@@ -21,9 +21,8 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "diod_log.h"
-
-#include "opt.h"
+#include "src/libdiod/diod_log.h"
+#include "src/cmd/opt.h"
 
 int
 main (int argc, char *argv[])

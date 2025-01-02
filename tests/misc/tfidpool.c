@@ -23,11 +23,11 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "9p.h"
-#include "npfs.h"
+#include "src/libnpfs/9p.h"
+#include "src/libnpfs/npfs.h"
 
-#include "list.h"
-#include "diod_log.h"
+#include "src/liblsd/list.h"
+#include "src/libdiod/diod_log.h"
 
 int
 main (int argc, char *argv[])

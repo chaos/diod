@@ -23,12 +23,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include "9p.h"
-#include "npfs.h"
-#include "npclient.h"
+#include "src/libnpfs/9p.h"
+#include "src/libnpfs/npfs.h"
+#include "src/libnpclient/npclient.h"
 
-#include "diod_log.h"
-#include "diod_auth.h"
+#include "src/libdiod/diod_log.h"
+#include "src/libdiod/diod_auth.h"
 
 static void
 usage (void)

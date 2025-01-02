@@ -27,18 +27,18 @@
 #include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h> 
+#include <fcntl.h>
 
-#include "9p.h"
-#include "npfs.h"
-#include "npclient.h"
+#include "src/libnpfs/9p.h"
+#include "src/libnpfs/npfs.h"
+#include "src/libnpclient/npclient.h"
 
-#include "list.h"
-#include "diod_log.h"
-#include "diod_conf.h"
-#include "diod_sock.h"
+#include "src/liblsd/list.h"
+#include "src/libdiod/diod_log.h"
+#include "src/libdiod/diod_conf.h"
+#include "src/libdiod/diod_sock.h"
 
-#include "ops.h"
+#include "src/daemon/ops.h"
 
 #define TEST_MSIZE 8192
 

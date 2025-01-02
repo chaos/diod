@@ -16,8 +16,8 @@ check_PROGRAMS = \
 SUBDIRS = fstest postmark fsx fsstress
 
 TESTS_ENVIRONMENT = env
-TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/diod/diod"
-TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/utils/diodmount"
+TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/daemon/diod"
+TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/src/cmd/diodmount"
 TESTS_ENVIRONMENT += "KERN_SRCDIR=$(top_srcdir)/tests/kern"
 TESTS_ENVIRONMENT += "KERN_BUILDDIR=$(top_builddir)/tests/kern"
 TESTS_ENVIRONMENT += "TOP_SRCDIR=$(top_srcdir)"
@@ -35,15 +35,13 @@ CLEANFILES = *.out *.diff *.diod *.postmark *.dbench
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir)/libnpfs \
-	-I$(top_srcdir)/liblsd \
-	-I$(top_srcdir)/libdiod \
+        -I$(top_srcdir) \
 	$(LUA_INCLUDE)
 
 
-LDADD = $(top_builddir)/libdiod/libdiod.a \
-        $(top_builddir)/libnpfs/libnpfs.a \
-        $(top_builddir)/liblsd/liblsd.a \
+LDADD = $(top_builddir)/src/libdiod/libdiod.a \
+        $(top_builddir)/src/libnpfs/libnpfs.a \
+        $(top_builddir)/src/liblsd/liblsd.a \
         $(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 common_sources = test.h

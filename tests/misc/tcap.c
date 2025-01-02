@@ -30,7 +30,7 @@
 #endif
 #include <grp.h>
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 
 #include "test.h"
 

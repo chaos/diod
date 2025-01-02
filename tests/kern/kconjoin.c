@@ -25,7 +25,7 @@
 #include <stdarg.h>
 #include <sched.h>
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 1024

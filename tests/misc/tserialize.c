@@ -27,10 +27,10 @@
 #include <fcntl.h>
 #include <assert.h>
 
-#include "9p.h"
-#include "npfs.h"
+#include "src/libnpfs/9p.h"
+#include "src/libnpfs/npfs.h"
 
-#include "diod_log.h"
+#include "src/libdiod/diod_log.h"
 
 #define TEST_MSIZE 4096
 
