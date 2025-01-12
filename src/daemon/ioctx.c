@@ -348,8 +348,10 @@ done:
 }
 
 int
-ioctx_fsync(IOCtx ioctx)
+ioctx_fsync(IOCtx ioctx, int datasync)
 {
+    if (datasync)
+        return fdatasync (ioctx->fd);
     return fsync (ioctx->fd);
 }
 

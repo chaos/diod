@@ -445,6 +445,7 @@ struct p9_rreaddir {
 };
 struct p9_tfsync {
 	u32 fid;
+	u32 datasync;
 };
 struct p9_rfsync {
 };

@@ -1045,7 +1045,7 @@ np_fsync(Npreq *req, Npfcall *tc)
 			np_uerror (ENOSYS);
 			goto done;
 		}
-		rc = (*req->conn->srv->fsync)(fid);
+		rc = (*req->conn->srv->fsync)(fid, tc->u.tfsync.datasync);
 	}
 done:
 	return rc;

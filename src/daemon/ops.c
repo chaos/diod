@@ -130,7 +130,7 @@ Npfcall     *diod_getattr(Npfid *fid, u64 request_mask);
 Npfcall     *diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                         u64 atime_sec, u64 atime_nsec, u64 mtime_sec, u64 mtime_nsec);
 Npfcall     *diod_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req);
-Npfcall     *diod_fsync (Npfid *fid);
+Npfcall     *diod_fsync (Npfid *fid, u32 datasync);
 Npfcall     *diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length,
                         u32 proc_id, Npstr *client_id);
 Npfcall     *diod_getlock (Npfid *fid, u8 type, u64 start, u64 length,
@@ -1226,7 +1226,7 @@ error:
 }
 
 Npfcall*
-diod_fsync (Npfid *fid)
+diod_fsync (Npfid *fid, u32 datasync)
 {
     Fid *f = fid->aux;
     Npfcall *ret;
@@ -1236,7 +1236,7 @@ diod_fsync (Npfid *fid)
         np_uerror (EBADF);
         goto error;
     }
-    if (ioctx_fsync (f->ioctx) < 0) {
+    if (ioctx_fsync (f->ioctx, datasync) < 0) {
         np_uerror (errno);
         goto error_quiet;
     }

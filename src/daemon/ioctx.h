@@ -27,7 +27,7 @@ int     ioctx_pwrite (IOCtx ioctx, const void *buf, size_t count, off_t offset);
 struct dirent *ioctx_readdir(IOCtx ioctx, long *new_offset);
 void    ioctx_rewinddir (IOCtx ioctx);
 void    ioctx_seekdir (IOCtx ioctx, long offset);
-int     ioctx_fsync (IOCtx ioctx);
+int     ioctx_fsync (IOCtx ioctx, int datasync);
 int     ioctx_flock (IOCtx ioctx, int operation);
 int     ioctx_testlock (IOCtx ioctx, int operation);
 

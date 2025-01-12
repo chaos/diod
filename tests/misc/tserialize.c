@@ -644,11 +644,12 @@ test_tfsync (void)
 {
     Npfcall *fc, *fc2;
 
-    if (!(fc = np_create_tfsync(1)))
+    if (!(fc = np_create_tfsync(1, 42)))
         msg_exit ("out of memory");
     fc2 = _rcv_buf (fc, P9_TFSYNC,  __FUNCTION__);
 
-    assert (fc->u.tfsync.fid == fc2->u.treaddir.fid);
+    assert (fc->u.tfsync.fid == fc2->u.tfsync.fid);
+    assert (fc->u.tfsync.datasync == fc2->u.tfsync.datasync);
 
     free (fc);
     free (fc2);

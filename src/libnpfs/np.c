@@ -1105,9 +1105,9 @@ np_create_treaddir(u32 fid, u64 offset, u32 count)
 }
 
 Npfcall *
-np_create_tfsync(u32 fid)
+np_create_tfsync(u32 fid, u32 datasync)
 {
-	int size = sizeof(u32);
+	int size = sizeof(u32) + sizeof(u32);
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
@@ -1115,6 +1115,7 @@ np_create_tfsync(u32 fid)
 	if (!(fc = np_create_common(bufp, size, P9_TFSYNC)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.tfsync.fid);
+	buf_put_int32(bufp, datasync, &fc->u.tfsync.datasync);
 
 	return np_post_check(fc, bufp);
 }
@@ -1593,6 +1594,7 @@ np_deserialize(Npfcall *fc)
 		break;
 	case P9_TFSYNC:
 		fc->u.tfsync.fid = buf_get_int32(bufp);
+		fc->u.tfsync.datasync = buf_get_int32(bufp);
 		break;
 	case P9_RFSYNC:
 		break;
