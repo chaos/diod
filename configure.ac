@@ -217,6 +217,7 @@ RRA_WITH_SYSTEMD_UNITDIR
 AC_CONFIG_FILES( \
   Makefile \
   diod.spec \
+  src/libtap/Makefile \
   src/libdiod/Makefile \
   src/liblsd/Makefile \
   src/libnpfs/Makefile \
