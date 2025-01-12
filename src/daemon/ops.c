@@ -73,6 +73,7 @@
 #include <sys/param.h>
 #include <sys/mount.h>
 #endif
+#include <sys/statvfs.h>
 
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -584,34 +585,26 @@ Npfcall*
 diod_statfs (Npfid *fid)
 {
     Fid *f = fid->aux;
-    struct statfs sb;
+    struct statvfs sb;
     Npfcall *ret;
-    u64 fsid;
     u32 type = V9FS_MAGIC;
 
-    if (statfs (path_s (f->path), &sb) < 0) {
+    if (statvfs (path_s (f->path), &sb) < 0) {
         np_uerror (errno);
         goto error;
     }
-
-#ifdef __FreeBSD__
-    fsid = (u64)sb.f_fsid.val[0] | ((u64)sb.f_fsid.val[1] << 32);
-#else
-    fsid = (u64)sb.f_fsid.__val[0] | ((u64)sb.f_fsid.__val[1] << 32);
-#endif
-    if (diod_conf_get_statfs_passthru ())
-        type = sb.f_type;
-#ifdef __FreeBSD__
+    if (diod_conf_get_statfs_passthru ()) {
+        struct statfs sb2;
+        if (statfs (path_s (f->path), &sb2) < 0) {
+            np_uerror (errno);
+            goto error;
+        }
+        type = sb2.f_type;
+    }
     if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
                                   sb.f_bfree, sb.f_bavail, sb.f_files,
-                                  sb.f_ffree, fsid,
+                                  sb.f_ffree, sb.f_fsid,
                                   sb.f_namemax))) {
-#else
-    if (!(ret = np_create_rstatfs(type, sb.f_bsize, sb.f_blocks,
-                                  sb.f_bfree, sb.f_bavail, sb.f_files,
-                                  sb.f_ffree, fsid,
-                                  sb.f_namelen))) {
-#endif
         np_uerror (ENOMEM);
         goto error;
     }
