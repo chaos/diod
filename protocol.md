@@ -145,20 +145,7 @@ size[4] Tstatfs tag[2] fid[4]
 size[4] Rstatfs tag[2] type[4] bsize[4] blocks[8] bfree[8] bavail[8]
                        files[8] ffree[8] fsid[8] namelen[4]
 ```
-statfs is used to request file system information of the file system containing fid. The Rstatfs response corresponds to the fields returned by the statfs(2) system call, e.g.:
-```
-struct statfs {
-    long    f_type;     /* type of file system (see below) */
-    long    f_bsize;    /* optimal transfer block size */
-    long    f_blocks;   /* total data blocks in file system */
-    long    f_bfree;    /* free blocks in fs */
-    long    f_bavail;   /* free blocks avail to non-superuser */
-    long    f_files;    /* total file nodes in file system */
-    long    f_ffree;    /* free file nodes in fs */
-    fsid_t  f_fsid;     /* file system id */
-    long    f_namelen;  /* maximum length of filenames */
-};
-```
+statfs is used to request file system information of the file system containing fid.  See statvfs(3).
 
 #### lopen -- open a file
 ```
