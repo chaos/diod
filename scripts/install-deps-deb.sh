@@ -8,8 +8,9 @@ apt install \
   libc6-dev \
   libpopt-dev \
   libncurses-dev \
+  libcap2-dev \
   lua5.1 \
   liblua5.1-dev \
-  valgrind
+  valgrind \
 
 # to build test DEBs you need devscripts and debhelper too

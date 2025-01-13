@@ -48,10 +48,10 @@ test_ldadd = \
 
 TESTS = \
 	test_encoding.t \
-	test_fidpool.t
+	test_fidpool.t \
+	test_capability.t
 
 check_PROGRAMS = $(TESTS)
-
 TEST_EXTENSIONS = .t
 T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
        $(top_srcdir)/config/tap-driver.sh
@@ -61,3 +61,6 @@ test_encoding_t_LDADD = $(test_ldadd)
 
 test_fidpool_t_SOURCES = test/fidpool.c
 test_fidpool_t_LDADD = $(test_ldadd)
+
+test_capability_t_SOURCES = test/capability.c
+test_capability_t_LDADD = $(test_ldadd)

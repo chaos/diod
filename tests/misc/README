@@ -19,7 +19,6 @@ t04	Demonstrate that fcntl advisory locking does not treat threads
 t06(@)	Unit test for parsing diod.conf.
 t08(@)	Check for memory problems in libdiod conf/log
 t10	Check for memory problems in a skeletal libnpfs client/server
-t11(*)	Show that pthreads can independently set/clear CAP_DAC_OVERRIDE
 t13	Check for memory problems in client/server with diod ops
 t14(*)	Check for memory problems in client/server with user switching
 t15     Check actual diod server for memory probs with multiple conns
