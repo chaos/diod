@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
-/* tlist.c - exercise list package (valgrind me) */
+/* list.c - exercise list package (valgrind me) */
 
 /* Internal memory allocation in list.c hangs on to some memory that's not
  * freed.  This may not really be worth the hassle, so it's disabled and
@@ -23,19 +23,13 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
-#include <assert.h>
 
-#include "src/liblsd/list.h"
+#include "src/libtap/tap.h"
+#include "list.h"
 
 #define ITERATIONS  1024
 
 static int objcount = 0;
-
-void oom (void)
-{
-    fprintf (stderr, "out of memory\n");
-    exit (1);
-}
 
 void myfree (void *x)
 {
@@ -48,7 +42,7 @@ char *myalloc (char *s)
     char *cpy;
 
     if (!(cpy = strdup ("xyz")))
-        oom ();
+        BAIL_OUT ("out of memory");
     objcount++;
 
     return cpy;
@@ -61,19 +55,25 @@ main (int argc, char *argv[])
     char *p;
     int i;
 
-    if (!(l = list_create ((ListDelF)myfree)))
-        oom ();
+    plan (NO_PLAN);
 
+    l = list_create ((ListDelF)myfree);
+    ok (l != NULL, "list_create with destructor works");
+
+    int errors = 0;
     for (i = 0; i < ITERATIONS; i++) {
         if (!(p = myalloc ("xyz")))
-            oom ();
-        if (!list_append (l, p))
-            oom ();
+            BAIL_OUT ("out of memory");
+        if (!list_append (l, p)) {
+            errors++;
+        }
     }
-
-    assert (objcount == i);
+    ok (errors == 0, "list_append worked %dX", ITERATIONS);
+    ok (objcount == i, "%d objects were allocated", i);
     list_destroy (l);
-    assert (objcount == 0);
+    ok (objcount == 0, "list_destroy deallocated them");
+
+    done_testing ();
 
     exit (0);
 }
@@ -81,4 +81,3 @@ main (int argc, char *argv[])
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
  */
-
