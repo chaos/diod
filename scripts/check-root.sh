@@ -9,4 +9,5 @@ sudo -n /bin/true || die "passwordless sudo is required to run privileged tests"
 
 sudo -n make -C src/libnpfs check TESTS="\
   test_capability.t \
-  test_setfsuid.t" || die "test failed"
+  test_setfsuid.t \
+  test_setgroups.t" || die "test failed"
