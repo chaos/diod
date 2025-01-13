@@ -43,3 +43,18 @@ diodshowmount_SOURCES = diodshowmount.c $(common_sources)
 
 dioddate_LDADD = $(common_ldadd)
 dioddate_SOURCES = dioddate.c $(common_sources)
+
+TESTS = \
+	test_opt.t
+
+check_PROGRAMS = $(TESTS)
+
+TEST_EXTENSIONS = .t
+T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+	$(top_srcdir)/config/tap-driver.sh
+
+test_opt_t_SOURCES = test/opt.c
+test_opt_t_LDADD = \
+	$(builddir)/opt.o \
+	$(common_ldadd) \
+	$(top_builddir)/src/libtap/libtap.a

@@ -16,7 +16,6 @@ t04	Demonstrate that fcntl advisory locking does not treat threads
 	like individual procesess, e.g. locks are shared among threads.
 	This means a threaded work crew cannot manage fcntl locks on behalf
 	of multiple remote processes.
-t05	Unit test for diodmount option handling module.
 t06(@)	Unit test for parsing diod.conf.
 t08(@)	Check for memory problems in libdiod conf/log
 t09   	Check for memory problems in list package
