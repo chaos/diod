@@ -49,7 +49,8 @@ test_ldadd = \
 TESTS = \
 	test_encoding.t \
 	test_fidpool.t \
-	test_capability.t
+	test_capability.t \
+	test_setfsuid.t
 
 check_PROGRAMS = $(TESTS)
 TEST_EXTENSIONS = .t
@@ -64,3 +65,6 @@ test_fidpool_t_LDADD = $(test_ldadd)
 
 test_capability_t_SOURCES = test/capability.c
 test_capability_t_LDADD = $(test_ldadd)
+
+test_setfsuid_t_SOURCES = test/setfsuid.c
+test_setfsuid_t_LDADD = $(test_ldadd)
