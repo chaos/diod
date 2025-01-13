@@ -18,7 +18,6 @@ t04	Demonstrate that fcntl advisory locking does not treat threads
 	of multiple remote processes.
 t05	Unit test for diodmount option handling module.
 t06(@)	Unit test for parsing diod.conf.
-t07   	Check for memory problems in libnpfs serialize/deserialize
 t08(@)	Check for memory problems in libdiod conf/log
 t09   	Check for memory problems in list package
 	Actually this was to run down a specific case, now fixed.
