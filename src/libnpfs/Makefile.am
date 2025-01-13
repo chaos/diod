@@ -47,7 +47,8 @@ test_ldadd = \
 	$(LIBPTHREAD)
 
 TESTS = \
-	test_encoding.t
+	test_encoding.t \
+	test_fidpool.t
 
 check_PROGRAMS = $(TESTS)
 
@@ -57,3 +58,6 @@ T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 
 test_encoding_t_SOURCES = test/encoding.c
 test_encoding_t_LDADD = $(test_ldadd)
+
+test_fidpool_t_SOURCES = test/fidpool.c
+test_fidpool_t_LDADD = $(test_ldadd)
