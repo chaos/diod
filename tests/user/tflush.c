@@ -93,7 +93,8 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         err_exit ("open)");
 
     for (i = 0; i < 100; i++) {
-        if (!(tc = np_create_tfsync (f->fid)))
+        // alternate with datasync set to 1 or 0
+        if (!(tc = np_create_tfsync (f->fid, i % 2 == 0 ? 0 : 1)))
             msg_exit ("out of memory");
         flushtag = tag = npc_get_id(fs->tagpool);
         np_set_tag(tc, tag);
@@ -115,7 +116,7 @@ _flush_series (Npcfsys *fs, Npcfid *root)
     msg ("sent 1 Tflush");
 
     for (i = 0; i < 100; i++) {
-        if (!(tc = np_create_tfsync (f->fid)))
+        if (!(tc = np_create_tfsync (f->fid, i % 2 == 0 ? 0 : 1)))
             msg_exit ("out of memory");
         tag = npc_get_id(fs->tagpool);
         np_set_tag(tc, tag);

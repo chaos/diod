@@ -309,7 +309,7 @@ struct Npsrv {
 	Npfcall*	(*xattrwalk)(Npfid *, Npfid *, Npstr *);
 	Npfcall*	(*xattrcreate)(Npfid *, Npstr *, u64, u32);
 	Npfcall*	(*readdir)(Npfid *, u64, u32, Npreq *);
-	Npfcall*	(*fsync)(Npfid *);
+	Npfcall*	(*fsync)(Npfid *, u32);
 	Npfcall*	(*llock)(Npfid *, u8, u32, u64, u64, u32, Npstr *);
 	Npfcall*	(*getlock)(Npfid *, u8 type, u64, u64, u32, Npstr *);
 	Npfcall*	(*link)(Npfid *, Npfid *, Npstr *);
@@ -472,7 +472,7 @@ Npfcall *np_create_rxattrcreate(void);
 Npfcall *np_create_treaddir(u32 fid, u64 offset, u32 count);
 Npfcall *np_create_rreaddir(u32 count);
 void np_finalize_rreaddir(Npfcall *fc, u32 count);
-Npfcall *np_create_tfsync(u32 fid);
+Npfcall *np_create_tfsync(u32 fid, u32 datasync);
 Npfcall *np_create_rfsync(void);
 Npfcall * np_create_tlock(u32 fid, u8 type, u32 flags, u64 start, u64 length,
 			  u32 proc_id, char *client_id);

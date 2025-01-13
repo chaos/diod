@@ -353,7 +353,7 @@ At most count bytes will be returned in data. If count is not zero in the respon
 
 #### fsync - flush any cached data to disk
 ```
-size[4] Tfsync tag[2] fid[4]
+size[4] Tfsync tag[2] fid[4] datasync[4]
 size[4] Rfsync tag[2]
 ```
 fsync tells the server to flush any cached data associated with fid, previously opened with lopen.
