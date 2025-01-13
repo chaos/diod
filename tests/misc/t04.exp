@@ -1,8 +1,0 @@
-tfcntl: proc0: locking bytes 0-64
-tfcntl: proc0: locking bytes 32-64
-tfcntl: proc1: locking bytes 0-64
-tfcntl: proc2: locking bytes 32-64
-tfcntl: child0: locking bytes 32-64
-tfcntl: child0: fcntl F_SETLK: Resource temporarily unavailable
-tfcntl: child1: locking bytes 32-64
-tfcntl: child1: fcntl F_SETLK: Resource temporarily unavailable

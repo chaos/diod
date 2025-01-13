@@ -26,3 +26,22 @@ diod_SOURCES = \
 	fid.h \
 	xattr.c \
 	xattr.h
+
+test_ldadd = \
+	$(top_builddir)/src/libdiod/libdiod.a \
+	$(top_builddir)/src/libnpclient/libnpclient.a \
+	$(top_builddir)/src/libnpfs/libnpfs.a \
+	$(top_builddir)/src/liblsd/liblsd.a \
+	$(top_builddir)/src/libtap/libtap.a
+
+TESTS = \
+	test_threadwrlock.t
+
+check_PROGRAMS = $(TESTS)
+
+TEST_EXTENSIONS = .t
+T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+	$(top_srcdir)/config/tap-driver.sh
+
+test_threadwrlock_t_SOURCES = test/threadwrlock.c
+test_threadwrlock_t_LDADD = $(test_ldadd)
