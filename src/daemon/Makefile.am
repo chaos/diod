@@ -50,7 +50,8 @@ xtest_ldadd = \
 TESTS = \
 	test_threadwrlock.t \
 	test_read.t \
-	test_directory.t
+	test_directory.t \
+	test_multiuser.t
 
 check_PROGRAMS = $(TESTS)
 
@@ -66,3 +67,6 @@ test_read_t_LDADD = $(xtest_ldadd)
 
 test_directory_t_SOURCES = test/directory.c
 test_directory_t_LDADD = $(xtest_ldadd)
+
+test_multiuser_t_SOURCES = test/multiuser.c
+test_multiuser_t_LDADD = $(xtest_ldadd)

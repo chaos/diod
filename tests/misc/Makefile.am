@@ -1,5 +1,4 @@
-check_PROGRAMS = \
-	tnpsrv3
+check_PROGRAMS =
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "MISC_SRCDIR=$(top_srcdir)/tests/misc"
@@ -7,7 +6,7 @@ TESTS_ENVIRONMENT += "MISC_BUILDDIR=$(top_builddir)/tests/misc"
 TESTS_ENVIRONMENT += "TOP_SRCDIR=$(top_srcdir)"
 TESTS_ENVIRONMENT += "TOP_BUILDDIR=$(top_builddir)"
 
-TESTS = t14 t15
+TESTS = t15
 
 CLEANFILES = *.out *.diff
 
@@ -28,9 +27,5 @@ LDADD = $(top_builddir)/src/cmd/opt.o \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
-
-common_sources = test.h
-
-tnpsrv3_SOURCES = tnpsrv3.c $(common_sources)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck valgrind.supp
