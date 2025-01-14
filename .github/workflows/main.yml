@@ -19,7 +19,7 @@ jobs:
         sudo apt-get install -y \
             libpopt-dev ncurses-dev automake autoconf pkgconf \
             lua5.3 liblua5.3-dev libmunge-dev libwrap0-dev libcap-dev \
-            libattr1-dev dbench attr scrub ${{matrix.cc}}
+            libattr1-dev dbench attr scrub valgrind ${{matrix.cc}}
     - name: Display configuration
       run: |
         echo "C compiler:"
@@ -38,6 +38,10 @@ jobs:
       run: make
     - name: make check
       run: make check
+    - name: valgrind some unit tests
+      run: scripts/check-valgrind.sh
+    - name: sudo some unit tests
+      run: scripts/check-root.sh
     - name: check with linux/9p
       run: sudo make check -C tests/kern
     - name: make distcheck
