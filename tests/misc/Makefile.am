@@ -13,7 +13,7 @@ CLEANFILES = *.out *.diff
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir)
+        -I$(top_srcdir) \
 	$(LUA_INCLUDE)
 
 LDADD = $(top_builddir)/src/cmd/opt.o \

@@ -35,7 +35,7 @@ CLEANFILES = *.out *.diff *.diod *.postmark *.dbench
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir) \
+	-I$(top_srcdir) \
 	$(LUA_INCLUDE)
 
 
