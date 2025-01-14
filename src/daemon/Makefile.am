@@ -11,6 +11,7 @@ diod_LDADD = \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
+	$(top_builddir)/src/libdiod/libdiod.a \
 	$(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) \
 	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC)
 
@@ -32,6 +33,7 @@ test_ldadd = \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
+	$(top_builddir)/src/libdiod/libdiod.a \
 	$(top_builddir)/src/libtap/libtap.a \
 	$(LIBPTHREAD)
 

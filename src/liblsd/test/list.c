@@ -31,6 +31,17 @@
 
 static int objcount = 0;
 
+void lsd_fatal_error (char *file, int line, char *mesg)
+{
+    BAIL_OUT ("fatal error: %s: %s::%d", mesg, file, line);
+}
+
+void *lsd_nomem_error (char *file, int line, char *mesg)
+{
+    diag ("out of memory: %s: %s::%d", mesg, file, line);
+    return NULL;
+}
+
 void myfree (void *x)
 {
     free (x);

@@ -14,12 +14,10 @@ liblsd_a_SOURCES = \
 	hash.c \
 	hash.h \
 	thread.c \
-	thread.h \
-	error.c
+	thread.h
 
 test_ldadd = \
 	$(builddir)/liblsd.a \
-	$(top_builddir)/src/libdiod/libdiod.a \
 	$(top_builddir)/src/libtap/libtap.a \
 	$(LIBPTHREAD)
 
