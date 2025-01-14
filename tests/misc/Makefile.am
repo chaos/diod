@@ -1,9 +1,7 @@
 check_PROGRAMS = \
-	tconf \
 	tnpsrv \
 	tnpsrv2 \
-	tnpsrv3 \
-	tlua
+	tnpsrv3
 
 TESTS_ENVIRONMENT = env
 TESTS_ENVIRONMENT += "MISC_SRCDIR=$(top_srcdir)/tests/misc"
@@ -11,7 +9,7 @@ TESTS_ENVIRONMENT += "MISC_BUILDDIR=$(top_builddir)/tests/misc"
 TESTS_ENVIRONMENT += "TOP_SRCDIR=$(top_srcdir)"
 TESTS_ENVIRONMENT += "TOP_BUILDDIR=$(top_builddir)"
 
-TESTS = t06 t08 t10 t13 t14 t15
+TESTS = t10 t13 t14 t15
 
 CLEANFILES = *.out *.diff
 
@@ -35,10 +33,8 @@ LDADD = $(top_builddir)/src/cmd/opt.o \
 
 common_sources = test.h
 
-tconf_SOURCES = tconf.c $(common_sources)
 tnpsrv_SOURCES = tnpsrv.c $(common_sources)
 tnpsrv2_SOURCES = tnpsrv2.c $(common_sources)
 tnpsrv3_SOURCES = tnpsrv3.c $(common_sources)
-tlua_SOURCES = tlua.c $(common_sources)
 
-EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck t06.conf t08.conf valgrind.supp
+EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck valgrind.supp
