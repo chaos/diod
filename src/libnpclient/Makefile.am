@@ -23,3 +23,23 @@ libnpclient_a_SOURCES = \
 	readdir.c \
 	chmod.c \
 	xattr.c
+
+test_ldadd = \
+	$(builddir)/libnpclient.a \
+	$(top_builddir)/src/libnpfs/libnpfs.a \
+	$(top_builddir)/src/liblsd/liblsd.a \
+	$(top_builddir)/src/libtap/libtap.a \
+	$(LUA_LIB) \
+	$(LIBCAP) \
+	$(LIBPTHREAD)
+
+TESTS = \
+	test_simple.t
+
+check_PROGRAMS = $(TESTS)
+TEST_EXTENSIONS = .t
+T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+	$(top_srcdir)/config/tap-driver.sh
+
+test_simple_t_SOURCES = test/simple.c
+test_simple_t_LDADD = $(test_ldadd)

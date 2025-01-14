@@ -1,5 +1,4 @@
 check_PROGRAMS = \
-	tnpsrv \
 	tnpsrv2 \
 	tnpsrv3
 
@@ -9,7 +8,7 @@ TESTS_ENVIRONMENT += "MISC_BUILDDIR=$(top_builddir)/tests/misc"
 TESTS_ENVIRONMENT += "TOP_SRCDIR=$(top_srcdir)"
 TESTS_ENVIRONMENT += "TOP_BUILDDIR=$(top_builddir)"
 
-TESTS = t10 t13 t14 t15
+TESTS = t13 t14 t15
 
 CLEANFILES = *.out *.diff
 
@@ -33,7 +32,6 @@ LDADD = $(top_builddir)/src/cmd/opt.o \
 
 common_sources = test.h
 
-tnpsrv_SOURCES = tnpsrv.c $(common_sources)
 tnpsrv2_SOURCES = tnpsrv2.c $(common_sources)
 tnpsrv3_SOURCES = tnpsrv3.c $(common_sources)
 
