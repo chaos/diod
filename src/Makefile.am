@@ -1,4 +1,5 @@
 SUBDIRS = \
+	libtap \
 	liblsd \
 	libnpfs \
 	libnpclient \

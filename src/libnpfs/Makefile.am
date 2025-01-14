@@ -36,3 +36,43 @@ endif
 if RDMATRANS
 libnpfs_a_SOURCES += rdmatrans.c
 endif
+
+test_ldadd = \
+	$(top_builddir)/src/libdiod/libdiod.a \
+	$(top_builddir)/src/libnpclient/libnpclient.a \
+	$(builddir)/libnpfs.a \
+	$(top_builddir)/src/liblsd/liblsd.a \
+	$(top_builddir)/src/libtap/libtap.a \
+	$(LIBCAP) \
+	$(LIBPTHREAD)
+
+TESTS = \
+	test_encoding.t \
+	test_fidpool.t \
+	test_capability.t \
+	test_setfsuid.t \
+	test_setgroups.t \
+	test_setreuid.t
+
+check_PROGRAMS = $(TESTS)
+TEST_EXTENSIONS = .t
+T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
+       $(top_srcdir)/config/tap-driver.sh
+
+test_encoding_t_SOURCES = test/encoding.c
+test_encoding_t_LDADD = $(test_ldadd)
+
+test_fidpool_t_SOURCES = test/fidpool.c
+test_fidpool_t_LDADD = $(test_ldadd)
+
+test_capability_t_SOURCES = test/capability.c
+test_capability_t_LDADD = $(test_ldadd)
+
+test_setfsuid_t_SOURCES = test/setfsuid.c
+test_setfsuid_t_LDADD = $(test_ldadd)
+
+test_setgroups_t_SOURCES = test/setgroups.c
+test_setgroups_t_LDADD = $(test_ldadd)
+
+test_setreuid_t_SOURCES = test/setreuid.c
+test_setreuid_t_LDADD = $(test_ldadd)

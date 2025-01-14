@@ -1,5 +1,0 @@
-#!/bin/bash -e
-
-TEST=$(basename $0 | cut -d- -f1)
-${MISC_SRCDIR}/memcheck ${MISC_BUILDDIR}/tnpsrv2 >$TEST.out 2>&1
-diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff

@@ -7,6 +7,7 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([NEWS])
 AC_CANONICAL_HOST
+AC_REQUIRE_AUX_FILE([tap-driver.sh])
 X_AC_EXPAND_INSTALL_DIRS
 
 ##
@@ -217,6 +218,7 @@ RRA_WITH_SYSTEMD_UNITDIR
 AC_CONFIG_FILES( \
   Makefile \
   diod.spec \
+  src/libtap/Makefile \
   src/libdiod/Makefile \
   src/liblsd/Makefile \
   src/libnpfs/Makefile \
