@@ -51,7 +51,8 @@ TESTS = \
 	test_fidpool.t \
 	test_capability.t \
 	test_setfsuid.t \
-	test_setgroups.t
+	test_setgroups.t \
+	test_setreuid.t
 
 check_PROGRAMS = $(TESTS)
 TEST_EXTENSIONS = .t
@@ -72,3 +73,6 @@ test_setfsuid_t_LDADD = $(test_ldadd)
 
 test_setgroups_t_SOURCES = test/setgroups.c
 test_setgroups_t_LDADD = $(test_ldadd)
+
+test_setreuid_t_SOURCES = test/setreuid.c
+test_setreuid_t_LDADD = $(test_ldadd)
