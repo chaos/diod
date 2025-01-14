@@ -32,10 +32,25 @@ test_ldadd = \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
-	$(top_builddir)/src/libtap/libtap.a
+	$(top_builddir)/src/libtap/libtap.a \
+	$(LIBPTHREAD)
+
+xtest_ldadd = \
+	$(builddir)/ops.o \
+	$(builddir)/fid.o \
+	$(builddir)/exp.o \
+	$(builddir)/ioctx.o \
+	$(builddir)/xattr.o \
+	$(test_ldadd) \
+	$(LUA_LIB) \
+	$(LIBCAP) \
+	$(LIBMUNGE) \
+	$(LIBWRAP)
 
 TESTS = \
-	test_threadwrlock.t
+	test_threadwrlock.t \
+	test_read.t \
+	test_directory.t
 
 check_PROGRAMS = $(TESTS)
 
@@ -45,3 +60,9 @@ T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 
 test_threadwrlock_t_SOURCES = test/threadwrlock.c
 test_threadwrlock_t_LDADD = $(test_ldadd)
+
+test_read_t_SOURCES = test/read.c
+test_read_t_LDADD = $(xtest_ldadd)
+
+test_directory_t_SOURCES = test/directory.c
+test_directory_t_LDADD = $(xtest_ldadd)

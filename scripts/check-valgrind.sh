@@ -10,7 +10,9 @@ which valgrind >/dev/null 2>&1 || die "valgrind is missing"
 TESTS="src/libnpfs/test_encoding.t \
     src/libnpfs/test_fidpool.t \
     src/libnpclient/test_simple.t \
-    src/libdiod/test_configfile.t"
+    src/libdiod/test_configfile.t \
+    src/daemon/test_read.t \
+    src/daemon/test_directory.t"
 
 exit_rc=0
 
