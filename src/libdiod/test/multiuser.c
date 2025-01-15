@@ -13,37 +13,24 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdint.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <string.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <dirent.h>
-
-#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <dirent.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
-#include "src/libnpfs/9p.h"
-#include "src/libnpfs/npfs.h"
+#include "src/libtest/server.h"
 #include "src/libnpclient/npclient.h"
-#include "src/liblsd/list.h"
 #include "src/libtap/tap.h"
 
-#include "diod_log.h"
+#include "src/liblsd/list.h"
 #include "diod_conf.h"
-#include "diod_sock.h"
-#include "diod_ops.h"
 
 #define TEST_MSIZE 8192
 
-int
-file_test (Npcfid *root)
+int file_test (Npcfid *root)
 {
     int n, len = 4096*100;
     char *buf = malloc (len);
@@ -121,11 +108,10 @@ done:
     return rc;
 }
 
-int
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
     Npsrv *srv;
-    int s[2];
+    int client_fd;
     int flags = 0;
     int rc;
     Npcfsys *fs;
@@ -135,41 +121,23 @@ main (int argc, char *argv[])
     if (geteuid () != 0 || getenv ("FAKEROOTKEY") != NULL)
         plan (SKIP_ALL, "this test must run as root");
 
-    diag ("initialize diod logging and configuration");
-    diod_log_init (argv[0]);
-    diod_conf_init ();
-
-    /* Allow attach with afid==-1.
-     */
-    diod_conf_set_auth_required (0);
+    plan (NO_PLAN);
 
     /* create export directory: will be owned by root, mode=0700 */
     if (!mkdtemp (tmpdir))
         BAIL_OUT ("mkdtemp: %s", strerror (errno));
-    diod_conf_add_exports (tmpdir);
-    diod_conf_set_exportopts ("sharefd");
-
-    if (socketpair (AF_LOCAL, SOCK_STREAM, 0, s) < 0)
-        BAIL_OUT ("socketpair: %s", strerror (errno));
 
     /* Note: supplementary groups do not work in this mode, however
      * regular uid:gid switching of fsid works.  Enabling DAC_BYPASS
      * assumes v9fs is enforcing permissions, not the case with npclient.
      */
     flags |= SRV_FLAGS_SETFSID;
-    srv = np_srv_create (16, flags);
-    ok (srv != NULL, "np_srv_create works");
-    if (!srv)
-        BAIL_OUT ("need server to continue");
-    rc = diod_init (srv);
-    ok (rc == 0, "diod_init works");
-    if (rc < 0)
-        BAIL_OUT ("diod_init: %s", strerror (np_rerror ()));
 
-    diag ("connecting server to socketpair");
-    diod_sock_startfd (srv, s[1], s[1], "loopback", 0);
+    srv = test_server_create (tmpdir, flags, &client_fd);
 
-    fs = npc_start (s[0], s[0], TEST_MSIZE, 0);
+    diod_conf_set_exportopts ("sharefd");
+
+    fs = npc_start (client_fd, client_fd, TEST_MSIZE, 0);
     ok (fs != NULL, "npc_start works");
     if (!fs)
         BAIL_OUT ("npc_start: %s", strerror (np_rerror ()));
@@ -219,17 +187,9 @@ main (int argc, char *argv[])
     diag ("npc_finish");
     npc_finish (fs);
 
-    diag ("npc_srv_wait_conncount");
-    np_srv_wait_conncount (srv, 0);
-
-    diag ("finalizing server");
-    diod_fini (srv);
-    np_srv_destroy (srv);
+    test_server_destroy (srv);
 
     rmdir (tmpdir);
-
-    diod_conf_fini ();
-    diod_log_fini ();
 
     done_testing ();
 

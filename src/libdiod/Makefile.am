@@ -32,12 +32,12 @@ libdiod_a_SOURCES += diod_rdma.c diod_rdma.h
 endif
 
 test_ldadd = \
+	$(top_builddir)/src/libtest/libtest.a \
 	$(builddir)/libdiod.a \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(builddir)/libdiod.a \
-	$(top_builddir)/src/libtest/libtest.a \
 	$(top_builddir)/src/libtap/libtap.a \
 	$(LUA_LIB) \
 	$(LIBCAP) \

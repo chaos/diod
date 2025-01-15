@@ -9,4 +9,6 @@ libtest_a_SOURCES = \
 	thread.c \
 	thread.h \
 	state.c \
-	state.h
+	state.h \
+	server.c \
+	server.h
