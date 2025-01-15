@@ -8,6 +8,9 @@
  * SPDX-License-Identifier: MIT
  *************************************************************/
 
+#ifndef LIBNPCLIENT_NPCIMPL_H
+#define LIBNPCLIENT_NPCIMPL_H
+
 typedef int (*RpcFun)(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
 typedef void (*RefFun)(Npcfsys *fs);
 typedef void (*DiscFun)(Npcfsys *fs);
@@ -80,3 +83,5 @@ void npc_put_id(Npcpool *p, u32 id);
 
 Npcfid *npc_fid_alloc(Npcfsys *fs);
 void npc_fid_free(Npcfid *fid);
+
+#endif

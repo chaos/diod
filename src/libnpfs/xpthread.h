@@ -8,6 +8,9 @@
  * SPDX-License-Identifier: MIT
  *************************************************************/
 
+#ifndef LIBNPFS_XPTHREAD_H
+#define LIBNPFS_XPTHREAD_H
+
 /* pthread wrappers */
 #define xpthread_mutex_lock(a) do { \
     int pthread_mutex_lock_result = pthread_mutex_lock(a); \
@@ -33,3 +36,5 @@
     int pthread_cond_signal_result = pthread_cond_signal(a); \
     NP_ASSERT (pthread_cond_signal_result == 0); \
 } while (0)
+
+#endif

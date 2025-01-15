@@ -8,6 +8,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
+#ifndef LIBDIOD_DIOD_LOG_H
+#define LIBDIOD_DIOD_LOG_H
+
 #include <stdarg.h>
 
 void diod_log_init (char *p);
@@ -28,6 +31,8 @@ void msg_exit (const char *fmt, ...)
         __attribute__ ((format (printf, 1, 2), noreturn));
 void msg (const char *fmt, ...)
         __attribute__ ((format (printf, 1, 2)));
+
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

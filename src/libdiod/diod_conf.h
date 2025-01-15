@@ -8,6 +8,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
+#ifndef LIBDIOD_DIOD_CONF_H
+#define LIBDIOD_DIOD_CONF_H
+
 #define DFLT_DEBUGLEVEL         0
 #define DFLT_NWTHREADS          16
 #define DFLT_MAXMMAP            0
@@ -110,6 +113,8 @@ void    diod_conf_set_exportall (int i);
 char   *diod_conf_get_exportopts(void);
 int     diod_conf_opt_exportopts(void);
 void    diod_conf_set_exportopts(char *opts);
+
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
