@@ -36,9 +36,9 @@
 #include "src/liblsd/list.h"
 #include "src/liblsd/hostlist.h"
 
-#include "src/libdiod/diod_conf.h"
-#include "src/libdiod/diod_log.h"
-#include "exp.h"
+#include "diod_conf.h"
+#include "diod_log.h"
+#include "diod_exp.h"
 
 static int
 _match_export_users (Export *x, Npuser *user)

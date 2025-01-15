@@ -32,14 +32,13 @@
 #include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
-
 #include "src/liblsd/list.h"
-#include "src/libdiod/diod_log.h"
-#include "src/libdiod/diod_conf.h"
-#include "src/libdiod/diod_sock.h"
-
-#include "ops.h"
 #include "src/libtap/tap.h"
+
+#include "diod_log.h"
+#include "diod_conf.h"
+#include "diod_sock.h"
+#include "diod_ops.h"
 
 #define TEST_MSIZE 8192
 

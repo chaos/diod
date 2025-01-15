@@ -15,7 +15,7 @@ check_PROGRAMS = \
 	testopenfid
 
 AM_TESTS_ENVIRONMENT = \
-	PATH_DIOD='$(top_builddir)/src/daemon/diod'; export PATH_DIOD; \
+	PATH_DIOD='$(top_builddir)/src/cmd/diod'; export PATH_DIOD; \
 	PATH_DIODCONF='$(top_builddir)/etc/diod.conf'; export PATH_DIODCONF; \
 	USER_SRCDIR='$(top_srcdir)/tests/user'; export USER_SRCDIR; \
 	USER_BUILDDIR='$(top_builddir)/tests/user'; export USER_BUILDDIR;

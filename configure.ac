@@ -231,7 +231,6 @@ AC_CONFIG_FILES( \
   man/diod.conf.5 \
   etc/diod.service \
   etc/auto.diod \
-  src/daemon/Makefile \
   src/cmd/Makefile \
   src/Makefile \
   tests/Makefile \

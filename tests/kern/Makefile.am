@@ -16,7 +16,7 @@ check_PROGRAMS = \
 SUBDIRS = fstest postmark fsx fsstress
 
 AM_TESTS_ENVIRONMENT = \
-	PATH_DIOD='$(top_builddir)/src/daemon/diod'; export PATH_DIOD; \
+	PATH_DIOD='$(top_builddir)/src/cmd/diod'; export PATH_DIOD; \
 	PATH_DIODMOUNT='$(top_builddir)/src/cmd/diodmount'; export PATH_DIODMOUNT; \
 	KERN_SRCDIR='$(top_srcdir)/tests/kern'; export KERN_SRCDIR; \
 	KERN_BUILDDIR='$(top_builddir)/tests/kern'; export KERN_BUILDDIR; \

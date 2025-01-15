@@ -4,5 +4,4 @@ SUBDIRS = \
 	libnpfs \
 	libnpclient \
 	libdiod \
-	daemon \
 	cmd

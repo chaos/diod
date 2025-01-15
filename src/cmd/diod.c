@@ -52,7 +52,7 @@
 #include "src/libdiod/diod_rdma.h"
 #endif
 
-#include "ops.h"
+#include "src/libdiod/diod_ops.h"
 
 #if USE_IMPERSONATION_GANESHA
 #include "src/libnpfs/ganesha-syscalls.h"

@@ -5,7 +5,7 @@ AM_CPPFLAGS = \
 	$(LUA_INCLUDE)
 AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 
-sbin_PROGRAMS = diodcat dtop diodload diodls diodshowmount dioddate
+sbin_PROGRAMS = diod diodcat dtop diodload diodls diodshowmount dioddate
 
 if ENABLE_DIODMOUNT
 sbin_PROGRAMS += diodmount
@@ -23,6 +23,9 @@ common_ldadd = \
 common_sources = \
 	opt.c \
 	opt.h
+
+diod_LDADD = $(common_ldadd)
+diod_SOURCES = diod.c $(common_sources)
 
 diodmount_LDADD = $(common_ldadd)
 diodmount_SOURCES = diodmount.c $(common_sources)
