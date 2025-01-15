@@ -31,6 +31,8 @@
 #include <string.h>
 #include <grp.h>
 
+#include "src/libtest/state.h"
+#include "src/libtest/thread.h"
 #include "src/libtap/tap.h"
 
 #define TEST_UID 100
@@ -38,64 +40,8 @@
 
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
-static state_t         state = S0;
-static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
 static char path[] = "/tmp/test.fcntl.XXXXXX";
 static int fd = -1;
-
-static void test_lock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_lock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_lock: %s", strerror (n));
-}
-static void test_unlock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_unlock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_unlock: %s", strerror (n));
-}
-static void test_condsig (pthread_cond_t *c)
-{
-    int n = pthread_cond_signal (c);
-    if (n)
-        BAIL_OUT ("pthread_cond_signal: %s", strerror (n));
-}
-static void test_condwait (pthread_cond_t *c, pthread_mutex_t *l)
-{
-    int n = pthread_cond_wait (c, l);
-    if (n)
-        BAIL_OUT ("pthread_cond_wait: %s", strerror (n));
-}
-static void test_thread_create (pthread_t *t, void *(f)(void *), void *a)
-{
-    int n = pthread_create (t, NULL, f, a);
-    if (n)
-        BAIL_OUT ("pthread_create: %s", strerror (n));
-}
-static void test_thread_join (pthread_t t, void **a)
-{
-    int n = pthread_join (t, a);
-    if (n)
-        BAIL_OUT ("pthread_join: %s", strerror (n));
-}
-
-static void change_state (state_t s)
-{
-    test_lock (&state_lock);
-    state = s;
-    test_condsig (&state_cond);
-    test_unlock (&state_lock);
-}
-
-static void wait_state (state_t s)
-{
-    test_lock (&state_lock);
-    while (state != s)
-        test_condwait (&state_cond, &state_lock);
-    test_unlock (&state_lock);
-}
 
 static void mkfile (void)
 {
@@ -123,11 +69,11 @@ static void *proc1 (void *a)
     f.l_len = 64;
     ok (fcntl (fd, F_SETLK, &f) == 0,
         "proc1: fcntl F_WRLCK 0-63 works");
-    change_state (S1);
+    test_state_change (S1);
 
-    wait_state (S2);
-    change_state (S3);
-    wait_state (S4);
+    test_state_wait (S2);
+    test_state_change (S3);
+    test_state_wait (S4);
     return NULL;
 }
 
@@ -135,7 +81,7 @@ static void *proc2 (void *a)
 {
     struct flock f;
 
-    wait_state (S1);
+    test_state_wait (S1);
     diag ("proc2: locking bytes 0-63 (locked in same process)");
     f.l_type = F_WRLCK;
     f.l_whence = SEEK_SET;
@@ -143,10 +89,10 @@ static void *proc2 (void *a)
     f.l_len = 64;
     ok (fcntl (fd, F_SETLK, &f) == 0,
         "proc2: fcntl F_WRLCK 0-63 works");
-    change_state (S2);
+    test_state_change (S2);
 
-    wait_state (S3);
-    change_state (S4);
+    test_state_wait (S3);
+    test_state_change (S4);
     return NULL;
 }
 
@@ -160,6 +106,8 @@ main (int arg, char *argv[])
     int rc;
 
     plan (NO_PLAN);
+
+    test_state_init (S0);
 
     mkfile ();
 

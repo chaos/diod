@@ -215,6 +215,7 @@ AC_CONFIG_FILES( \
   Makefile \
   diod.spec \
   src/libtap/Makefile \
+  src/libtest/Makefile \
   src/libdiod/Makefile \
   src/liblsd/Makefile \
   src/libnpfs/Makefile \

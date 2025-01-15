@@ -40,6 +40,7 @@ endif
 test_ldadd = \
 	$(builddir)/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
+	$(top_builddir)/src/libtest/libtest.a \
 	$(top_builddir)/src/libtap/libtap.a \
 	$(LIBCAP) \
 	$(LIBPTHREAD)

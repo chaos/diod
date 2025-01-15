@@ -30,99 +30,44 @@
 #include <sys/stat.h>
 #include <grp.h>
 
+#include "src/libtest/thread.h"
+#include "src/libtest/state.h"
 #include "src/libtap/tap.h"
 
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
-static state_t         state = S0;
-static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
-
-static void test_lock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_lock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_lock: %s", strerror (n));
-}
-static void test_unlock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_unlock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_unlock: %s", strerror (n));
-}
-static void test_condsig (pthread_cond_t *c)
-{
-    int n = pthread_cond_signal (c);
-    if (n)
-        BAIL_OUT ("pthread_cond_signal: %s", strerror (n));
-}
-static void test_condwait (pthread_cond_t *c, pthread_mutex_t *l)
-{
-    int n = pthread_cond_wait (c, l);
-    if (n)
-        BAIL_OUT ("pthread_cond_wait: %s", strerror (n));
-}
-static void test_thread_create (pthread_t *t, void *(f)(void *), void *a)
-{
-    int n = pthread_create (t, NULL, f, a);
-    if (n)
-        BAIL_OUT ("pthread_create: %s", strerror (n));
-}
-static void test_thread_join (pthread_t t, void **a)
-{
-    int n = pthread_join (t, a);
-    if (n)
-        BAIL_OUT ("pthread_join: %s", strerror (n));
-}
-
-static void change_state (state_t s)
-{
-    test_lock (&state_lock);
-    state = s;
-    test_condsig (&state_cond);
-    test_unlock (&state_lock);
-}
-
-static void wait_state (state_t s)
-{
-    test_lock (&state_lock);
-    while ((state != s))
-        test_condwait (&state_cond, &state_lock);
-    test_unlock (&state_lock);
-}
-
 static void *proc1 (void *a)
 {
     ok (geteuid () == 0, "task1: geteuid returned 0");
-    change_state (S1);
+    test_state_change (S1);
 
-    wait_state (S2);
+    test_state_wait (S2);
     ok (geteuid () == 100, "task1: geteuid returned 100");
     ok (setreuid (0, 0) == 0, "task1: setreuid 0 0 worked");
     ok (setreuid (-1, 101) == 0, "task1: setreuid -1 %d works", 101);
     ok (geteuid () == 101, "task1: geteuid returned 101");
-    change_state (S3);
+    test_state_change (S3);
 
-    wait_state (S4);
+    test_state_wait (S4);
     ok (geteuid () == 102, "task1: geteuid returned 102");
     return NULL;
 }
 
 static void *proc2 (void *a)
 {
-    wait_state (S1);
+    test_state_wait (S1);
     ok (geteuid () == 0, "task2: geteuid returned 0");
     ok (setreuid (0, 0) == 0, "setreuid 0 0 worked");
     ok (setreuid (-1, 100) == 0, "setreuid -1 %d worked", 100);
     ok (geteuid () == 100, "task2: geteuid returned 100");
-    change_state (S2);
+    test_state_change (S2);
 
-    wait_state (S3);
+    test_state_wait (S3);
     ok (geteuid () == 101, "task2: geteuid returned 101");
     ok (setreuid (0, 0) == 0, "setreuid 0 0 worked");
     ok (setreuid (-1, 102) == 0, "setreuid -1 %d worked", 102);
     ok (geteuid () == 102, "task2: geteuid returned 102");
-    change_state (S4);
+    test_state_change (S4);
     return NULL;
 }
 
@@ -135,7 +80,7 @@ int main(int argc, char *argv[])
 
     pthread_t t1, t2;
 
-    ok (geteuid () == 0, "task0: geteuid returned 0");
+    test_state_init (S0);
 
     test_thread_create (&t1, proc1, NULL);
     test_thread_create (&t2, proc2, NULL);
