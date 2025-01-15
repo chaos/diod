@@ -25,7 +25,6 @@
 #include "src/libnpclient/npclient.h"
 #include "src/libtap/tap.h"
 
-#include "src/liblsd/list.h"
 #include "diod_conf.h"
 
 #define TEST_MSIZE 8192

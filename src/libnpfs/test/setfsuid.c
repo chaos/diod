@@ -19,19 +19,11 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <unistd.h>
-#include <sys/syscall.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <pthread.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <assert.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <string.h>
-#include <grp.h>
 #include <sys/fsuid.h>
+#include <string.h>
+#include <errno.h>
 
 #include "src/libtest/thread.h"
 #include "src/libtest/state.h"

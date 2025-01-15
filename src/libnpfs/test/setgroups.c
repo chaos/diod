@@ -22,13 +22,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
-#include <stdarg.h>
 #include <string.h>
-#include <pthread.h>
 #include <sys/fsuid.h>
 #include <grp.h>
 

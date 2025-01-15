@@ -12,19 +12,17 @@
 #include "config.h"
 #endif
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <string.h>
 #include <errno.h>
-#include <stdint.h>
 
-#include "server.h"
-
-#include "src/liblsd/list.h"
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_conf.h"
 #include "src/libdiod/diod_ops.h"
 #include "src/libdiod/diod_sock.h"
+#include "src/libnpfs/npfs.h"
 #include "src/libtap/tap.h"
+
+#include "server.h"
 
 Npsrv *test_server_create (const char *testdir, int flags, int *client_fd)
 {
