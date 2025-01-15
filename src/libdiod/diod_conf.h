@@ -11,6 +11,8 @@
 #ifndef LIBDIOD_DIOD_CONF_H
 #define LIBDIOD_DIOD_CONF_H
 
+#include "src/liblsd/list.h"
+
 #define DFLT_DEBUGLEVEL         0
 #define DFLT_NWTHREADS          16
 #define DFLT_MAXMMAP            0

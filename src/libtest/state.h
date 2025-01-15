@@ -11,8 +11,6 @@
 #ifndef _LIBTEST_STATE_H
 #define _LIBTEST_STATE_H
 
-#include <pthread.h>
-
 void test_state_init (int s);
 void test_state_change (int s);
 void test_state_wait (int s);

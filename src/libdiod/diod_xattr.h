@@ -11,6 +11,8 @@
 #ifndef LIBDIOD_DIOD_XATTR_H
 #define LIBDIOD_DIOD_XATTR_H
 
+#include "src/libnpfs/npfs.h"
+
 typedef struct xattr_struct *Xattr;
 
 int xattr_open (Npfid *fid, Npstr *name, u64 *sizep);

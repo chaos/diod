@@ -11,6 +11,11 @@
 #ifndef LIBDIOD_DIOD_OPS_H
 #define LIBDIOD_DIOD_OPS_H
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#include "src/libnpfs/npfs.h"
+
 int diod_init (Npsrv *srv);
 void diod_fini (Npsrv *srv);
 

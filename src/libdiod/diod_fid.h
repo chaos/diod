@@ -11,6 +11,12 @@
 #ifndef LIBDIOD_DIOD_FID_H
 #define LIBDIOD_DIOD_FID_H
 
+#include "src/libnpfs/npfs.h"
+
+#include "diod_xattr.h"
+#include "diod_fid.h"
+#include "diod_ioctx.h"
+
 #define DIOD_FID_FLAGS_ROFS       0x01
 #define DIOD_FID_FLAGS_MOUNTPT    0x02
 #define DIOD_FID_FLAGS_SHAREFD    0x04

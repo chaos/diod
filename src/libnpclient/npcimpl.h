@@ -11,6 +11,8 @@
 #ifndef LIBNPCLIENT_NPCIMPL_H
 #define LIBNPCLIENT_NPCIMPL_H
 
+#include "src/libnpfs/npfs.h"
+
 typedef int (*RpcFun)(Npcfsys *fs, Npfcall *tc, Npfcall **rc);
 typedef void (*RefFun)(Npcfsys *fs);
 typedef void (*DiscFun)(Npcfsys *fs);

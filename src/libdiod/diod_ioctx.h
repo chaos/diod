@@ -11,6 +11,9 @@
 #ifndef LIBDIOD_DIOD_IOCTX_H
 #define LIBDIOD_DIOD_IOCTX_H
 
+#include <sys/types.h>
+#include "src/libnpfs/npfs.h"
+
 typedef struct path_struct *Path;
 typedef struct ioctx_struct *IOCtx;
 

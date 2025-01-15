@@ -13,6 +13,7 @@
 
 #include <stdarg.h>
 #include <sys/types.h>
+#include "9p.h"
 
 typedef struct p9_str Npstr;
 typedef struct p9_qid Npqid;

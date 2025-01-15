@@ -11,8 +11,6 @@
 #ifndef LIBTEST_SERVER_H
 #define LIBTEST_SERVER_H
 
-#include <stdint.h>
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 
 /* Embed a diod server in a test program that uses libtap,

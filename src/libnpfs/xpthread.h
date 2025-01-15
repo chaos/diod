@@ -11,6 +11,8 @@
 #ifndef LIBNPFS_XPTHREAD_H
 #define LIBNPFS_XPTHREAD_H
 
+#include <pthread.h>
+
 /* pthread wrappers */
 #define xpthread_mutex_lock(a) do { \
     int pthread_mutex_lock_result = pthread_mutex_lock(a); \

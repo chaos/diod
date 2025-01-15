@@ -11,6 +11,8 @@
 #ifndef _LIBDIOD_DIOD_AUTH_H
 #define _LIBDIOD_DIOD_AUTH_H
 
+#include "src/libnpfs/npfs.h"
+
 extern Npauth *diod_auth_functions;
 
 struct Npcfid;

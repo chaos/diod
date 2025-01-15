@@ -11,6 +11,8 @@
 #ifndef LIBDIOD_DIOD_RDMA_H
 #define LIBDIOD_DIOD_RDMA_H
 
+#include "src/libnpfs/npfs.h"
+
 typedef struct diod_rdma_struct *diod_rdma_t;
 
 diod_rdma_t diod_rdma_create (void);

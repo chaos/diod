@@ -11,6 +11,10 @@
 #ifndef LIBDIOD_DIOD_SOCK_H
 #define LIBDIOD_DIOD_SOCK_H
 
+#include <poll.h>
+#include "src/libnpfs/npfs.h"
+#include "src/liblsd/list.h"
+
 struct pollfd;
 
 void diod_sock_accept_one (Npsrv *srv, int fd, int lookup);

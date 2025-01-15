@@ -11,6 +11,8 @@
 #ifndef LIBNPFS_NPFSIMPL_H
 #define LIBNPFS_NPFSIMPL_H
 
+#include "npfs.h"
+
 /* fcall.c */
 Npfcall *np_version(Npreq *req, Npfcall *tc);
 Npfcall *np_auth(Npreq *req, Npfcall *tc);
