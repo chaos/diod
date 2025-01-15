@@ -15,14 +15,15 @@ check_PROGRAMS = \
 
 SUBDIRS = fstest postmark fsx fsstress
 
-TESTS_ENVIRONMENT = env
-TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/daemon/diod"
-TESTS_ENVIRONMENT += "PATH_DIODMOUNT=$(top_builddir)/src/cmd/diodmount"
-TESTS_ENVIRONMENT += "KERN_SRCDIR=$(top_srcdir)/tests/kern"
-TESTS_ENVIRONMENT += "KERN_BUILDDIR=$(top_builddir)/tests/kern"
-TESTS_ENVIRONMENT += "TOP_SRCDIR=$(top_srcdir)"
-TESTS_ENVIRONMENT += "TOP_BUILDDIR=$(top_builddir)"
-TESTS_ENVIRONMENT += "${srcdir}/runtest"
+AM_TESTS_ENVIRONMENT = \
+	PATH_DIOD='$(top_builddir)/src/daemon/diod'; export PATH_DIOD; \
+	PATH_DIODMOUNT='$(top_builddir)/src/cmd/diodmount'; export PATH_DIODMOUNT; \
+	KERN_SRCDIR='$(top_srcdir)/tests/kern'; export KERN_SRCDIR; \
+	KERN_BUILDDIR='$(top_builddir)/tests/kern'; export KERN_BUILDDIR; \
+	TOP_SRCDIR='$(top_srcdir)'; export TOP_SRCDIR; \
+	TOP_BUILDDIR='$(top_builddir)'; export TOP_BUILDDIR;
+
+LOG_COMPILER = ${srcdir}/runtest
 
 TESTS = t05 t06 t07 t12 t13 t14 t15 t16 t17 t18 t19 t22 \
 	t23 t24 t25 t26 t27 t28 t29 t30 t31 t32 t33 \
@@ -35,7 +36,7 @@ CLEANFILES = *.out *.diff *.diod *.postmark *.dbench
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir) \
+	-I$(top_srcdir) \
 	$(LUA_INCLUDE)
 
 

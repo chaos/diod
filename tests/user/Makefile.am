@@ -14,12 +14,15 @@ check_PROGRAMS = \
 	txattr \
 	testopenfid
 
-TESTS_ENVIRONMENT = env
-TESTS_ENVIRONMENT += "PATH_DIOD=$(top_builddir)/src/daemon/diod"
-TESTS_ENVIRONMENT += "PATH_DIODCONF=$(top_builddir)/etc/diod.conf"
-TESTS_ENVIRONMENT += "USER_SRCDIR=$(top_srcdir)/tests/user"
-TESTS_ENVIRONMENT += "USER_BUILDDIR=$(top_builddir)/tests/user"
-TESTS_ENVIRONMENT += "${srcdir}/runtest"
+AM_TESTS_ENVIRONMENT = \
+	PATH_DIOD='$(top_builddir)/src/daemon/diod'; export PATH_DIOD; \
+	PATH_DIODCONF='$(top_builddir)/etc/diod.conf'; export PATH_DIODCONF; \
+	USER_SRCDIR='$(top_srcdir)/tests/user'; export USER_SRCDIR; \
+	USER_BUILDDIR='$(top_builddir)/tests/user'; export USER_BUILDDIR;
+
+LOG_COMPILER = ${srcdir}/runtest
+
+AM_LOG_FLAGS =
 
 TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15 t16 t17 t18 t19 t20
 
@@ -33,7 +36,7 @@ CLEANFILES = *.out *.diff *.diod
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
-        -I$(top_srcdir)
+	-I$(top_srcdir) \
 	$(LUA_INCLUDE)
 
 

@@ -38,8 +38,6 @@ libnpfs_a_SOURCES += rdmatrans.c
 endif
 
 test_ldadd = \
-	$(top_builddir)/src/libdiod/libdiod.a \
-	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(builddir)/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libtap/libtap.a \

@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "src/libdiod/diod_log.h"
+#include "diod_log.h"
 
 void
 lsd_fatal_error (char *file, int line, char *mesg)

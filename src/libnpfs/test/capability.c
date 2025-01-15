@@ -233,7 +233,6 @@ int main(int argc, char *argv[])
     if (geteuid () != 0 || getenv ("FAKEROOTKEY") != NULL)
         plan (SKIP_ALL, "this test must run as root");
     plan (NO_PLAN);
-    diod_log_init (argv[0]);
     proc0 (); // spawns proc1 and proc2
 #else
     plan (SKIP_ALL, "libcap2-dev is not installed");

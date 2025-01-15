@@ -201,9 +201,9 @@ main (int arg, char *argv[])
             f.l_len = 64;
             if (fcntl (fd, F_SETLK, &f) < 0) {
                 diag ("fcntl F_WRLCK 32-63: %s", strerror (errno));
-                exit (1);
+                _exit (1);
             }
-            exit (0);
+            _exit (0);
             break;
         default: /* parent */
             if (waitpid (pid, &status, 0) < 0)
@@ -222,7 +222,7 @@ main (int arg, char *argv[])
             if (close (fd) < 0
                 || (fd = open (path, O_RDWR)) < 0) {
                 diag ("close/open %s (child): %s", path, strerror (errno));
-                exit (2);
+                _exit (2);
             }
             f.l_type = F_WRLCK;
             f.l_whence = SEEK_SET;
@@ -232,7 +232,7 @@ main (int arg, char *argv[])
             if (exit_code == 1)
                 diag ("fcntl F_WRLCK 32-63: %s", strerror (errno));
             (void)close (fd);
-            exit (exit_code);
+            _exit (exit_code);
             break;
         default: /* parent */
             if (waitpid (pid, &status, 0) < 0)
@@ -246,6 +246,9 @@ main (int arg, char *argv[])
         BAIL_OUT ("close: %s", strerror (errno));
     if (unlink (path) < 0)
         BAIL_OUT ("unlink %s: %s", path, strerror (errno));
+
+    done_testing ();
+
     exit (0);
 }
 

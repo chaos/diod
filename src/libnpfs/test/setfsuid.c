@@ -186,6 +186,8 @@ int main(int argc, char *argv[])
 
     check_fsid ("task0", 0, 0);
 
+    done_testing ();
+
     exit (0);
 }
 
