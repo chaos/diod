@@ -8,17 +8,14 @@
  * SPDX-License-Identifier: MIT
  *************************************************************/
 
-#if HAVE_CONFIG_H
-#include "config.h"
-#endif
+#ifndef LIBNPFS_TYPES_H
+#define LIBNPFS_TYPES_H
+
 #include <stdint.h>
 
-#include "npfs.h"
-#include "xpthread.h"
-#include "npfsimpl.h"
+typedef uint8_t   u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
 
-int
-np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
-{
-	return 0;
-}
+#endif

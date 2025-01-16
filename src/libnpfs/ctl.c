@@ -27,7 +27,6 @@
 #include <limits.h>
 #include <sys/stat.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"

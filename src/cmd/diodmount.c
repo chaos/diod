@@ -47,7 +47,6 @@
 #define PATH_MAX 1024
 #endif
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 #include "src/liblsd/list.h"

@@ -18,7 +18,6 @@
 #include <stdarg.h>
 #include <inttypes.h>
 
-#include "9p.h"
 #include "npfs.h"
 
 void

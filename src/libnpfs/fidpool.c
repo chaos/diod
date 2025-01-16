@@ -20,7 +20,6 @@
 #include <errno.h>
 #include <sys/time.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"

@@ -21,7 +21,6 @@
 #include <stdarg.h>
 #include <inttypes.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 
 #include "src/libdiod/diod_log.h"

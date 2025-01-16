@@ -37,7 +37,6 @@
 #include <dirent.h>
 #include <limits.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 #include "src/libnpfs/xpthread.h"

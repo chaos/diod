@@ -22,7 +22,6 @@
 #include <fcntl.h>
 #include <stdarg.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 

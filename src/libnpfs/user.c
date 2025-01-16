@@ -22,7 +22,6 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"

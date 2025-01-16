@@ -22,7 +22,6 @@
 #include <pthread.h>
 #include <signal.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"

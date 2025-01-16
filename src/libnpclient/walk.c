@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"

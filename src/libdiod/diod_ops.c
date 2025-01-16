@@ -90,7 +90,6 @@
 #define O_CLOEXEC   0
 #endif
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpfs/xpthread.h"
 #include "src/liblsd/list.h"

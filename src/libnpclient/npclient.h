@@ -11,7 +11,7 @@
 #ifndef LIBNPCLIENT_NPCLIENT_H
 #define LIBNPCLIENT_NPCLIENT_H
 
-#include "src/libnpfs/9p.h"
+#include "src/libnpfs/types.h"
 
 typedef struct Npcfid Npcfid;
 typedef struct Npcfsys Npcfsys;
