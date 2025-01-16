@@ -31,7 +31,6 @@
 #include <utime.h>
 #include <stdarg.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/liblsd/list.h"
 #include "src/liblsd/hostlist.h"

@@ -47,7 +47,6 @@
 #define PATH_MAX 1024
 #endif
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 #include "src/liblsd/list.h"
@@ -540,8 +539,8 @@ _diod_mount (Opt o, int rfd, int wfd, char *spec, char *dir, int vopt,
         msg_exit ("uname is not set"); /* can't happen */
     uid = _uname2uid (uname);
     aname = opt_find (o, "aname"); /* can be null */
-    if (!opt_scanf (o, "msize=%d", &msize) || msize < P9_IOHDRSZ)
-        msg_exit ("msize must be set to integer >= %d", P9_IOHDRSZ);
+    if (!opt_scanf (o, "msize=%d", &msize) || msize < IOHDRSZ)
+        msg_exit ("msize must be set to integer >= %d", IOHDRSZ);
 
     if (vopt)
         msg ("pre-authenticating connection to server");

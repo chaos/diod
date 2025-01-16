@@ -17,7 +17,6 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <errno.h>
-#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 
@@ -249,7 +248,7 @@ np_create_common(struct cbuf *bufp, u32 size, u8 id)
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_put_int8(bufp, id, &fc->type);
-	buf_put_int16(bufp, P9_NOTAG, &fc->tag);
+	buf_put_int16(bufp, NOTAG, &fc->tag);
 
 	return fc;
 }
@@ -268,7 +267,7 @@ np_create_common_static(struct cbuf *bufp, u32 size, u8 id,
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_put_int8(bufp, id, &fc->type);
-	buf_put_int16(bufp, P9_NOTAG, &fc->tag);
+	buf_put_int16(bufp, NOTAG, &fc->tag);
 
 	return fc;
 }
@@ -292,7 +291,7 @@ np_create_tversion(u32 msize, char *version)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TVERSION)))
+        if (!(fc = np_create_common(bufp, size, Tversion)))
                 return NULL;
         buf_put_int32(bufp, msize, &fc->u.tversion.msize);
         buf_put_str(bufp, version, &fc->u.tversion.version);
@@ -309,7 +308,7 @@ np_create_rversion(u32 msize, char *version)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RVERSION)))
+	if (!(fc = np_create_common(bufp, size, Rversion)))
 		return NULL;
 	buf_put_int32(bufp, msize, &fc->u.rversion.msize);
 	buf_put_str(bufp, version, &fc->u.rversion.version);
@@ -328,7 +327,7 @@ np_create_tauth(u32 fid, char *uname, char *aname, u32 n_uname)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TAUTH)))
+        if (!(fc = np_create_common(bufp, size, Tauth)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tauth.afid);
         buf_put_str(bufp, uname, &fc->u.tauth.uname);
@@ -346,7 +345,7 @@ np_create_rauth(Npqid *aqid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RAUTH)))
+	if (!(fc = np_create_common(bufp, size, Rauth)))
 		return NULL;
 	buf_put_qid(bufp, aqid, &fc->u.rauth.qid);
 
@@ -361,7 +360,7 @@ np_create_tflush(u16 oldtag)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TFLUSH)))
+        if (!(fc = np_create_common(bufp, size, Tflush)))
                 return NULL;
         buf_put_int16(bufp, oldtag, &fc->u.tflush.oldtag);
 
@@ -376,7 +375,7 @@ np_create_rflush(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RFLUSH)))
+	if (!(fc = np_create_common(bufp, size, Rflush)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -390,7 +389,7 @@ np_create_rflush_static(void *buf, int buflen)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	fc = np_create_common_static(bufp, size, P9_RFLUSH, buf, buflen);
+	fc = np_create_common_static(bufp, size, Rflush, buf, buflen);
 
 	return np_post_check(fc, bufp);
 }
@@ -406,7 +405,7 @@ np_create_tattach(u32 fid, u32 afid, char *uname, char *aname, u32 n_uname)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TATTACH)))
+        if (!(fc = np_create_common(bufp, size, Tattach)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tattach.fid);
         buf_put_int32(bufp, afid, &fc->u.tattach.afid);
@@ -425,7 +424,7 @@ np_create_rattach(Npqid *qid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RATTACH)))
+	if (!(fc = np_create_common(bufp, size, Rattach)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rattach.qid);
 
@@ -440,10 +439,10 @@ np_create_twalk(u32 fid, u32 newfid, u16 nwname, char **wnames)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-	NP_ASSERT (nwname <= P9_MAXWELEM);
+	NP_ASSERT (nwname <= MAXWELEM);
         for(i = 0; i < nwname; i++)
                 size += sizeof(u16) + strlen(wnames[i]);
-        if (!(fc = np_create_common(bufp, size, P9_TWALK)))
+        if (!(fc = np_create_common(bufp, size, Twalk)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.twalk.fid);
         buf_put_int32(bufp, newfid, &fc->u.twalk.newfid);
@@ -462,8 +461,8 @@ np_create_rwalk(int nwqid, Npqid *wqids)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	NP_ASSERT (nwqid <= P9_MAXWELEM);
-	if (!(fc = np_create_common(bufp, size, P9_RWALK)))
+	NP_ASSERT (nwqid <= MAXWELEM);
+	if (!(fc = np_create_common(bufp, size, Rwalk)))
 		return NULL;
 	buf_put_int16(bufp, nwqid, &fc->u.rwalk.nwqid);
 	for(i = 0; i < nwqid; i++) {
@@ -481,7 +480,7 @@ np_create_tread(u32 fid, u64 offset, u32 count)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TREAD)))
+        if (!(fc = np_create_common(bufp, size, Tread)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tread.fid);
         buf_put_int64(bufp, offset, &fc->u.tread.offset);
@@ -498,7 +497,7 @@ np_alloc_rread(u32 count)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RREAD)))
+	if (!(fc = np_create_common(bufp, size, Rread)))
 		return NULL;
 	buf_put_int32(bufp, count, &fc->u.rread.count);
 	fc->u.rread.data = buf_alloc(bufp, count);
@@ -542,7 +541,7 @@ np_create_twrite(u32 fid, u64 offset, u32 count, u8 *data)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TWRITE)))
+        if (!(fc = np_create_common(bufp, size, Twrite)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.twrite.fid);
         buf_put_int64(bufp, offset, &fc->u.twrite.offset);
@@ -562,7 +561,7 @@ np_create_rwrite(u32 count)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RWRITE)))
+	if (!(fc = np_create_common(bufp, size, Rwrite)))
 		return NULL;
 	buf_put_int32(bufp, count, &fc->u.rwrite.count);
 
@@ -577,7 +576,7 @@ np_create_tclunk(u32 fid)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TCLUNK)))
+        if (!(fc = np_create_common(bufp, size, Tclunk)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tclunk.fid);
 
@@ -592,7 +591,7 @@ np_create_rclunk(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RCLUNK)))
+	if (!(fc = np_create_common(bufp, size, Rclunk)))
 		return NULL;
 	return np_post_check(fc, bufp);
 }
@@ -605,7 +604,7 @@ np_create_tremove(u32 fid)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TREMOVE)))
+        if (!(fc = np_create_common(bufp, size, Tremove)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tremove.fid);
 
@@ -620,7 +619,7 @@ np_create_rremove(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RREMOVE)))
+	if (!(fc = np_create_common(bufp, size, Rremove)))
 		return NULL;
 	return np_post_check(fc, bufp);
 }
@@ -633,7 +632,7 @@ np_create_rlerror(u32 ecode)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RLERROR)))
+	if (!(fc = np_create_common(bufp, size, Rlerror)))
 		return NULL;
 	buf_put_int32(bufp, ecode, &fc->u.rlerror.ecode);
 
@@ -648,7 +647,7 @@ np_create_rlerror_static(u32 ecode, void *buf, int bufsize)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	fc = np_create_common_static(bufp, size, P9_RLERROR, buf, bufsize);
+	fc = np_create_common_static(bufp, size, Rlerror, buf, bufsize);
 	buf_put_int32(bufp, ecode, &fc->u.rlerror.ecode);
 
 	return np_post_check(fc, bufp);
@@ -662,7 +661,7 @@ np_create_tstatfs(u32 fid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TSTATFS)))
+	if (!(fc = np_create_common(bufp, size, Tstatfs)))
 		return NULL;
 	buf_put_int32(bufp, fid,    &fc->u.tstatfs.fid);
 
@@ -678,7 +677,7 @@ np_create_rstatfs(u32 type, u32 bsize, u64 blocks, u64 bfree, u64 bavail, u64 fi
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RSTATFS)))
+	if (!(fc = np_create_common(bufp, size, Rstatfs)))
 		return NULL;
 	buf_put_int32(bufp, type,    &fc->u.rstatfs.type);
 	buf_put_int32(bufp, bsize,   &fc->u.rstatfs.bsize);
@@ -701,7 +700,7 @@ np_create_tlopen(u32 fid, u32 flags)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TLOPEN)))
+        if (!(fc = np_create_common(bufp, size, Tlopen)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tlopen.fid);
         buf_put_int32(bufp, flags, &fc->u.tlopen.flags);
@@ -717,7 +716,7 @@ np_create_rlopen(Npqid *qid, u32 iounit)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RLOPEN)))
+	if (!(fc = np_create_common(bufp, size, Rlopen)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rlopen.qid);
 	buf_put_int32(bufp, iounit, &fc->u.rlopen.iounit);
@@ -734,7 +733,7 @@ np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TLCREATE)))
+        if (!(fc = np_create_common(bufp, size, Tlcreate)))
                 return NULL;
         buf_put_int32(bufp, fid, &fc->u.tlcreate.fid);
         buf_put_str(bufp, name, &fc->u.tlcreate.name);
@@ -746,14 +745,14 @@ np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid)
 }
 
 Npfcall *
-np_create_rlcreate(struct p9_qid *qid, u32 iounit)
+np_create_rlcreate(Npqid *qid, u32 iounit)
 {
 	int size = QIDSIZE + sizeof(u32);
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RLCREATE)))
+	if (!(fc = np_create_common(bufp, size, Rlcreate)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rlcreate.qid);
 	buf_put_int32(bufp, iounit, &fc->u.rlcreate.iounit);
@@ -770,7 +769,7 @@ np_create_tsymlink(u32 fid, char *name, char *symtgt, u32 gid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TSYMLINK)))
+	if (!(fc = np_create_common(bufp, size, Tsymlink)))
 		return NULL;
         buf_put_int32(bufp, fid, &fc->u.tsymlink.fid);
         buf_put_str(bufp, name, &fc->u.tsymlink.name);
@@ -781,14 +780,14 @@ np_create_tsymlink(u32 fid, char *name, char *symtgt, u32 gid)
 }
 
 Npfcall *
-np_create_rsymlink(struct p9_qid *qid)
+np_create_rsymlink(Npqid *qid)
 {
 	int size = QIDSIZE;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RSYMLINK)))
+	if (!(fc = np_create_common(bufp, size, Rsymlink)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rsymlink.qid);
 
@@ -804,7 +803,7 @@ np_create_tmknod (u32 fid, char *name, u32 mode, u32 major, u32 minor, u32 gid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TMKNOD)))
+	if (!(fc = np_create_common(bufp, size, Tmknod)))
 		return NULL;
         buf_put_int32(bufp, fid, &fc->u.tmknod.fid);
         buf_put_str(bufp, name, &fc->u.tmknod.name);
@@ -817,14 +816,14 @@ np_create_tmknod (u32 fid, char *name, u32 mode, u32 major, u32 minor, u32 gid)
 }
 
 Npfcall *
-np_create_rmknod (struct p9_qid *qid)
+np_create_rmknod (Npqid *qid)
 {
 	int size = QIDSIZE;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RMKNOD)))
+	if (!(fc = np_create_common(bufp, size, Rmknod)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rmknod.qid);
 
@@ -839,7 +838,7 @@ np_create_trename(u32 fid, u32 dfid, char *name)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TRENAME)))
+	if (!(fc = np_create_common(bufp, size, Trename)))
 		return NULL;
         buf_put_int32(bufp, fid, &fc->u.trename.fid);
         buf_put_int32(bufp, dfid, &fc->u.trename.dfid);
@@ -856,7 +855,7 @@ np_create_rrename(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RRENAME)))
+	if (!(fc = np_create_common(bufp, size, Rrename)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -870,7 +869,7 @@ np_create_treadlink (u32 fid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TREADLINK)))
+	if (!(fc = np_create_common(bufp, size, Treadlink)))
 		return NULL;
         buf_put_int32(bufp, fid, &fc->u.treadlink.fid);
 
@@ -886,7 +885,7 @@ np_create_rreadlink(char *target)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RREADLINK)))
+	if (!(fc = np_create_common(bufp, size, Rreadlink)))
 		return NULL;
 	buf_put_str(bufp, target, &fc->u.rreadlink.target);
 
@@ -901,7 +900,7 @@ np_create_tgetattr(u32 fid, u64 request_mask)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TGETATTR)))
+	if (!(fc = np_create_common(bufp, size, Tgetattr)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.tgetattr.fid);
 	buf_put_int64(bufp, request_mask, &fc->u.tgetattr.request_mask);
@@ -910,7 +909,7 @@ np_create_tgetattr(u32 fid, u64 request_mask)
 }
 
 Npfcall *
-np_create_rgetattr(u64 valid, struct p9_qid *qid, u32 mode,
+np_create_rgetattr(u64 valid, Npqid *qid, u32 mode,
   		u32 uid, u32 gid, u64 nlink, u64 rdev,
 		u64 size, u64 blksize, u64 blocks,
 		u64 atime_sec, u64 atime_nsec,
@@ -924,7 +923,7 @@ np_create_rgetattr(u64 valid, struct p9_qid *qid, u32 mode,
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, bufsize, P9_RGETATTR)))
+	if (!(fc = np_create_common(bufp, bufsize, Rgetattr)))
 		return NULL;
 	buf_put_int64(bufp, valid, &fc->u.rgetattr.valid);
 	buf_put_qid(bufp, qid, &fc->u.rgetattr.qid);
@@ -959,7 +958,7 @@ np_create_tsetattr(u32 fid, u32 valid, u32 mode, u32 uid, u32 gid,
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, bufsize, P9_TSETATTR)))
+	if (!(fc = np_create_common(bufp, bufsize, Tsetattr)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.tsetattr.fid);
 	buf_put_int32(bufp, valid, &fc->u.tsetattr.valid);
@@ -983,7 +982,7 @@ np_create_rsetattr(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RSETATTR)))
+	if (!(fc = np_create_common(bufp, size, Rsetattr)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -997,7 +996,7 @@ np_create_txattrwalk(u32 fid, u32 attrfid, char *name)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TXATTRWALK)))
+	if (!(fc = np_create_common(bufp, size, Txattrwalk)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.txattrwalk.fid);
 	buf_put_int32(bufp, attrfid, &fc->u.txattrwalk.attrfid);
@@ -1014,7 +1013,7 @@ np_create_rxattrwalk(u64 size)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, bufsize, P9_RXATTRWALK)))
+	if (!(fc = np_create_common(bufp, bufsize, Rxattrwalk)))
 		return NULL;
 	buf_put_int64(bufp, size, &fc->u.rxattrwalk.size);
 
@@ -1031,7 +1030,7 @@ np_create_txattrcreate(u32 fid, char *name, u64 size, u32 flag)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, bufsize, P9_TXATTRCREATE)))
+	if (!(fc = np_create_common(bufp, bufsize, Txattrcreate)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.txattrcreate.fid);
 	buf_put_str(bufp, name, &fc->u.txattrcreate.name);
@@ -1049,7 +1048,7 @@ np_create_rxattrcreate(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RXATTRCREATE)))
+	if (!(fc = np_create_common(bufp, size, Rxattrcreate)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -1063,7 +1062,7 @@ np_create_rreaddir(u32 count)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RREADDIR)))
+	if (!(fc = np_create_common(bufp, size, Rreaddir)))
 		return NULL;
 	buf_put_int32(bufp, count, &fc->u.rreaddir.count);
 	fc->u.rreaddir.data = buf_alloc(bufp, count);
@@ -1095,7 +1094,7 @@ np_create_treaddir(u32 fid, u64 offset, u32 count)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TREADDIR)))
+	if (!(fc = np_create_common(bufp, size, Treaddir)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.treaddir.fid);
 	buf_put_int64(bufp, offset, &fc->u.treaddir.offset);
@@ -1112,7 +1111,7 @@ np_create_tfsync(u32 fid, u32 datasync)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TFSYNC)))
+	if (!(fc = np_create_common(bufp, size, Tfsync)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.tfsync.fid);
 	buf_put_int32(bufp, datasync, &fc->u.tfsync.datasync);
@@ -1128,7 +1127,7 @@ np_create_rfsync(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RFSYNC)))
+	if (!(fc = np_create_common(bufp, size, Rfsync)))
 		return NULL;
 	return np_post_check(fc, bufp);
 }
@@ -1143,7 +1142,7 @@ np_create_tlock(u32 fid, u8 type, u32 flags, u64 start, u64 length,
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TLOCK)))
+	if (!(fc = np_create_common(bufp, size, Tlock)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.tlock.fid);
 	buf_put_int8(bufp, type, &fc->u.tlock.type);
@@ -1164,7 +1163,7 @@ np_create_rlock(u8 status)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RLOCK)))
+	if (!(fc = np_create_common(bufp, size, Rlock)))
 		return NULL;
 	buf_put_int8(bufp, status, &fc->u.rlock.status);
 
@@ -1181,7 +1180,7 @@ np_create_tgetlock(u32 fid, u8 type, u64 start, u64 length, u32 proc_id,
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TGETLOCK)))
+	if (!(fc = np_create_common(bufp, size, Tgetlock)))
 		return NULL;
 	buf_put_int32(bufp, fid, &fc->u.tgetlock.fid);
 	buf_put_int8(bufp, type, &fc->u.tgetlock.type);
@@ -1202,7 +1201,7 @@ np_create_rgetlock(u8 type, u64 start, u64 length, u32 proc_id, char *client_id)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RGETLOCK)))
+	if (!(fc = np_create_common(bufp, size, Rgetlock)))
 		return NULL;
 	buf_put_int8(bufp, type, &fc->u.rgetlock.type);
 	buf_put_int64(bufp, start, &fc->u.rgetlock.start);
@@ -1221,7 +1220,7 @@ np_create_tlink(u32 dfid, u32 fid, char *name)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TLINK)))
+	if (!(fc = np_create_common(bufp, size, Tlink)))
 		return NULL;
 	buf_put_int32(bufp, dfid, &fc->u.tlink.dfid);
 	buf_put_int32(bufp, fid, &fc->u.tlink.fid);
@@ -1238,7 +1237,7 @@ np_create_rlink(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RLINK)))
+	if (!(fc = np_create_common(bufp, size, Rlink)))
 		return NULL;
 	return np_post_check(fc, bufp);
 }
@@ -1251,7 +1250,7 @@ np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TMKDIR)))
+	if (!(fc = np_create_common(bufp, size, Tmkdir)))
 		return NULL;
 	buf_put_int32(bufp, dfid, &fc->u.tmkdir.fid);
 	buf_put_str(bufp, name, &fc->u.tmkdir.name);
@@ -1262,14 +1261,14 @@ np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid)
 }
 
 Npfcall *
-np_create_rmkdir(struct p9_qid *qid)
+np_create_rmkdir(Npqid *qid)
 {
 	int size = QIDSIZE;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RMKDIR)))
+	if (!(fc = np_create_common(bufp, size, Rmkdir)))
 		return NULL;
 	buf_put_qid(bufp, qid, &fc->u.rmkdir.qid);
 
@@ -1285,7 +1284,7 @@ np_create_trenameat(u32 olddirfid, char *oldname, u32 newdirfid, char *newname)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_TRENAMEAT)))
+	if (!(fc = np_create_common(bufp, size, Trenameat)))
 		return NULL;
         buf_put_int32(bufp, olddirfid, &fc->u.trenameat.olddirfid);
         buf_put_str(bufp, oldname, &fc->u.trenameat.oldname);
@@ -1303,7 +1302,7 @@ np_create_rrenameat(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RRENAMEAT)))
+	if (!(fc = np_create_common(bufp, size, Rrenameat)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -1317,7 +1316,7 @@ np_create_tunlinkat(u32 dirfid, char *name, u32 flags)
         struct cbuf *bufp = &buffer;
         Npfcall *fc;
 
-        if (!(fc = np_create_common(bufp, size, P9_TUNLINKAT)))
+        if (!(fc = np_create_common(bufp, size, Tunlinkat)))
                 return NULL;
         buf_put_int32(bufp, dirfid, &fc->u.tunlinkat.dirfid);
         buf_put_str(bufp, name, &fc->u.tunlinkat.name);
@@ -1334,7 +1333,7 @@ np_create_runlinkat(void)
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
-	if (!(fc = np_create_common(bufp, size, P9_RUNLINKAT)))
+	if (!(fc = np_create_common(bufp, size, Runlinkat)))
 		return NULL;
 
 	return np_post_check(fc, bufp);
@@ -1380,91 +1379,91 @@ np_deserialize(Npfcall *fc)
 	switch (fc->type) {
 	default:
 		goto error;
-	case P9_RLERROR:
+	case Rlerror:
 		fc->u.rlerror.ecode = buf_get_int32(bufp);
 		break;
-	case P9_TVERSION:
+	case Tversion:
 		fc->u.tversion.msize = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tversion.version);
 		break;
-	case P9_RVERSION:
+	case Rversion:
                 fc->u.rversion.msize = buf_get_int32(bufp);
                 buf_get_str(bufp, &fc->u.rversion.version);
                 break;
-	case P9_TAUTH:
+	case Tauth:
 		fc->u.tauth.afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tauth.uname);
 		buf_get_str(bufp, &fc->u.tauth.aname);
 		fc->u.tauth.n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
-	case P9_RAUTH:
+	case Rauth:
                 buf_get_qid(bufp, &fc->u.rauth.qid);
                 break;
-	case P9_TFLUSH:
+	case Tflush:
 		fc->u.tflush.oldtag = buf_get_int16(bufp);
 		break;
-	case P9_RFLUSH:
+	case Rflush:
 		break;
-	case P9_TATTACH:
+	case Tattach:
 		fc->u.tattach.fid = buf_get_int32(bufp);
 		fc->u.tattach.afid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tattach.uname);
 		buf_get_str(bufp, &fc->u.tattach.aname);
 		fc->u.tattach.n_uname = buf_get_int32(bufp); /* .u extension */
 		break;
-	case P9_RATTACH:
+	case Rattach:
 		buf_get_qid(bufp, &fc->u.rattach.qid);
                 break;
-	case P9_TWALK:
+	case Twalk:
 		fc->u.twalk.fid = buf_get_int32(bufp);
 		fc->u.twalk.newfid = buf_get_int32(bufp);
 		fc->u.twalk.nwname = buf_get_int16(bufp);
-		if (fc->u.twalk.nwname > P9_MAXWELEM)
+		if (fc->u.twalk.nwname > MAXWELEM)
 			goto error;
 
 		for(i = 0; i < fc->u.twalk.nwname; i++) {
 			buf_get_str(bufp, &fc->u.twalk.wnames[i]);
 		}
 		break;
-	case P9_RWALK:
+	case Rwalk:
 		fc->u.rwalk.nwqid = buf_get_int16(bufp);
-                if (fc->u.rwalk.nwqid > P9_MAXWELEM)
+                if (fc->u.rwalk.nwqid > MAXWELEM)
                         goto error;
                 for(i = 0; i < fc->u.rwalk.nwqid; i++)
                         buf_get_qid(bufp, &fc->u.rwalk.wqids[i]);
                 break;
-	case P9_TREAD:
+	case Tread:
 		fc->u.tread.fid = buf_get_int32(bufp);
 		fc->u.tread.offset = buf_get_int64(bufp);
 		fc->u.tread.count = buf_get_int32(bufp);
 		break;
-	case P9_RREAD:
+	case Rread:
 		fc->u.rread.count = buf_get_int32(bufp);
                 fc->u.rread.data = buf_alloc(bufp, fc->u.rread.count);
                 break;
-	case P9_TWRITE:
+	case Twrite:
 		fc->u.twrite.fid = buf_get_int32(bufp);
 		fc->u.twrite.offset = buf_get_int64(bufp);
 		fc->u.twrite.count = buf_get_int32(bufp);
 		fc->u.twrite.data = buf_alloc(bufp, fc->u.twrite.count);
 		break;
-	case P9_RWRITE:
+	case Rwrite:
 		fc->u.rwrite.count = buf_get_int32(bufp);
                 break;
-	case P9_TCLUNK:
+	case Tclunk:
 		fc->u.tclunk.fid = buf_get_int32(bufp);
 		break;
-	case P9_RCLUNK:
+	case Rclunk:
 		break;
-	case P9_TREMOVE:
+	case Tremove:
 		fc->u.tremove.fid = buf_get_int32(bufp);
 		break;
-	case P9_RREMOVE:
+	case Rremove:
 		break;
-	case P9_TSTATFS:
+	case Tstatfs:
 		fc->u.tstatfs.fid = buf_get_int32(bufp);
 		break;
-	case P9_RSTATFS:
+	case Rstatfs:
        		fc->u.rstatfs.type = buf_get_int32(bufp);
                 fc->u.rstatfs.bsize = buf_get_int32(bufp);
                 fc->u.rstatfs.blocks = buf_get_int64(bufp);
@@ -1475,35 +1474,35 @@ np_deserialize(Npfcall *fc)
                 fc->u.rstatfs.fsid = buf_get_int64(bufp);
                 fc->u.rstatfs.namelen = buf_get_int32(bufp);
                 break;
-	case P9_TLOPEN:
+	case Tlopen:
 		fc->u.tlopen.fid = buf_get_int32(bufp);
 		fc->u.tlopen.flags = buf_get_int32(bufp);
 		break;
-	case P9_RLOPEN:
+	case Rlopen:
 		buf_get_qid(bufp, &fc->u.rlopen.qid);
                 fc->u.rlopen.iounit = buf_get_int32(bufp);
 		break;
-	case P9_TLCREATE:
+	case Tlcreate:
 		fc->u.tlcreate.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tlcreate.name);
 		fc->u.tlcreate.flags = buf_get_int32(bufp);
 		fc->u.tlcreate.mode = buf_get_int32(bufp);
 		fc->u.tlcreate.gid = buf_get_int32(bufp);
 		break;
-	case P9_RLCREATE:
+	case Rlcreate:
 		buf_get_qid(bufp, &fc->u.rlcreate.qid);
                 fc->u.rlcreate.iounit = buf_get_int32(bufp);
 		break;
-	case P9_TSYMLINK:
+	case Tsymlink:
 		fc->u.tsymlink.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tsymlink.name);
 		buf_get_str(bufp, &fc->u.tsymlink.symtgt);
 		fc->u.tsymlink.gid = buf_get_int32(bufp);
 		break;
-	case P9_RSYMLINK:
+	case Rsymlink:
 		buf_get_qid(bufp, &fc->u.rsymlink.qid);
 		break;
-	case P9_TMKNOD:
+	case Tmknod:
 		fc->u.tmknod.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tmknod.name);
 		fc->u.tmknod.mode = buf_get_int32(bufp);
@@ -1511,27 +1510,27 @@ np_deserialize(Npfcall *fc)
 		fc->u.tmknod.minor = buf_get_int32(bufp);
 		fc->u.tmknod.gid = buf_get_int32(bufp);
 		break;
-	case P9_RMKNOD:
+	case Rmknod:
 		buf_get_qid(bufp, &fc->u.rmknod.qid);
 		break;
-	case P9_TRENAME:
+	case Trename:
 		fc->u.trename.fid = buf_get_int32(bufp);
 		fc->u.trename.dfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.trename.name);
 		break;
-	case P9_RRENAME:
+	case Rrename:
 		break;
-	case P9_TREADLINK:
+	case Treadlink:
 		fc->u.treadlink.fid = buf_get_int32(bufp);
 		break;
-	case P9_RREADLINK:
+	case Rreadlink:
 		buf_get_str(bufp, &fc->u.rreadlink.target);
 		break;
-	case P9_TGETATTR:
+	case Tgetattr:
 		fc->u.tgetattr.fid = buf_get_int32(bufp);
 		fc->u.tgetattr.request_mask = buf_get_int64(bufp);
 		break;
-	case P9_RGETATTR:
+	case Rgetattr:
 		fc->u.rgetattr.valid = buf_get_int64(bufp);
 		buf_get_qid(bufp, &fc->u.rgetattr.qid);
 		fc->u.rgetattr.mode = buf_get_int32(bufp);
@@ -1553,7 +1552,7 @@ np_deserialize(Npfcall *fc)
 		fc->u.rgetattr.gen = buf_get_int64(bufp);
 		fc->u.rgetattr.data_version = buf_get_int64(bufp);
 		break;
-	case P9_TSETATTR:
+	case Tsetattr:
 		fc->u.tsetattr.fid = buf_get_int32(bufp);
 		fc->u.tsetattr.valid = buf_get_int32(bufp);
 		fc->u.tsetattr.mode = buf_get_int32(bufp);
@@ -1565,40 +1564,40 @@ np_deserialize(Npfcall *fc)
 		fc->u.tsetattr.mtime_sec = buf_get_int64(bufp);
 		fc->u.tsetattr.mtime_nsec = buf_get_int64(bufp);
 		break;
-	case P9_RSETATTR:
+	case Rsetattr:
 		break;
-	case P9_TXATTRWALK:
+	case Txattrwalk:
 		fc->u.txattrwalk.fid = buf_get_int32(bufp);
 		fc->u.txattrwalk.attrfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.txattrwalk.name);
 		break;
-	case P9_RXATTRWALK:
+	case Rxattrwalk:
 		fc->u.rxattrwalk.size = buf_get_int64(bufp);
 		break;
-	case P9_TXATTRCREATE:
+	case Txattrcreate:
 		fc->u.txattrcreate.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.txattrcreate.name);
 		fc->u.txattrcreate.size = buf_get_int64(bufp);
 		fc->u.txattrcreate.flag = buf_get_int32(bufp);
 		break;
-	case P9_RXATTRCREATE:
+	case Rxattrcreate:
 		break;
-	case P9_TREADDIR:
+	case Treaddir:
 		fc->u.treaddir.fid = buf_get_int32(bufp);
 		fc->u.treaddir.offset = buf_get_int64(bufp);
 		fc->u.treaddir.count = buf_get_int32(bufp);
 		break;
-	case P9_RREADDIR:
+	case Rreaddir:
 		fc->u.rreaddir.count = buf_get_int32(bufp);
                 fc->u.rreaddir.data = buf_alloc(bufp, fc->u.rreaddir.count);
 		break;
-	case P9_TFSYNC:
+	case Tfsync:
 		fc->u.tfsync.fid = buf_get_int32(bufp);
 		fc->u.tfsync.datasync = buf_get_int32(bufp);
 		break;
-	case P9_RFSYNC:
+	case Rfsync:
 		break;
-	case P9_TLOCK:
+	case Tlock:
 		fc->u.tlock.fid = buf_get_int32(bufp);
 		fc->u.tlock.type = buf_get_int8(bufp);
 		fc->u.tlock.flags = buf_get_int32(bufp);
@@ -1607,10 +1606,10 @@ np_deserialize(Npfcall *fc)
 		fc->u.tlock.proc_id = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tlock.client_id);
 		break;
-	case P9_RLOCK:
+	case Rlock:
 		fc->u.rlock.status = buf_get_int8(bufp);
 		break;
-	case P9_TGETLOCK:
+	case Tgetlock:
 		fc->u.tgetlock.fid = buf_get_int32(bufp);
 		fc->u.tgetlock.type = buf_get_int8(bufp);
 		fc->u.tgetlock.start = buf_get_int64(bufp);
@@ -1618,43 +1617,43 @@ np_deserialize(Npfcall *fc)
 		fc->u.tgetlock.proc_id = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tgetlock.client_id);
 		break;
-	case P9_RGETLOCK:
+	case Rgetlock:
 		fc->u.rgetlock.type = buf_get_int8(bufp);
 		fc->u.rgetlock.start = buf_get_int64(bufp);
 		fc->u.rgetlock.length = buf_get_int64(bufp);
 		fc->u.rgetlock.proc_id = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.rgetlock.client_id);
 		break;
-	case P9_TLINK:
+	case Tlink:
 		fc->u.tlink.dfid = buf_get_int32(bufp);
 		fc->u.tlink.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tlink.name);
 		break;
-	case P9_RLINK:
+	case Rlink:
 		break;
-	case P9_TMKDIR:
+	case Tmkdir:
 		fc->u.tmkdir.fid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tmkdir.name);
 		fc->u.tmkdir.mode = buf_get_int32(bufp);
 		fc->u.tmkdir.gid = buf_get_int32(bufp);
 		break;
-	case P9_RMKDIR:
+	case Rmkdir:
 		buf_get_qid(bufp, &fc->u.rmkdir.qid);
 		break;
-	case P9_TRENAMEAT:
+	case Trenameat:
 		fc->u.trenameat.olddirfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.trenameat.oldname);
 		fc->u.trenameat.newdirfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.trenameat.newname);
 		break;
-	case P9_RRENAMEAT:
+	case Rrenameat:
 		break;
-	case P9_TUNLINKAT:
+	case Tunlinkat:
 		fc->u.tunlinkat.dirfid = buf_get_int32(bufp);
 		buf_get_str(bufp, &fc->u.tunlinkat.name);
 		fc->u.tunlinkat.flags = buf_get_int32(bufp);
 		break;
-	case P9_RUNLINKAT:
+	case Runlinkat:
 		break;
 	}
 
@@ -1698,7 +1697,7 @@ np_deserialize_p9dirent(Npqid *qid, u64 *offset, u8 *type,
 {
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
-	struct p9_str s9;
+	Npstr s9;
 
 	buf_init(bufp, buf, buflen);
 	buf_get_qid(bufp, qid);

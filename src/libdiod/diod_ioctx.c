@@ -31,7 +31,6 @@
 #include <utime.h>
 #include <stdarg.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/liblsd/list.h"
 #include "src/liblsd/hash.h"
@@ -225,7 +224,7 @@ ioctx_open (Npfid *fid, u32 flags, u32 mode)
     xpthread_mutex_lock (&f->path->lock);
     if ((f->flags & DIOD_FID_FLAGS_SHAREFD) && (flags & 3) == O_RDONLY) {
         for (ip = f->path->ioctx; ip != NULL; ip = ip->next) {
-            if (ip->qid.type != P9_QTFILE)
+            if (ip->qid.type != Qtfile)
                 continue;
             if (ip->open_flags != flags)
                 continue;

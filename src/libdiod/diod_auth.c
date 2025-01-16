@@ -44,7 +44,6 @@
 #include <munge.h>
 #endif
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 
@@ -144,7 +143,7 @@ startauth(Npfid *afid, char *aname, Npqid *aqid)
     if (!(afid->aux = _da_create ()))
         goto done;
     aqid->path = 0;
-    aqid->type = P9_QTAUTH;
+    aqid->type = Qtauth;
     aqid->version = 0;
     ret = 1;
 done:

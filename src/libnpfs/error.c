@@ -18,7 +18,6 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <pthread.h>
-#include "9p.h"
 #include "npfs.h"
 
 static pthread_key_t error_key;

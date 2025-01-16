@@ -24,7 +24,6 @@
 #include <sys/types.h>
 #include <inttypes.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"
@@ -414,60 +413,60 @@ np_preprocess_request(Npreq *req)
 	Npconn *conn = req->conn;
 
 	switch (tc->type) {
-		case P9_TSTATFS:
+		case Tstatfs:
 			req->fid = np_fid_find (conn, tc->u.tstatfs.fid);
 			break;
-		case P9_TLOPEN:
+		case Tlopen:
 			req->fid = np_fid_find (conn, tc->u.tlopen.fid);
 			break;
-		case P9_TLCREATE:
+		case Tlcreate:
 			req->fid = np_fid_find (conn, tc->u.tlcreate.fid);
 			break;
-		case P9_TSYMLINK:
+		case Tsymlink:
 			req->fid = np_fid_find (conn, tc->u.tsymlink.fid);
 			break;
-		case P9_TMKNOD:
+		case Tmknod:
 			req->fid = np_fid_find (conn, tc->u.tmknod.fid);
 			break;
-		case P9_TRENAME:
+		case Trename:
 			req->fid = np_fid_find (conn, tc->u.trename.fid);
 			break;
-		case P9_TREADLINK:
+		case Treadlink:
 			req->fid = np_fid_find (conn, tc->u.treadlink.fid);
 			break;
-		case P9_TGETATTR:
+		case Tgetattr:
 			req->fid = np_fid_find (conn, tc->u.tgetattr.fid);
 			break;
-		case P9_TSETATTR:
+		case Tsetattr:
 			req->fid = np_fid_find (conn, tc->u.tsetattr.fid);
 			break;
-		case P9_TXATTRWALK:
+		case Txattrwalk:
 			req->fid = np_fid_find (conn, tc->u.txattrwalk.fid);
 			break;
-		case P9_TXATTRCREATE:
+		case Txattrcreate:
 			req->fid = np_fid_find (conn, tc->u.txattrcreate.fid);
 			break;
-		case P9_TREADDIR:
+		case Treaddir:
 			req->fid = np_fid_find (conn, tc->u.treaddir.fid);
 			break;
-		case P9_TFSYNC:
+		case Tfsync:
 			req->fid = np_fid_find (conn, tc->u.tfsync.fid);
 			break;
-		case P9_TLOCK:
+		case Tlock:
 			req->fid = np_fid_find (conn, tc->u.tlock.fid);
 			break;
-		case P9_TGETLOCK:
+		case Tgetlock:
 			req->fid = np_fid_find (conn, tc->u.tgetlock.fid);
 			break;
-		case P9_TLINK:
+		case Tlink:
 			req->fid = np_fid_find (conn, tc->u.tlink.dfid);
 			break;
-		case P9_TMKDIR:
+		case Tmkdir:
 			req->fid = np_fid_find (conn, tc->u.tmkdir.fid);
 			break;
-		case P9_TVERSION:
+		case Tversion:
 			break;
-		case P9_TAUTH:
+		case Tauth:
 			req->fid = np_fid_create (conn, tc->u.tauth.afid);
 			if (!req->fid)
 				break;
@@ -479,7 +478,7 @@ np_preprocess_request(Npreq *req)
 			 * without risk of deadlock.
 			 */
 			break;
-		case P9_TATTACH:
+		case Tattach:
 			req->fid = np_fid_create (conn, tc->u.tattach.fid);
 			if (!req->fid)
 				break;
@@ -491,28 +490,28 @@ np_preprocess_request(Npreq *req)
 			 */
 			np_tpool_select (req);
 			break;
-		case P9_TFLUSH:
+		case Tflush:
 			break;
-		case P9_TWALK:
+		case Twalk:
 			req->fid = np_fid_find (conn, tc->u.twalk.fid);
 			break;
-		case P9_TREAD:
+		case Tread:
 			req->fid = np_fid_find (conn, tc->u.tread.fid);
 			break;
-		case P9_TWRITE:
+		case Twrite:
 			req->fid = np_fid_find (conn, tc->u.twrite.fid);
 			break;
-		case P9_TCLUNK:
+		case Tclunk:
 			req->fid = np_fid_find (conn, tc->u.tclunk.fid);
 			break;
-		case P9_TREMOVE:
+		case Tremove:
 			req->fid = np_fid_find (conn, tc->u.tremove.fid);
 			break;
-		case P9_TRENAMEAT:
+		case Trenameat:
 			req->fid = np_fid_find (conn,
 						tc->u.trenameat.olddirfid);
 			break;
-		case P9_TUNLINKAT:
+		case Tunlinkat:
 			req->fid = np_fid_find (conn, tc->u.tunlinkat.dirfid);
 			break;
 		default:
@@ -552,92 +551,92 @@ np_process_request(Npreq *req, Nptpool *tp)
 
 	np_uerror(0);
 	switch (tc->type) {
-		case P9_TSTATFS:
+		case Tstatfs:
 			rc = np_statfs(req, tc);
 			break;
-		case P9_TLOPEN:
+		case Tlopen:
 			rc = np_lopen(req, tc);
 			break;
-		case P9_TLCREATE:
+		case Tlcreate:
 			rc = np_lcreate(req, tc);
 			break;
-		case P9_TSYMLINK:
+		case Tsymlink:
 			rc = np_symlink(req, tc);
 			break;
-		case P9_TMKNOD:
+		case Tmknod:
 			rc = np_mknod(req, tc);
 			break;
-		case P9_TRENAME:
+		case Trename:
 			rc = np_rename(req, tc);
 			break;
-		case P9_TREADLINK:
+		case Treadlink:
 			rc = np_readlink(req, tc);
 			break;
-		case P9_TGETATTR:
+		case Tgetattr:
 			rc = np_getattr(req, tc);
 			break;
-		case P9_TSETATTR:
+		case Tsetattr:
 			rc = np_setattr(req, tc);
 			break;
-		case P9_TXATTRWALK:
+		case Txattrwalk:
 			rc = np_xattrwalk(req, tc);
 			break;
-		case P9_TXATTRCREATE:
+		case Txattrcreate:
 			rc = np_xattrcreate(req, tc);
 			break;
-		case P9_TREADDIR:
+		case Treaddir:
 			rc = np_readdir(req, tc);
 			break;
-		case P9_TFSYNC:
+		case Tfsync:
 			rc = np_fsync(req, tc);
 			break;
-		case P9_TLOCK:
+		case Tlock:
 			rc = np_lock(req, tc);
 			break;
-		case P9_TGETLOCK:
+		case Tgetlock:
 			rc = np_getlock(req, tc);
 			break;
-		case P9_TLINK:
+		case Tlink:
 			rc = np_link(req, tc);
 			break;
-		case P9_TMKDIR:
+		case Tmkdir:
 			rc = np_mkdir(req, tc);
 			break;
-		case P9_TRENAMEAT:
+		case Trenameat:
 			rc = np_renameat (req, tc);
 			break;
-		case P9_TUNLINKAT:
+		case Tunlinkat:
 			rc = np_unlinkat (req, tc);
 			break;
-		case P9_TVERSION:
+		case Tversion:
 			rc = np_version(req, tc);
 			break;
-		case P9_TAUTH:
+		case Tauth:
 			rc = np_auth(req, tc);
 			break;
-		case P9_TATTACH:
+		case Tattach:
 			rc = np_attach(req, tc);
 			break;
-		case P9_TFLUSH:
+		case Tflush:
 			NP_ASSERT (0); /* handled in receive path */
 			break;
-		case P9_TWALK:
+		case Twalk:
 			rc = np_walk(req, tc);
 			break;
-		case P9_TREAD:
+		case Tread:
 			rc = np_read(req, tc);
 			if (rc)
 				rbytes = rc->u.rread.count;
 			break;
-		case P9_TWRITE:
+		case Twrite:
 			rc = np_write(req, tc);
 			if (rc)
 				wbytes = rc->u.rwrite.count;
 			break;
-		case P9_TCLUNK:
+		case Tclunk:
 			rc = np_clunk(req, tc);
 			break;
-		case P9_TREMOVE:
+		case Tremove:
 			rc = np_remove(req, tc);
 			break;
 		default:
@@ -674,11 +673,11 @@ np_postprocess_request(Npreq *req, Npfcall *rc)
 	 */
 	if (ecode == EINTR) {
 		switch (tc->type) {
-			case P9_TCLUNK:
-			case P9_TREMOVE:
+			case Tclunk:
+			case Tremove:
 				req->fid = NULL; /* avoid final decrement */
 				break;
-			case P9_TWALK: {
+			case Twalk: {
 				u32 ofid = tc->u.twalk.fid;
 				u32 nfid = tc->u.twalk.newfid;
 

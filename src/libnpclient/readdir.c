@@ -28,7 +28,6 @@
 #include <libgen.h>
 #include <sys/param.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -69,7 +68,7 @@ npc_opendir (Npcfid *root, char *path)
 			np_uerror (ENOTDIR);
 			goto error;
 		}
-		fid->buf_size = root->fsys->msize - P9_IOHDRSZ;
+		fid->buf_size = root->fsys->msize - IOHDRSZ;
 		if (!(fid->buf = malloc (fid->buf_size))) {
 			(void)npc_clunk (fid);
 			np_uerror (ENOMEM);

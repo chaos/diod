@@ -71,7 +71,7 @@ test_rlerror (void)
 
     fc = np_create_rlerror (42);
     ok (fc != NULL, "Rlerror encode ecode=42 works");
-    fc2 = _rcv_buf (fc, P9_RLERROR);
+    fc2 = _rcv_buf (fc, Rlerror);
     ok (fc2 != NULL && fc->u.rlerror.ecode == fc2->u.rlerror.ecode,
         "Rlerror decode works");
     free (fc);
@@ -79,7 +79,7 @@ test_rlerror (void)
 
     fc = np_create_rlerror_static (42, buf, sizeof(buf));
     ok (fc != NULL, "Rlerror encode (static) ecode=42 works");
-    fc2 = _rcv_buf (fc, P9_RLERROR);
+    fc2 = _rcv_buf (fc, Rlerror);
     ok (fc2 != NULL && fc->u.rlerror.ecode == fc2->u.rlerror.ecode,
         "Rlerror decode (from static) works");
     // fc is static memory
@@ -92,7 +92,7 @@ static void test_statfs (void)
 
     fc = np_create_tstatfs (42);
     ok (fc != NULL, "Tstatfs encode fid=42 works");
-    fc2 = _rcv_buf (fc, P9_TSTATFS);
+    fc2 = _rcv_buf (fc, Tstatfs);
     ok (fc2 != NULL && fc->u.tstatfs.fid == fc2->u.tstatfs.fid,
         "Tstatfs decode works");
     free (fc);
@@ -100,7 +100,7 @@ static void test_statfs (void)
 
     fc = np_create_rstatfs (1, 2, 3, 4, 5, 6, 7, 8, 9);
     ok (fc != NULL, "Rstatfs type=1 bsize=2 blocks=3 bfree=4 bavail=5... works");
-    fc2 = _rcv_buf (fc, P9_RSTATFS);
+    fc2 = _rcv_buf (fc, Rstatfs);
     ok (fc2 != NULL
         && fc->u.rstatfs.type == fc2->u.rstatfs.type
         && fc->u.rstatfs.bsize == fc2->u.rstatfs.bsize
@@ -119,11 +119,11 @@ static void test_statfs (void)
 static void test_lopen (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tlopen (1, 2);
     ok (fc != NULL, "Tlopen encode fid=1 flags=2 works");
-    fc2 = _rcv_buf (fc, P9_TLOPEN);
+    fc2 = _rcv_buf (fc, Tlopen);
     ok (fc2 != NULL
         && fc->u.tlopen.fid == fc2->u.tlopen.fid
         && fc->u.tlopen.flags == fc2->u.tlopen.flags,
@@ -134,7 +134,7 @@ static void test_lopen (void)
     fc = np_create_rlopen (&qid, 2);
     ok (fc != NULL,
         "Rlopen encode qid.type=1 qid.version=2 qid.path=3 iounit=2 works");
-    fc2 = _rcv_buf (fc, P9_RLOPEN);
+    fc2 = _rcv_buf (fc, Rlopen);
     ok (fc2 != NULL
         && fc->u.rlopen.qid.type == fc2->u.rlopen.qid.type
         && fc->u.rlopen.qid.version == fc2->u.rlopen.qid.version
@@ -148,11 +148,11 @@ static void test_lopen (void)
 static void test_lcreate (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tlcreate (1, "xyz", 3, 4, 5);
     ok (fc != NULL, "Tlcreate encode fid=1 name=xyz flags=3 mode=4 gid=5 works");
-    fc2 = _rcv_buf (fc, P9_TLCREATE);
+    fc2 = _rcv_buf (fc, Tlcreate);
     ok (fc2 != NULL
         && fc->u.tlcreate.fid == fc2->u.tlcreate.fid
         && np_str9cmp (&fc->u.tlcreate.name, &fc2->u.tlcreate.name) == 0
@@ -165,7 +165,7 @@ static void test_lcreate (void)
 
     fc = np_create_rlcreate (&qid, 2);
     ok (fc != NULL, "Rlcreate encode qid.type=1 qid.version=2 qid.path=3 works");
-    fc2 = _rcv_buf (fc, P9_RLCREATE);
+    fc2 = _rcv_buf (fc, Rlcreate);
     ok (fc2 != NULL
         && fc->u.rlcreate.qid.type == fc2->u.rlcreate.qid.type
         && fc->u.rlcreate.qid.version == fc2->u.rlcreate.qid.version
@@ -179,11 +179,11 @@ static void test_lcreate (void)
 static void test_symlink (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tsymlink (1, "xyz", "abc", 4);
     ok (fc != NULL, "Tsymlink encode fid=1 name=xyz symtgt=abc gid=4 works");
-    fc2 = _rcv_buf (fc, P9_TSYMLINK);
+    fc2 = _rcv_buf (fc, Tsymlink);
     ok (fc2 != NULL
         && fc->u.tsymlink.fid == fc2->u.tsymlink.fid
         && np_str9cmp (&fc->u.tsymlink.name, &fc2->u.tsymlink.name) == 0
@@ -195,7 +195,7 @@ static void test_symlink (void)
 
     fc = np_create_rsymlink (&qid);
     ok (fc != NULL, "Rsymlink encode qid.type=1 qid.version=2 qid.path=3 works");
-    fc2 = _rcv_buf (fc, P9_RSYMLINK);
+    fc2 = _rcv_buf (fc, Rsymlink);
     ok (fc2 != NULL
         && fc->u.rsymlink.qid.type == fc2->u.rsymlink.qid.type
         && fc->u.rsymlink.qid.version == fc2->u.rsymlink.qid.version
@@ -208,12 +208,12 @@ static void test_symlink (void)
 static void test_mknod (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tmknod (1, "xyz", 3, 4, 5, 6);
     ok (fc != NULL,
         "Tmknod encode fid=1 name=xyz mode=3 major=4 minor=5 gid=6 works");
-    fc2 = _rcv_buf (fc, P9_TMKNOD);
+    fc2 = _rcv_buf (fc, Tmknod);
     ok (fc2 != NULL
         && fc->u.tmknod.fid == fc2->u.tmknod.fid
         && np_str9cmp (&fc->u.tmknod.name, &fc2->u.tmknod.name) == 0
@@ -227,7 +227,7 @@ static void test_mknod (void)
 
     fc = np_create_rmknod (&qid);
     ok (fc != NULL, "Rmknod encode qid.type=1 qid.version=2 qid.path=3 works");
-    fc2 = _rcv_buf (fc, P9_RMKNOD);
+    fc2 = _rcv_buf (fc, Rmknod);
     ok (fc2 != NULL
         && fc->u.rmknod.qid.type == fc2->u.rmknod.qid.type
         && fc->u.rmknod.qid.version == fc2->u.rmknod.qid.version
@@ -243,7 +243,7 @@ static void test_rename (void)
 
     fc = np_create_trename (1, 2, "xyz");
     ok (fc != NULL, "Trename encode fid=1 dfid=2 name=xyz works");
-    fc2 = _rcv_buf (fc, P9_TRENAME);
+    fc2 = _rcv_buf (fc, Trename);
     ok (fc2 != NULL
         && fc->u.trename.fid == fc2->u.trename.fid
         && fc->u.trename.dfid == fc2->u.trename.dfid
@@ -254,7 +254,7 @@ static void test_rename (void)
 
     fc = np_create_rrename ();
     ok (fc != NULL, "Rrename encode works");
-    fc2 = _rcv_buf (fc, P9_RRENAME);
+    fc2 = _rcv_buf (fc, Rrename);
     ok (fc2 != NULL, "Rrename decode works");
     free (fc);
     free (fc2);
@@ -266,7 +266,7 @@ static void test_readlink (void)
 
     fc = np_create_treadlink (1);
     ok (fc != NULL, "Treadlink encode fid=1 works");
-    fc2 = _rcv_buf (fc, P9_TREADLINK);
+    fc2 = _rcv_buf (fc, Treadlink);
     ok (fc2 != NULL && fc->u.treadlink.fid == fc2->u.treadlink.fid,
         "Treadlink decode works");
     free (fc);
@@ -274,7 +274,7 @@ static void test_readlink (void)
 
     fc = np_create_rreadlink ("xyz");
     ok (fc != NULL, "Rreadlink encode target=xyz works");
-    fc2 = _rcv_buf (fc, P9_RREADLINK);
+    fc2 = _rcv_buf (fc, Rreadlink);
     ok (fc2 != NULL
         && np_str9cmp (&fc->u.rreadlink.target, &fc2->u.rreadlink.target) == 0,
         "Rreadlink decode works");
@@ -285,11 +285,11 @@ static void test_readlink (void)
 static void test_getattr (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tgetattr (42, 5000);
     ok (fc != NULL, "Tgetattr encode fid=42 request_mask=5000 works");
-    fc2 = _rcv_buf (fc, P9_TGETATTR);
+    fc2 = _rcv_buf (fc, Tgetattr);
     ok (fc2 != NULL
         && fc->u.tgetattr.fid == fc2->u.tgetattr.fid
         && fc->u.tgetattr.request_mask == fc2->u.tgetattr.request_mask,
@@ -301,7 +301,7 @@ static void test_getattr (void)
                              12, 13, 14, 15, 16, 17, 18, 19, 20, 21);
     ok (fc != NULL,
         "Rgetattr encode valid=1 qid.type=1 qid.version=2 qid.path=3... works");
-    fc2 = _rcv_buf (fc, P9_RGETATTR);
+    fc2 = _rcv_buf (fc, Rgetattr);
     ok (fc2 != NULL
         && fc->u.rgetattr.valid == fc2->u.rgetattr.valid
         && fc->u.rgetattr.qid.type == fc2->u.rgetattr.qid.type
@@ -337,7 +337,7 @@ static void test_setattr (void)
     fc = np_create_tsetattr (1,2,3,4,5,6,7,8,9,10);
     ok (fc != NULL,
         "Tsetattr encode fid=1 valid=2 mode=3 uid=4 gid=5 size=6... works");
-    fc2 = _rcv_buf (fc, P9_TSETATTR);
+    fc2 = _rcv_buf (fc, Tsetattr);
     ok (fc2 != NULL
         && fc->u.tsetattr.fid == fc2->u.tsetattr.fid
         && fc->u.tsetattr.valid == fc2->u.tsetattr.valid
@@ -355,7 +355,7 @@ static void test_setattr (void)
 
     fc = np_create_rsetattr ();
     ok (fc != NULL, "Rsetattr encode works");
-    fc2 = _rcv_buf (fc, P9_RSETATTR);
+    fc2 = _rcv_buf (fc, Rsetattr);
     ok (fc2 != NULL, "Rsetattr decode works");
     free (fc);
     free (fc2);
@@ -367,7 +367,7 @@ static void test_xattrwalk (void)
 
     fc = np_create_txattrwalk(1, 2, "abc");
     ok (fc != NULL, "Txattrwalk encode fid=1 newfid=2 name=abc works");
-    fc2 = _rcv_buf (fc, P9_TXATTRWALK);
+    fc2 = _rcv_buf (fc, Txattrwalk);
     ok (fc2 != NULL
         && fc->u.txattrwalk.fid == fc2->u.txattrwalk.fid
         && fc->u.txattrwalk.attrfid == fc2->u.txattrwalk.attrfid
@@ -378,7 +378,7 @@ static void test_xattrwalk (void)
 
     fc = np_create_rxattrwalk(1);
     ok (fc != NULL, "Rxattrwalk encode size=1 works");
-    fc2 = _rcv_buf (fc, P9_RXATTRWALK);
+    fc2 = _rcv_buf (fc, Rxattrwalk);
     ok (fc2 != NULL && fc->u.rxattrwalk.size == fc2->u.rxattrwalk.size,
         "Rxattrwalk decode works");
     free (fc);
@@ -392,7 +392,7 @@ static void test_xattrcreate (void)
     fc = np_create_txattrcreate(1, "abc", 3, 4);
     ok (fc != NULL,
         "Txattrcreate encode fid=1 name=abc attr_size=3 flags=4 works");
-    fc2 = _rcv_buf (fc, P9_TXATTRCREATE);
+    fc2 = _rcv_buf (fc, Txattrcreate);
     ok (fc2 != NULL
         && fc->u.txattrcreate.fid == fc2->u.txattrcreate.fid
         && np_str9cmp (&fc->u.txattrcreate.name, &fc2->u.txattrcreate.name) == 0
@@ -404,7 +404,7 @@ static void test_xattrcreate (void)
 
     fc = np_create_rxattrcreate();
     ok (fc != NULL, "Rxattrcreate encode works");
-    fc2 = _rcv_buf (fc, P9_RXATTRCREATE);
+    fc2 = _rcv_buf (fc, Rxattrcreate);
     ok (fc2 != NULL, "Rxattrcreate decode works");
     free (fc);
     free (fc2);
@@ -414,14 +414,14 @@ static void test_readdir (void)
 {
     Npfcall *fc, *fc2;
     int n = 0, len = 256;
-    struct p9_qid qid[3] = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } }, qid2[3];
+    Npqid qid[3] = { { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 } }, qid2[3];
     char *name[3] = { "abc", "def", "ghi" }, name2[3][128];
     u64 offset;
     u8 type;
 
     fc = np_create_treaddir(1, 2, 3);
     ok (fc != NULL, "Treaddir encode fid=1 offset=2 count=3 works");
-    fc2 = _rcv_buf (fc, P9_TREADDIR);
+    fc2 = _rcv_buf (fc, Treaddir);
     ok (fc2 != NULL
         && fc->u.treaddir.fid == fc2->u.treaddir.fid
         && fc->u.treaddir.offset == fc2->u.treaddir.offset
@@ -441,7 +441,7 @@ static void test_readdir (void)
                                 fc->u.rreaddir.data + n, len - n);
     ok (n < len, "Rreaddir encode three dirents didn't overflow");
     np_finalize_rreaddir (fc, n);
-    fc2 = _rcv_buf (fc, P9_RREADDIR);
+    fc2 = _rcv_buf (fc, Rreaddir);
     ok (fc2 != NULL && fc->u.rreaddir.count == fc2->u.rreaddir.count,
         "Rreaddir decode works");
     n = 0;
@@ -468,7 +468,7 @@ static void test_fsync (void)
 
     fc = np_create_tfsync(1, 42);
     ok (fc != NULL, "Tfsync encode datasync=42 works");
-    fc2 = _rcv_buf (fc, P9_TFSYNC);
+    fc2 = _rcv_buf (fc, Tfsync);
     ok (fc2 != NULL
         && fc->u.tfsync.fid == fc2->u.tfsync.fid
         && fc->u.tfsync.datasync == fc2->u.tfsync.datasync,
@@ -478,7 +478,7 @@ static void test_fsync (void)
 
     fc = np_create_rfsync();
     ok (fc != NULL, "Rfsync encode works");
-    fc2 = _rcv_buf (fc, P9_RFSYNC);
+    fc2 = _rcv_buf (fc, Rfsync);
     ok (fc2 != NULL, "Rfsync decode works");
 
     free (fc);
@@ -489,11 +489,11 @@ static void test_lock (void)
 {
     Npfcall *fc, *fc2;
 
-    fc = np_create_tlock (1, P9_LOCK_TYPE_UNLCK, 3, 4, 5, 6, "xyz");
+    fc = np_create_tlock (1, Lunlck, 3, 4, 5, 6, "xyz");
     ok (fc != NULL,
-        "Tlock encode fid=1 type=UNLCK flags=3 start=4 length=5 proc_id=6"
+        "Tlock encode fid=1 type=Lunlck flags=3 start=4 length=5 proc_id=6"
         " client_id=xyz works");
-    fc2 = _rcv_buf (fc, P9_TLOCK);
+    fc2 = _rcv_buf (fc, Tlock);
     ok (fc2 != NULL
         && fc->u.tlock.fid == fc2->u.tlock.fid
         && fc->u.tlock.type == fc2->u.tlock.type
@@ -507,7 +507,7 @@ static void test_lock (void)
 
     fc = np_create_rlock (1);
     ok (fc != NULL, "Rlock encode status=1 works");
-    fc2 = _rcv_buf (fc, P9_RLOCK);
+    fc2 = _rcv_buf (fc, Rlock);
     ok (fc2 != NULL && fc->u.rlock.status == fc2->u.rlock.status,
         "Rlock decode works");
     free (fc);
@@ -518,11 +518,11 @@ static void test_getlock (void)
 {
     Npfcall *fc, *fc2;
 
-    fc = np_create_tgetlock (1, P9_LOCK_TYPE_UNLCK, 3, 4, 5, "xyz");
+    fc = np_create_tgetlock (1, Lunlck, 3, 4, 5, "xyz");
     ok (fc != NULL,
-        "Tgetlock encode fid=1 type=UNLCK start=3 length=4 proc_id=5"
+        "Tgetlock encode fid=1 type=Lunlck start=3 length=4 proc_id=5"
         " client_id=xyz works");
-    fc2 = _rcv_buf (fc, P9_TGETLOCK);
+    fc2 = _rcv_buf (fc, Tgetlock);
     ok (fc2 != NULL
         && fc->u.tgetlock.fid == fc2->u.tgetlock.fid
         && fc->u.tgetlock.type == fc2->u.tgetlock.type
@@ -534,11 +534,11 @@ static void test_getlock (void)
     free (fc);
     free (fc2);
 
-    fc = np_create_rgetlock (P9_LOCK_TYPE_WRLCK, 2, 3, 4, "xyz");
+    fc = np_create_rgetlock (Lwrlck, 2, 3, 4, "xyz");
     ok (fc != NULL,
-        "Rgetlock encode type=WRLCK start=2 length=3 proc_id=4 client_id=xyz"
+        "Rgetlock encode type=Lwrlck start=2 length=3 proc_id=4 client_id=xyz"
         " works");
-    fc2 = _rcv_buf (fc, P9_RGETLOCK);
+    fc2 = _rcv_buf (fc, Rgetlock);
     ok (fc2 != NULL
         && fc->u.rgetlock.type == fc2->u.rgetlock.type
         && fc->u.rgetlock.start == fc2->u.rgetlock.start
@@ -556,7 +556,7 @@ static void test_link (void)
 
     fc = np_create_tlink (1, 2, "xyz");
     ok (fc != NULL, "Tlink encode dfid=1 fid=2 name=xyz works");
-    fc2 = _rcv_buf (fc, P9_TLINK);
+    fc2 = _rcv_buf (fc, Tlink);
     ok (fc2 != NULL
         && fc->u.tlink.dfid == fc2->u.tlink.dfid
         && fc->u.tlink.fid == fc2->u.tlink.fid
@@ -567,7 +567,7 @@ static void test_link (void)
 
     fc = np_create_rlink ();
     ok (fc != NULL, "Rlink encode works");
-    fc2 = _rcv_buf (fc, P9_RLINK);
+    fc2 = _rcv_buf (fc, Rlink);
     ok (fc2 != NULL, "Rlink decodeworks");
     free (fc);
     free (fc2);
@@ -576,11 +576,11 @@ static void test_link (void)
 static void test_mkdir (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tmkdir (1, "abc", 2, 3);
     ok (fc != NULL, "Tmkdir encode dfid=1 name=abc mode=2 gid=3 works");
-    fc2 = _rcv_buf (fc, P9_TMKDIR);
+    fc2 = _rcv_buf (fc, Tmkdir);
     ok (fc2 != NULL
         && fc->u.tmkdir.fid == fc2->u.tmkdir.fid
         && np_str9cmp (&fc->u.tmkdir.name, &fc2->u.tmkdir.name) == 0
@@ -592,7 +592,7 @@ static void test_mkdir (void)
 
     fc = np_create_rmkdir (&qid);
     ok (fc != NULL, "Rmkdir encode qid.type=1 qid.version=2 qid.path=3 works");
-    fc2 = _rcv_buf (fc, P9_RMKDIR);
+    fc2 = _rcv_buf (fc, Rmkdir);
     ok (fc2 != NULL
         && fc->u.rmkdir.qid.type == fc2->u.rmkdir.qid.type
         && fc->u.rmkdir.qid.version == fc2->u.rmkdir.qid.version
@@ -609,7 +609,7 @@ static void test_renameat (void)
     fc = np_create_trenameat (1, "abc", 2, "zyx");
     ok (fc != NULL,
         "Trenameat encode olddirfd=1 oldname=abc newdirfd=2 newname=zyx works");
-    fc2 = _rcv_buf (fc, P9_TRENAMEAT);
+    fc2 = _rcv_buf (fc, Trenameat);
     ok (fc2 != NULL
         && fc->u.trenameat.olddirfid == fc2->u.trenameat.olddirfid
         && np_str9cmp (&fc->u.trenameat.oldname, &fc2->u.trenameat.oldname) == 0
@@ -621,7 +621,7 @@ static void test_renameat (void)
 
     fc = np_create_rrenameat ();
     ok (fc != NULL, "Rrenameat encode works");
-    fc2 = _rcv_buf (fc, P9_RRENAMEAT);
+    fc2 = _rcv_buf (fc, Rrenameat);
     ok (fc2 != NULL, "Rrenameat decode works");
     free (fc);
     free (fc2);
@@ -633,7 +633,7 @@ static void test_unlinkat (void)
 
     fc = np_create_tunlinkat(1, "abc", 2);
     ok (fc != NULL, "Tunlinkat encode dirfd=1 name=abc flags=2 works");
-    fc2 = _rcv_buf (fc, P9_TUNLINKAT);
+    fc2 = _rcv_buf (fc, Tunlinkat);
     ok (fc2 != NULL
         && fc->u.tunlinkat.dirfid == fc2->u.tunlinkat.dirfid
         && np_str9cmp (&fc->u.tunlinkat.name, &fc2->u.tunlinkat.name) == 0
@@ -644,7 +644,7 @@ static void test_unlinkat (void)
 
     fc = np_create_runlinkat ();
     ok (fc != NULL, "Runlinkat encode works");
-    fc2 = _rcv_buf (fc, P9_RUNLINKAT);
+    fc2 = _rcv_buf (fc, Runlinkat);
     ok (fc2 != NULL, "Runlinkat works");
 
     free (fc);
@@ -657,7 +657,7 @@ static void test_version (void)
 
     fc = np_create_tversion (TEST_MSIZE, "9p2000.L");
     ok (fc != NULL, "Tversion encode msize=%d version=9p2000.L works", TEST_MSIZE);
-    fc2 = _rcv_buf (fc, P9_TVERSION);
+    fc2 = _rcv_buf (fc, Tversion);
     ok (fc2 != NULL
         && fc->u.tversion.msize == fc2->u.tversion.msize
         && np_str9cmp (&fc->u.tversion.version, &fc2->u.tversion.version) == 0,
@@ -667,7 +667,7 @@ static void test_version (void)
 
     fc = np_create_rversion (TEST_MSIZE, "9p2000.L");
     ok (fc != NULL, "Rversion encode msize=%d version=9p2000.L works", TEST_MSIZE);
-    fc2 = _rcv_buf (fc, P9_RVERSION);
+    fc2 = _rcv_buf (fc, Rversion);
     ok (fc2 != NULL
         && fc->u.rversion.msize == fc2->u.rversion.msize
         && np_str9cmp (&fc->u.rversion.version, &fc2->u.rversion.version) == 0,
@@ -679,11 +679,11 @@ static void test_version (void)
 static void test_auth (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tauth (1, "abc", "xyz", 4);
     ok (fc != NULL, "Tauth encode afid=1 uname=abc aname=xyz n_uname=4 works");
-    fc2 = _rcv_buf (fc, P9_TAUTH);
+    fc2 = _rcv_buf (fc, Tauth);
     ok (fc2 != NULL
         && fc->u.tauth.afid == fc2->u.tauth.afid
         && np_str9cmp (&fc->u.tauth.uname, &fc2->u.tauth.uname) == 0
@@ -695,7 +695,7 @@ static void test_auth (void)
 
     fc = np_create_rauth (&qid);
     ok (fc != NULL, "Rauth encode qid.type=1 qid.version=2 qid.path=3 works");
-    fc2 = _rcv_buf (fc, P9_RAUTH);
+    fc2 = _rcv_buf (fc, Rauth);
     ok (fc2 != NULL
         && fc->u.rauth.qid.type == fc2->u.rauth.qid.type
         && fc->u.rauth.qid.version == fc2->u.rauth.qid.version
@@ -712,7 +712,7 @@ static void test_flush (void)
 
     fc = np_create_tflush (1);
     ok (fc != NULL, "Tflush encode oldtag=1 works");
-    fc2 = _rcv_buf (fc, P9_TFLUSH);
+    fc2 = _rcv_buf (fc, Tflush);
     ok (fc2 != NULL && fc->u.tflush.oldtag == fc2->u.tflush.oldtag,
         "Tflush decode works");
     free (fc);
@@ -720,14 +720,14 @@ static void test_flush (void)
 
     fc = np_create_rflush ();
     ok (fc != NULL, "Rflush encode works");
-    fc2 = _rcv_buf (fc, P9_RFLUSH);
+    fc2 = _rcv_buf (fc, Rflush);
     ok (fc2 != NULL, "Rflush decode works");
     free (fc);
     free (fc2);
 
     fc = np_create_rflush_static (buf, sizeof(buf));
     ok (fc != NULL, "Rflush encode (static) works");
-    fc2 = _rcv_buf (fc, P9_RFLUSH);
+    fc2 = _rcv_buf (fc, Rflush);
     ok (fc2 != NULL, "Rflush decode (from static) works");
     // fc is static memory
     free (fc2);
@@ -736,12 +736,12 @@ static void test_flush (void)
 static void test_attach (void)
 {
     Npfcall *fc, *fc2;
-    struct p9_qid qid = { 1, 2, 3 };
+    Npqid qid = { 1, 2, 3 };
 
     fc = np_create_tattach (1, 2, "abc", "xyz", 5);
     ok (fc != NULL,
         "Tattach encode fid=1 afid=2 uname=abc aname=xyz, n_uname=5 works");
-    fc2 = _rcv_buf (fc, P9_TATTACH);
+    fc2 = _rcv_buf (fc, Tattach);
     ok (fc2 != NULL
         && fc->u.tattach.fid == fc2->u.tattach.fid
         && fc->u.tattach.afid == fc2->u.tattach.afid
@@ -754,7 +754,7 @@ static void test_attach (void)
 
     fc = np_create_rattach (&qid);
     ok (fc != NULL, "Rattach encode qid.type=1 qid.version=2 qid.path=3 works");
-    fc2 = _rcv_buf (fc, P9_RATTACH);
+    fc2 = _rcv_buf (fc, Rattach);
     ok (fc2 != NULL
         && fc->u.rattach.qid.type == fc2->u.rattach.qid.type
         && fc->u.rattach.qid.version == fc2->u.rattach.qid.version
@@ -767,13 +767,13 @@ static void test_attach (void)
 static void test_walk (void)
 {
     Npfcall *fc, *fc2;
-    char *wnames[P9_MAXWELEM] = {
+    char *wnames[MAXWELEM] = {
         "abc", "def", "ghi", "jkl",
         "abc", "def", "ghi", "jkl",
         "abc", "def", "ghi", "jkl",
         "abc", "def", "ghi", "jkl",
     };
-    struct p9_qid wqids [P9_MAXWELEM] = {
+    Npqid wqids [MAXWELEM] = {
         { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
         { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
         { 1, 2, 3 }, { 4, 5, 6 }, { 7, 8, 9 }, { 10, 11, 12 },
@@ -781,19 +781,19 @@ static void test_walk (void)
     };
     int i;
 
-    if (P9_MAXWELEM != 16)
-        BAIL_OUT ("P9_MAXWELEM != 16");
-    fc = np_create_twalk (1, 2, P9_MAXWELEM, wnames);
+    if (MAXWELEM != 16)
+        BAIL_OUT ("MAXWELEM != 16");
+    fc = np_create_twalk (1, 2, MAXWELEM, wnames);
     ok (fc != NULL, "Twalk encode fid=1 newfid=2 nwname=16 works");
-    fc2 = _rcv_buf (fc, P9_TWALK);
+    fc2 = _rcv_buf (fc, Twalk);
     ok (fc2 != NULL
         && fc->u.twalk.fid == fc2->u.twalk.fid
         && fc->u.twalk.newfid == fc2->u.twalk.newfid
         && fc->u.twalk.nwname == fc2->u.twalk.nwname
-        && fc->u.twalk.nwname == P9_MAXWELEM,
+        && fc->u.twalk.nwname == MAXWELEM,
         "Twalk decode works");
     int errors = 0;
-    for (i = 0; i < P9_MAXWELEM; i++) {
+    for (i = 0; i < MAXWELEM; i++) {
         if (np_str9cmp (&fc->u.twalk.wnames[i], &fc2->u.twalk.wnames[i]) != 0)
             errors++;
     }
@@ -801,15 +801,15 @@ static void test_walk (void)
     free (fc);
     free (fc2);
 
-    fc = np_create_rwalk (P9_MAXWELEM, wqids);
+    fc = np_create_rwalk (MAXWELEM, wqids);
     ok (fc != NULL, "Rwalk encode nwqid=16 works");
-    fc2 = _rcv_buf (fc, P9_RWALK);
+    fc2 = _rcv_buf (fc, Rwalk);
     ok (fc2 != NULL
-        && fc->u.rwalk.nwqid == P9_MAXWELEM
+        && fc->u.rwalk.nwqid == MAXWELEM
         && fc->u.rwalk.nwqid == fc2->u.rwalk.nwqid,
         "Rwalk decode works");
     errors = 0;
-    for (i = 0; i < P9_MAXWELEM; i++) {
+    for (i = 0; i < MAXWELEM; i++) {
         if (fc->u.rwalk.wqids[i].type != fc2->u.rwalk.wqids[i].type
             || fc->u.rwalk.wqids[i].version != fc2->u.rwalk.wqids[i].version
             || fc->u.rwalk.wqids[i].path != fc2->u.rwalk.wqids[i].path)
@@ -827,7 +827,7 @@ static void test_read (void)
 
     fc = np_create_tread (1, 2, 3);
     ok (fc != NULL, "Tread encode fid=1 offset=2 count=3 works");
-    fc2 = _rcv_buf (fc, P9_TREAD);
+    fc2 = _rcv_buf (fc, Tread);
     ok (fc2 != NULL
         && fc->u.tread.fid == fc2->u.tread.fid
         && fc->u.tread.offset == fc2->u.tread.offset
@@ -840,7 +840,7 @@ static void test_read (void)
     fc = np_create_rread (sizeof (buf), buf);
     ok (fc != NULL, "Rread encode count=128 works");
     np_set_rread_count (fc, sizeof (buf));
-    fc2 = _rcv_buf (fc, P9_RREAD);
+    fc2 = _rcv_buf (fc, Rread);
     ok (fc2 != NULL
         && fc->u.rread.count == fc2->u.rread.count
         && memcmp (fc->u.rread.data, fc2->u.rread.data, fc->u.rread.count) == 0,
@@ -858,7 +858,7 @@ static void test_write (void)
 
     fc = np_create_twrite (1, 2, sizeof (buf), buf);
     ok (fc != NULL, "Twrite encode fid=1 offset=2 count=128 works");
-    fc2 = _rcv_buf (fc, P9_TWRITE);
+    fc2 = _rcv_buf (fc, Twrite);
     ok (fc2 != NULL
         && fc->u.twrite.fid == fc2->u.twrite.fid
         && fc->u.twrite.offset == fc2->u.twrite.offset
@@ -870,7 +870,7 @@ static void test_write (void)
 
     fc = np_create_rwrite (1);
     ok (fc != NULL, "Rwrite encode count=1 works");
-    fc2 = _rcv_buf (fc, P9_RWRITE);
+    fc2 = _rcv_buf (fc, Rwrite);
     ok (fc2 != NULL && fc->u.rwrite.count == fc2->u.rwrite.count,
         "Rwrite decode works");
     free (fc);
@@ -883,7 +883,7 @@ static void test_clunk (void)
 
     fc = np_create_tclunk (1);
     ok (fc != NULL, "Tclunk encode fid=1 works");
-    fc2 = _rcv_buf (fc, P9_TCLUNK);
+    fc2 = _rcv_buf (fc, Tclunk);
     ok (fc2 != NULL && fc->u.tclunk.fid == fc2->u.tclunk.fid,
         "Tclunk decode works");
     free (fc);
@@ -891,7 +891,7 @@ static void test_clunk (void)
 
     fc = np_create_rclunk ();
     ok (fc != NULL, "Rclunk encode works");
-    fc2 = _rcv_buf (fc, P9_RCLUNK);
+    fc2 = _rcv_buf (fc, Rclunk);
     ok (fc2 != NULL, "Rclunk decode works");
 
     free (fc);
@@ -904,7 +904,7 @@ static void test_remove (void)
 
     fc = np_create_tremove (1);
     ok (fc != NULL, "Tremove encode fid=1 works");
-    fc2 = _rcv_buf (fc, P9_TREMOVE);
+    fc2 = _rcv_buf (fc, Tremove);
     ok (fc2 != NULL && fc->u.tremove.fid == fc2->u.tremove.fid,
         "Tremove decode works");
     free (fc);
@@ -912,7 +912,7 @@ static void test_remove (void)
 
     fc = np_create_rremove ();
     ok (fc != NULL, "Rremove encode works");
-    fc2 = _rcv_buf (fc, P9_RREMOVE);
+    fc2 = _rcv_buf (fc, Rremove);
     ok (fc2 != NULL, "Rremove decode works");
     free (fc);
     free (fc2);

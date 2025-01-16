@@ -18,7 +18,6 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
-#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 

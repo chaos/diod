@@ -20,7 +20,6 @@
 #include <errno.h>
 #include <sys/time.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"
@@ -45,10 +44,10 @@ _destroy_fid (Npfid *f)
 		np_logmsg (srv, "_destroy_fid: fid %d has %d refs",
 			   f->fid, f->refcount);
 	}
-	if ((f->type & P9_QTAUTH)) {
+	if ((f->type & Qtauth)) {
 		if (srv->auth && srv->auth->clunk)
 			(*srv->auth->clunk)(f);
-	} else if ((f->type & P9_QTTMP)) {
+	} else if ((f->type & Qttmp)) {
 		np_ctl_fiddestroy (f);
 	} else {
 		if (srv->fiddestroy)

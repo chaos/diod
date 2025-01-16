@@ -90,7 +90,6 @@
 #define O_CLOEXEC   0
 #endif
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpfs/xpthread.h"
 #include "src/liblsd/list.h"
@@ -106,6 +105,11 @@
 #include "diod_ioctx.h"
 #include "diod_xattr.h"
 #include "diod_fid.h"
+
+// value from <linux/magic.h>
+#ifndef V9FS_MAGIC
+#define V9FS_MAGIC      0x01021997
+#endif
 
 #define DIOD_SRV_MAX_MSIZE 1048576
 
@@ -213,9 +217,9 @@ diod_ustat2qid (struct stat *st, Npqid *qid)
     qid->version = 0;
     qid->type = 0;
     if (S_ISDIR(st->st_mode))
-        qid->type |= P9_QTDIR;
+        qid->type |= Qtdir;
     if (S_ISLNK(st->st_mode))
-        qid->type |= P9_QTSYMLINK;
+        qid->type |= Qtsymlink;
 }
 
 static void
@@ -226,9 +230,9 @@ _dirent2qid (struct dirent *d, Npqid *qid)
     qid->version = 0;
     qid->type = 0;
     if (d->d_type == DT_DIR)
-        qid->type |= P9_QTDIR;
+        qid->type |= Qtdir;
     if (d->d_type == DT_LNK)
-        qid->type |= P9_QTSYMLINK;
+        qid->type |= Qtsymlink;
 }
 
 int
@@ -632,27 +636,27 @@ _remap_oflags (int flags)
     int rflags = 0;
 
     struct dotl_openflag_map dotl_oflag_map[] = {
-        { O_CREAT,      P9_DOTL_CREATE },
-        { O_EXCL,       P9_DOTL_EXCL },
-        { O_NOCTTY,     P9_DOTL_NOCTTY },
-        { O_TRUNC,      P9_DOTL_TRUNC },
-        { O_APPEND,     P9_DOTL_APPEND },
-        { O_NONBLOCK,   P9_DOTL_NONBLOCK },
+        { O_CREAT,      Ocreate },
+        { O_EXCL,       Oexcl },
+        { O_NOCTTY,     Onoctty },
+        { O_TRUNC,      Otrunc },
+        { O_APPEND,     Oappend },
+        { O_NONBLOCK,   Ononblock },
 #ifdef O_DSYNC
-        { O_DSYNC,      P9_DOTL_DSYNC },
+        { O_DSYNC,      Odsync },
 #endif
-        { FASYNC,       P9_DOTL_FASYNC },
-        { O_DIRECT,     P9_DOTL_DIRECT },
+        { FASYNC,       Ofasync },
+        { O_DIRECT,     Odirect },
 #ifdef O_LARGEFILE
-        { O_LARGEFILE,  P9_DOTL_LARGEFILE },
+        { O_LARGEFILE,  Olargefile },
 #endif
-        { O_DIRECTORY,  P9_DOTL_DIRECTORY },
-        { O_NOFOLLOW,   P9_DOTL_NOFOLLOW },
+        { O_DIRECTORY,  Odirectory },
+        { O_NOFOLLOW,   Onofollow },
 #ifdef O_NOATIME
-        { O_NOATIME,    P9_DOTL_NOATIME },
+        { O_NOATIME,    Onoatime },
 #endif
-        { O_CLOEXEC,    P9_DOTL_CLOEXEC },
-        { O_SYNC,       P9_DOTL_SYNC},
+        { O_CLOEXEC,    Ocloexec },
+        { O_SYNC,       Osync },
     };
     int nel = sizeof(dotl_oflag_map)/sizeof(dotl_oflag_map[0]);
 
@@ -1019,46 +1023,46 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
     Fid *f = fid->aux;
     int ctime_updated = 0;
 
-    if ((valid & P9_ATTR_MODE)) { /* N.B. derefs symlinks */
+    if ((valid & Samode)) { /* N.B. derefs symlinks */
         if (_chmod (f, mode) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-    if ((valid & P9_ATTR_UID) || (valid & P9_ATTR_GID)) {
-        if (_lchown (f, (valid & P9_ATTR_UID) ? uid : -1,
-                                      (valid & P9_ATTR_GID) ? gid : -1) < 0){
+    if ((valid & Sauid) || (valid & Sagid)) {
+        if (_lchown (f, (valid & Sauid) ? uid : -1,
+                                      (valid & Sagid) ? gid : -1) < 0){
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-    if ((valid & P9_ATTR_SIZE)) {
+    if ((valid & Sasize)) {
         if (_truncate (f, size) < 0) {
             np_uerror(errno);
             goto error_quiet;
         }
         ctime_updated = 1;
     }
-    if ((valid & P9_ATTR_ATIME) || (valid & P9_ATTR_MTIME)) {
+    if ((valid & Saatime) || (valid & Samtime)) {
 #if HAVE_UTIMENSAT
         struct timespec ts[2];
 
-        if (!(valid & P9_ATTR_ATIME)) {
+        if (!(valid & Saatime)) {
             ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_OMIT;
-        } else if (!(valid & P9_ATTR_ATIME_SET)) {
+        } else if (!(valid & Saatimeset)) {
             ts[0].tv_sec = 0;
             ts[0].tv_nsec = UTIME_NOW;
         } else {
             ts[0].tv_sec = atime_sec;
             ts[0].tv_nsec = atime_nsec;
         }
-        if (!(valid & P9_ATTR_MTIME)) {
+        if (!(valid & Samtime)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_OMIT;
-        } else if (!(valid & P9_ATTR_MTIME_SET)) {
+        } else if (!(valid & Samtimeset)) {
             ts[1].tv_sec = 0;
             ts[1].tv_nsec = UTIME_NOW;
         } else {
@@ -1072,8 +1076,8 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 #else /* HAVE_UTIMENSAT */
         struct timeval tv[2], now, *tvp;
         struct stat sb;
-        if ((valid & P9_ATTR_ATIME) && !(valid & P9_ATTR_ATIME_SET)
-         && (valid & P9_ATTR_MTIME) && !(valid & P9_ATTR_MTIME_SET)) {
+        if ((valid & Saatime) && !(valid & Saatimeset)
+         && (valid & Samtime) && !(valid & Samtimeset)) {
             tvp = NULL; /* set both to now */
         } else {
             if (_lstat(f, &sb) < 0) {
@@ -1084,10 +1088,10 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                 np_uerror (errno);
                 goto error_quiet;
             }
-            if (!(valid & P9_ATTR_ATIME)) {
+            if (!(valid & Saatime)) {
                 tv[0].tv_sec = sb.st_atim.tv_sec;
                 tv[0].tv_usec = sb.st_atim.tv_nsec / 1000;
-            } else if (!(valid & P9_ATTR_ATIME_SET)) {
+            } else if (!(valid & Saatimeset)) {
                 tv[0].tv_sec = now.tv_sec;
                 tv[0].tv_usec = now.tv_usec;
             } else {
@@ -1095,10 +1099,10 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
                 tv[0].tv_usec = atime_nsec / 1000;
             }
 
-            if (!(valid & P9_ATTR_MTIME)) {
+            if (!(valid & Samtime)) {
                 tv[1].tv_sec = sb.st_mtim.tv_sec;
                 tv[1].tv_usec = sb.st_mtim.tv_nsec / 1000;
-            } else if (!(valid & P9_ATTR_MTIME_SET)) {
+            } else if (!(valid & Samtimeset)) {
                 tv[1].tv_sec = now.tv_sec;
                 tv[1].tv_usec = now.tv_usec;
             } else {
@@ -1114,7 +1118,7 @@ diod_setattr (Npfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
 #endif /* HAVE_UTIMENSAT */
         ctime_updated = 1;
     }
-    if ((valid & P9_ATTR_CTIME) && !ctime_updated) {
+    if ((valid & Sactime) && !ctime_updated) {
         if (_lchown (f, -1, -1) < 0) {
             np_uerror (errno);
             goto error_quiet;
@@ -1257,10 +1261,10 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
 {
     Fid *f = fid->aux;
     Npfcall *ret;
-    u8 status = P9_LOCK_ERROR;
+    u8 status = Lerror;
 
-    if (flags & ~P9_LOCK_FLAGS_BLOCK) { /* only one valid flag for now */
-        np_uerror (EINVAL);             /*  (which we ignore) */
+    if (flags & ~Lblock) { /* only one valid flag for now (which we ignore) */
+        np_uerror (EINVAL);
         goto error;
     }
     if (!f->ioctx) {
@@ -1269,21 +1273,21 @@ diod_lock (Npfid *fid, u8 type, u32 flags, u64 start, u64 length, u32 proc_id,
         goto error;
     }
     switch (type) {
-        case P9_LOCK_TYPE_UNLCK:
+        case Lunlck:
             if (ioctx_flock (f->ioctx, LOCK_UN) == 0)
-                status = P9_LOCK_SUCCESS;
+                status = Lsuccess;
             break;
-        case P9_LOCK_TYPE_RDLCK:
+        case Lrdlck:
             if (ioctx_flock (f->ioctx, LOCK_SH | LOCK_NB) == 0)
-                status = P9_LOCK_SUCCESS;
+                status = Lsuccess;
             else if (errno == EWOULDBLOCK)
-                status = P9_LOCK_BLOCKED;
+                status = Lblocked;
             break;
-        case P9_LOCK_TYPE_WRLCK:
+        case Lwrlck:
             if (ioctx_flock (f->ioctx, LOCK_EX | LOCK_NB) == 0)
-                status = P9_LOCK_SUCCESS;
+                status = Lsuccess;
             else if (errno == EWOULDBLOCK)
-                status  = P9_LOCK_BLOCKED;
+                status  = Lblocked;
             break;
         default:
             np_uerror (EINVAL);
@@ -1319,13 +1323,13 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         np_uerror (ENOMEM);
         goto error;
     }
-    if (type != P9_LOCK_TYPE_RDLCK && type != P9_LOCK_TYPE_WRLCK) {
+    if (type != Lrdlck && type != Lwrlck) {
         np_uerror (EINVAL);
         goto error;
     }
-    ftype = (type == P9_LOCK_TYPE_RDLCK) ? LOCK_SH : LOCK_EX;
+    ftype = (type == Lrdlck) ? LOCK_SH : LOCK_EX;
     ftype = ioctx_testlock (f->ioctx, ftype);
-    type = (ftype == LOCK_EX) ? P9_LOCK_TYPE_WRLCK : P9_LOCK_TYPE_UNLCK;
+    type = (ftype == LOCK_EX) ? Lwrlck : Lunlck;
     if (!((ret = np_create_rgetlock(type, start, length, proc_id, cid)))) {
         np_uerror (ENOMEM);
         goto error;
