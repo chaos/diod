@@ -54,7 +54,7 @@ np_conn_create(Npsrv *srv, Nptrans *trans, char *client_id, int flags)
 		return NULL;
 	}
 	snprintf(conn->client_id, sizeof(conn->client_id), "%s", client_id);
-	conn->authuser = P9_NONUNAME;
+	conn->authuser = NONUNAME;
 	conn->flags = flags;
 
 	conn->trans = trans;
@@ -192,15 +192,15 @@ np_conn_read_proc(void *a)
 		}
 
 		/* Enqueue request for processing by next available worker
-		 * thread, except P9_TFLUSH which is handled immediately.
+		 * thread, except Tflush which is handled immediately.
 		 */
-		if (fc->type == P9_TFLUSH) {
+		if (fc->type == Tflush) {
 			if (np_flush (req, fc)) {
 				np_req_respond_flush (req);
 				np_req_unref(req);
 			}
 			xpthread_mutex_lock (&srv->lock);
-			srv->tpool->stats.nreqs[P9_TFLUSH]++;
+			srv->tpool->stats.nreqs[Tflush]++;
 			xpthread_mutex_unlock (&srv->lock);
 		} else {
 			xpthread_mutex_lock(&srv->lock);
@@ -274,7 +274,7 @@ np_conn_get_authuser(Npconn *conn, u32 *uidp)
 {
 	int ret = -1;
 
-	if (conn->authuser != P9_NONUNAME) {
+	if (conn->authuser != NONUNAME) {
 		if (uidp)
 			*uidp = conn->authuser;
 		ret = 0;

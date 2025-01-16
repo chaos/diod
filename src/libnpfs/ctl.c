@@ -109,9 +109,9 @@ _alloc_file (char *name, u8 type)
 		goto error;
 	}
 	file->qid.path = _next_inum ();
-	file->qid.type = type | P9_QTTMP;
+	file->qid.type = type | Qttmp;
 	file->qid.version = 0;
-	if ((type & P9_QTDIR)) {
+	if ((type & Qtdir)) {
 		file->mode = S_IFDIR;
 		file->mode |= S_IRUSR | S_IRGRP | S_IROTH;
 		file->mode |= S_IXUSR | S_IXGRP | S_IXOTH;
@@ -187,11 +187,11 @@ np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg, int flags)
 {
 	Npfile *file;
 
-	if (!(parent->qid.type & P9_QTDIR)) {
+	if (!(parent->qid.type & Qtdir)) {
 		np_uerror (EINVAL);
 		return NULL;
 	}
-	if (!(file = _alloc_file (name, P9_QTFILE)))
+	if (!(file = _alloc_file (name, Qtfile)))
 		return NULL;
 	if ((flags & NP_CTL_FLAGS_SINK))
 		file->mode |= S_IWUSR | S_IWGRP | S_IWOTH;
@@ -210,11 +210,11 @@ np_ctl_adddir (Npfile *parent, char *name)
 {
 	Npfile *file;
 
-	if (!(parent->qid.type & P9_QTDIR)) {
+	if (!(parent->qid.type & Qtdir)) {
 		np_uerror (EINVAL);
 		return NULL;
 	}
-	if (!(file = _alloc_file (name, P9_QTDIR)))
+	if (!(file = _alloc_file (name, Qtdir)))
 		return NULL;
 	file->getf = NULL;
 	file->getf_arg = NULL;
@@ -240,7 +240,7 @@ np_ctl_initialize (Npsrv *srv)
 {
 	Npfile *root = NULL;
 
-	if (!(root = _alloc_file ("root", P9_QTDIR)))
+	if (!(root = _alloc_file ("root", Qtdir)))
 		goto error;
 	srv->ctlroot = root;
 
@@ -404,7 +404,7 @@ np_ctl_lopen(Npfid *fid, u32 mode)
 		goto done;
 	}
 	if (((mode & O_RDONLY) || (mode & O_RDWR)) && !f->file->getf
-				&& !(fid->type & P9_QTDIR)
+				&& !(fid->type & Qtdir)
 				&& !(f->file->flags & NP_CTL_FLAGS_ZEROSRC)){
 		np_uerror (EACCES);
 		goto done;
@@ -470,7 +470,7 @@ np_ctl_readdir(Npfid *fid, u64 offset, u32 count, Npreq *req)
 	for (ff = f->file->child; ff != NULL; ff = ff->next) {
 		if (off >= offset) {
 			i = np_serialize_p9dirent (&ff->qid, off + 1,
-				(ff->qid.type & P9_QTDIR) ? DT_DIR : DT_REG,
+				(ff->qid.type & Qtdir) ? DT_DIR : DT_REG,
 				ff->name, rc->u.rreaddir.data + n, count - n);
 			if (i == 0)
 				break;

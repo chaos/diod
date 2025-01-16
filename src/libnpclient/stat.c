@@ -30,7 +30,7 @@
 #include "npcimpl.h"
 
 int
-npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, struct p9_qid *qid,
+npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, Npqid *qid,
 	     u32 *mode, u32 *uid, u32 *gid, u64 *nlink, u64 *rdev, u64 *size,
 	     u64 *blksize, u64 *blocks, u64 *atime_sec, u64 *atime_nsec,
 	     u64 *mtime_sec, u64 *mtime_nsec, u64 *ctime_sec, u64 *ctime_nsec,
@@ -79,7 +79,7 @@ npc_fstat (Npcfid *fid, struct stat *sb)
 {
 	int ret = -1;
 	u64 valid;
-	struct p9_qid qid;
+	Npqid qid;
 	u32 mode, uid, gid;
 	u64 nlink, rdev, size, blksize, blocks;
 	u64 atime_sec, atime_nsec;
@@ -88,7 +88,7 @@ npc_fstat (Npcfid *fid, struct stat *sb)
 	u64 btime_sec, btime_nsec;
 	u64 gen, data_version;
 
-	ret = npc_getattr (fid, P9_STAT_BASIC, &valid, &qid,
+	ret = npc_getattr (fid, Gabasic, &valid, &qid,
 			   &mode, &uid, &gid, &nlink, &rdev, &size,
 			   &blksize, &blocks, &atime_sec, &atime_nsec,
 			   &mtime_sec, &mtime_nsec, &ctime_sec, &ctime_nsec,

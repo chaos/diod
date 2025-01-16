@@ -141,7 +141,7 @@ _flush_series (Npcfsys *fs, Npcfid *root)
         if (!np_deserialize (rc))
             msg_exit ("failed to deserialize response");
         switch (rc->type) {
-            case P9_RFSYNC:
+            case Rfsync:
                 if (rc->tag == flushtag) {
                     assert (orig_reply_received == 0);
                     if (rflush_received)
@@ -149,7 +149,7 @@ _flush_series (Npcfsys *fs, Npcfid *root)
                     orig_reply_received = 1;
                 }
                 break;
-            case P9_RFLUSH:
+            case Rflush:
                 rflush_received = 1;
                 break;
             default:

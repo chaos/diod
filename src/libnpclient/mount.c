@@ -116,7 +116,7 @@ npc_attach (Npcfsys *fs, Npcfid *afid, char *aname, uid_t uid)
 
 	if (!(fid = npc_fid_alloc (fs)))
 		goto done;
-	if (!(tc = np_create_tattach (fid->fid, afid ? afid->fid : P9_NOFID,
+	if (!(tc = np_create_tattach (fid->fid, afid ? afid->fid : NOFID,
 				      NULL, aname, uid))) {
 		np_uerror (ENOMEM);
 		goto done;

@@ -83,10 +83,10 @@ npc_create_mtfsys(int rfd, int wfd, int msize, int flags)
 	fs->trans = np_fdtrans_create(rfd, wfd);
 	if (!fs->trans)
 		goto error;
-	fs->tagpool = npc_create_pool(P9_NOTAG);
+	fs->tagpool = npc_create_pool(NOTAG);
 	if (!fs->tagpool)
 		goto error;
-	fs->fidpool = npc_create_pool(P9_NOFID);
+	fs->fidpool = npc_create_pool(NOFID);
 	if (!fs->fidpool)
 		goto error;
 
@@ -294,7 +294,7 @@ npc_read_proc(void *a)
 
 				xpthread_mutex_unlock(&fs->lock);
 				req->rc = fc;
-				if (fc->type == P9_RLERROR) {
+				if (fc->type == Rlerror) {
 					req->ecode = fc->u.rlerror.ecode;
 				} else if (fc->type != req->tc->type+1) {
 					req->ecode = EIO;
@@ -416,7 +416,7 @@ npc_rpcnb(Npcfsys *fs, Npfcall *tc, void (*cb)(Npcreq *, void *), void *cba)
 	if (!req)
 		return -1;
 
-	if (tc->type != P9_TVERSION) {
+	if (tc->type != Tversion) {
 		tc->tag = npc_get_id(fs->tagpool);
 		np_set_tag(tc, tc->tag);
 	}
@@ -484,7 +484,7 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rc)
 	}
 
 	/* N.B. allow for auth returning error with ecode == 0 */
-	if (r.ecode || r.rc->type == P9_RLERROR) {
+	if (r.ecode || r.rc->type == Rlerror) {
 		np_uerror(r.ecode);
 		free(r.rc);
 		return -1;
@@ -510,7 +510,7 @@ npc_reqalloc()
 	}
 
 	req->fsys = NULL;
-	req->tag = P9_NOTAG;
+	req->tag = NOTAG;
 	req->tc = NULL;
 	req->rc = NULL;
 	req->ecode = 0;

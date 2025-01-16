@@ -40,7 +40,7 @@ main (int argc, char *argv[])
     int i;
     char tmpstr[PATH_MAX + 1];
     int n;
-    char dbuf[TEST_MSIZE - P9_IOHDRSZ];
+    char dbuf[TEST_MSIZE - IOHDRSZ];
     struct dirent d, *dp;
 
     plan (NO_PLAN);

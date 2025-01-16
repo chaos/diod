@@ -31,7 +31,7 @@
 int
 npc_pread(Npcfid *fid, void *buf, u32 count, u64 offset)
 {
-	int maxio = fid->fsys->msize - P9_IOHDRSZ;
+	int maxio = fid->fsys->msize - IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 

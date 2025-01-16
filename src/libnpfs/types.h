@@ -18,4 +18,18 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
+typedef struct Npstr Npstr;
+typedef struct Npqid Npqid;
+
+struct Npqid {
+        u8		type;
+        u32		version;
+        u64		path;
+};
+
+struct Npstr {
+        u16             len;
+        char*           str;
+};
+
 #endif

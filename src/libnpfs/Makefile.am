@@ -19,7 +19,7 @@ libnpfs_a_SOURCES = \
 	npstring.c \
 	npfs.h \
 	npfsimpl.h \
-	9p.h \
+	protocol.h \
 	types.h \
 	ctl.c \
 	xpthread.h

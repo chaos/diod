@@ -31,7 +31,7 @@ np_version(Npreq *req, Npfcall *tc)
 	Npfcall *rc = NULL;
 	int msize = tc->u.tversion.msize;
 
-	if (msize < P9_IOHDRSZ + 1) {
+	if (msize < IOHDRSZ + 1) {
 		np_uerror(EIO);
 		np_logerr(srv, "version: msize is too small");
 		return NULL;
@@ -75,7 +75,7 @@ np_auth(Npreq *req, Npfcall *tc)
 					       tc->u.tauth.n_uname,
 					       &tc->u.tauth.aname);
 
-	if (tc->u.tauth.n_uname != P9_NONUNAME) {
+	if (tc->u.tauth.n_uname != NONUNAME) {
 		snprintf (a, sizeof(a), "auth(%d@%s:%.*s)",
 			  tc->u.tauth.n_uname,
 			  np_conn_get_client_id (conn),
@@ -104,12 +104,12 @@ np_auth(Npreq *req, Npfcall *tc)
 		np_logerr (srv, "%s: user lookup", a);
 		goto error;
 	}
-	afid->type = P9_QTAUTH;
+	afid->type = Qtauth;
 	if (!srv->auth->startauth(afid, afid->aname, &aqid)) {
 		np_logerr (srv, "%s: startauth", a);
 		goto error;
 	}
-	NP_ASSERT((aqid.type & P9_QTAUTH));
+	NP_ASSERT((aqid.type & Qtauth));
 	if (!(rc = np_create_rauth(&aqid))) {
 		np_uerror(ENOMEM);
 		np_logerr (srv, "%s: creating response", a);
@@ -132,7 +132,7 @@ np_attach(Npreq *req, Npfcall *tc)
 					       tc->u.tattach.n_uname,
 					       &tc->u.tattach.aname);
 
-	if (tc->u.tattach.n_uname != P9_NONUNAME) {
+	if (tc->u.tattach.n_uname != NONUNAME) {
 		snprintf (a, sizeof(a), "attach(%d@%s:%.*s)",
 			  tc->u.tattach.n_uname,
 			  np_conn_get_client_id (conn),
@@ -148,14 +148,14 @@ np_attach(Npreq *req, Npfcall *tc)
 		np_logerr (srv, "%s: invalid fid (%d)", a, tc->u.tattach.fid);
 		goto error;
 	}
-	if (tc->u.tattach.afid != P9_NOFID) {
+	if (tc->u.tattach.afid != NOFID) {
 		if (!(afid = np_fid_find(conn, tc->u.tattach.afid))) {
 			np_uerror(EPERM);
 			np_logerr (srv, "%s: invalid afid (%d)", a,
 				   tc->u.tattach.afid);
 			goto error;
 		}
-		if (!(afid->type & P9_QTAUTH)) {
+		if (!(afid->type & Qtauth)) {
 			np_uerror(EPERM);
 			np_logerr (srv, "%s: invalid afid type", a);
 			goto error;
@@ -306,7 +306,7 @@ np_walk(Npreq *req, Npfcall *tc)
 	Npfid *fid = req->fid;
 	Npfid *newfid = NULL;
 	Npfcall *rc = NULL;
-	Npqid wqids[P9_MAXWELEM];
+	Npqid wqids[MAXWELEM];
 
 	if (!fid) {
 		np_uerror (EIO);
@@ -314,14 +314,14 @@ np_walk(Npreq *req, Npfcall *tc)
 		goto done;
 	}
 #if 0
-	if (!(fid->type & P9_QTDIR)) {
+	if (!(fid->type & Qtdir)) {
 		np_uerror(ENOTDIR);
 		goto done;
 	}
 #endif
 	/* FIXME: error if fid has been opened */
 
-	if (tc->u.twalk.nwname > P9_MAXWELEM) {
+	if (tc->u.twalk.nwname > MAXWELEM) {
 		np_uerror(EIO);
 		np_logerr (conn->srv, "walk: too many elements");
 		goto done;
@@ -340,7 +340,7 @@ np_walk(Npreq *req, Npfcall *tc)
 			}
 			goto done;
 		}
-		if (fid->type & P9_QTTMP) {
+		if (fid->type & Qttmp) {
 			if (!np_ctl_clone (fid, newfid))
 				goto done;
 		} else {
@@ -365,12 +365,12 @@ np_walk(Npreq *req, Npfcall *tc)
 	} else
 		newfid = fid;
 
-	if (!(newfid->type & P9_QTTMP)) {
+	if (!(newfid->type & Qttmp)) {
 		if (np_setfsid (req, newfid->user, -1) < 0)
 			goto done;
 	}
 	for(i = 0; i < tc->u.twalk.nwname;) {
-		if (newfid->type & P9_QTTMP) {
+		if (newfid->type & Qttmp) {
 			if (!np_ctl_walk (newfid, &tc->u.twalk.wnames[i],
 					  &wqids[i]))
 				break;
@@ -385,7 +385,7 @@ np_walk(Npreq *req, Npfcall *tc)
 		}
 		newfid->type = wqids[i].type;
 		i++;
-		if (i<(tc->u.twalk.nwname) && !(newfid->type & P9_QTDIR))
+		if (i<(tc->u.twalk.nwname) && !(newfid->type & Qtdir))
 			break;
 	}
 
@@ -413,14 +413,14 @@ np_read(Npreq *req, Npfcall *tc)
 		np_logerr (conn->srv, "read: invalid fid");
 		goto done;
 	}
-	if (tc->u.tread.count + P9_IOHDRSZ > conn->msize) {
+	if (tc->u.tread.count + IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		np_logerr (conn->srv, "read: count %u too large",
 			   tc->u.tread.count);
 		goto done;
 	}
 
-	if (fid->type & P9_QTAUTH) {
+	if (fid->type & Qtauth) {
 		if (conn->srv->auth) {
 			rc = np_alloc_rread(tc->u.tread.count);
 			if (!rc)
@@ -437,7 +437,7 @@ np_read(Npreq *req, Npfcall *tc)
 			np_uerror(ENOSYS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		rc = np_ctl_read(fid, tc->u.tread.offset,
 				 tc->u.tread.count, req);
 	} else {
@@ -468,7 +468,7 @@ np_write(Npreq *req, Npfcall *tc)
 		np_logerr (conn->srv, "write: invalid fid");
 		goto done;
 	}
-	if (fid->type & P9_QTAUTH) {
+	if (fid->type & Qtauth) {
 		if (conn->srv->auth) {
 			n = conn->srv->auth->write(fid, tc->u.twrite.offset,
 				tc->u.twrite.count, tc->u.twrite.data);
@@ -484,14 +484,14 @@ np_write(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (tc->u.twrite.count + P9_IOHDRSZ > conn->msize) {
+	if (tc->u.twrite.count + IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		np_logerr (conn->srv, "write: count %u too large",
 			   tc->u.twrite.count);
 		goto done;
 	}
 
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		rc = np_ctl_write(fid, tc->u.twrite.offset,
 				  tc->u.twrite.count,
 				  tc->u.twrite.data, req);
@@ -522,7 +522,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 					   tc->u.tclunk.fid);
 		goto done;
 	}
-	if (req->fid->type & P9_QTAUTH) {
+	if (req->fid->type & Qtauth) {
 		if (req->conn->srv->auth) {
 			/* N.B. fidpool calls auth->clunk on last decref */
 			if (!(rc = np_create_rclunk()))
@@ -531,7 +531,7 @@ np_clunk(Npreq *req, Npfcall *tc)
 			np_uerror(ENOSYS);
 		goto done;
 	}
-	if (req->fid->type & P9_QTTMP) {
+	if (req->fid->type & Qttmp) {
 		rc = np_ctl_clunk (req->fid);
 	} else {
 		if (!req->conn->srv->clunk) {
@@ -563,7 +563,7 @@ np_remove(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (req->fid->type & P9_QTTMP) {
+	if (req->fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -594,7 +594,7 @@ np_statfs(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "statfs: invalid fid");
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (ENOSYS);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
@@ -627,7 +627,7 @@ np_lopen(Npreq *req, Npfcall *tc)
 			goto done;
 		}
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		rc = np_ctl_lopen (fid, tc->u.tlopen.flags);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
@@ -657,7 +657,7 @@ np_lcreate(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -696,7 +696,7 @@ np_symlink(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -730,7 +730,7 @@ np_mknod(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -772,7 +772,7 @@ np_rename(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -801,7 +801,7 @@ np_readlink(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "readlink: invalid fid");
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -828,7 +828,7 @@ np_getattr(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "getattr: invalid fid");
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		rc = np_ctl_getattr(fid, tc->u.tgetattr.request_mask);
 	} else {
 		if (np_setfsid (req, fid->user, -1) < 0)
@@ -859,7 +859,7 @@ np_setattr(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		rc = np_ctl_setattr(fid,
 				    tc->u.tsetattr.valid,
 				    tc->u.tsetattr.mode,
@@ -935,7 +935,7 @@ np_xattrwalk(Npreq *req, Npfcall *tc)
 	}
 	/* FIXME: end of block that should be factored */
 
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -965,7 +965,7 @@ np_xattrcreate(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "xattrcreate: invalid fid");
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -995,13 +995,13 @@ np_readdir(Npreq *req, Npfcall *tc)
 		np_logerr (req->conn->srv, "readdir: invalid fid");
 		goto done;
 	}
-	if (tc->u.treaddir.count + P9_READDIRHDRSZ > req->conn->msize) {
+	if (tc->u.treaddir.count + DIRHDRSZ > req->conn->msize) {
 		np_uerror(EIO);
 		np_logerr (req->conn->srv, "readdir: count %u too large",
 			   tc->u.treaddir.count);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		rc = np_ctl_readdir(fid, tc->u.treaddir.offset,
 				    tc->u.treaddir.count, req);
 	} else {
@@ -1034,7 +1034,7 @@ np_fsync(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -1065,7 +1065,7 @@ np_lock(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -1102,7 +1102,7 @@ np_getlock(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -1144,7 +1144,7 @@ np_link(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -1177,7 +1177,7 @@ np_mkdir(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (fid->type & P9_QTTMP) {
+	if (fid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	} else {
@@ -1217,7 +1217,7 @@ np_renameat (Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (olddirfid->type & P9_QTTMP) {
+	if (olddirfid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	}
@@ -1256,7 +1256,7 @@ np_unlinkat (Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (dirfid->type & P9_QTTMP) {
+	if (dirfid->type & Qttmp) {
 		np_uerror (EPERM);
 		goto done;
 	}

@@ -14,10 +14,8 @@
 #include <stdarg.h>
 #include <sys/types.h>
 #include "types.h"
-#include "9p.h"
+#include "protocol.h"
 
-typedef struct p9_str Npstr;
-typedef struct p9_qid Npqid;
 typedef struct Npfile Npfile;
 typedef struct Npfcall Npfcall;
 typedef struct Npfid Npfid;
@@ -47,64 +45,55 @@ struct Npfcall {
 	u16		tag;
 	u8*		pkt;
 	union {
-	   struct p9_rlerror rlerror;
-	   struct p9_tstatfs tstatfs;
-	   struct p9_rstatfs rstatfs;
-	   struct p9_tlopen tlopen;
-	   struct p9_rlopen rlopen;
-	   struct p9_tlcreate tlcreate;
-	   struct p9_rlcreate rlcreate;
-	   struct p9_tsymlink tsymlink;
-	   struct p9_rsymlink rsymlink;
-	   struct p9_tmknod tmknod;
-	   struct p9_rmknod rmknod;
-	   struct p9_trename trename;
-	   struct p9_rrename rrename;
-	   struct p9_treadlink treadlink;
-	   struct p9_rreadlink rreadlink;
-	   struct p9_tgetattr tgetattr;
-	   struct p9_rgetattr rgetattr;
-	   struct p9_tsetattr tsetattr;
-	   struct p9_rsetattr rsetattr;
-	   struct p9_txattrwalk txattrwalk;
-	   struct p9_rxattrwalk rxattrwalk;
-	   struct p9_txattrcreate txattrcreate;
-	   struct p9_rxattrcreate rxattrcreate;
-	   struct p9_treaddir treaddir;
-	   struct p9_rreaddir rreaddir;
-	   struct p9_tfsync tfsync;
-	   struct p9_rfsync rfsync;
-	   struct p9_tlock tlock;
-	   struct p9_rlock rlock;
-	   struct p9_tgetlock tgetlock;
-	   struct p9_rgetlock rgetlock;
-	   struct p9_tlink tlink;
-	   struct p9_rlink rlink;
-	   struct p9_tmkdir tmkdir;
-	   struct p9_rmkdir rmkdir;
-	   struct p9_trenameat trenameat;
-	   struct p9_rrenameat rrenameat;
-	   struct p9_tunlinkat tunlinkat;
-	   struct p9_runlinkat runlinkat;
+		struct Nprlerror	rlerror;
+		struct Nptstatfs	tstatfs;
+		struct Nprstatfs	rstatfs;
+		struct Nptlopen		tlopen;
+		struct Nprlopen		rlopen;
+		struct Nptlcreate	tlcreate;
+		struct Nprlcreate	rlcreate;
+		struct Nptsymlink	tsymlink;
+		struct Nprsymlink	rsymlink;
+		struct Nptmknod		tmknod;
+		struct Nprmknod		rmknod;
+		struct Nptrename	trename;
+		struct Nptreadlink	treadlink;
+		struct Nprreadlink	rreadlink;
+		struct Nptgetattr	tgetattr;
+		struct Nprgetattr	rgetattr;
+		struct Nptsetattr	tsetattr;
+		struct Nptxattrwalk	txattrwalk;
+		struct Nprxattrwalk	rxattrwalk;
+		struct Nptxattrcreate	txattrcreate;
+		struct Nptreaddir	treaddir;
+		struct Nprreaddir	rreaddir;
+		struct Nptfsync		tfsync;
+		struct Nptlock		tlock;
+		struct Nprlock		rlock;
+		struct Nptgetlock	tgetlock;
+		struct Nprgetlock	rgetlock;
+		struct Nptlink		tlink;
+		struct Nptmkdir		tmkdir;
+		struct Nprmkdir		rmkdir;
+		struct Nptrenameat	trenameat;
+		struct Nptunlinkat	tunlinkat;
 
-	   struct p9_tversion tversion;
-	   struct p9_rversion rversion;
-	   struct p9_tauth tauth;
-	   struct p9_rauth rauth;
-	   struct p9_tattach tattach;
-	   struct p9_rattach rattach;
-	   struct p9_tflush tflush;
-	   struct p9_rflush rflush;
-	   struct p9_twalk twalk;
-	   struct p9_rwalk rwalk;
-	   struct p9_tread tread;
-	   struct p9_rread rread;
-	   struct p9_twrite twrite;
-	   struct p9_rwrite rwrite;
-	   struct p9_tclunk tclunk;
-	   struct p9_rclunk rclunk;
-	   struct p9_tremove tremove;
-	   struct p9_rremove rremove;
+		struct Nptversion	tversion;
+		struct Nprversion	rversion;
+		struct Nptauth		tauth;
+		struct Nprauth		rauth;
+		struct Nptattach	tattach;
+		struct Nprattach	rattach;
+		struct Nptflush		tflush;
+		struct Nptwalk		twalk;
+		struct Nprwalk		rwalk;
+		struct Nptread		tread;
+		struct Nprread		rread;
+		struct Nptwrite		twrite;
+		struct Nprwrite		rwrite;
+		struct Nptclunk		tclunk;
+		struct Nprclunk		rclunk;
+		struct Nptremove	tremove;
 	} u;
 };
 
@@ -199,7 +188,7 @@ struct Npstats {
 	char		*name;
 	int		numfids;
 	int		numreqs;
-	u64		nreqs[P9_RWSTAT+1];
+	u64		nreqs[Rwstat+1];
 	u64		rbytes;
 	u64		wbytes;
 	u64		rcount[NPSTATS_RWCOUNT_BINS];
@@ -447,18 +436,18 @@ Npfcall *np_create_rstatfs(u32 type, u32 bsize,
 Npfcall *np_create_tlopen(u32 fid, u32 flags);
 Npfcall *np_create_rlopen(Npqid *qid, u32 iounit);
 Npfcall *np_create_tlcreate(u32 fid, char *name, u32 flags, u32 mode, u32 gid);
-Npfcall *np_create_rlcreate(struct p9_qid *qid, u32 iounit);
+Npfcall *np_create_rlcreate(Npqid *qid, u32 iounit);
 Npfcall *np_create_tsymlink(u32 fid, char *name, char *symtgt, u32 gid);
-Npfcall *np_create_rsymlink (struct p9_qid *qid);
+Npfcall *np_create_rsymlink (Npqid *qid);
 Npfcall *np_create_treadlink(u32 fid);
 Npfcall *np_create_rreadlink(char *symtgt);
 Npfcall *np_create_tmknod(u32 dfid, char *name, u32 mode,
 			  u32 major, u32 minor, u32 gid);
-Npfcall *np_create_rmknod (struct p9_qid *qid);
+Npfcall *np_create_rmknod (Npqid *qid);
 Npfcall *np_create_trename(u32 fid, u32 dfid, char *name);
 Npfcall *np_create_rrename(void);
 Npfcall *np_create_tgetattr(u32 fid, u64 request_mask);
-Npfcall *np_create_rgetattr(u64 valid, struct p9_qid *qid,
+Npfcall *np_create_rgetattr(u64 valid, Npqid *qid,
 		u32 mode, u32 uid, u32 gid, u64 nlink, u64 rdev,
                 u64 size, u64 blksize, u64 st_blocks,
                 u64 atime_sec, u64 atime_nsec,
@@ -489,7 +478,7 @@ Npfcall *np_create_rgetlock(u8 type, u64 start, u64 length, u32 proc_id,
 Npfcall *np_create_tlink(u32 dfid, u32 fid, char *name);
 Npfcall *np_create_rlink(void);
 Npfcall *np_create_tmkdir(u32 dfid, char *name, u32 mode, u32 gid);
-Npfcall *np_create_rmkdir(struct p9_qid *qid);
+Npfcall *np_create_rmkdir(Npqid *qid);
 Npfcall *np_create_trenameat(u32 olddirfid, char *oldname,
 			     u32 newdirfid, char *newname);
 Npfcall *np_create_rrenameat(void);

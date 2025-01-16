@@ -121,7 +121,7 @@ int npc_mkdir (Npcfid *fid, char *name, u32 mode);
 /* Send a GETATTR request to get information on 'fid'.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
-int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, struct p9_qid *qid,
+int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, Npqid *qid,
 	         u32 *mode, u32 *uid, u32 *gid, u64 *nlink, u64 *rdev,
 		 u64 *size, u64 *blksize, u64 *blocks, u64 *atime_sec,
 		 u64 *atime_nsec, u64 *mtime_sec, u64 *mtime_nsec,

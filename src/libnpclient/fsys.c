@@ -60,10 +60,10 @@ npc_create_fsys(int rfd, int wfd, int msize, int flags)
 	fs->trans = np_fdtrans_create(rfd, wfd);
 	if (!fs->trans)
 		goto error;
-	fs->tagpool = npc_create_pool(P9_NOTAG);
+	fs->tagpool = npc_create_pool(NOTAG);
 	if (!fs->tagpool)
 		goto error;
-	fs->fidpool = npc_create_pool(P9_NOFID);
+	fs->fidpool = npc_create_pool(NOFID);
 	if (!fs->fidpool)
 		goto error;
 	return fs;
@@ -115,14 +115,14 @@ static int
 npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 {
 	Npfcall *rc = NULL;
-	u16 tag = P9_NOTAG;
+	u16 tag = NOTAG;
 	int n, ret = -1;
 
 	if (!fs->trans) {
 		np_uerror(ECONNABORTED);
 		goto done;
 	}
-	if (tc->type != P9_TVERSION)
+	if (tc->type != Tversion)
 		tag = npc_get_id(fs->tagpool);
 	np_set_tag(tc, tag);
 
@@ -141,14 +141,14 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 		np_uerror (EPROTO); /* unmatched response */
 		goto done;
 	}
-	if (rc->type == P9_RLERROR) {
+	if (rc->type == Rlerror) {
 		np_uerror (rc->u.rlerror.ecode);
 		goto done;
 	}
 	*rcp = rc;
 	ret = 0;
 done:
-	if (tag != P9_NOTAG)
+	if (tag != NOTAG)
 		npc_put_id(fs->tagpool, tag);
 	if (ret < 0 && rc != NULL)
 		free (rc);

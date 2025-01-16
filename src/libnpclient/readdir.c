@@ -68,7 +68,7 @@ npc_opendir (Npcfid *root, char *path)
 			np_uerror (ENOTDIR);
 			goto error;
 		}
-		fid->buf_size = root->fsys->msize - P9_IOHDRSZ;
+		fid->buf_size = root->fsys->msize - IOHDRSZ;
 		if (!(fid->buf = malloc (fid->buf_size))) {
 			(void)npc_clunk (fid);
 			np_uerror (ENOMEM);
