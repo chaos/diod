@@ -22,7 +22,8 @@ libnpclient_a_SOURCES = \
 	remove.c \
 	readdir.c \
 	chmod.c \
-	xattr.c
+	xattr.c \
+	lock.c
 
 test_ldadd = \
 	$(builddir)/libnpclient.a \
