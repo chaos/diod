@@ -13,5 +13,5 @@ sudo -n make -C src/libnpfs check TESTS="\
   test_setgroups.t \
   test_setreuid.t" || die "test failed"
 
-sudo -n make -C src/daemon check TESTS="\
+sudo -n make -C src/libdiod check TESTS="\
   test_multiuser.t" || die "test failed"

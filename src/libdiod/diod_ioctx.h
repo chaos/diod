@@ -8,6 +8,12 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
+#ifndef LIBDIOD_DIOD_IOCTX_H
+#define LIBDIOD_DIOD_IOCTX_H
+
+#include <sys/types.h>
+#include "src/libnpfs/npfs.h"
+
 typedef struct path_struct *Path;
 typedef struct ioctx_struct *IOCtx;
 
@@ -44,6 +50,8 @@ int     ioctx_utimes (IOCtx ioctx, const utimbuf *times);
 
 u32     ioctx_iounit (IOCtx ioctx);
 Npqid   *ioctx_qid (IOCtx ioctx);
+
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

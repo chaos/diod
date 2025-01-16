@@ -8,6 +8,11 @@
  * SPDX-License-Identifier: MIT
  *************************************************************/
 
+#ifndef LIBNPCLIENT_NPCLIENT_H
+#define LIBNPCLIENT_NPCLIENT_H
+
+#include "src/libnpfs/9p.h"
+
 typedef struct Npcfid Npcfid;
 typedef struct Npcfsys Npcfsys;
 
@@ -278,3 +283,5 @@ ssize_t npc_getxattr (Npcfid *root, char *path, char *attr,
 		      char *buf, size_t size);
 int npc_setxattr (Npcfid *root, char *path, char *name, char *val, size_t size,
               int flags);
+
+#endif

@@ -22,16 +22,14 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
-#include <stdarg.h>
 #include <string.h>
-#include <pthread.h>
 #include <sys/fsuid.h>
 #include <grp.h>
 
+#include "src/libtest/thread.h"
+#include "src/libtest/state.h"
 #include "src/libtap/tap.h"
 
 static void check_fsid (uid_t uid, gid_t gid)
@@ -149,63 +147,6 @@ void test_single_thread (void)
 
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
-static state_t         state = S0;
-static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
-
-static void test_lock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_lock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_lock: %s", strerror (n));
-}
-static void test_unlock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_unlock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_unlock: %s", strerror (n));
-}
-static void test_condsig (pthread_cond_t *c)
-{
-    int n = pthread_cond_signal (c);
-    if (n)
-        BAIL_OUT ("pthread_cond_signal: %s", strerror (n));
-}
-static void test_condwait (pthread_cond_t *c, pthread_mutex_t *l)
-{
-    int n = pthread_cond_wait (c, l);
-    if (n)
-        BAIL_OUT ("pthread_cond_wait: %s", strerror (n));
-}
-static void test_thread_create (pthread_t *t, void *(f)(void *), void *a)
-{
-    int n = pthread_create (t, NULL, f, a);
-    if (n)
-        BAIL_OUT ("pthread_create: %s", strerror (n));
-}
-static void test_thread_join (pthread_t t, void **a)
-{
-    int n = pthread_join (t, a);
-    if (n)
-        BAIL_OUT ("pthread_join: %s", strerror (n));
-}
-
-static void change_state (state_t s)
-{
-    test_lock (&state_lock);
-    state = s;
-    test_condsig (&state_cond);
-    test_unlock (&state_lock);
-}
-
-static void wait_state (state_t s)
-{
-    test_lock (&state_lock);
-    while ((state != s))
-        test_condwait (&state_cond, &state_lock);
-    test_unlock (&state_lock);
-}
-
 static const char *strgroups (char *buf, size_t size, gid_t *g, size_t len)
 {
     buf[0] = '\0';
@@ -234,18 +175,18 @@ static void *proc1 (void *a)
     gid_t g[] = { 101 };
 
     check_groups ("task1", "");
-    change_state (S1);
+    test_state_change (S1);
 
-    wait_state (S2);
+    test_state_wait (S2);
     check_groups ("task1", "");
 
     diag ("task1: SYS_setgroups [101]");
     if (syscall (SYS_setgroups, 1, g) < 0)
         BAIL_OUT ("task1: SYS_setgroups: %s", strerror (errno));
     check_groups ("task1", "101");
-    change_state (S3);
+    test_state_change (S3);
 
-    wait_state (S4);
+    test_state_wait (S4);
     return NULL;
 }
 
@@ -253,24 +194,26 @@ static void *proc2 (void *a)
 {
     gid_t g[] = { 100 };
 
-    wait_state (S1);
+    test_state_wait (S1);
     check_groups ("task2", "");
 
     diag ("task2: SYS_setgroups [100]");
     if (syscall (SYS_setgroups, 1, g) < 0)
         BAIL_OUT ("task2: SYS_setgroups: %s", strerror (errno));
     check_groups ("task2", "100");
-    change_state (S2);
+    test_state_change (S2);
 
-    wait_state (S3);
+    test_state_wait (S3);
     check_groups ("task2", "100");
-    change_state (S4);
+    test_state_change (S4);
     return NULL;
 }
 
 void test_multi_thread (void)
 {
     pthread_t t1, t2;
+
+    test_state_init (S0);
 
     diag ("task0: SYS_setgroups []");
     if (syscall (SYS_setgroups, 0, NULL) < 0)

@@ -10,20 +10,9 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdint.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
 #include <string.h>
-#include <errno.h>
-#include <stdarg.h>
-#include <assert.h>
+#include "npfs.h"
 
-#include "src/libnpfs/9p.h"
-#include "src/libnpfs/npfs.h"
-
-#include "src/liblsd/list.h"
 #include "src/libtap/tap.h"
 
 

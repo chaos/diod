@@ -11,8 +11,8 @@ TESTS="src/libnpfs/test_encoding.t \
     src/libnpfs/test_fidpool.t \
     src/libnpclient/test_simple.t \
     src/libdiod/test_configfile.t \
-    src/daemon/test_read.t \
-    src/daemon/test_directory.t"
+    src/libdiod/test_read.t \
+    src/libdiod/test_directory.t"
 
 exit_rc=0
 

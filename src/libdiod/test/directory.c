@@ -13,33 +13,16 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdint.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <sys/socket.h>
 #include <string.h>
 #include <errno.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <dirent.h>
 
-#include <sys/param.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-#include "src/libnpfs/9p.h"
-#include "src/libnpfs/npfs.h"
+#include "src/libtest/server.h"
 #include "src/libnpclient/npclient.h"
-
-#include "src/liblsd/list.h"
-#include "src/libdiod/diod_log.h"
-#include "src/libdiod/diod_conf.h"
-#include "src/libdiod/diod_sock.h"
-
-#include "ops.h"
 #include "src/libtap/tap.h"
+
+#include "diod_conf.h"
 
 #define TEST_MSIZE 8192
 
@@ -49,7 +32,7 @@ int
 main (int argc, char *argv[])
 {
     Npsrv *srv;
-    int s[2];
+    int client_fd;
     int flags = 0;
     int rc;
     Npcfid *root, *dir, *f[TEST_ITER];
@@ -62,34 +45,15 @@ main (int argc, char *argv[])
 
     plan (NO_PLAN);
 
-    diag ("initialize diod logging and configuration");
-    diod_log_init (argv[0]);
-    diod_conf_init ();
-    diod_conf_set_auth_required (0);
-
     /* export */
     if (!mkdtemp (tmpdir))
         BAIL_OUT ("mkdtemp: %s", strerror (errno));
-    diag ("exporting %s", tmpdir);
-    diod_conf_add_exports (tmpdir);
+
+    srv = test_server_create (tmpdir, flags, &client_fd);
+
     diod_conf_set_exportopts ("sharefd");
 
-    if (socketpair (AF_LOCAL, SOCK_STREAM, 0, s) < 0)
-        BAIL_OUT ("socketpair: %s", strerror (errno));
-
-    srv = np_srv_create (16, flags);
-    ok (srv != NULL, "np_srv_create works");
-    if (!srv)
-        BAIL_OUT ("need server to continue");
-    rc = diod_init (srv);
-    ok (rc == 0, "diod_init works");
-    if (rc < 0)
-        BAIL_OUT ("diod_init: %s", strerror (np_rerror ()));
-
-    diag ("connecting server to socketpair");
-    diod_sock_startfd (srv, s[1], s[1], "loopback", 0);
-
-    root = npc_mount (s[0], s[0], TEST_MSIZE, tmpdir, NULL);
+    root = npc_mount (client_fd, client_fd, TEST_MSIZE, tmpdir, NULL);
     ok (root != NULL, "npc_mount on socketpair works");
     if (!root)
         BAIL_OUT ("npc_mount: %s", strerror (np_rerror ()));
@@ -166,17 +130,9 @@ main (int argc, char *argv[])
     diag ("npc_umount");
     npc_umount (root);
 
-    diag ("npc_srv_wait_conncount");
-    np_srv_wait_conncount (srv, 0);
-
-    diag ("finalzing server");
-    diod_fini (srv);
-    np_srv_destroy (srv);
+    test_server_destroy (srv);
 
     rmdir (tmpdir);
-
-    diod_conf_fini ();
-    diod_log_fini ();
 
     done_testing ();
 

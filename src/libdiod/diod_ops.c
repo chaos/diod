@@ -97,15 +97,15 @@
 #include "src/liblsd/hash.h"
 #include "src/liblsd/hostlist.h"
 
-#include "src/libdiod/diod_conf.h"
-#include "src/libdiod/diod_log.h"
-#include "src/libdiod/diod_auth.h"
+#include "diod_conf.h"
+#include "diod_log.h"
+#include "diod_auth.h"
 
-#include "ops.h"
-#include "exp.h"
-#include "ioctx.h"
-#include "xattr.h"
-#include "fid.h"
+#include "diod_ops.h"
+#include "diod_exp.h"
+#include "diod_ioctx.h"
+#include "diod_xattr.h"
+#include "diod_fid.h"
 
 #define DIOD_SRV_MAX_MSIZE 1048576
 

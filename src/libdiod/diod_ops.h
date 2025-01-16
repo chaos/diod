@@ -8,21 +8,20 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
-#define DIOD_FID_FLAGS_ROFS       0x01
-#define DIOD_FID_FLAGS_MOUNTPT    0x02
-#define DIOD_FID_FLAGS_SHAREFD    0x04
-#define DIOD_FID_FLAGS_XATTR      0x08
+#ifndef LIBDIOD_DIOD_OPS_H
+#define LIBDIOD_DIOD_OPS_H
 
-typedef struct {
-    Path            path;
-    IOCtx           ioctx;
-    Xattr           xattr;
-    int             flags;
-} Fid;
+#include <sys/types.h>
+#include <sys/stat.h>
 
-Fid *diod_fidalloc (Npfid *fid, Npstr *ns);
-Fid *diod_fidclone (Npfid *newfid, Npfid *fid);
-void diod_fiddestroy (Npfid *fid);
+#include "src/libnpfs/npfs.h"
+
+int diod_init (Npsrv *srv);
+void diod_fini (Npsrv *srv);
+
+void diod_ustat2qid (struct stat *st, Npqid *qid);
+
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

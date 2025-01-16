@@ -10,21 +10,8 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <unistd.h>
-#include <stdarg.h>
-#include <pthread.h>
-#include <errno.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <assert.h>
 
-#include "9p.h"
 #include "npfs.h"
 
 #include "src/libtap/tap.h"

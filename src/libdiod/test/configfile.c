@@ -13,12 +13,8 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdarg.h>
-#include <string.h>
-#include <stdio.h>
 #include <errno.h>
+#include <string.h>
 
 #include "src/liblsd/list.h"
 #include "src/libtap/tap.h"

@@ -8,6 +8,11 @@
  * SPDX-License-Identifier: MIT
  *************************************************************/
 
+#ifndef LIBNPFS_NPFSIMPL_H
+#define LIBNPFS_NPFSIMPL_H
+
+#include "npfs.h"
+
 /* fcall.c */
 Npfcall *np_version(Npreq *req, Npfcall *tc);
 Npfcall *np_auth(Npreq *req, Npfcall *tc);
@@ -47,3 +52,4 @@ Npreq *np_req_alloc(Npconn *conn, Npfcall *tc);
 Npreq *np_req_ref(Npreq*);
 void np_req_unref(Npreq*);
 
+#endif

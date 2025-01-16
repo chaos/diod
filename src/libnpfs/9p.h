@@ -16,6 +16,8 @@
 #ifndef NET_9P_H
 #define NET_9P_H
 
+#include <stdint.h>
+
 #ifndef V9FS_MAGIC
 #define V9FS_MAGIC      0x01021997
 #endif

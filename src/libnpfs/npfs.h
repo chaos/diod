@@ -8,8 +8,12 @@
  * SPDX-License-Identifier: MIT
  *************************************************************/
 
+#ifndef LIBNPFS_NPFS_H
+#define LIBNPFS_NPFS_H
+
 #include <stdarg.h>
 #include <sys/types.h>
+#include "9p.h"
 
 typedef struct p9_str Npstr;
 typedef struct p9_qid Npqid;
@@ -540,3 +544,5 @@ Npfile *np_ctl_addfile (Npfile *parent, char *name, SynGetF getf, void *arg,
 			int flags);
 Npfile *np_ctl_adddir (Npfile *parent, char *name);
 void np_ctl_delfile (Npfile *file);
+
+#endif

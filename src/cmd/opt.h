@@ -8,6 +8,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
+#ifndef CMD_OPT_H
+#define CMD_OPT_H
+
 typedef struct opt_struct *Opt;
 
 Opt             opt_create (void);
@@ -28,6 +31,7 @@ int             opt_scanf (Opt o, const char *fmt, ...)
 
 int             opt_check_allowed_csv (Opt o, const char *s);
 
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

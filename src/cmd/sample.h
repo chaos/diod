@@ -8,6 +8,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
+#ifndef CMD_SAMPLE_H
+#define CMD_SAMPLE_H
+
 typedef struct sample_struct *sample_t;
 
 sample_t sample_create (int stale_secs);
@@ -26,6 +29,8 @@ double sample_val (sample_t s, time_t tnow);
 
 int sample_val_cmp (sample_t s1, sample_t s2, time_t tnow);
 int sample_rate_cmp (sample_t s1, sample_t s2, time_t tnow);
+
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

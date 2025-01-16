@@ -8,6 +8,13 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
+#ifndef LIBDIOD_DIOD_SOCK_H
+#define LIBDIOD_DIOD_SOCK_H
+
+#include <poll.h>
+#include "src/libnpfs/npfs.h"
+#include "src/liblsd/list.h"
+
 struct pollfd;
 
 void diod_sock_accept_one (Npsrv *srv, int fd, int lookup);
@@ -23,6 +30,8 @@ int  diod_sock_listen (List l, struct pollfd **fdsp, int *nfdsp);
 int diod_sock_connect (char *name, int flags);
 int diod_sock_connect_inet (char *host, char *port, int flags);
 int diod_sock_connect_unix (char *path, int flags);
+
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab

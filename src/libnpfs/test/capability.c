@@ -12,69 +12,18 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <sys/fsuid.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <pthread.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <assert.h>
-#include <errno.h>
-#include <string.h>
 #if HAVE_LIBCAP
 #include <sys/capability.h>
 #endif
-#include <grp.h>
+#include <sys/fsuid.h>
+#include <string.h>
 
-#include "src/libdiod/diod_log.h"
+#include "src/libtest/thread.h"
+#include "src/libtest/state.h"
 #include "src/libtap/tap.h"
 
 #if HAVE_LIBCAP
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
-
-static state_t         state = S0;
-static pthread_mutex_t state_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  state_cond = PTHREAD_COND_INITIALIZER;
-
-static void test_lock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_lock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_lock: %s", strerror (n));
-}
-static void test_unlock (pthread_mutex_t *l)
-{
-    int n = pthread_mutex_unlock (l);
-    if (n)
-        BAIL_OUT ("pthread_mutex_unlock: %s", strerror (n));
-}
-static void test_condsig (pthread_cond_t *c)
-{
-    int n = pthread_cond_signal (c);
-    if (n)
-        BAIL_OUT ("pthread_cond_signal: %s", strerror (n));
-}
-static void test_condwait (pthread_cond_t *c, pthread_mutex_t *l)
-{
-    int n = pthread_cond_wait (c, l);
-    if (n)
-        BAIL_OUT ("pthread_cond_wait: %s", strerror (n));
-}
-static void test_thread_create (pthread_t *t, void *(f)(void *), void *a)
-{
-    int n = pthread_create (t, NULL, f, a);
-    if (n)
-        BAIL_OUT ("pthread_create: %s", strerror (n));
-}
-static void test_thread_join (pthread_t t, void **a)
-{
-    int n = pthread_join (t, a);
-    if (n)
-        BAIL_OUT ("pthread_join: %s", strerror (n));
-}
 
 static void check_capability (const char *who,
                               const char *capname,
@@ -111,45 +60,27 @@ static void set_capability (char *who,
         BAIL_OUT ("%s: cap_free failed", who);
 }
 
-static void
-change_state (state_t s)
-{
-    test_lock (&state_lock);
-    state = s;
-    test_condsig (&state_cond);
-    test_unlock (&state_lock);
-}
-
-static void
-wait_state (state_t s)
-{
-    test_lock (&state_lock);
-    while ((state != s))
-        test_condwait (&state_cond, &state_lock);
-    test_unlock (&state_lock);
-}
-
 static void *proc1 (void *a)
 {
     /* 1) task 1, expect clr */
     check_capability ("task1", "DAC_OVERRIDE", CAP_DAC_OVERRIDE, CAP_CLEAR);
     check_capability ("task1", "CHOWN", CAP_CHOWN, CAP_CLEAR);
-    change_state (S1);
-    wait_state (S2);
+    test_state_change (S1);
+    test_state_wait (S2);
     /* 4) task 1, still clr */
     check_capability ("task1", "DAC_OVERRIDE", CAP_DAC_OVERRIDE, CAP_CLEAR);
     check_capability ("task1", "CHOWN", CAP_CHOWN, CAP_CLEAR);
     diag ("task1: clr cap");
     set_capability ("task1", "DAC_OVERRIDE", CAP_DAC_OVERRIDE, CAP_CLEAR);
-    change_state (S3);
-    wait_state (S4);
+    test_state_change (S3);
+    test_state_wait (S4);
     return NULL;
 }
 
 static void *proc2 (void *a)
 {
     /* 2) task 2, expect clr */
-    wait_state (S1);
+    test_state_wait (S1);
     check_capability ("task2", "DAC_OVERRIDE", CAP_DAC_OVERRIDE, CAP_CLEAR);
     check_capability ("task2", "CHOWN", CAP_CHOWN, CAP_CLEAR);
     diag ("task2: set cap");
@@ -158,12 +89,12 @@ static void *proc2 (void *a)
     /* 3) task 2, expect set */
     check_capability ("task2", "DAC_OVERRIDE", CAP_DAC_OVERRIDE, CAP_SET);
     check_capability ("task2", "CHOWN", CAP_CHOWN, CAP_SET);
-    change_state (S2);
-    wait_state (S3);
+    test_state_change (S2);
+    test_state_wait (S3);
     /* 5) task 2, expect set */
     check_capability ("task2", "DAC_OVERRIDE", CAP_DAC_OVERRIDE, CAP_SET);
     check_capability ("task2", "CHOWN", CAP_CHOWN, CAP_SET);
-    change_state (S4);
+    test_state_change (S4);
     return NULL;
 }
 
@@ -233,6 +164,7 @@ int main(int argc, char *argv[])
     if (geteuid () != 0 || getenv ("FAKEROOTKEY") != NULL)
         plan (SKIP_ALL, "this test must run as root");
     plan (NO_PLAN);
+    test_state_init (S0);
     proc0 (); // spawns proc1 and proc2
 #else
     plan (SKIP_ALL, "libcap2-dev is not installed");

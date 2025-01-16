@@ -1,8 +1,8 @@
 SUBDIRS = \
 	libtap \
+	libtest \
 	liblsd \
 	libnpfs \
 	libnpclient \
 	libdiod \
-	daemon \
 	cmd

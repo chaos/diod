@@ -8,15 +8,14 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
-typedef struct xattr_struct *Xattr;
+#ifndef _LIBTEST_STATE_H
+#define _LIBTEST_STATE_H
 
-int xattr_open (Npfid *fid, Npstr *name, u64 *sizep);
-int xattr_create (Npfid *fid, Npstr *name, u64 size, u32 flags);
-int xattr_close (Npfid *fid);
+void test_state_init (int s);
+void test_state_change (int s);
+void test_state_wait (int s);
 
-int xattr_pread (Xattr xattr, void *buf, size_t count, off_t offset);
-int xattr_pwrite (Xattr xattr, void *buf, size_t count, off_t offset);
-
+#endif
 
 /*
  * vi:tabstop=4 shiftwidth=4 expandtab
