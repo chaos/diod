@@ -6,7 +6,6 @@ apt install \
   make \
   pkg-config \
   libc6-dev \
-  libpopt-dev \
   libncurses-dev \
   libcap2-dev \
   lua5.1 \

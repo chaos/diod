@@ -6,7 +6,6 @@ Standards-Version: 4.1.2
 Build-Depends:
   debhelper (>= 10),
   libncurses-dev,
-  libpopt-dev,
   lua5.1,
   liblua5.1-dev
 
