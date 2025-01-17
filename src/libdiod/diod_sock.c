@@ -31,9 +31,6 @@
 #include <stdint.h>
 #include <syslog.h>
 #include <sys/time.h>
-#if HAVE_TCP_WRAPPERS
-#include <tcpd.h>
-#endif
 #include <poll.h>
 #include <pthread.h>
 
@@ -357,14 +354,6 @@ diod_sock_accept_one (Npsrv *srv, int fd, int lookup)
         close (fd);
         return;
     }
-#if HAVE_TCP_WRAPPERS
-    res = hosts_ctl (DAEMON_NAME, host, ip, STRING_UNKNOWN);
-    if (!res) {
-        msg ("connect denied by wrappers: %s:%s", host, svc);
-        close (fd);
-        return;
-    }
-#endif
     port = strtoul (svc, NULL, 10);
     if (port < IPPORT_RESERVED && port >= IPPORT_RESERVED / 2)
         flags |= CONN_FLAGS_PRIVPORT;

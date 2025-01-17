@@ -42,7 +42,6 @@ test_ldadd = \
 	$(LUA_LIB) \
 	$(LIBCAP) \
 	$(LIBMUNGE) \
-	$(LIBWRAP) \
 	$(LIBPTHREAD)
 
 TESTS = \
