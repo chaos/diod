@@ -93,9 +93,8 @@ AC_SYS_LARGEFILE
 # Optional features
 ##
 AC_ARG_ENABLE([diodmount],
-  [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])],
-  [],
-  [enable_diodmount=auto])
+  [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])])
+
 AC_ARG_ENABLE([impersonation],
   [AS_HELP_STRING([--enable-impersonation], [allow access=user])],
   [],
@@ -117,12 +116,6 @@ AS_IF([test "x$enable_config" != "xno"], [
 
 case "${host_os}" in
   linux*)
-    case "${enable_diodmount}" in
-      no)
-        ;;
-      *)
-        enable_diodmount=yes;;
-    esac
     case "${enable_impersonation}" in
       no)
         ;;
@@ -133,12 +126,6 @@ case "${host_os}" in
     esac
     ;;
   freebsd*)
-    case "${enable_diodmount}" in
-      yes)
-        ;;
-      *)
-        enable_diodmount=no;;
-    esac
     case "${enable_impersonation}" in
       no|auto)
         enable_impersonation=no;;
@@ -149,12 +136,6 @@ case "${host_os}" in
     esac
     ;;
   *)
-    case "${enable_diodmount}" in
-      yes)
-        ;;
-      *)
-        enable_diodmount=no;;
-    esac
     case "${enable_impersonation}" in
       no|auto)
         enable_impersonation=no;;
@@ -164,7 +145,7 @@ case "${host_os}" in
     ;;
 esac
 
-AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
+AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" != "xno"])
 AM_CONDITIONAL([USE_IMPERSONATION_LINUX], [test "x${enable_impersonation}" = "xlinux"])
 AM_CONDITIONAL([USE_IMPERSONATION_GANESHA], [test "x${enable_impersonation}" = "xganesha"])
 
