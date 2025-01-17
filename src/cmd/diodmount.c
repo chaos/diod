@@ -27,9 +27,7 @@
 #include <stdint.h>
 #include <netdb.h>
 #include <stdio.h>
-#if HAVE_GETOPT_H
 #include <getopt.h>
-#endif
 #include <mntent.h>
 #include <sys/mount.h>
 #include <string.h>
@@ -56,9 +54,8 @@
 #include "src/libdiod/diod_auth.h"
 #include "opt.h"
 
-#define OPTIONS "fnvo:p"
-#if HAVE_GETOPT_LONG
-#define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
+static const char *options = "fnvo:p";
+
 static const struct option longopts[] = {
     {"fake-mount",      no_argument,         0, 'f'},
     {"no-mtab",         no_argument,         0, 'n'},
@@ -67,9 +64,6 @@ static const struct option longopts[] = {
     {"privport",        no_argument,         0, 'p'},
     {0, 0, 0, 0},
 };
-#else
-#define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
-#endif
 
 #define NBD_SET_BLKSIZE _IO( 0xab, 1 )
 #define NBD_SET_TIMEOUT _IO( 0xab, 2 )
@@ -125,7 +119,7 @@ main (int argc, char *argv[])
     o = opt_create ();
 
     opterr = 0;
-    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'f':   /* --fake-mount */
                 fopt = 1;

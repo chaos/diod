@@ -54,7 +54,6 @@ PKG_CHECK_MODULES([ncurses], [ncurses])
 # Checks for header files.
 ##
 AC_CHECK_HEADERS( \
-  getopt.h \
   pthread.h \
   sys/prctl.h \
   sys/statfs.h \
@@ -72,7 +71,6 @@ AC_C_CONST
 # Checks for library functions
 ##
 AC_CHECK_FUNCS( \
-  getopt_long \
   vsnprintf \
   vsscanf \
   utimensat \
