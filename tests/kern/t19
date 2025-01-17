@@ -1,7 +1,0 @@
-#!/bin/bash -e
-
-dd if=/dev/zero of=$PATH_EXPDIR/a count=1024 status=noxfer
-echo testing host file system
-./tfcntl2 $PATH_EXPDIR/a || :
-echo testing diod file system
-./tfcntl2 $PATH_MNTDIR/a || :

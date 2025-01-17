@@ -23,7 +23,6 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 #include "src/libtap/tap.h"

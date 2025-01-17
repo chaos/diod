@@ -21,7 +21,6 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -60,7 +59,7 @@ npc_walk(Npcfid *nfid, char *path)
 {
 	int n;
 	char *fname, *s, *t = NULL;
-	char *wnames[P9_MAXWELEM];
+	char *wnames[MAXWELEM];
 	Npfcall *tc = NULL, *rc = NULL;
 	Npcfid *fid = NULL;
 
@@ -81,7 +80,7 @@ npc_walk(Npcfid *nfid, char *path)
 	s = fname;
 	while (1) {
 		n = 0;
-		while (n<P9_MAXWELEM && *s!='\0') {
+		while (n<MAXWELEM && *s!='\0') {
 			if (*s == '/') {
 				s++;
 				continue;

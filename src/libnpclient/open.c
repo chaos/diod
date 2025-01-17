@@ -24,7 +24,6 @@
 #include <inttypes.h>
 #include <libgen.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "npclient.h"
 #include "npcimpl.h"
@@ -34,7 +33,7 @@
 int
 npc_create (Npcfid *fid, char *name, u32 flags, u32 mode, gid_t gid)
 {
-	int maxio = fid->fsys->msize - P9_IOHDRSZ;
+	int maxio = fid->fsys->msize - IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 
@@ -94,7 +93,7 @@ npc_create_bypath (Npcfid *root, char *path, u32 flags, u32 mode, gid_t gid)
 int
 npc_open (Npcfid *fid, u32 flags)
 {
-	int maxio = fid->fsys->msize - P9_IOHDRSZ;
+	int maxio = fid->fsys->msize - IOHDRSZ;
 	Npfcall *tc = NULL, *rc = NULL;
 	int ret = -1;
 

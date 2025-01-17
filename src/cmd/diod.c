@@ -41,7 +41,6 @@
 #include <signal.h>
 #include <pthread.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/liblsd/list.h"
 

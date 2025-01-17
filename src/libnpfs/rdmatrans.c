@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
-#include "9p.h"
 #include "npfs.h"
 #include "npfsimpl.h"
 

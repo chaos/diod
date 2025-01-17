@@ -1,4 +1,0 @@
-#!/bin/bash -e
-
-# mmap write test disabled
-fsx/fsx -N 1000 -W $PATH_MNTDIR/testfile

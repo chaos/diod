@@ -11,10 +11,11 @@
 #ifndef LIBNPCLIENT_NPCLIENT_H
 #define LIBNPCLIENT_NPCLIENT_H
 
-#include "src/libnpfs/9p.h"
+#include "src/libnpfs/types.h"
 
 typedef struct Npcfid Npcfid;
 typedef struct Npcfsys Npcfsys;
+typedef struct Npclockinfo Npclockinfo;
 
 struct Npcfsys;
 struct stat;
@@ -29,6 +30,15 @@ struct Npcfid {
 	int		buf_len;	/* length of 'buf' filled (readdir_r) */
 	int		buf_used;	/* amount of 'buf' used (readdir_r)*/
 };
+
+struct Npclockinfo {
+	u8 type;			/* Lrdlck, Lwrlck, or Lunlck */
+	u64 start;			/* start of lock range */
+	u64 length;			/* length of lock range */
+	u32 proc_id;			/* pid of lock owner/requestor */
+	char *client_id;		/* hostname of lock owner/requestor */
+};
+
 
 typedef int (*AuthFun)(Npcfid *afid, u32 uid);
 
@@ -121,7 +131,7 @@ int npc_mkdir (Npcfid *fid, char *name, u32 mode);
 /* Send a GETATTR request to get information on 'fid'.
  * Returns 0 on success or -1 on error (retrieve with np_rerror ()).
  */
-int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, struct p9_qid *qid,
+int npc_getattr (Npcfid *fid, u64 request_mask, u64 *valid, Npqid *qid,
 	         u32 *mode, u32 *uid, u32 *gid, u64 *nlink, u64 *rdev,
 		 u64 *size, u64 *blksize, u64 *blocks, u64 *atime_sec,
 		 u64 *atime_nsec, u64 *mtime_sec, u64 *mtime_nsec,
@@ -152,6 +162,16 @@ int npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count);
 ssize_t npc_xattrwalk (Npcfid *fid, Npcfid *attrfid, char *name);
 int npc_xattrcreate (Npcfid *fid, char *name, u64 attr_size, u32 flags);
 
+/* Request a lock.
+ * 'flags' is Lblock or Lreclaim.
+ * 'status' is set to Lsuccess, Lblocked, Lerror, or Lgrace.
+ */
+int npc_lock (Npcfid *fid, u32 flags, Npclockinfo *info, u8 *status);
+
+/* Test for the existence of a lock.
+ */
+int npc_getlock (Npcfid *fid, Npclockinfo *info_in, Npclockinfo *info_out);
+
 
 /* TODO:
  * npc_statfs ()
@@ -159,8 +179,6 @@ int npc_xattrcreate (Npcfid *fid, char *name, u64 attr_size, u32 flags);
  * npc_rename ()
  * npc_readlink ()
  * npc_fsync ()
- * npc_lock ()
- * npc_getlock ()
  * npc_link ()
  */
 

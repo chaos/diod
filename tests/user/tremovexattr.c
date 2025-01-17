@@ -27,7 +27,6 @@
 #include <fcntl.h>
 #include <libgen.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 

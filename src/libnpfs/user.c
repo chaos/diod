@@ -22,7 +22,6 @@
 #include <pwd.h>
 #include <grp.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"
@@ -370,7 +369,7 @@ _real_lookup_byname (Npsrv *srv, char *uname)
 	char *buf = NULL;
 
 	if (srv->flags & SRV_FLAGS_NOUSERDB) {
-		if (!(u = _alloc_nouserdb (srv, P9_NONUNAME, uname)))
+		if (!(u = _alloc_nouserdb (srv, NONUNAME, uname)))
 			goto error;
 	} else {
 		len= sysconf(_SC_GETPW_R_SIZE_MAX);
@@ -410,7 +409,7 @@ np_uname2user (Npsrv *srv, char *uname)
 	Npuser *u = NULL;
 
 	xpthread_mutex_lock (&uc->lock);
-	if (!(u = _usercache_lookup (srv, uname, P9_NONUNAME)))
+	if (!(u = _usercache_lookup (srv, uname, NONUNAME)))
 		if ((u = _real_lookup_byname (srv, uname)))
 			_usercache_add (srv, u);
 	xpthread_mutex_unlock (&uc->lock);
@@ -454,7 +453,7 @@ np_attach2user (Npsrv *srv, Npstr *uname, u32 n_uname)
 	Npuser *u = NULL;
 	char *s;
 
-	if (n_uname != P9_NONUNAME) {
+	if (n_uname != NONUNAME) {
 		u = np_uid2user (srv, n_uname);
 	} else {
 		if (uname->len == 0) {
@@ -481,7 +480,7 @@ np_afid2user (Npfid *afid, Npstr *uname, u32 n_uname)
 {
 	Npuser *u = NULL;
 
-	if (n_uname != P9_NONUNAME) {
+	if (n_uname != NONUNAME) {
 		if (n_uname != afid->user->uid) {
 			np_uerror (EPERM);
 			goto done;

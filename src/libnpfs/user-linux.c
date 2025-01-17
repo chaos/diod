@@ -28,7 +28,6 @@
 #endif
 #include <sys/prctl.h>
 
-#include "9p.h"
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"
@@ -97,7 +96,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 	int dumpclrd = 0;
 
 	if (np_conn_get_authuser(req->conn, &authuid) < 0)
-		authuid = P9_NONUNAME;
+		authuid = NONUNAME;
 
 	if ((srv->flags & SRV_FLAGS_SETFSID)) {
 		/* gid_override must be one of user's suppl. groups unless
@@ -124,7 +123,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_uerror (errno);
 				np_logerr (srv, "setfsgid(%s) gid=%d failed",
 					   u->uname, gid);
-				wt->fsgid = P9_NONUNAME;
+				wt->fsgid = NONUNAME;
 				goto done;
 			}
 			if (n != wt->fsgid) {
@@ -132,7 +131,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_logerr (srv, "setfsgid(%s) gid=%d failed"
 					   "returned %d, expected %d",
 					   u->uname, gid, n, wt->fsgid);
-				wt->fsgid = P9_NONUNAME;
+				wt->fsgid = NONUNAME;
 				goto done;
 			}
 			wt->fsgid = gid;
@@ -143,7 +142,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_uerror (errno);
 				np_logerr (srv, "setfsuid(%s) uid=%d failed",
 					   u->uname, u->uid);
-				wt->fsuid = P9_NONUNAME;
+				wt->fsuid = NONUNAME;
 				goto done;
 			}
 			if (n != wt->fsuid) {
@@ -151,7 +150,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 				np_logerr (srv, "setfsuid(%s) uid=%d failed: "
 					   "returned %d, expected %d",
 					   u->uname, u->uid, n, wt->fsuid);
-				wt->fsuid = P9_NONUNAME;
+				wt->fsuid = NONUNAME;
 				goto done;
 			}
 			/* Track CAP side effects of setfsuid.
@@ -172,7 +171,7 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 					np_uerror (errno);
 					np_logerr (srv, "setgroups(%s) nsg=%d failed",
 						   u->uname, u->nsg);
-					wt->fsuid = P9_NONUNAME;
+					wt->fsuid = NONUNAME;
 					goto done;
 				}
 			}

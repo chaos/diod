@@ -37,7 +37,6 @@
 #include <dirent.h>
 #include <limits.h>
 
-#include "src/libnpfs/9p.h"
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 #include "src/libnpfs/xpthread.h"
@@ -85,7 +84,7 @@ typedef struct {
     sample_t numfids;
     sample_t numreqs;
     sample_t totreqs;
-    sample_t nreqs[P9_RWSTAT + 1];
+    sample_t nreqs[Rwstat + 1];
     sample_t rcount[NPSTATS_RWCOUNT_BINS];
     sample_t wcount[NPSTATS_RWCOUNT_BINS];
 } TpoolStats;
@@ -259,30 +258,30 @@ _update_display_topwin (WINDOW *win)
     if (!(itr = list_iterator_create (tpools)))
         msg_exit ("out of memory");
     while ((tp = list_next (itr))) {
-        statfs   += sample_rate (tp->nreqs[P9_TSTATFS], now);
-        lopen    += sample_rate (tp->nreqs[P9_TLOPEN], now);
-        lcreate  += sample_rate (tp->nreqs[P9_TLCREATE], now);
-        symlink  += sample_rate (tp->nreqs[P9_TSYMLINK], now);
-        mknod    += sample_rate (tp->nreqs[P9_TMKNOD], now);
-        rename   += sample_rate (tp->nreqs[P9_TRENAME], now);
-        readlink += sample_rate (tp->nreqs[P9_TREADLINK], now);
-        getattr  += sample_rate (tp->nreqs[P9_TGETATTR], now);
-        setattr  += sample_rate (tp->nreqs[P9_TSETATTR], now);
-        readdir  += sample_rate (tp->nreqs[P9_TREADDIR], now);
-        fsync    += sample_rate (tp->nreqs[P9_TFSYNC], now);
-        lock     += sample_rate (tp->nreqs[P9_TLOCK], now);
-        getlock  += sample_rate (tp->nreqs[P9_TGETLOCK], now);
-        link     += sample_rate (tp->nreqs[P9_TLINK], now);
-        mkdir    += sample_rate (tp->nreqs[P9_TMKDIR], now);
-        version  += sample_rate (tp->nreqs[P9_TVERSION], now);
-        auth     += sample_rate (tp->nreqs[P9_TAUTH], now);
-        attach   += sample_rate (tp->nreqs[P9_TATTACH], now);
-        flush    += sample_rate (tp->nreqs[P9_TFLUSH], now);
-        walk     += sample_rate (tp->nreqs[P9_TWALK], now);
-        read     += sample_rate (tp->nreqs[P9_TREAD], now);
-        write    += sample_rate (tp->nreqs[P9_TWRITE], now);
-        clunk    += sample_rate (tp->nreqs[P9_TCLUNK], now);
-        remove   += sample_rate (tp->nreqs[P9_TREMOVE], now);
+        statfs   += sample_rate (tp->nreqs[Tstatfs], now);
+        lopen    += sample_rate (tp->nreqs[Tlopen], now);
+        lcreate  += sample_rate (tp->nreqs[Tlcreate], now);
+        symlink  += sample_rate (tp->nreqs[Tsymlink], now);
+        mknod    += sample_rate (tp->nreqs[Tmknod], now);
+        rename   += sample_rate (tp->nreqs[Trename], now);
+        readlink += sample_rate (tp->nreqs[Treadlink], now);
+        getattr  += sample_rate (tp->nreqs[Tgetattr], now);
+        setattr  += sample_rate (tp->nreqs[Tsetattr], now);
+        readdir  += sample_rate (tp->nreqs[Treaddir], now);
+        fsync    += sample_rate (tp->nreqs[Tfsync], now);
+        lock     += sample_rate (tp->nreqs[Tlock], now);
+        getlock  += sample_rate (tp->nreqs[Tgetlock], now);
+        link     += sample_rate (tp->nreqs[Tlink], now);
+        mkdir    += sample_rate (tp->nreqs[Tmkdir], now);
+        version  += sample_rate (tp->nreqs[Tversion], now);
+        auth     += sample_rate (tp->nreqs[Tauth], now);
+        attach   += sample_rate (tp->nreqs[Tattach], now);
+        flush    += sample_rate (tp->nreqs[Tflush], now);
+        walk     += sample_rate (tp->nreqs[Twalk], now);
+        read     += sample_rate (tp->nreqs[Tread], now);
+        write    += sample_rate (tp->nreqs[Twrite], now);
+        clunk    += sample_rate (tp->nreqs[Tclunk], now);
+        remove   += sample_rate (tp->nreqs[Tremove], now);
 
         rmbps    += sample_rate (tp->rbytes, now) / (1024*1024);
         wmbps    += sample_rate (tp->wbytes, now) / (1024*1024);
@@ -817,7 +816,7 @@ _update (char *host, time_t t, char *s)
     sample_update (tp->rbytes, (double)stats.rbytes, t);
     sample_update (tp->wbytes, (double)stats.wbytes, t);
     sample_update (tp->iops,
-                   (double)(stats.nreqs[P9_TREAD] + stats.nreqs[P9_TWRITE]), t);
+                   (double)(stats.nreqs[Tread] + stats.nreqs[Twrite]), t);
     sample_update (tp->numfids, (double)stats.numfids, t);
     sample_update (tp->numreqs, (double)stats.numreqs, t);
     sample_update (tp->totreqs, (double)_sum_nreqs(&stats), t);
