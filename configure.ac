@@ -96,10 +96,6 @@ AC_ARG_ENABLE([diodmount],
   [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])],
   [],
   [enable_diodmount=auto])
-AC_ARG_ENABLE([tests],
-  [AS_HELP_STRING([--disable-tests], [do not build tests])],
-  [],
-  [enable_tests=auto])
 AC_ARG_ENABLE([impersonation],
   [AS_HELP_STRING([--enable-impersonation], [allow access=user])],
   [],
@@ -127,12 +123,6 @@ case "${host_os}" in
       *)
         enable_diodmount=yes;;
     esac
-    case "${enable_tests}" in
-      no)
-        ;;
-      *)
-        enable_tests=yes;;
-    esac
     case "${enable_impersonation}" in
       no)
         ;;
@@ -148,12 +138,6 @@ case "${host_os}" in
         ;;
       *)
         enable_diodmount=no;;
-    esac
-    case "${enable_tests}" in
-      yes)
-        ;;
-      *)
-        enable_tests=no;;
     esac
     case "${enable_impersonation}" in
       no|auto)
@@ -171,12 +155,6 @@ case "${host_os}" in
       *)
         enable_diodmount=no;;
     esac
-    case "${enable_tests}" in
-      yes)
-        ;;
-      *)
-        enable_tests=no;;
-    esac
     case "${enable_impersonation}" in
       no|auto)
         enable_impersonation=no;;
@@ -187,7 +165,6 @@ case "${host_os}" in
 esac
 
 AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" = "xyes"])
-AM_CONDITIONAL([ENABLE_TESTS], [test "x${enable_tests}" = "xyes"])
 AM_CONDITIONAL([USE_IMPERSONATION_LINUX], [test "x${enable_impersonation}" = "xlinux"])
 AM_CONDITIONAL([USE_IMPERSONATION_GANESHA], [test "x${enable_impersonation}" = "xganesha"])
 
