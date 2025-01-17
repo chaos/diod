@@ -47,7 +47,6 @@ test_ldadd = \
 
 TESTS = \
 	test_configfile.t \
-	test_threadwrlock.t \
 	test_read.t \
 	test_directory.t \
 	test_lock.t \
@@ -60,9 +59,6 @@ T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 
 test_configfile_t_SOURCES = test/configfile.c
 test_configfile_t_LDADD = $(test_ldadd)
-
-test_threadwrlock_t_SOURCES = test/threadwrlock.c
-test_threadwrlock_t_LDADD = $(test_ldadd)
 
 test_read_t_SOURCES = test/read.c
 test_read_t_LDADD = $(test_ldadd)
