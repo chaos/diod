@@ -71,8 +71,6 @@ AC_C_CONST
 # Checks for library functions
 ##
 AC_CHECK_FUNCS( \
-  vsnprintf \
-  vsscanf \
   utimensat \
 )
 AC_FUNC_STRERROR_R
