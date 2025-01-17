@@ -47,9 +47,9 @@ test_ldadd = \
 
 TESTS = \
 	test_configfile.t \
-	test_threadwrlock.t \
 	test_read.t \
 	test_directory.t \
+	test_lock.t \
 	test_multiuser.t
 
 check_PROGRAMS = $(TESTS)
@@ -60,14 +60,14 @@ T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 test_configfile_t_SOURCES = test/configfile.c
 test_configfile_t_LDADD = $(test_ldadd)
 
-test_threadwrlock_t_SOURCES = test/threadwrlock.c
-test_threadwrlock_t_LDADD = $(test_ldadd)
-
 test_read_t_SOURCES = test/read.c
 test_read_t_LDADD = $(test_ldadd)
 
 test_directory_t_SOURCES = test/directory.c
 test_directory_t_LDADD = $(test_ldadd)
+
+test_lock_t_SOURCES = test/lock.c
+test_lock_t_LDADD = $(test_ldadd)
 
 test_multiuser_t_SOURCES = test/multiuser.c
 test_multiuser_t_LDADD = $(test_ldadd)
