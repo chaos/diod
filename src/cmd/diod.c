@@ -534,7 +534,7 @@ _test_setgroups (void)
         err_exit ("pthread_create");
     if ((err = pthread_join (t, NULL)))
         err_exit ("pthread_join");
-    if ((n = getgroups (ngroups_max, sg)) < 0)
+    if ((n = getgroups (0, NULL)) < 0)
         err_exit ("getgroups");
     if (n == 0)
         rc = 1;
