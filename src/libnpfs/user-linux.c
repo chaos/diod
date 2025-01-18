@@ -160,11 +160,23 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			else if (wt->fsuid == 0)
 				wt->privcap = 0; /* trans from 0 clears caps */
 
-			/* Suppl groups need to be part of cred for NFS
-			 * forwarding even with DAC_BYPASS.  However only
-			 * do it if kernel treats sg's per-thread not process.
-			 * Addendum: late model glibc attempts to make this
-			 * per-process, so for now bypass glibc. See issue 53.
+			/* Set the user's supplementary groups (as read from the host
+			 * system's group configuration), but only if it can be
+			 * done safely.
+			 *
+			 * setgroups(2) is per-process (POSIX), which is incompatible
+			 * with the npfs thread pool model.  SYS_setgroups, the
+			 * direct system call as opposed to the libc wrapper, is
+			 * per-thread, but relying on that is fragile.  Therefore,
+			 * require the server to attest that SYS_setgroups is per-
+			 * thread on the server host kernel by setting a flag, e.g.
+			 * based on a test at startup.  If the flag is unset, access
+			 * is determined solely by the user's uid and primary gid.
+			 *
+			 * Even with DAC_BYPASS, the supplementary groups might
+			 * into play if the host file system is NFS, since the
+			 * supplementary groups are still checked on the NFS server.
+			 * Unlike 9P, NFS transmits them over the wire.
 			 */
 			if ((srv->flags & SRV_FLAGS_SETGROUPS)) {
 				if (syscall(SYS_setgroups, u->nsg, u->sg) < 0) {
