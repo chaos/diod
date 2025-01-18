@@ -494,9 +494,14 @@ _service_sigsetup (void)
 }
 
 #if USE_IMPERSONATION_LINUX
-/* Test whether setgroups applies to thread or process.
- * On RHEL6 (2.6.32 based) it applies to threads and we can use it.
- * On Ubuntu 11 (2.6.38 based) it applies to the whole process and we can't.
+/* POSIX setgroups(2) is per process but in Linux the underlying system call
+ * is per-thread and the per-process bit is handled in glibc, so we can use
+ * SYS_setgroups directly in the server thread pool when switching users.
+ * This assumption is tenuous though, so we should quickly check it during
+ * server startup, in case a future kernel update invalidates it.
+ *
+ * If we can't use it, a warning is issued and life goes on with group access
+ * checks based on the user's primary group.
  */
 void *
 _test_setgroups_thread (void *arg)
@@ -619,8 +624,10 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
 #if USE_IMPERSONATION_LINUX
         if (_test_setgroups ())
             flags |= SRV_FLAGS_SETGROUPS;
-        else
-            msg ("test_setgroups: groups are per-process (disabling)");
+        else {
+            msg ("warning: supplemental group membership will be ignored."
+                "  Some accesses might be inappropriately denied.");
+        }
 #elif USE_IMPERSONATION_GANESHA
         if (init_ganesha_syscalls() < 0)
             msg ("nfs-ganesha-kmod not loaded: changing user/group will fail");
