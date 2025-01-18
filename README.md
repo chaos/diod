@@ -7,8 +7,8 @@
 
 #### On Debian
 ```
-sudo apt-get install build-essential libpopt-dev ncurses-dev automake autoconf git pkgconf
-sudo apt-get install lua5.1 liblua5.1-dev libmunge-dev libwrap0-dev libcap-dev libattr1-dev
+sudo apt-get install build-essential ncurses-dev automake autoconf git pkgconf
+sudo apt-get install lua5.1 liblua5.1-dev libmunge-dev libcap-dev libattr1-dev
 ./autogen.sh
 ./configure
 make
@@ -19,7 +19,7 @@ make check
 
 ```
 sudo yum install epel-release gperftools-devel ncurses-devel automake autoconf libattr-devel
-sudo yum install lua lua-devel munge-devel tcp_wrappers-devel libcap-devel pkgconf
+sudo yum install lua lua-devel munge-devel libcap-devel pkgconf
 ./autogen.sh
 ./configure
 make

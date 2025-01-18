@@ -21,9 +21,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
-#if HAVE_GETOPT_H
 #include <getopt.h>
-#endif
 #include <string.h>
 #include <errno.h>
 #include <ctype.h>
@@ -42,9 +40,8 @@
 #include "src/libdiod/diod_sock.h"
 #include "src/libdiod/diod_auth.h"
 
-#define OPTIONS "a:s:m:u:t:lp"
-#if HAVE_GETOPT_LONG
-#define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
+static const char *options = "a:s:m:u:t:lp";
+
 static const struct option longopts[] = {
     {"aname",   required_argument,      0, 'a'},
     {"server",  required_argument,      0, 's'},
@@ -54,9 +51,6 @@ static const struct option longopts[] = {
     {"privport",no_argument,            0, 'p'},
     {0, 0, 0, 0},
 };
-#else
-#define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
-#endif
 
 static int lsfiles (int fd, uid_t uid, int msize, char *aname, int lopt,
                     char **av, int ac);
@@ -93,7 +87,7 @@ main (int argc, char *argv[])
     diod_log_init (argv[0]);
 
     opterr = 0;
-    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'a':   /* --aname NAME */
                 aname = optarg;

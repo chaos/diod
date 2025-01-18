@@ -44,7 +44,7 @@ LDADD = $(top_builddir)/src/libdiod/libdiod.a \
         $(top_builddir)/src/libnpclient/libnpclient.a \
         $(top_builddir)/src/libnpfs/libnpfs.a \
         $(top_builddir)/src/liblsd/liblsd.a \
-        $(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
+        $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 common_sources =
 

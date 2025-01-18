@@ -1,11 +1,8 @@
 SUBDIRS = \
 	src \
 	man \
-	etc
-
-if ENABLE_TESTS
-  SUBDIRS += tests
-endif
+	etc \
+	tests
 
 EXTRA_DIST = diod.spec
 

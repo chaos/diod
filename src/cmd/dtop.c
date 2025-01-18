@@ -21,9 +21,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
-#if HAVE_GETOPT_H
 #include <getopt.h>
-#endif
 #include <string.h>
 #include <curses.h>
 #include <errno.h>
@@ -51,18 +49,14 @@
 int mvwprintw(WINDOW *win, int y, int x, const char *fmt, ...)
     __attribute__ ((format (printf, 4, 5)));
 
-#define OPTIONS "h:P:p:"
-#if HAVE_GETOPT_LONG
-#define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
+static const char *options = "h:P:p:";
+
 static const struct option longopts[] = {
     {"hostlist",   required_argument,      0, 'h'},
     {"poll-period",required_argument,      0, 'P'},
     {"port",       required_argument,      0, 'p'},
     {0, 0, 0, 0},
 };
-#else
-#define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
-#endif
 
 #ifndef MAXHOSTNAMELEN
 #define MAXHOSTNAMELEN 64
@@ -174,7 +168,7 @@ main (int argc, char *argv[])
     diod_log_init (argv[0]);
 
     opterr = 0;
-    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'h':   /* --hostlist NAME */
                 if (!hl) {

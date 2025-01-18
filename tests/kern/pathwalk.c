@@ -26,19 +26,15 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#if HAVE_GETOPT_H
 #include <getopt.h>
-#endif
 #include <errno.h>
 #include <assert.h>
 #include <libgen.h>
 
 #include "src/libdiod/diod_log.h"
 
-#define OPTIONS "l:f:crtCFq"
+static const char *options = "l:f:crtCFq";
 
-#if HAVE_GETOPT_LONG
-#define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"length",          required_argument,  0, 'l'},
     {"files",           required_argument,  0, 'f'},
@@ -50,9 +46,6 @@ static const struct option longopts[] = {
     {"quiet",           no_argument,        0, 'q'},
     {0, 0, 0, 0},
 };
-#else
-#define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
-#endif
 
 static char **searchpath_create(char *root, int length);
 static void searchpath_destroy(char **searchpath, int length);
@@ -99,7 +92,7 @@ main (int argc, char *argv[])
     diod_log_init (argv[0]);
 
     opterr = 0;
-    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'l':   /* --length N */
                 length = strtoul (optarg, NULL, 10);

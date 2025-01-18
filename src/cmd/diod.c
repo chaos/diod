@@ -25,9 +25,7 @@
 #include <sys/syscall.h>
 #endif
 #include <stdio.h>
-#if HAVE_GETOPT_H
 #include <getopt.h>
-#endif
 #include <errno.h>
 #include <pwd.h>
 #include <grp.h>
@@ -68,10 +66,8 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-#define OPTIONS "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:s"
+static const char *options = "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:s";
 
-#if HAVE_GETOPT_LONG
-#define GETOPT(ac,av,opt,lopt) getopt_long (ac,av,opt,lopt,NULL)
 static const struct option longopts[] = {
     {"foreground",         no_argument,        0, 'f'},
     {"rfdno",              required_argument,  0, 'r'},
@@ -94,9 +90,6 @@ static const struct option longopts[] = {
     {"socktest",           no_argument,        0, 's'},
     {0, 0, 0, 0},
 };
-#else
-#define GETOPT(ac,av,opt,lopt) getopt (ac,av,opt)
-#endif
 
 static void
 usage()
@@ -139,7 +132,7 @@ main(int argc, char **argv)
 
     /* config file overrides defaults */
     opterr = 0;
-    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'c':   /* --config-file PATH */
                 copt = optarg;
@@ -154,7 +147,7 @@ main(int argc, char **argv)
      */
     optind = 0;
     opterr = 0;
-    while ((c = GETOPT (argc, argv, OPTIONS, longopts)) != -1) {
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'f':   /* --foreground */
                 diod_conf_set_foreground (1);

@@ -26,6 +26,6 @@ LDADD = $(top_builddir)/src/cmd/opt.o \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
+	$(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) memcheck valgrind.supp

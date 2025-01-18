@@ -17,7 +17,7 @@ common_ldadd = \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libdiod/libdiod.a \
-	$(LIBWRAP) $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) \
+	$(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) \
 	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC) $(ncurses_LIBS)
 
 common_sources = \
