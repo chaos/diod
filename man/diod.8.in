@@ -13,10 +13,6 @@ Configuration is read from the diod.conf (5) config file.
 Some configuration can be overridden on the command line, as described below.
 .SH OPTIONS
 .TP
-.I "-f, --foreground"
-Do not change working directory to @X_LOCALSTATEDIR@/run,
-drop the controlling terminal, or run in the background.
-.TP
 .I "-r, --rfdno INT"
 .TP
 .I "-w, --wfdno INT"
