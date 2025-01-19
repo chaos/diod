@@ -29,7 +29,7 @@
 #ifdef HAVE_CONFIG_FILE
 #define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
 #endif
-#define DFLT_LOGDEST            "syslog:daemon:err"
+#define DFLT_LOGDEST            "stderr"
 
 void	diod_conf_init (void);
 void	diod_conf_fini (void);

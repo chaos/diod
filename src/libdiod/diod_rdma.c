@@ -29,7 +29,6 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdint.h>
-#include <syslog.h>
 #include <sys/time.h>
 #include <poll.h>
 #include <pthread.h>

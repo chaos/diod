@@ -111,7 +111,7 @@ usage()
 "   -u,--runas-uid UID      only allow UID to attach\n"
 "   -S,--allsquash          map all users to the squash user\n"
 "   -U,--squashuser USER    set the squash user (default nobody)\n"
-"   -L,--logdest DEST       log to DEST, can be syslog, stderr, or file\n"
+"   -L,--logdest DEST       log to DEST, can be stdout, stderr, or file\n"
 "   -d,--debug MASK         set debugging mask\n"
 "   -c,--config-file FILE   set config file path\n"
 "   -s,--socktest           run in test mode where server exits early\n"
@@ -340,7 +340,7 @@ _setrlimit (void)
 }
 
 /* Create run directory if it doesn't exist and chdir there.
- * Disassociate from parent's controlling tty.  Switch logging to syslog.
+ * Disassociate from parent's controlling tty.
  * Exit on error.
  */
 static void
