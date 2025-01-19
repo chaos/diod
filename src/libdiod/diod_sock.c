@@ -40,11 +40,6 @@
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_sock.h"
 
-extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
-int         allow_severity = LOG_INFO;
-int         deny_severity = LOG_WARNING;
-#define DAEMON_NAME     "diod"
-
 static int
 _disable_nagle(int fd)
 {
