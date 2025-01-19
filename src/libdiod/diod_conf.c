@@ -56,7 +56,6 @@
 /* ro_mask values to protect attribute from overwrite by config file */
 #define RO_DEBUGLEVEL           0x00000001
 #define RO_NWTHREADS            0x00000002
-#define RO_FOREGROUND           0x00000004
 #define RO_AUTH_REQUIRED        0x00000008
 #define RO_RUNASUID             0x00000010
 #define RO_USERDB               0x00000020
@@ -77,7 +76,6 @@
 typedef struct {
     int          debuglevel;
     int          nwthreads;
-    int          foreground;
     int          auth_required;
     int          hostname_lookup;
     int          statfs_passthru;
@@ -165,7 +163,6 @@ diod_conf_init (void)
 {
     config.debuglevel = DFLT_DEBUGLEVEL;
     config.nwthreads = DFLT_NWTHREADS;
-    config.foreground = DFLT_FOREGROUND;
     config.auth_required = DFLT_AUTH_REQUIRED;
     config.hostname_lookup = DFLT_HOSTNAME_LOOKUP;
     config.statfs_passthru = DFLT_STATFS_PASSTHRU;
@@ -240,16 +237,6 @@ void diod_conf_set_nwthreads (int i)
 {
     config.nwthreads = i;
     config.ro_mask |= RO_NWTHREADS;
-}
-
-/* foreground - run daemon in foreground
- */
-int diod_conf_get_foreground (void) { return config.foreground; }
-int diod_conf_opt_foreground (void) { return config.ro_mask & RO_FOREGROUND; }
-void diod_conf_set_foreground (int i)
-{
-    config.foreground = i;
-    config.ro_mask |= RO_FOREGROUND;
 }
 
 /* auth_required - whether to accept unauthenticated attaches

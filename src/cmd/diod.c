@@ -14,9 +14,6 @@
 #include "config.h"
 #endif
 #include <poll.h>
-#ifndef _BSD_SOURCE
-#define _BSD_SOURCE         /* daemon () */
-#endif
 #include <stdlib.h>
 #include <stdint.h>
 #include <sys/types.h>
@@ -57,7 +54,6 @@
 
 typedef enum { SRV_FILEDES, SRV_SOCKTEST, SRV_NORMAL } srvmode_t;
 
-static void          _daemonize (void);
 static void          _setrlimit (void);
 static void          _become_user (char *name, uid_t uid, int realtoo);
 static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
@@ -66,10 +62,9 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-static const char *options = "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:s";
+static const char *options = "r:w:d:l:t:e:Eo:u:SL:nHpc:NU:s";
 
 static const struct option longopts[] = {
-    {"foreground",         no_argument,        0, 'f'},
     {"rfdno",              required_argument,  0, 'r'},
     {"wfdno",              required_argument,  0, 'w'},
     {"debug",              required_argument,  0, 'd'},
@@ -96,7 +91,6 @@ usage()
 {
     fprintf (stderr,
 "Usage: diod [OPTIONS]\n"
-"   -f,--foreground         do not fork and disassociate with tty\n"
 "   -r,--rfdno              service connected client on read file descriptor\n"
 "   -w,--wfdno              service connected client on write file descriptor\n"
 "   -l,--listen IP:PORT     set interface to listen on (multiple -l allowed)\n"
@@ -111,7 +105,7 @@ usage()
 "   -u,--runas-uid UID      only allow UID to attach\n"
 "   -S,--allsquash          map all users to the squash user\n"
 "   -U,--squashuser USER    set the squash user (default nobody)\n"
-"   -L,--logdest DEST       log to DEST, can be syslog, stderr, or file\n"
+"   -L,--logdest DEST       log to DEST, can be stdout, stderr, or file\n"
 "   -d,--debug MASK         set debugging mask\n"
 "   -c,--config-file FILE   set config file path\n"
 "   -s,--socktest           run in test mode where server exits early\n"
@@ -149,9 +143,6 @@ main(int argc, char **argv)
     opterr = 0;
     while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
-            case 'f':   /* --foreground */
-                diod_conf_set_foreground (1);
-                break;
             case 'r':   /* --rfdno */
                 mode = SRV_FILEDES;
                 rfdno = strtoul (optarg, NULL, 10);
@@ -337,26 +328,6 @@ _setrlimit (void)
     if (setrlimit (RLIMIT_AS, &r) < 0)
         err_exit ("setrlimit RLIMIT_AS");
 
-}
-
-/* Create run directory if it doesn't exist and chdir there.
- * Disassociate from parent's controlling tty.  Switch logging to syslog.
- * Exit on error.
- */
-static void
-_daemonize (void)
-{
-    char rdir[PATH_MAX];
-
-    snprintf (rdir, sizeof(rdir), "%s/run/diod", X_LOCALSTATEDIR);
-    if (mkdir (rdir, 0755) < 0 && errno != EEXIST) {
-        msg ("failed to find/create %s, running out of /tmp", rdir);
-        snprintf (rdir, sizeof(rdir), "/tmp");
-    }
-    if (chdir (rdir) < 0)
-        err_exit ("chdir %s", rdir);
-    if (daemon (1, 0) < 0)
-        err_exit ("daemon");
 }
 
 /**
@@ -598,11 +569,6 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
             diod_conf_set_runasuid (euid);
         }
     }
-
-    if (!diod_conf_get_foreground () && mode != SRV_FILEDES)
-        _daemonize (); /* implicit fork - no pthreads before this */
-    if (!diod_conf_get_foreground () && mode != SRV_FILEDES)
-        diod_log_set_dest (diod_conf_get_logdest ());
 
     /* drop root */
     if (euid == 0) {

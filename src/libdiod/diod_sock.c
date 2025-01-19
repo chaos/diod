@@ -29,7 +29,6 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdint.h>
-#include <syslog.h>
 #include <sys/time.h>
 #include <poll.h>
 #include <pthread.h>
@@ -39,11 +38,6 @@
 
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_sock.h"
-
-extern int  hosts_ctl(char *daemon, char *name, char *addr, char *user);
-int         allow_severity = LOG_INFO;
-int         deny_severity = LOG_WARNING;
-#define DAEMON_NAME     "diod"
 
 static int
 _disable_nagle(int fd)

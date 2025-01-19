@@ -16,7 +16,6 @@
 #define DFLT_DEBUGLEVEL         0
 #define DFLT_NWTHREADS          16
 #define DFLT_MAXMMAP            0
-#define DFLT_FOREGROUND         0
 #define DFLT_AUTH_REQUIRED      1
 #define DFLT_HOSTNAME_LOOKUP    1
 #define DFLT_STATFS_PASSTHRU    0
@@ -29,7 +28,7 @@
 #ifdef HAVE_CONFIG_FILE
 #define DFLT_CONFIGPATH     X_SYSCONFDIR "/diod.conf"
 #endif
-#define DFLT_LOGDEST            "syslog:daemon:err"
+#define DFLT_LOGDEST            "stderr"
 
 void	diod_conf_init (void);
 void	diod_conf_fini (void);
@@ -49,10 +48,6 @@ void    diod_conf_set_debuglevel (int i);
 int     diod_conf_get_nwthreads (void);
 int     diod_conf_opt_nwthreads (void);
 void    diod_conf_set_nwthreads (int i);
-
-int     diod_conf_get_foreground (void);
-int     diod_conf_opt_foreground (void);
-void    diod_conf_set_foreground (int i);
 
 int     diod_conf_get_auth_required (void);
 int     diod_conf_opt_auth_required (void);
