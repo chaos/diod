@@ -16,7 +16,6 @@ Some configuration can be overridden on the command line, as described below.
 .I "-f, --foreground"
 Do not change working directory to @X_LOCALSTATEDIR@/run,
 drop the controlling terminal, or run in the background.
-Send logs to stderr not syslog, unless sent somewhere else by \fI\-L\fR.
 .TP
 .I "-r, --rfdno INT"
 .TP
@@ -82,7 +81,6 @@ supplementary groups to those belonging to UID.
 .TP
 .I "-L, --logdest DEST"
 Set the destination for logging.  Possible destinations are
-\fIsyslog:facility:level\fR,
 \fIstderr\fR,
 \fIstdout\fR, or
 a file name.

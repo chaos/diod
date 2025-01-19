@@ -65,8 +65,8 @@ The squash user must be present in the password file.
 .TP
 \fIlogdest = "DEST"\fR
 Set the destination for logging.
-\fIDEST\fR is in the form of \fIsyslog:facility:level\fR or \fIfilename\fR.
-The default is \fIsyslog:daemon:err\fR.
+\fIDEST\fR is \fIstdout\fR, \fIstderr\fR, or \fIfilename\fR.
+The default is \fIstderr\fR.
 .TP
 .I "statfs_passthru = 1"
 This option configures statfs to return the host file system's type
