@@ -26,15 +26,27 @@
 
 #include "diod_log.h"
 
-static char *prog = NULL;
-
+static char log_prefix[32] = { 0 };
 static char *filename = NULL;
 static FILE *logf = NULL;
 
+/* If 'path' is a program path, prefix is "name: ", where name is basename (path).
+ * If 'path' ends in a space, omit the ": ", e.g. path of "# " is used verbatim.
+ * If 'path' is NULL, there is no log prefix.
+ */
 void
-diod_log_init (char *p)
+diod_log_init (char *path)
 {
-    prog = basename (p);
+    if (path) {
+        char *cp = strrchr (path, '/');
+        snprintf (log_prefix,
+                  sizeof (log_prefix),
+                  "%s%s",
+                  cp ? cp + 1 : path,
+                  isspace (path[strlen (path) - 1]) ? "" : ": ");
+    }
+    else
+        log_prefix[0] = '\0';
     logf = stderr;
 }
 
@@ -93,7 +105,7 @@ _verr (int errnum, const char *fmt, va_list ap)
         char *s = strerror_r (errnum, errbuf, sizeof (errbuf)); /* GNU version */
 #endif
         vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
-        fprintf (logf, "%s: %s: %s\n", prog, buf, s);
+        fprintf (logf, "%s%s: %s\n", log_prefix, buf, s);
         fflush (logf);
     }
 }
@@ -105,7 +117,7 @@ diod_log_msg (const char *fmt, va_list ap)
 
     if (logf) {
         vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
-        fprintf (logf, "%s: %s\n", prog, buf);
+        fprintf (logf, "%s%s\n", log_prefix, buf);
         fflush (logf);
     }
 }

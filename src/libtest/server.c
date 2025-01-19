@@ -29,7 +29,7 @@ Npsrv *test_server_create (const char *testdir, int flags, int *client_fd)
     int s[2];
     Npsrv *srv;
 
-    diod_log_init ("#"); // add TAP compatible prefix on stderr logs
+    diod_log_init ("# "); // add TAP compatible prefix on stderr logs
     diod_conf_init ();
     diod_conf_set_auth_required (0);
 
