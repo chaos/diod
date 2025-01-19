@@ -35,8 +35,8 @@
 #include <infiniband/verbs.h>
 #include <rdma/rdma_cma.h>
 
-#include "npfs.h"
-#include "list.h"
+#include "src/libnpfs/npfs.h"
+#include "src/liblsd/list.h"
 
 #include "diod_log.h"
 #include "diod_rdma.h"
