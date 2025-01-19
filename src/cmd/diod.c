@@ -121,7 +121,7 @@ main(int argc, char **argv)
     srvmode_t mode = SRV_NORMAL;
     int rfdno = -1, wfdno = -1;
 
-    diod_log_init (argv[0]);
+    diod_log_init (NULL);
     diod_conf_init ();
 
     /* config file overrides defaults */
