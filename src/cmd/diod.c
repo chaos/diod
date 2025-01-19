@@ -541,10 +541,6 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         case SRV_SOCKTEST:
             if (!diod_sock_listen (l, &ss.fds, &ss.nfds))
                 msg_exit ("failed to set up listener");
-#if WITH_RDMA
-            ss.rdma = diod_rdma_create ();
-            diod_rdma_listen (ss.rdma);
-#endif
             break;
     }
 
@@ -602,6 +598,16 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         msg ("warning: cannot change user/group (built with --disable-impersonation)");
 #endif
     }
+
+#if WITH_RDMA
+    /* RDMA needs to be initialized after user transitions.
+     * See chaos/diod#107.
+     */
+    if (mode == SRV_NORMAL) {
+        ss.rdma = diod_rdma_create ();
+        diod_rdma_listen (ss.rdma);
+    }
+#endif
 
     /* Process dumpable flag may have been cleared by uid manipulation above.
      * Set it here, then maintain it in user.c::np_setfsid () as uids are
