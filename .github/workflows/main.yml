@@ -17,8 +17,8 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-            libpopt-dev ncurses-dev automake autoconf pkgconf \
-            lua5.3 liblua5.3-dev libmunge-dev libwrap0-dev libcap-dev \
+            ncurses-dev automake autoconf pkgconf \
+            lua5.3 liblua5.3-dev libmunge-dev libcap-dev \
             libattr1-dev dbench attr scrub valgrind ${{matrix.cc}}
     - name: Display configuration
       run: |
@@ -46,3 +46,22 @@ jobs:
       run: sudo make check -C tests/kern
     - name: make distcheck
       run: make distcheck
+
+  build-rdma:
+    name: build-only check for RDMA (experimental)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            ncurses-dev automake autoconf pkgconf \
+            lua5.3 liblua5.3-dev libmunge-dev libcap-dev \
+            libattr1-dev libibverbs-dev librdmacm-dev gcc
+    - name: autogen
+      run: ./autogen.sh
+    - name: configure
+      run: ./configure --enable-rdma
+    - name: make
+      run: make

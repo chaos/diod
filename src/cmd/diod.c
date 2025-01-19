@@ -42,7 +42,7 @@
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_conf.h"
 #include "src/libdiod/diod_sock.h"
-#if WITH_RDMATRANS
+#if WITH_RDMA
 #include "src/libdiod/diod_rdma.h"
 #endif
 
@@ -344,7 +344,7 @@ struct svc_struct {
     pthread_t t;
     int shutdown;
     int reload;
-#if WITH_RDMATRANS
+#if WITH_RDMA
     diod_rdma_t rdma;
     pthread_t rdma_t;
 #endif
@@ -421,7 +421,7 @@ _service_loop (void *arg)
     return NULL;
 }
 
-#if WITH_RDMATRANS
+#if WITH_RDMA
 static void *
 _service_loop_rdma (void *arg)
 {
@@ -541,10 +541,6 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         case SRV_SOCKTEST:
             if (!diod_sock_listen (l, &ss.fds, &ss.nfds))
                 msg_exit ("failed to set up listener");
-#if WITH_RDMATRANS
-            ss.rdma = diod_rdma_create ();
-            diod_rdma_listen (ss.rdma);
-#endif
             break;
     }
 
@@ -603,6 +599,16 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
 #endif
     }
 
+#if WITH_RDMA
+    /* RDMA needs to be initialized after user transitions.
+     * See chaos/diod#107.
+     */
+    if (mode == SRV_NORMAL) {
+        ss.rdma = diod_rdma_create ();
+        diod_rdma_listen (ss.rdma);
+    }
+#endif
+
     /* Process dumpable flag may have been cleared by uid manipulation above.
      * Set it here, then maintain it in user.c::np_setfsid () as uids are
      * further manipulated.
@@ -621,7 +627,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
 
     if ((n = pthread_create (&ss.t, NULL, _service_loop, NULL)))
         errn_exit (n, "pthread_create _service_loop");
-#if WITH_RDMATRANS
+#if WITH_RDMA
     if ((n = pthread_create (&ss.rdma_t, NULL, _service_loop_rdma, NULL)))
         errn_exit (n, "pthread_create _service_loop_rdma");
 #endif
@@ -636,7 +642,7 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     }
     if ((n = pthread_join (ss.t, NULL)))
         errn_exit (n, "pthread_join _service_loop");
-#if WITH_RDMATRANS
+#if WITH_RDMA
     if ((n = pthread_join (ss.rdma_t, NULL)))
         errn_exit (n, "pthread_join _service_loop_rdma");
 #endif

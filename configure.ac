@@ -78,7 +78,7 @@ X_AC_CHECK_PTHREADS
 X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC
-X_AC_RDMATRANS
+X_AC_RDMA
 
 ##
 # For list.c, hostlist.c, hash.c
