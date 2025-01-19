@@ -17,8 +17,8 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-            libpopt-dev ncurses-dev automake autoconf pkgconf \
-            lua5.3 liblua5.3-dev libmunge-dev libwrap0-dev libcap-dev \
+            ncurses-dev automake autoconf pkgconf \
+            lua5.3 liblua5.3-dev libmunge-dev libcap-dev \
             libattr1-dev dbench attr scrub valgrind ${{matrix.cc}}
     - name: Display configuration
       run: |
