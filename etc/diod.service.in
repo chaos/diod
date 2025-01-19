@@ -2,7 +2,7 @@
 Description=9P File Server
 
 [Service]
-Type=forking
+Type=exec
 ExecStart=@X_SBINDIR@/diod
 
 [Install]
