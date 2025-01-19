@@ -27,7 +27,7 @@ libdiod_a_SOURCES = \
 	diod_ops.h \
 	lsderr.c
 
-if RDMATRANS
+if RDMA
 libdiod_a_SOURCES += diod_rdma.c diod_rdma.h
 endif
 

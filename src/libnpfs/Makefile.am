@@ -34,7 +34,7 @@ libnpfs_a_SOURCES += user-stub.c
 endif
 endif
 
-if RDMATRANS
+if RDMA
 libnpfs_a_SOURCES += rdmatrans.c
 endif
 
