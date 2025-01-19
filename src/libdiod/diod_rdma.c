@@ -23,6 +23,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/signal.h>
 #include <sys/param.h>
@@ -102,6 +103,10 @@ diod_rdma_listen (diod_rdma_t rdma)
     n = rdma_listen(rdma->listen_id, 1);
     if (n)
         errn (n, "rdma_listen");
+
+    msg ("Listening on rdma %s:%d",
+         inet_ntoa (rdma->addr.sin_addr),
+         rdma_port);
 
     return 0;
 }

@@ -177,6 +177,8 @@ _setup_one_inet (char *host, char *port, struct pollfd **fdsp, int *nfdsp)
             break;
         count++;
     }
+    if (count > 0)
+        msg ("Listening on %s:%s", host, port);
 done:
     if (res)
         freeaddrinfo (res);
@@ -211,6 +213,7 @@ _setup_one_unix (char *path, struct pollfd **fdsp, int *nfdsp)
     }
     if (_poll_add (fdsp, nfdsp, fd) < 0)
         goto error;
+    msg ("Listening on %s", path);
     return 1;
 error:
     if (fd != -1)
