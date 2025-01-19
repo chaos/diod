@@ -61,7 +61,6 @@ exports = {\n\
     is (s, path, "configpath is %s", path);
     ok (diod_conf_get_debuglevel () == DFLT_DEBUGLEVEL, "debuglevel is default");
     ok (diod_conf_get_nwthreads () == DFLT_NWTHREADS, "nwthreads is default");
-    ok (diod_conf_get_foreground () == DFLT_FOREGROUND, "foreground is default");
     ok (diod_conf_get_auth_required () == DFLT_AUTH_REQUIRED,
         "auth_required is default");
     ok (diod_conf_get_hostname_lookup () == DFLT_HOSTNAME_LOOKUP,
@@ -156,7 +155,6 @@ exports = { \"/g/g1\" }\n";
     is (s, path, "configpath is %s", path);
     ok (diod_conf_get_debuglevel () == DFLT_DEBUGLEVEL, "debuglevel is default");
     ok (diod_conf_get_nwthreads () == 64, "nwthreads is 64");
-    ok (diod_conf_get_foreground () == DFLT_FOREGROUND, "foreground is default");
     ok (diod_conf_get_auth_required () != 0, "auth_required is true");
     ok (diod_conf_get_hostname_lookup () == DFLT_HOSTNAME_LOOKUP,
         "hostname_lookup is default");
