@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
-#if USE_IMPERSONATION_LINUX
+#ifndef USE_GANESHA_KMOD
 #include <sys/syscall.h>
 #endif
 #include <stdio.h>
@@ -48,7 +48,7 @@
 
 #include "src/libdiod/diod_ops.h"
 
-#if USE_IMPERSONATION_GANESHA
+#if USE_GANESHA_KMOD
 #include "src/libnpfs/ganesha-syscalls.h"
 #endif
 
@@ -455,7 +455,7 @@ _service_sigsetup (void)
         err_exit ("sigprocmask");
 }
 
-#if USE_IMPERSONATION_LINUX
+#if defined(MULTIUSER) && !defined(USE_GANESHA_KMOD)
 /* POSIX setgroups(2) is per process but in Linux the underlying system call
  * is per-thread and the per-process bit is handled in glibc, so we can use
  * SYS_setgroups directly in the server thread pool when switching users.
@@ -505,7 +505,7 @@ _test_setgroups (void)
     free (sg);
     return rc;
 }
-#endif /* USE_IMPERSONATION_LINUX */
+#endif
 
 /* Look up user name of effective uid.
  * The result is only valid until the next call, and this is not thread safe.
@@ -597,21 +597,23 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     flags |= SRV_FLAGS_AUTHCONN;
     //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
     if (geteuid () == 0) {
+#if MULTIUSER
         flags |= SRV_FLAGS_SETFSID;
         flags |= SRV_FLAGS_DAC_BYPASS;
-#if USE_IMPERSONATION_LINUX
+#ifndef USE_GANESHA_KMOD
         if (_test_setgroups ())
             flags |= SRV_FLAGS_SETGROUPS;
         else {
             msg ("warning: supplemental group membership will be ignored."
                 "  Some accesses might be inappropriately denied.");
         }
-#elif USE_IMPERSONATION_GANESHA
+#else
         if (init_ganesha_syscalls() < 0)
             msg ("nfs-ganesha-kmod not loaded: changing user/group will fail");
         /* SRV_FLAGS_SETGROUPS is ignored in user-freebsd.c */
+#endif
 #else
-        msg ("warning: cannot change user/group (built with --disable-impersonation)");
+        msg ("warning: cannot change user/group (built with --disable-multiuser)");
 #endif
     }
 

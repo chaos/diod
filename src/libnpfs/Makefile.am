@@ -24,14 +24,14 @@ libnpfs_a_SOURCES = \
 	ctl.c \
 	xpthread.h
 
-if USE_IMPERSONATION_LINUX
-libnpfs_a_SOURCES += user-linux.c
-else
-if USE_IMPERSONATION_GANESHA
+if MULTIUSER
+if USE_GANESHA_KMOD
 libnpfs_a_SOURCES += user-freebsd.c
 else
-libnpfs_a_SOURCES += user-stub.c
+libnpfs_a_SOURCES += user-linux.c
 endif
+else
+libnpfs_a_SOURCES += user-stub.c
 endif
 
 if RDMA
