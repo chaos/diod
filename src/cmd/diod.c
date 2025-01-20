@@ -278,13 +278,8 @@ _become_user (char *name, uid_t uid)
     nsg = sizeof (sg) / sizeof(sg[0]);
     if (getgrouplist(pw->pw_name, pw->pw_gid, sg, &nsg) == -1)
         err_exit ("user %s is in too many groups", pw->pw_name);
-#if USE_IMPERSONATION_LINUX
-    if (syscall(SYS_setgroups, nsg, sg) < 0)
-        err_exit ("setgroups");
-#else
     if (setgroups (nsg, sg) < 0)
         err_exit ("setgroups");
-#endif
     if (setregid (pw->pw_gid, pw->pw_gid) < 0)
         err_exit ("setreuid");
     if (setreuid (pw->pw_uid, pw->pw_uid) < 0)
