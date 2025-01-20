@@ -273,17 +273,19 @@ _become_user (char *name, uid_t uid)
         if (!(pw = getpwuid (uid)))
             msg_exit ("error looking up uid %d", uid);
     }
-    if (pw->pw_uid == 0)
-        return; // nothing to do for root=>root transition
+    if (pw->pw_uid == geteuid ())
+        return; // nothing to do
+    if (geteuid () != 0)
+        msg_exit ("no permission to switch users");
+
     nsg = sizeof (sg) / sizeof(sg[0]);
     if (getgrouplist(pw->pw_name, pw->pw_gid, sg, &nsg) == -1)
         err_exit ("user %s is in too many groups", pw->pw_name);
     if (setgroups (nsg, sg) < 0)
         err_exit ("setgroups");
-    if (setregid (pw->pw_gid, pw->pw_gid) < 0)
-        err_exit ("setreuid");
-    if (setreuid (pw->pw_uid, pw->pw_uid) < 0)
-        err_exit ("setreuid");
+    if (setregid (pw->pw_gid, pw->pw_gid) < 0
+        || setreuid (pw->pw_uid, pw->pw_uid) < 0)
+        err_exit ("could not switch to %d:%d", pw->pw_uid, pw->pw_gid);
 
     msg ("Dropped root, running as %s", pw->pw_name);
 }
@@ -550,72 +552,59 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
             break;
     }
 
-    /* manipulate squash/runas users if not root */
-    if (geteuid () != 0) {
-        if (diod_conf_get_allsquash ()) {
-            struct passwd *pw = getpwuid (geteuid ());
-            char *su = diod_conf_get_squashuser ();
-            if (!pw)
-                msg_exit ("getpwuid on effective uid failed");
-            if (strcmp (pw->pw_name, su) != 0) {
-                if (strcmp (su, DFLT_SQUASHUSER) != 0)
-                    msg ("changing squashuser '%s' to '%s' "
-                         "since you are not root", su, pw->pw_name);
-                diod_conf_set_squashuser (pw->pw_name); /* fixes issue 41 */
-            }
-        } else { /* N.B. runasuser cannot be set in the config file */
-            uid_t ruid = diod_conf_get_runasuid ();
-            if (diod_conf_opt_runasuid () && ruid != geteuid ())
-                msg ("changing runasuid %d to %d "
-                     "since you are not root", ruid, geteuid ());
+    /* allsquash */
+    if (diod_conf_get_allsquash ()) {
+        /* If not root, and the squashuser has not been explicitly set,
+         * let's assume the user wants squashuser to default to the effective uid.
+         */
+        if (geteuid () != 0 && !strcmp (diod_conf_get_squashuser (), DFLT_SQUASHUSER))
+            diod_conf_set_squashuser ((char *)_geteuser ());
+        /* _become_user() fails if not root and squashuser != effective uid.
+         */
+        _become_user (diod_conf_get_squashuser (), -1);
+        msg ("Anyone can attach and access files as %s", _geteuser ());
+    }
+
+    /* runasuid */
+    else if (diod_conf_opt_runasuid () || geteuid () != 0) {
+        /* If not root, and not allsquash, and not runasuid (command line only),
+         * let's assume runasuid set to the effective uid.
+         * N.B.  diod_attach () lets anyone connect unless runasuid is set
+         */
+        if (getuid () != 0 && !diod_conf_opt_runasuid ())
             diod_conf_set_runasuid (geteuid ());
-        }
-    }
-
-    /* drop root */
-    if (geteuid () == 0) {
-        if (diod_conf_get_allsquash ())
-            _become_user (diod_conf_get_squashuser (), -1);
-        else if (diod_conf_opt_runasuid ())
-            _become_user (NULL, diod_conf_get_runasuid ());
-    }
-
-    /* report */
-    if (diod_conf_opt_runasuid ()) {
+        /* _become_user() fails if not root and runasuser != effective uid
+         */
+        _become_user (NULL, diod_conf_get_runasuid());
         const char *user = _geteuser ();
         msg ("Only %s can attach and access files as %s", user, user);
     }
-    else if (diod_conf_get_allsquash ())
-        msg ("Anyone can attach and access files as %s", _geteuser ());
-    else
-        msg ("Anyone can attach and access files as themselves");
 
-    /* clear umask */
-    umask (0);
-
-    flags |= SRV_FLAGS_LOOSEFID;        /* work around buggy clients */
-    flags |= SRV_FLAGS_AUTHCONN;
-    //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
-    if (geteuid () == 0) {
+    /* multiuser */
+    else {
 #if MULTIUSER
+#ifndef USE_GANESHA_KMOD
         flags |= SRV_FLAGS_SETFSID;
         flags |= SRV_FLAGS_DAC_BYPASS;
-#ifndef USE_GANESHA_KMOD
         if (_test_setgroups ())
             flags |= SRV_FLAGS_SETGROUPS;
         else {
             msg ("warning: supplemental group membership will be ignored."
-                "  Some accesses might be inappropriately denied.");
+                 "  Some accesses might be inappropriately denied.");
         }
 #else
         if (init_ganesha_syscalls() < 0)
             msg ("nfs-ganesha-kmod not loaded: changing user/group will fail");
         /* SRV_FLAGS_SETGROUPS is ignored in user-freebsd.c */
 #endif
+        msg ("Anyone can attach and access files as themselves");
 #else
         msg ("warning: cannot change user/group (built with --disable-multiuser)");
 #endif
     }
+
+    /* clear umask */
+    umask (0);
 
 #if WITH_RDMA
     /* RDMA needs to be initialized after user transitions.
@@ -636,6 +625,9 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         err_exit ("prctl PR_SET_DUMPABLE failed");
 #endif
 
+    flags |= SRV_FLAGS_LOOSEFID;        /* work around buggy clients */
+    flags |= SRV_FLAGS_AUTHCONN;
+    //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */
