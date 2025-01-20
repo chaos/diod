@@ -522,7 +522,6 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     List l = diod_conf_get_listen ();
     int nwthreads = diod_conf_get_nwthreads ();
     int flags = diod_conf_get_debuglevel ();
-    uid_t euid = geteuid ();
     int n;
 
     ss.mode = mode;
@@ -545,9 +544,9 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     }
 
     /* manipulate squash/runas users if not root */
-    if (euid != 0) {
+    if (geteuid () != 0) {
         if (diod_conf_get_allsquash ()) {
-            struct passwd *pw = getpwuid (euid);
+            struct passwd *pw = getpwuid (geteuid ());
             char *su = diod_conf_get_squashuser ();
             if (!pw)
                 msg_exit ("getpwuid on effective uid failed");
@@ -559,15 +558,15 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
             }
         } else { /* N.B. runasuser cannot be set in the config file */
             uid_t ruid = diod_conf_get_runasuid ();
-            if (diod_conf_opt_runasuid () && ruid != euid)
+            if (diod_conf_opt_runasuid () && ruid != geteuid ())
                 msg ("changing runasuid %d to %d "
-                     "since you are not root", ruid, euid);
-            diod_conf_set_runasuid (euid);
+                     "since you are not root", ruid, geteuid ());
+            diod_conf_set_runasuid (geteuid ());
         }
     }
 
     /* drop root */
-    if (euid == 0) {
+    if (geteuid () == 0) {
         if (diod_conf_get_allsquash ())
             _become_user (diod_conf_get_squashuser (), -1, 1);
         else if (diod_conf_opt_runasuid ())
