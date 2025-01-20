@@ -507,6 +507,22 @@ _test_setgroups (void)
 }
 #endif /* USE_IMPERSONATION_LINUX */
 
+/* Look up user name of effective uid.
+ * The result is only valid until the next call, and this is not thread safe.
+ */
+static const char *
+_geteuser (void)
+{
+    static char idstr[16];
+    struct passwd *pw = getpwuid (geteuid ());
+
+    if (!pw) {
+        snprintf (idstr, sizeof (idstr), "%d", geteuid ());
+        return idstr;
+    }
+    return pw->pw_name;
+}
+
 static void
 _service_run (srvmode_t mode, int rfdno, int wfdno)
 {
@@ -563,6 +579,16 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         else if (diod_conf_opt_runasuid ())
             _become_user (NULL, diod_conf_get_runasuid ());
     }
+
+    /* report */
+    if (diod_conf_opt_runasuid ()) {
+        const char *user = _geteuser ();
+        msg ("Only %s can attach and access files as %s", user, user);
+    }
+    else if (diod_conf_get_allsquash ())
+        msg ("Anyone can attach and access files as %s", _geteuser ());
+    else
+        msg ("Anyone can attach and access files as themselves");
 
     /* clear umask */
     umask (0);
