@@ -55,7 +55,7 @@
 typedef enum { SRV_FILEDES, SRV_SOCKTEST, SRV_NORMAL } srvmode_t;
 
 static void          _setrlimit (void);
-static void          _become_user (char *name, uid_t uid, int realtoo);
+static void          _become_user (char *name, uid_t uid);
 static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 
 #ifndef NR_OPEN
@@ -245,44 +245,39 @@ main(int argc, char **argv)
     exit (0);
 }
 
-/* Switch to user/group, load the user's supplementary groups.
- * Print message and exit on failure.
+/* Look up name (which may be a stringified numerical uid) or if name is NULL,
+ * look up uid.  Then drop root and load the credentials of the new user.
+ * It is a fatal error if the user cannot be found in the password file.
+ * This function is not safe to call after any threads have been spawned that
+ * could do user lookups.  For example, call before np_srv_create ().
  */
 static void
-_become_user (char *name, uid_t uid, int realtoo)
+_become_user (char *name, uid_t uid)
 {
-    int err;
-    struct passwd pw, *pwd;
-    int len = sysconf(_SC_GETPW_R_SIZE_MAX);
-    char *buf;
+    struct passwd *pw;
     int nsg;
     gid_t sg[64];
-    char *endptr;
 
-    if (len == -1)
-        len = 4096;
-    if (!(buf = malloc(len)))
-        msg_exit ("out of memory");
-    if (name) {
+    if (name) { // handle stringified uid
+        char *endptr;
         errno = 0;
         uid = strtoul (name, &endptr, 10);
         if (errno == 0 && *name != '\0' && *endptr == '\0')
             name = NULL;
     }
     if (name) {
-        if ((err = getpwnam_r (name, &pw, buf, len, &pwd)) != 0)
-            errn_exit (err, "error looking up user %s", name);
-        if (!pwd)
+        if (!(pw = getpwnam (name)))
             msg_exit ("error looking up user %s", name);
-    } else {
-        if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0)
-            errn_exit (err, "error looking up uid %d", uid);
-        if (!pwd)
+    }
+    else {
+        if (!(pw = getpwuid (uid)))
             msg_exit ("error looking up uid %d", uid);
     }
+    if (pw->pw_uid == 0)
+        return; // nothing to do for root=>root transition
     nsg = sizeof (sg) / sizeof(sg[0]);
-    if (getgrouplist(pwd->pw_name, pwd->pw_gid, sg, &nsg) == -1)
-        err_exit ("user is in too many groups");
+    if (getgrouplist(pw->pw_name, pw->pw_gid, sg, &nsg) == -1)
+        err_exit ("user %s is in too many groups", pw->pw_name);
 #if USE_IMPERSONATION_LINUX
     if (syscall(SYS_setgroups, nsg, sg) < 0)
         err_exit ("setgroups");
@@ -290,11 +285,12 @@ _become_user (char *name, uid_t uid, int realtoo)
     if (setgroups (nsg, sg) < 0)
         err_exit ("setgroups");
 #endif
-    if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
+    if (setregid (pw->pw_gid, pw->pw_gid) < 0)
         err_exit ("setreuid");
-    if (setreuid (realtoo ? pwd->pw_uid : -1, pwd->pw_uid) < 0)
+    if (setreuid (pw->pw_uid, pw->pw_uid) < 0)
         err_exit ("setreuid");
-    free (buf);
+
+    msg ("Dropped root, running as %s", pw->pw_name);
 }
 
 /* Remove any resource limits.
@@ -568,9 +564,9 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     /* drop root */
     if (geteuid () == 0) {
         if (diod_conf_get_allsquash ())
-            _become_user (diod_conf_get_squashuser (), -1, 1);
+            _become_user (diod_conf_get_squashuser (), -1);
         else if (diod_conf_opt_runasuid ())
-            _become_user (NULL, diod_conf_get_runasuid (), 1);
+            _become_user (NULL, diod_conf_get_runasuid ());
     }
 
     /* clear umask */
