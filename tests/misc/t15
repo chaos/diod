@@ -12,7 +12,6 @@ bg_test ()
 TEST=$(basename $0 | cut -d- -f1)
 sockfile=$(mktemp)
 bg_test $sockfile &
-${MISC_SRCDIR}/memcheck ${TOP_BUILDDIR}/src/cmd/diod -c /dev/null -n -e ctl -l $sockfile -s >$TEST.out 2>&1
-diff ${MISC_SRCDIR}/$TEST.exp $TEST.out >$TEST.diff
+${MISC_SRCDIR}/memcheck ${TOP_BUILDDIR}/src/cmd/diod -L $TEST.diod -c /dev/null -n -e ctl -l $sockfile -s >$TEST.out 2>&1
 rm -f $sockfile
 wait %1

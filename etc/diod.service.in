@@ -4,6 +4,7 @@ Description=9P File Server
 [Service]
 Type=exec
 ExecStart=@X_SBINDIR@/diod
+ExecReload=kill -HUP $MAINPID
 
 [Install]
 WantedBy=multi-user.target
