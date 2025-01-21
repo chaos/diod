@@ -231,6 +231,12 @@ main(int argc, char **argv)
         msg_exit ("--runas-uid and allsquash cannot be used together");
     if (mode == SRV_FILEDES && (rfdno == -1 || wfdno == -1))
         msg_exit ("--rfdno,wfdno must be used together");
+#ifndef HAVE_LIBMUNGE
+    if (diod_conf_get_auth_required ()) {
+        msg_exit ("diod was built without authentication support."
+                  " Run with --no-auth.");
+    }
+#endif
 
     diod_conf_validate_exports ();
 
@@ -605,6 +611,8 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
                   " Run as a normal user or add --runasuser or --allsquash options.");
 #endif
     }
+    msg ("%s authentication is required",
+         diod_conf_get_auth_required () ? "MUNGE" : "No");
 
     /* clear umask */
     umask (0);
