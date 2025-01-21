@@ -2,6 +2,7 @@ AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
+	$(MUNGE_CFLAGS) \
 	$(LUA_INCLUDE)
 AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 
@@ -17,7 +18,7 @@ common_ldadd = \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libdiod/libdiod.a \
-	$(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) \
+	$(LIBPTHREAD) $(LUA_LIB) $(MUNGE_LIBS) $(LIBCAP) \
 	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC) $(ncurses_LIBS)
 
 common_sources = \

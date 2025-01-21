@@ -46,6 +46,11 @@ m4_ifndef([PKG_PROG_PKG_CONFIG],
   [AC_MSG_ERROR([PKG_PROG_PKG_CONFIG not found, please install pkgconf package before configuring.])])
 
 ##
+# Initialize pkg-config for PKG_CHECK_MODULES to avoid conditional issues
+##
+PKG_PROG_PKG_CONFIG
+
+##
 # Checks for ncurses
 ##
 PKG_CHECK_MODULES([ncurses], [ncurses])
@@ -75,7 +80,6 @@ AC_CHECK_FUNCS( \
 )
 AC_FUNC_STRERROR_R
 X_AC_CHECK_PTHREADS
-X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
 X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC
 X_AC_RDMA
@@ -98,11 +102,21 @@ AC_ARG_ENABLE([diodmount],
 AC_ARG_ENABLE([multiuser],
   [AS_HELP_STRING([--disable-multiuser], [build without multi-user support])])
 
+AC_ARG_ENABLE([auth],
+  [AS_HELP_STRING([--disable-auth], [build without authentication support])])
+
 AC_ARG_WITH([ganesha-kmod],
   [AS_HELP_STRING([--with-ganesha-kmod], [use nfs-ganesha-kmod syscalls for multi-user])])
 
 AS_IF([test "x$with_ganesha_kmod" = "xyes"], [
   AC_DEFINE([USE_GANESHA_KMOD], [1], [Use nfs-ganesha-kmod syscalls])
+])
+
+AS_IF([test "x$enable_auth" != "xno"], [
+  PKG_CHECK_MODULES([MUNGE], [munge], [], [
+    AC_MSG_ERROR([Install munge or configure with --disable-auth])
+  ])
+  AC_DEFINE([AUTH], [1], [Support MUNGE authentication])
 ])
 
 AS_IF([test "x$enable_multiuser" != "xno"], [

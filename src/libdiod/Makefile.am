@@ -2,6 +2,7 @@ AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
+	$(MUNGE_CFLAGS) \
 	$(LUA_INCLUDE)
 
 noinst_LIBRARIES = libdiod.a
@@ -41,7 +42,7 @@ test_ldadd = \
 	$(top_builddir)/src/libtap/libtap.a \
 	$(LUA_LIB) \
 	$(LIBCAP) \
-	$(LIBMUNGE) \
+	$(MUNGE_LIBS) \
 	$(LIBPTHREAD)
 
 TESTS = \

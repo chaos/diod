@@ -231,7 +231,7 @@ main(int argc, char **argv)
         msg_exit ("--runas-uid and allsquash cannot be used together");
     if (mode == SRV_FILEDES && (rfdno == -1 || wfdno == -1))
         msg_exit ("--rfdno,wfdno must be used together");
-#ifndef HAVE_LIBMUNGE
+#ifndef AUTH
     if (diod_conf_get_auth_required ()) {
         msg_exit ("diod was built without authentication support."
                   " Run with --no-auth.");
