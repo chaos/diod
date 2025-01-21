@@ -593,13 +593,16 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
                  "  Some accesses might be inappropriately denied.");
         }
 #else
-        if (init_ganesha_syscalls() < 0)
-            msg ("nfs-ganesha-kmod not loaded: changing user/group will fail");
+        if (init_ganesha_syscalls() < 0) {
+            msg_exit ("diod cannot continue in multi-user mode without"
+                      " nfs-ganesha-kmod loaded");
+        }
         /* SRV_FLAGS_SETGROUPS is ignored in user-freebsd.c */
 #endif
         msg ("Anyone can attach and access files as themselves");
 #else
-        msg ("warning: cannot change user/group (built with --disable-multiuser)");
+        msg_exit ("diod was built without multi-user support."
+                  " Run as a normal user or add --runasuser or --allsquash options.");
 #endif
     }
 
