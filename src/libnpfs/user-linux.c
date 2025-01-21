@@ -23,16 +23,13 @@
 #include <sys/fsuid.h>
 #include <pwd.h>
 #include <grp.h>
-#if HAVE_LIBCAP
 #include <sys/capability.h>
-#endif
 #include <sys/prctl.h>
 
 #include "npfs.h"
 #include "xpthread.h"
 #include "npfsimpl.h"
 
-#if HAVE_LIBCAP
 /* When handling requests on connections authenticated as root, we consider
  * it safe to disable DAC checks on the server and presume the client is
  * doing it.  This is only done if the server sets SRV_FLAGS_DAC_BYPASS.
@@ -79,7 +76,6 @@ done:
 	}
 	return ret;
 }
-#endif
 
 /* Note: it is possible for setfsuid/setfsgid to fail silently,
  * e.g. if user doesn't have CAP_SETUID/CAP_SETGID.
@@ -190,7 +186,6 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			wt->fsuid = u->uid;
 		}
 	}
-#if HAVE_LIBCAP
 	if ((srv->flags & SRV_FLAGS_DAC_BYPASS) && wt->fsuid != 0) {
 		if (!wt->privcap && authuid == 0) {
 			if (_chg_privcap (srv, CAP_SET) < 0)
@@ -204,7 +199,6 @@ np_setfsid (Npreq *req, Npuser *u, u32 gid_override)
 			dumpclrd = 1;
 		}
 	}
-#endif
 	ret = 0;
 done:
 	if (dumpclrd && prctl (PR_SET_DUMPABLE, 1, 0, 0, 0) < 0)

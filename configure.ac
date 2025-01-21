@@ -80,7 +80,6 @@ AC_CHECK_FUNCS( \
 )
 AC_FUNC_STRERROR_R
 X_AC_CHECK_PTHREADS
-X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC
 X_AC_RDMA
 
@@ -120,6 +119,9 @@ AS_IF([test "x$enable_auth" != "xno"], [
 ])
 
 AS_IF([test "x$enable_multiuser" != "xno"], [
+  PKG_CHECK_MODULES([CAP], [libcap], [], [
+    AC_MSG_ERROR([Install libcap or configure with --disable-multiuser])
+  ])
   AC_DEFINE([MULTIUSER], [1], [service files to multiple users])
 ])
 

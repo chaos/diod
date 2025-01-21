@@ -1,6 +1,7 @@
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
+	$(CAP_CFLAGS) \
 	-I$(top_srcdir)
 
 noinst_LIBRARIES = libnpfs.a
@@ -43,15 +44,19 @@ test_ldadd = \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libtest/libtest.a \
 	$(top_builddir)/src/libtap/libtap.a \
-	$(LIBCAP) \
+	$(CAP_LIBS) \
 	$(LIBPTHREAD)
 
 TESTS = \
 	test_encoding.t \
 	test_fidpool.t \
-	test_capability.t \
 	test_setfsuid.t \
 	test_setreuid.t
+
+if MULTIUSER
+TESTS += \
+	test_capability.t
+endif
 
 check_PROGRAMS = $(TESTS)
 TEST_EXTENSIONS = .t
@@ -64,8 +69,10 @@ test_encoding_t_LDADD = $(test_ldadd)
 test_fidpool_t_SOURCES = test/fidpool.c
 test_fidpool_t_LDADD = $(test_ldadd)
 
+if MULTIUSER
 test_capability_t_SOURCES = test/capability.c
 test_capability_t_LDADD = $(test_ldadd)
+endif
 
 test_setfsuid_t_SOURCES = test/setfsuid.c
 test_setfsuid_t_LDADD = $(test_ldadd)
