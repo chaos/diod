@@ -1,6 +1,7 @@
 AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
+	$(CAP_CFLAGS) \
 	-I$(top_srcdir)
 
 noinst_LIBRARIES = libnpclient.a
@@ -31,7 +32,7 @@ test_ldadd = \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libtap/libtap.a \
 	$(LUA_LIB) \
-	$(LIBCAP) \
+	$(CAP_LIBS) \
 	$(LIBPTHREAD)
 
 TESTS = \

@@ -39,8 +39,7 @@
 #include <pwd.h>
 #include <grp.h>
 #include <errno.h>
-#if HAVE_LIBMUNGE
-#define GPL_LICENSED 1
+#if AUTH
 #include <munge.h>
 #endif
 
@@ -73,7 +72,7 @@ Npauth *diod_auth_functions = &_auth;
 struct diod_auth_struct {
     int magic;
     char *datastr;
-#if HAVE_LIBMUNGE
+#if AUTH
     munge_ctx_t mungectx;
     munge_err_t mungerr;
     uid_t mungeuid;
@@ -95,7 +94,7 @@ _da_create (void)
     }
     da->magic = DIOD_AUTH_MAGIC;
     da->datastr = NULL;
-#if HAVE_LIBMUNGE
+#if AUTH
     if (!(da->mungectx = munge_ctx_create ())) {
         np_uerror (ENOMEM);
         free (da);
@@ -118,7 +117,7 @@ _da_destroy (da_t da)
     da->magic = 0;
     if (da->datastr)
         free (da->datastr);
-#if HAVE_LIBMUNGE
+#if AUTH
     if (da->mungectx)
         munge_ctx_destroy (da->mungectx);
 #endif
@@ -172,7 +171,7 @@ checkauth(Npfid *fid, Npfid *afid, char *aname)
 
     snprintf (a, sizeof(a), "checkauth(%s@%s:%s)", fid->user->uname,
               np_conn_get_client_id (fid->conn), aname ? aname : "<NULL>");
-#if HAVE_LIBMUNGE
+#if AUTH
     if (!da->datastr) {
         msg ("%s: munge cred missing", a);
         np_uerror (EPERM);
@@ -267,7 +266,7 @@ int
 diod_auth (Npcfid *afid, u32 uid)
 {
     int ret = -1;
-#if HAVE_LIBMUNGE
+#if AUTH
     char *cred = NULL;
     munge_ctx_t ctx = NULL;
 

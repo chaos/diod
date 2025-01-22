@@ -12,9 +12,7 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
-#if HAVE_LIBCAP
 #include <sys/capability.h>
-#endif
 #include <sys/fsuid.h>
 #include <string.h>
 
@@ -22,7 +20,6 @@
 #include "src/libtest/state.h"
 #include "src/libtap/tap.h"
 
-#if HAVE_LIBCAP
 typedef enum { S0, S1, S2, S3, S4, S5 } state_t;
 
 static void check_capability (const char *who,
@@ -156,19 +153,15 @@ static void proc0 (void)
     check_capability ("task0", "CHOWN", CAP_CHOWN, CAP_CLEAR);
 }
 
-#endif
-
 int main(int argc, char *argv[])
 {
-#if HAVE_LIBCAP
     if (geteuid () != 0 || getenv ("FAKEROOTKEY") != NULL)
         plan (SKIP_ALL, "this test must run as root");
     plan (NO_PLAN);
+
     test_state_init (S0);
     proc0 (); // spawns proc1 and proc2
-#else
-    plan (SKIP_ALL, "libcap2-dev is not installed");
-#endif
+
     done_testing ();
 
     exit (0);
