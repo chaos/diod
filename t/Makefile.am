@@ -10,7 +10,8 @@ clean-local:
 # This list is included in both TESTS and dist_check_SCRIPTS.
 TESTSCRIPTS = \
 	t0000-sharness.t \
-	t1000-valgrind.t
+	t1000-valgrind.t \
+	t0001-basic-runasuser.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \
