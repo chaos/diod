@@ -20,7 +20,8 @@ dist_check_SCRIPTS = \
 
 EXTRA_DIST = \
 	sharness.sh \
-	aggregate-results.sh
+	aggregate-results.sh \
+	sharness.d
 
 
 AM_CFLAGS = @WARNING_CFLAGS@
