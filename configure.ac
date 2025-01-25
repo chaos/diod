@@ -185,7 +185,6 @@ AC_CONFIG_FILES( \
   src/Makefile \
   t/Makefile \
   tests/Makefile \
-  tests/misc/Makefile \
   tests/kern/Makefile \
   tests/kern/fstest/Makefile \
   tests/kern/postmark/Makefile \

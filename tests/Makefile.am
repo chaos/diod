@@ -1,1 +1,1 @@
-SUBDIRS = misc user kern
+SUBDIRS = user kern
