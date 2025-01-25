@@ -183,6 +183,7 @@ AC_CONFIG_FILES( \
   etc/auto.diod \
   src/cmd/Makefile \
   src/Makefile \
+  t/Makefile \
   tests/Makefile \
   tests/misc/Makefile \
   tests/kern/Makefile \
