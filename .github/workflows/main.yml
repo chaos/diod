@@ -30,6 +30,8 @@ jobs:
         df /tmp
       env:
         CC: ${{matrix.cc}}
+    - name: allow nobody user into home
+      run: sudo chmod go+rx ~
     - name: autogen
       run: ./autogen.sh
     - name: configure
