@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <unistd.h>
-#if USE_IMPERSONATION_LINUX
+#ifndef USE_GANESHA_KMOD
 #include <sys/syscall.h>
 #endif
 #include <stdio.h>
@@ -48,14 +48,14 @@
 
 #include "src/libdiod/diod_ops.h"
 
-#if USE_IMPERSONATION_GANESHA
+#if USE_GANESHA_KMOD
 #include "src/libnpfs/ganesha-syscalls.h"
 #endif
 
 typedef enum { SRV_FILEDES, SRV_SOCKTEST, SRV_NORMAL } srvmode_t;
 
 static void          _setrlimit (void);
-static void          _become_user (char *name, uid_t uid, int realtoo);
+static void          _become_user (char *name, uid_t uid);
 static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 
 #ifndef NR_OPEN
@@ -231,6 +231,12 @@ main(int argc, char **argv)
         msg_exit ("--runas-uid and allsquash cannot be used together");
     if (mode == SRV_FILEDES && (rfdno == -1 || wfdno == -1))
         msg_exit ("--rfdno,wfdno must be used together");
+#ifndef AUTH
+    if (diod_conf_get_auth_required ()) {
+        msg_exit ("diod was built without authentication support."
+                  " Run with --no-auth.");
+    }
+#endif
 
     diod_conf_validate_exports ();
 
@@ -245,56 +251,49 @@ main(int argc, char **argv)
     exit (0);
 }
 
-/* Switch to user/group, load the user's supplementary groups.
- * Print message and exit on failure.
+/* Look up name (which may be a stringified numerical uid) or if name is NULL,
+ * look up uid.  Then drop root and load the credentials of the new user.
+ * It is a fatal error if the user cannot be found in the password file.
+ * This function is not safe to call after any threads have been spawned that
+ * could do user lookups.  For example, call before np_srv_create ().
  */
 static void
-_become_user (char *name, uid_t uid, int realtoo)
+_become_user (char *name, uid_t uid)
 {
-    int err;
-    struct passwd pw, *pwd;
-    int len = sysconf(_SC_GETPW_R_SIZE_MAX);
-    char *buf;
+    struct passwd *pw;
     int nsg;
     gid_t sg[64];
-    char *endptr;
 
-    if (len == -1)
-        len = 4096;
-    if (!(buf = malloc(len)))
-        msg_exit ("out of memory");
-    if (name) {
+    if (name) { // handle stringified uid
+        char *endptr;
         errno = 0;
         uid = strtoul (name, &endptr, 10);
         if (errno == 0 && *name != '\0' && *endptr == '\0')
             name = NULL;
     }
     if (name) {
-        if ((err = getpwnam_r (name, &pw, buf, len, &pwd)) != 0)
-            errn_exit (err, "error looking up user %s", name);
-        if (!pwd)
+        if (!(pw = getpwnam (name)))
             msg_exit ("error looking up user %s", name);
-    } else {
-        if ((err = getpwuid_r (uid, &pw, buf, len, &pwd)) != 0)
-            errn_exit (err, "error looking up uid %d", uid);
-        if (!pwd)
+    }
+    else {
+        if (!(pw = getpwuid (uid)))
             msg_exit ("error looking up uid %d", uid);
     }
+    if (pw->pw_uid == geteuid ())
+        return; // nothing to do
+    if (geteuid () != 0)
+        msg_exit ("no permission to switch users");
+
     nsg = sizeof (sg) / sizeof(sg[0]);
-    if (getgrouplist(pwd->pw_name, pwd->pw_gid, sg, &nsg) == -1)
-        err_exit ("user is in too many groups");
-#if USE_IMPERSONATION_LINUX
-    if (syscall(SYS_setgroups, nsg, sg) < 0)
-        err_exit ("setgroups");
-#else
+    if (getgrouplist(pw->pw_name, pw->pw_gid, sg, &nsg) == -1)
+        err_exit ("user %s is in too many groups", pw->pw_name);
     if (setgroups (nsg, sg) < 0)
         err_exit ("setgroups");
-#endif
-    if (setregid (realtoo ? pwd->pw_gid : -1, pwd->pw_gid) < 0)
-        err_exit ("setreuid");
-    if (setreuid (realtoo ? pwd->pw_uid : -1, pwd->pw_uid) < 0)
-        err_exit ("setreuid");
-    free (buf);
+    if (setregid (pw->pw_gid, pw->pw_gid) < 0
+        || setreuid (pw->pw_uid, pw->pw_uid) < 0)
+        err_exit ("could not switch to %d:%d", pw->pw_uid, pw->pw_gid);
+
+    msg ("Dropped root, running as %s", pw->pw_name);
 }
 
 /* Remove any resource limits.
@@ -464,7 +463,7 @@ _service_sigsetup (void)
         err_exit ("sigprocmask");
 }
 
-#if USE_IMPERSONATION_LINUX
+#if defined(MULTIUSER) && !defined(USE_GANESHA_KMOD)
 /* POSIX setgroups(2) is per process but in Linux the underlying system call
  * is per-thread and the per-process bit is handled in glibc, so we can use
  * SYS_setgroups directly in the server thread pool when switching users.
@@ -514,7 +513,23 @@ _test_setgroups (void)
     free (sg);
     return rc;
 }
-#endif /* USE_IMPERSONATION_LINUX */
+#endif
+
+/* Look up user name of effective uid.
+ * The result is only valid until the next call, and this is not thread safe.
+ */
+static const char *
+_geteuser (void)
+{
+    static char idstr[16];
+    struct passwd *pw = getpwuid (geteuid ());
+
+    if (!pw) {
+        snprintf (idstr, sizeof (idstr), "%d", geteuid ());
+        return idstr;
+    }
+    return pw->pw_name;
+}
 
 static void
 _service_run (srvmode_t mode, int rfdno, int wfdno)
@@ -522,7 +537,6 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
     List l = diod_conf_get_listen ();
     int nwthreads = diod_conf_get_nwthreads ();
     int flags = diod_conf_get_debuglevel ();
-    uid_t euid = geteuid ();
     int n;
 
     ss.mode = mode;
@@ -544,60 +558,64 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
             break;
     }
 
-    /* manipulate squash/runas users if not root */
-    if (euid != 0) {
-        if (diod_conf_get_allsquash ()) {
-            struct passwd *pw = getpwuid (euid);
-            char *su = diod_conf_get_squashuser ();
-            if (!pw)
-                msg_exit ("getpwuid on effective uid failed");
-            if (strcmp (pw->pw_name, su) != 0) {
-                if (strcmp (su, DFLT_SQUASHUSER) != 0)
-                    msg ("changing squashuser '%s' to '%s' "
-                         "since you are not root", su, pw->pw_name);
-                diod_conf_set_squashuser (pw->pw_name); /* fixes issue 41 */
-            }
-        } else { /* N.B. runasuser cannot be set in the config file */
-            uid_t ruid = diod_conf_get_runasuid ();
-            if (diod_conf_opt_runasuid () && ruid != euid)
-                msg ("changing runasuid %d to %d "
-                     "since you are not root", ruid, euid);
-            diod_conf_set_runasuid (euid);
-        }
+    /* allsquash */
+    if (diod_conf_get_allsquash ()) {
+        /* If not root, and the squashuser has not been explicitly set,
+         * let's assume the user wants squashuser to default to the effective uid.
+         */
+        if (geteuid () != 0 && !strcmp (diod_conf_get_squashuser (), DFLT_SQUASHUSER))
+            diod_conf_set_squashuser ((char *)_geteuser ());
+        /* _become_user() fails if not root and squashuser != effective uid.
+         */
+        _become_user (diod_conf_get_squashuser (), -1);
+        msg ("Anyone can attach and access files as %s", _geteuser ());
     }
 
-    /* drop root */
-    if (euid == 0) {
-        if (diod_conf_get_allsquash ())
-            _become_user (diod_conf_get_squashuser (), -1, 1);
-        else if (diod_conf_opt_runasuid ())
-            _become_user (NULL, diod_conf_get_runasuid (), 1);
+    /* runasuid */
+    else if (diod_conf_opt_runasuid () || geteuid () != 0) {
+        /* If not root, and not allsquash, and not runasuid (command line only),
+         * let's assume runasuid set to the effective uid.
+         * N.B.  diod_attach () lets anyone connect unless runasuid is set
+         */
+        if (getuid () != 0 && !diod_conf_opt_runasuid ())
+            diod_conf_set_runasuid (geteuid ());
+        /* _become_user() fails if not root and runasuser != effective uid
+         */
+        _become_user (NULL, diod_conf_get_runasuid());
+        const char *user = _geteuser ();
+        msg ("Only %s can attach and access files as %s", user, user);
     }
 
-    /* clear umask */
-    umask (0);
-
-    flags |= SRV_FLAGS_LOOSEFID;        /* work around buggy clients */
-    flags |= SRV_FLAGS_AUTHCONN;
-    //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
-    if (geteuid () == 0) {
+    /* multiuser */
+    else {
+#if MULTIUSER
+#ifndef USE_GANESHA_KMOD
         flags |= SRV_FLAGS_SETFSID;
         flags |= SRV_FLAGS_DAC_BYPASS;
-#if USE_IMPERSONATION_LINUX
         if (_test_setgroups ())
             flags |= SRV_FLAGS_SETGROUPS;
         else {
             msg ("warning: supplemental group membership will be ignored."
-                "  Some accesses might be inappropriately denied.");
+                 "  Some accesses might be inappropriately denied.");
         }
-#elif USE_IMPERSONATION_GANESHA
-        if (init_ganesha_syscalls() < 0)
-            msg ("nfs-ganesha-kmod not loaded: changing user/group will fail");
-        /* SRV_FLAGS_SETGROUPS is ignored in user-freebsd.c */
 #else
-        msg ("warning: cannot change user/group (built with --disable-impersonation)");
+        if (init_ganesha_syscalls() < 0) {
+            msg_exit ("diod cannot continue in multi-user mode without"
+                      " nfs-ganesha-kmod loaded");
+        }
+        /* SRV_FLAGS_SETGROUPS is ignored in user-freebsd.c */
+#endif
+        msg ("Anyone can attach and access files as themselves");
+#else
+        msg_exit ("diod was built without multi-user support."
+                  " Run as a normal user or add --runasuser or --allsquash options.");
 #endif
     }
+    msg ("%s authentication is required",
+         diod_conf_get_auth_required () ? "MUNGE" : "No");
+
+    /* clear umask */
+    umask (0);
 
 #if WITH_RDMA
     /* RDMA needs to be initialized after user transitions.
@@ -618,6 +636,9 @@ _service_run (srvmode_t mode, int rfdno, int wfdno)
         err_exit ("prctl PR_SET_DUMPABLE failed");
 #endif
 
+    flags |= SRV_FLAGS_LOOSEFID;        /* work around buggy clients */
+    flags |= SRV_FLAGS_AUTHCONN;
+    //flags |= SRV_FLAGS_FLUSHSIG;      /* XXX temporarily off */
     if (!diod_conf_get_userdb ())
         flags |= SRV_FLAGS_NOUSERDB;
     if (!(ss.srv = np_srv_create (nwthreads, flags))) /* starts threads */

@@ -35,13 +35,15 @@ AM_CFLAGS = @WARNING_CFLAGS@
 
 AM_CPPFLAGS = \
 	-I$(top_srcdir) \
+	$(MUNGE_CFLAGS) \
+	$(CAP_CFLAGS) \
 	$(LUA_INCLUDE)
 
 
 LDADD = $(top_builddir)/src/libdiod/libdiod.a \
         $(top_builddir)/src/libnpfs/libnpfs.a \
         $(top_builddir)/src/liblsd/liblsd.a \
-        $(LIBPTHREAD) $(LUA_LIB) $(LIBMUNGE) $(LIBCAP) $(LIBTCMALLOC)
+        $(LIBPTHREAD) $(LUA_LIB) $(MUNGE_LIBS) $(CAP_LIBS) $(LIBTCMALLOC)
 
 common_sources = test.h
 

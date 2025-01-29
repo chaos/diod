@@ -46,6 +46,11 @@ m4_ifndef([PKG_PROG_PKG_CONFIG],
   [AC_MSG_ERROR([PKG_PROG_PKG_CONFIG not found, please install pkgconf package before configuring.])])
 
 ##
+# Initialize pkg-config for PKG_CHECK_MODULES to avoid conditional issues
+##
+PKG_PROG_PKG_CONFIG
+
+##
 # Checks for ncurses
 ##
 PKG_CHECK_MODULES([ncurses], [ncurses])
@@ -75,8 +80,6 @@ AC_CHECK_FUNCS( \
 )
 AC_FUNC_STRERROR_R
 X_AC_CHECK_PTHREADS
-X_AC_CHECK_COND_LIB(munge, munge_ctx_create)
-X_AC_CHECK_COND_LIB(cap, cap_get_proc)
 X_AC_TCMALLOC
 X_AC_RDMA
 
@@ -95,10 +98,32 @@ AC_SYS_LARGEFILE
 AC_ARG_ENABLE([diodmount],
   [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])])
 
-AC_ARG_ENABLE([impersonation],
-  [AS_HELP_STRING([--enable-impersonation], [allow access=user])],
-  [],
-  [enable_impersonation=auto])
+AC_ARG_ENABLE([multiuser],
+  [AS_HELP_STRING([--disable-multiuser], [build without multi-user support])])
+
+AC_ARG_ENABLE([auth],
+  [AS_HELP_STRING([--disable-auth], [build without authentication support])])
+
+AC_ARG_WITH([ganesha-kmod],
+  [AS_HELP_STRING([--with-ganesha-kmod], [use nfs-ganesha-kmod syscalls for multi-user])])
+
+AS_IF([test "x$with_ganesha_kmod" = "xyes"], [
+  AC_DEFINE([USE_GANESHA_KMOD], [1], [Use nfs-ganesha-kmod syscalls])
+])
+
+AS_IF([test "x$enable_auth" != "xno"], [
+  PKG_CHECK_MODULES([MUNGE], [munge], [], [
+    AC_MSG_ERROR([Install munge or configure with --disable-auth])
+  ])
+  AC_DEFINE([AUTH], [1], [Support MUNGE authentication])
+])
+
+AS_IF([test "x$enable_multiuser" != "xno"], [
+  PKG_CHECK_MODULES([CAP], [libcap], [], [
+    AC_MSG_ERROR([Install libcap or configure with --disable-multiuser])
+  ])
+  AC_DEFINE([MULTIUSER], [1], [service files to multiple users])
+])
 
 AC_ARG_ENABLE([config],
   [AS_HELP_STRING([--disable-config], [disable lua config file support])])
@@ -114,47 +139,9 @@ AS_IF([test "x$enable_config" != "xno"], [
   AC_DEFINE([HAVE_CONFIG_FILE], [1], [lua config file support])
 ])
 
-case "${host_os}" in
-  linux*)
-    case "${enable_impersonation}" in
-      no)
-        ;;
-      yes|linux|auto)
-        enable_impersonation=linux;;
-      *)
-        AC_MSG_FAILURE([unsupported impersonation model]);;
-    esac
-    ;;
-  freebsd*)
-    case "${enable_impersonation}" in
-      no|auto)
-        enable_impersonation=no;;
-      yes|ganesha)
-        enable_impersonation=ganesha;;
-      *)
-        AC_MSG_FAILURE([unsupported impersonation model]);;
-    esac
-    ;;
-  *)
-    case "${enable_impersonation}" in
-      no|auto)
-        enable_impersonation=no;;
-      *)
-        AC_MSG_FAILURE([unsupported impersonation model]);;
-    esac
-    ;;
-esac
-
 AM_CONDITIONAL([ENABLE_DIODMOUNT], [test "x${enable_diodmount}" != "xno"])
-AM_CONDITIONAL([USE_IMPERSONATION_LINUX], [test "x${enable_impersonation}" = "xlinux"])
-AM_CONDITIONAL([USE_IMPERSONATION_GANESHA], [test "x${enable_impersonation}" = "xganesha"])
-
-if test "x${enable_impersonation}" = "xlinux"; then
-  AC_DEFINE([USE_IMPERSONATION_LINUX], [1], [Use Linux setfsuid])
-fi
-if test "x${enable_impersonation}" = "xganesha"; then
-  AC_DEFINE([USE_IMPERSONATION_GANESHA], [1], [Use nfs-ganesha-kmod syscalls])
-fi
+AM_CONDITIONAL([MULTIUSER], [test "x${enable_multiuser}" != "xno"])
+AM_CONDITIONAL([USE_GANESHA_KMOD], [test "x${with_ganesha_kmod}" = "xyes"])
 
 ##
 # Check for systemd
