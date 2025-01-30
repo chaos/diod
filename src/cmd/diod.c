@@ -62,9 +62,10 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-static const char *options = "r:w:d:l:t:e:Eo:u:SL:nHpc:NU:s";
+static const char *options = "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:s";
 
 static const struct option longopts[] = {
+    {"foreground",         no_argument,        0, 'f'},
     {"rfdno",              required_argument,  0, 'r'},
     {"wfdno",              required_argument,  0, 'w'},
     {"debug",              required_argument,  0, 'd'},
@@ -91,6 +92,7 @@ usage()
 {
     fprintf (stderr,
 "Usage: diod [OPTIONS]\n"
+"   -f,--foreground         do not daemonize (default)\n"
 "   -r,--rfdno              service connected client on read file descriptor\n"
 "   -w,--wfdno              service connected client on write file descriptor\n"
 "   -l,--listen IP:PORT     set interface to listen on (multiple -l allowed)\n"
@@ -143,6 +145,9 @@ main(int argc, char **argv)
     opterr = 0;
     while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
+            case 'f':   /* --foreground */
+                /* no-op; this is the default now */
+                break;
             case 'r':   /* --rfdno */
                 mode = SRV_FILEDES;
                 rfdno = strtoul (optarg, NULL, 10);
