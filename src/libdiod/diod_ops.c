@@ -150,6 +150,9 @@ int          diod_exportok (Npfid *fid);
 int          diod_auth_required (Npstr *uname, u32 n_uname, Npstr *aname);
 char        *diod_get_path (Npfid *fid);
 char        *diod_get_files (char *name, void *a);
+Npfcall 	*diod_renameat(Npfid *olddirfid, Npstr *oldname, Npfid *newdirfid,
+                           Npstr *newname);
+Npfcall 	*diod_unlinkat(Npfid *dirfid, Npstr *name, u32 flags);
 
 int
 diod_init (Npsrv *srv)
@@ -187,8 +190,8 @@ diod_init (Npsrv *srv)
     srv->getlock = diod_getlock;
     srv->link = diod_link;
     srv->mkdir = diod_mkdir;
-    //srv->renameat = diod_renameat;
-    //srv->unlinkat = diod_unlinkat;
+    srv->renameat = diod_renameat;
+    srv->unlinkat = diod_unlinkat;
 
     if (!np_ctl_addfile (srv->ctlroot, "exports", diod_get_exports, srv, 0))
         goto error;
@@ -1472,6 +1475,102 @@ error:
     errn (np_rerror (), "diod_xattrcreate %s@%s:%s/%.*s",
           fid->user->uname, np_conn_get_client_id (fid->conn), path_s (f->path),
           name->len, name->str);
+    return NULL;
+}
+
+Npfcall*
+diod_renameat(Npfid *olddirfid, Npstr *oldname, Npfid *newdirfid, Npstr *newname)
+{
+    Fid *odf = olddirfid->aux;
+    Fid *ndf = newdirfid->aux;
+    Npsrv *srv = olddirfid->conn->srv;
+    Npfcall *ret = NULL;
+    Path opath = NULL, npath = NULL;
+
+    if (!(opath = path_append (srv, odf->path, oldname))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+
+    if (!(npath = path_append (srv, ndf->path, newname))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+
+    if (rename (path_s (opath), path_s (npath)) < 0) {
+        np_uerror (errno);
+        goto error_quiet;
+    }
+
+    if (!(ret = np_create_rrenameat ())) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+
+    path_decref (srv, npath);
+    path_decref (srv, opath);
+    return ret;
+error:
+    errn (np_rerror (), "diod_renameat %s@%s:%s -> %s",
+          olddirfid->user->uname, np_conn_get_client_id (olddirfid->conn),
+          path_s (opath), path_s (npath));
+error_quiet:
+    if (npath)
+        path_decref (srv, npath);
+    if (opath)
+        path_decref (srv, opath);
+    return NULL;
+}
+
+Npfcall*
+diod_unlinkat(Npfid *dirfid, Npstr *name, u32 flags)
+{
+    Fid *df = dirfid->aux;
+    Path rpath = NULL;
+    Npfcall *ret = NULL;
+    Npsrv *srv = dirfid->conn->srv;
+    struct stat st;
+
+    if (!(rpath = path_append (srv, df->path, name))) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+
+    if (lstat (path_s (rpath), &st) < 0) {
+        np_uerror (errno);
+        goto error;
+    }
+
+    if (S_ISDIR (st.st_mode)) {
+        if (!(flags & Uremovedir)) {
+            np_uerror (EISDIR);
+            goto error_quiet;
+        }
+
+        if (rmdir (path_s (rpath)) < 0) {
+            np_uerror (errno);
+            goto error_quiet;
+        }
+    }
+    else if (unlink (path_s (rpath)) < 0) {
+        np_uerror (errno);
+        goto error_quiet;
+    }
+
+    if (!(ret = np_create_runlinkat())) {
+        np_uerror (ENOMEM);
+        goto error;
+    }
+
+    path_decref (srv, rpath);
+    return ret;
+error:
+    errn (np_rerror (), "diod_unlinkat %s@%s:%s", 
+          dirfid->user->uname, np_conn_get_client_id (dirfid->conn),
+          path_s (rpath));
+error_quiet:
+    if (rpath)
+        path_decref (srv, rpath);
     return NULL;
 }
 
