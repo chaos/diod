@@ -164,6 +164,11 @@ enum {
 	Osync		= 04000000,
 };
 
+// flags for Tunlinkat
+enum {
+	Uremovedir	= 0x200,
+};
+
 // flags for Tlock
 enum {
 	Lblock		= 1,
