@@ -413,7 +413,7 @@ np_read(Npreq *req, Npfcall *tc)
 		np_logerr (conn->srv, "read: invalid fid");
 		goto done;
 	}
-	if (tc->u.tread.count + IOHDRSZ > conn->msize) {
+	if ((u64)(tc->u.tread.count) + IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		np_logerr (conn->srv, "read: count %u too large",
 			   tc->u.tread.count);
@@ -484,7 +484,7 @@ np_write(Npreq *req, Npfcall *tc)
 		np_uerror(EROFS);
 		goto done;
 	}
-	if (tc->u.twrite.count + IOHDRSZ > conn->msize) {
+	if ((u64)(tc->u.twrite.count) + IOHDRSZ > conn->msize) {
 		np_uerror(EIO);
 		np_logerr (conn->srv, "write: count %u too large",
 			   tc->u.twrite.count);
