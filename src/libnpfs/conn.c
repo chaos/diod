@@ -154,6 +154,54 @@ np_conn_cleanup(void *a)
 	np_conn_destroy(conn);
 }
 
+/* Check if the message type is allowed or not.
+ */
+static int
+np_check_allowed (Npfcall *fc)
+{
+	switch (fc->type)
+	{
+	case Tlerror:
+	case Tstatfs:
+	case Tlopen:
+	case Tlcreate:
+	case Tsymlink:
+	case Tmknod:
+	case Trename:
+	case Treadlink:
+	case Tgetattr:
+	case Tsetattr:
+	case Txattrwalk:
+	case Txattrcreate:
+	case Treaddir:
+	case Tfsync:
+	case Tlock:
+	case Tgetlock:
+	case Tlink:
+	case Tmkdir:
+	case Trenameat:
+	case Tunlinkat:
+	case Tversion:
+	case Tauth:
+	case Tattach:
+	case Terror:
+	case Tflush:
+	case Twalk:
+	case Topen:
+	case Tcreate:
+	case Tread:
+	case Twrite:
+	case Tclunk:
+	case Tremove:
+	case Tstat:
+	case Twstat:
+		np_uerror(EPROTO);
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 /* Per-connection read thread.
  */
 static void *
@@ -178,6 +226,14 @@ np_conn_read_proc(void *a)
 		if (!fc) /* EOF */
 			break;
 		_debug_trace (srv, fc);
+
+		/* Reject invalid message types */
+		if (np_check_allowed (fc) != 1) {
+			np_logerr (srv, "unexpected request - "
+				   "dropping connection to '%s'",
+				   conn->client_id);
+			break;
+		}
 
 		/* Encapsulate fc in a request and hand to srv worker threads.
 		 * In np_req_alloc, req->fid is looked up/initialized.
