@@ -1267,7 +1267,7 @@ np_unlinkat (Npreq *req, Npfcall *tc)
 		np_uerror (95); /* v9fs expects this not ENOSYS for this op */
 		goto done;
 	}
-	rc = (*req->conn->srv->unlinkat)(dirfid, &tc->u.tunlinkat.name);
+	rc = (*req->conn->srv->unlinkat)(dirfid, &tc->u.tunlinkat.name, tc->u.tunlinkat.flags);
 done:
 	return rc;
 }
