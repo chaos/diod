@@ -37,6 +37,15 @@ AS_CASE($ax_cv_c_compiler_vendor,
 )
 AC_SUBST([WARNING_CFLAGS])
 
+##
+# Fix non-optional LUAJIT support macro in autoconf-archive > 2023.02.20
+##
+AC_ARG_WITH(luajit, [AS_HELP_STRING([--with-luajit],
+            [Prefer LuaJIT over PUC Lua, even if the latter is newer. Default: no])
+])
+AM_CONDITIONAL([LUAJIT], [test "x$with_luajit" != 'xno'])
+
+
 AC_PROG_RANLIB
 
 ##
