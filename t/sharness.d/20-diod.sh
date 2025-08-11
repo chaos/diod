@@ -1,5 +1,7 @@
 PATH_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/diod
 PATH_DIODMOUNT=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodmount
+PATH_DIODRUN=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_diodrun
+PATH_NPCLIENT=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_npclient
 
 ##
 # Set test prerequisites
@@ -89,3 +91,36 @@ diod_term_asroot() {
 	rmdir $sockdir
 	return $exit_rc
 }
+
+# Re-exec the test script "under" a test instance of diod.
+# Usage: test_under_diod ARGS ...
+test_under_diod() {
+	log_file="$SHARNESS_TEST_NAME.diod.log"
+	if test -n "$TEST_UNDER_DIOD_ACTIVE"; then
+		test "$debug" = "t" || cleanup rm -f "${SHARNESS_TEST_DIRECTORY:-..}/$log_file"
+		return
+	fi
+	if test "$verbose" = "t"; then
+		flags="${flags} --verbose"
+	fi
+	if test "$debug" = "t"; then
+		flags="${flags} --debug"
+	fi
+	if test "$chain_lint" = "t"; then
+		flags="${flags} --chain-lint"
+	fi
+
+	if test -n "$SHARNESS_TEST_DIRECTORY"; then
+		cd $SHARNESS_TEST_DIRECTORY
+	fi
+
+	ulimit -c unlimited
+
+	export MALLOC_CHECK_=3
+	export TEST_UNDER_DIOD_ACTIVE=t
+
+	exec $PATH_DIODRUN \
+	    "$PATH_DIOD -r0 -w0 -L $log_file $*" \
+	    "sh $0 ${flags}"
+}
+# -c /dev/null -n -d 1 -e $DIOD_SERVER_ANAME \

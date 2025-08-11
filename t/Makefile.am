@@ -5,7 +5,7 @@ T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
 	$(top_srcdir)/config/tap-driver.sh
 
 clean-local:
-	rm -fr trash-directory.* test-results .prove *.output
+	rm -fr trash-directory.* test-results .prove *.output *.diod.log
 
 # This list is included in both TESTS and dist_check_SCRIPTS.
 TESTSCRIPTS = \
