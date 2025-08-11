@@ -13,7 +13,8 @@ TESTSCRIPTS = \
 	t1000-valgrind.t \
 	t0001-basic-runasuser.t \
 	t0002-basic-allsquash.t \
-	t0003-basic-multiuser.t
+	t0003-basic-multiuser.t \
+	t0004-npclient-basic.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \
