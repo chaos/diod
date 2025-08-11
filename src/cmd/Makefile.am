@@ -53,7 +53,9 @@ dioddate_SOURCES = dioddate.c $(common_sources)
 TESTS = \
 	test_opt.t
 
-check_PROGRAMS = $(TESTS)
+check_PROGRAMS = \
+	test_diodrun \
+	$(TESTS)
 
 TEST_EXTENSIONS = .t
 T_LOG_DRIVER = env AM_TAP_AWK='$(AWK)' $(SHELL) \
@@ -64,3 +66,7 @@ test_opt_t_LDADD = \
 	$(builddir)/opt.o \
 	$(common_ldadd) \
 	$(top_builddir)/src/libtap/libtap.a
+
+test_diodrun_SOURCES = test/diodrun.c $(common_sources)
+test_diodrun_LDADD = \
+	$(common_ldadd)
