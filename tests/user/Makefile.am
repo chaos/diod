@@ -6,7 +6,6 @@ check_PROGRAMS = \
 	tread \
 	tstat \
 	twrite \
-	tflush \
 	tgetxattr \
 	tsetxattr \
 	tsetxattr_wildoffset \
@@ -24,7 +23,7 @@ LOG_COMPILER = ${srcdir}/runtest
 
 AM_LOG_FLAGS =
 
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t15 t16 t17 t18 t19 t20
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t16 t17 t18 t19 t20
 
 $(TESTS): exp.d
 
@@ -56,7 +55,6 @@ tmkdir_SOURCES = tmkdir.c $(common_sources)
 tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
 twrite_SOURCES = twrite.c $(common_sources)
-tflush_SOURCES = tflush.c $(common_sources)
 tgetxattr_SOURCES = tgetxattr.c $(common_sources)
 tsetxattr_SOURCES = tsetxattr.c $(common_sources)
 tremovexattr_SOURCES = tremovexattr.c $(common_sources)

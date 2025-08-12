@@ -20,7 +20,6 @@ t10	Attach to server with N threads, 1 user
 t11(*)	Attach to server with N threads, M users (N > M)
 t12(+)  Attach to user A's private server with user B
 t13(*)	Attach to server with N threads, M users (N < M)
-t15	Check that flush works the way it ought to.
 t16	Attach directly to a file and perform I/O
 t17	Read, list, remove user extended attributes
 t18	Removing nonexistent user xattrs returns ENODATA

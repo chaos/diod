@@ -56,6 +56,7 @@ TESTS = \
 check_PROGRAMS = \
 	test_diodrun \
 	test_npclient \
+	test_tflush \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -74,4 +75,8 @@ test_diodrun_LDADD = \
 
 test_npclient_SOURCES = test/npclient.c $(common_sources)
 test_npclient_LDADD = \
+	$(common_ldadd)
+
+test_tflush_SOURCES = test/tflush.c $(common_sources)
+test_tflush_LDADD = \
 	$(common_ldadd)
