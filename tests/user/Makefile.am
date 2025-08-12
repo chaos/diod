@@ -1,7 +1,6 @@
 check_PROGRAMS = \
 	conjoin \
 	tattach \
-	tattachmt \
 	tmkdir \
 	tread \
 	tstat \
@@ -23,7 +22,7 @@ LOG_COMPILER = ${srcdir}/runtest
 
 AM_LOG_FLAGS =
 
-TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t10 t11 t12 t13 t16 t17 t18 t19 t20
+TESTS = t01 t02 t03 t04 t05 t06 t07 t08 t09 t12 t16 t17 t18 t19 t20
 
 $(TESTS): exp.d
 
@@ -50,7 +49,6 @@ LDADD = $(top_builddir)/src/libdiod/libdiod.a \
 common_sources =
 
 conjoin_SOURCES = conjoin.c $(common_sources)
-tattachmt_SOURCES = tattachmt.c $(common_sources)
 tmkdir_SOURCES = tmkdir.c $(common_sources)
 tread_SOURCES = tread.c $(common_sources)
 tstat_SOURCES = tstat.c $(common_sources)
