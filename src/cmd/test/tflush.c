@@ -16,9 +16,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <getopt.h>
 #include <errno.h>
 #include <stdint.h>
 #include <inttypes.h>
@@ -30,34 +32,90 @@
 
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_auth.h"
+#include "src/libdiod/diod_sock.h"
+#include "src/libdiod/diod_auth.h"
 
-static void
-_flush_series (Npcfsys *fs, Npcfid *root);
+static void flush_series (Npcfsys *fs, Npcfid *root);
 
-static void
-usage (void)
+static void usage (void)
 {
-    fprintf (stderr, "Usage: tflush aname\n");
+    fprintf (stderr, "Usage: tflush [OPTIONS]\n"
+"   -a,--aname NAME       file system (default ctl)\n"
+"   -s,--server HOST:PORT server (default localhost:564)\n"
+"   -m,--msize            msize (default 65536)\n"
+"   -u,--uid              authenticate as uid (default is your euid)\n"
+"   -t,--timeout SECS     give up after specified seconds\n"
+"   -p,--privport         connect from a privileged port (root user only)\n"
+);
     exit (1);
 }
 
-int
-main (int argc, char *argv[])
+static const char *options = "a:s:m:u:p";
+
+static const struct option longopts[] = {
+    {"aname",   required_argument,      0, 'a'},
+    {"server",  required_argument,      0, 's'},
+    {"msize",   required_argument,      0, 'm'},
+    {"uid",     required_argument,      0, 'u'},
+    {"privport",no_argument,            0, 'p'},
+    {0, 0, 0, 0},
+};
+
+int main (int argc, char *argv[])
 {
+    char *aname = NULL;
+    char *server = NULL;
+    int msize = 65536;
+    uid_t uid = geteuid ();
+    int flags = 0;
+    int server_fd;
+    bool not_my_serverfd = false;
     Npcfsys *fs;
     Npcfid *afid, *root;
-    char *aname;
-    int fd = 0; /* stdin */
-    uid_t uid = geteuid ();
+    int c;
 
     diod_log_init (argv[0]);
 
-    if (argc != 2)
+    opterr = 0;
+    while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
+        switch (c) {
+            case 'a':   /* --aname NAME */
+                aname = optarg;
+                break;
+            case 's':   /* --server HOST[:PORT] or /path/to/socket */
+                server = optarg;
+                break;
+            case 'm':   /* --msize SIZE */
+                msize = strtoul (optarg, NULL, 10);
+                break;
+            case 'u':   /* --uid UID */
+                uid = strtoul (optarg, NULL, 10);
+                break;
+            case 'p':   /* --privport */
+                flags |= DIOD_SOCK_PRIVPORT;
+                break;
+            default:
+                usage ();
+        }
+    }
+    if (optind != argc)
         usage ();
-    aname = argv[1];
 
-    if (!(fs = npc_start (fd, fd, 8192+24, 0)))
-        errn_exit (np_rerror (), "npc_start");
+    const char *s = getenv ("DIOD_SERVER_FD");
+    if (server || !s) {
+        server_fd = diod_sock_connect (server, flags);
+        if (server_fd < 0)
+            exit (1);
+    }
+    else {
+        server_fd = strtoul (s, NULL, 10);
+        not_my_serverfd = true;
+    }
+    if (!aname)
+        aname = getenv ("DIOD_SERVER_ANAME");
+
+    if (!(fs = npc_start (server_fd, server_fd, msize, 0)))
+        errn_exit (np_rerror (), "start");
     if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0)
         errn_exit (np_rerror (), "npc_auth");
     if (!(root = npc_attach (fs, afid, aname, uid)))
@@ -65,19 +123,21 @@ main (int argc, char *argv[])
     if (afid && npc_clunk (afid) < 0)
         errn_exit (np_rerror (), "npc_clunk afid");
 
-    _flush_series (fs, root);
+    flush_series (fs, root);
 
     if (npc_clunk (root) < 0)
         errn_exit (np_rerror (), "npc_clunk root");
     npc_finish (fs);
+
+    if (!not_my_serverfd)
+        close (server_fd);
 
     diod_log_fini ();
 
     exit (0);
 }
 
-static void
-_flush_series (Npcfsys *fs, Npcfid *root)
+static void flush_series (Npcfsys *fs, Npcfid *root)
 {
     Npfcall *rc = NULL, *tc = NULL, *ac = NULL;
     Npcfid *f;
