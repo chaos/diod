@@ -71,3 +71,29 @@ jobs:
       run: ./configure --enable-rdma
     - name: make
       run: make
+
+
+  build-minimal:
+    name: check minimal configuration
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            ncurses-dev automake autoconf pkgconf \
+            libcap-dev libattr1-dev
+    - name: allow nobody user into home
+      run: sudo chmod go+rx ~
+    - name: autogen
+      run: ./autogen.sh
+    - name: configure without auth, config, multiuser
+      run: ./configure --disable-auth --disable-config --disable-multiuser
+    - name: make
+      run: make
+    - name: make check
+      run: verbose=t make check
+    - name: get test results on failure
+      if: failure()
+      run: find . -name test-suite.log | xargs cat >&2
