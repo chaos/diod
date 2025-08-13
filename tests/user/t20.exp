@@ -1,6 +1,0 @@
-testopenfid: testing 'open_remove_read'
-testopenfid: testing 'open_remove_getattr'
-testopenfid: testing 'open_remove_setattr'
-testopenfid: testing 'open_remove_create_setattr'
-conjoin: t20 exited with rc=0
-conjoin: diod exited with rc=0

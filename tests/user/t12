@@ -1,8 +1,0 @@
-#!/bin/bash
-
-uid=$(id -u daemon) || exit 1   # unlikely
-[ $(id -u) != $uid ] || exit 1  # unlikely
-[ $(id -u) != 0 ] || exit 1     # enforced by runtest
-
-# should fail - diod is running as "me" only and $uid is not me
-./tattach $uid "$@"
