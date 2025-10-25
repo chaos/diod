@@ -1,5 +1,0 @@
-tsetxattr: npc_setxattr user.foo=bazval: File exists
-tsetxattr: npc_setxattr user.foo=bazval: No data available
-tsetxattr_wildoffset: OK: Twrite with crazy offset failed with Invalid argument
-conjoin: t19 exited with rc=0
-conjoin: diod exited with rc=0

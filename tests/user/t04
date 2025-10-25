@@ -1,7 +1,0 @@
-#!/bin/bash -e
-
-tmpfile=`mktemp`
-echo reading testfile
-./tread "$@" $tmpfile bogusfile || : # should fail
-rm -f $tmpfile
-exit 0

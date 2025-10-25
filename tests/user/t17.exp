@@ -1,6 +1,0 @@
-creating file with three xattrs set
-tgetxattr: user.foo="fooval"
-tgetxattr: user.bar="barval"
-tgetxattr: user.baz="bazval"
-conjoin: t17 exited with rc=0
-conjoin: diod exited with rc=0

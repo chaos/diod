@@ -2,6 +2,7 @@ SUBDIRS = \
 	src \
 	man \
 	etc \
+	t \
 	tests
 
 EXTRA_DIST = diod.spec

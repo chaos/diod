@@ -1,7 +1,0 @@
-#!/bin/bash
-
-[ $(id -u) == 0 ] || exit 1
-
-# args: users, threads, gettattrs, iterations, aname
-
-./tattachmt 4 2 1024 8 "$@"

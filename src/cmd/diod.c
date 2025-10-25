@@ -62,7 +62,7 @@ static void          _service_run (srvmode_t mode, int rfdno, int wfdno);
 #define NR_OPEN         1048576 /* works on RHEL 5 x86_64 arch */
 #endif
 
-static const char *options = "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:s";
+static const char *options = "fr:w:d:l:t:e:Eo:u:SL:nHpc:NU:sv";
 
 static const struct option longopts[] = {
     {"foreground",         no_argument,        0, 'f'},
@@ -84,6 +84,7 @@ static const struct option longopts[] = {
     {"logdest",            required_argument,  0, 'L'},
     {"config-file",        required_argument,  0, 'c'},
     {"socktest",           no_argument,        0, 's'},
+    {"version",            no_argument,        0, 'v'},
     {0, 0, 0, 0},
 };
 
@@ -111,6 +112,7 @@ usage()
 "   -d,--debug MASK         set debugging mask\n"
 "   -c,--config-file FILE   set config file path\n"
 "   -s,--socktest           run in test mode where server exits early\n"
+"   -v,--version            show diod version and configuration information\n"
     );
     exit (1);
 }
@@ -133,6 +135,31 @@ main(int argc, char **argv)
             case 'c':   /* --config-file PATH */
                 copt = optarg;
                 break;
+            case 'v':   /* --version */
+                printf ("version   %s\n", PACKAGE_VERSION);
+                printf ("buildopts %s%s%s%s\n",
+#ifdef HAVE_CONFIG_FILE
+                        "+config",
+#else
+                        "",
+#endif
+#ifdef USE_GANESHA_KMOD
+                        "+ganesha-kmod",
+#else
+                        "",
+#endif
+#ifdef AUTH
+                        "+auth",
+#else
+                        "",
+#endif
+#ifdef MULTIUSER
+                        "+multiuser"
+#else
+                        ""
+#endif
+                        );
+                exit (0);
             default:
                 break;
         }
