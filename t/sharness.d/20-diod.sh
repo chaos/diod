@@ -123,4 +123,3 @@ test_under_diod() {
 	    "$PATH_DIOD -r0 -w0 -L $log_file $*" \
 	    "sh $0 ${flags}"
 }
-# -c /dev/null -n -d 1 -e $DIOD_SERVER_ANAME \
