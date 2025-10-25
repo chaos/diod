@@ -1,5 +1,6 @@
 queue_rules:
   - name: default
+    batch_size: 1
     queue_conditions:
       - base=master
       - label="merge-when-passing"
@@ -18,6 +19,9 @@ queue_rules:
       - -title~=^\[*[Ww][Ii][Pp]
     update_method: rebase
     merge_method: merge
+
+merge_queue:
+  max_parallel_checks: 1
 
 pull_request_rules:
   - name: rebase and merge when passing all checks
