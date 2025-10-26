@@ -93,8 +93,18 @@ diod_term_asroot() {
 }
 
 # Re-exec the test script "under" a test instance of diod.
-# Usage: test_under_diod ARGS ...
+# Usage: test_under_diod method ARGS ...
 test_under_diod() {
+	local method=$1; shift
+	local diodrun_opts
+	case "$method" in
+	socketpair)
+		diodrun_opts=
+		;;
+	*)
+		error "unknown test method $method"
+		;;
+	esac
 	log_file="$SHARNESS_TEST_NAME.diod.log"
 	if test -n "$TEST_UNDER_DIOD_ACTIVE"; then
 		test "$debug" = "t" || cleanup rm -f "${SHARNESS_TEST_DIRECTORY:-..}/$log_file"
@@ -119,7 +129,7 @@ test_under_diod() {
 	export MALLOC_CHECK_=3
 	export TEST_UNDER_DIOD_ACTIVE=t
 
-	exec $PATH_DIODRUN \
+	exec $PATH_DIODRUN $diodrun_opts \
 	    "$PATH_DIOD -r0 -w0 -L $log_file $*" \
 	    "sh $0 ${flags}"
 }
