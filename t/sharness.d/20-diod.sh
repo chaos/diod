@@ -14,6 +14,10 @@ PATH_NPCLIENT=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_npclient
 # AUTH          munge authentication support was built
 # MULTIUSER     multiuser support was built
 #
+# V9FS_CLIENT   9p linux filesystem is available
+# STAT          stat(1) is available
+# FLOCK		flock(1) is available
+#
 ##
 get_buildopts() {
 	$PATH_DIOD -v | grep buildopts \
@@ -29,6 +33,19 @@ if test_have_prereq SUDO; then
 	if $SUDO -u nobody true 2>/dev/null; then
 		test_set_prereq NOBODY
 	fi
+fi
+if test_have_prereq SUDO; then
+	errmsg=$($SUDO mount -t 9p check / 2>&1)
+	case "$errmsg" in
+		*'unknown filesystem type'*) ;;
+		*) test_set_prereq V9FS_CLIENT ;;
+	esac
+fi
+if PATH_STAT=$(which stat) >/dev/null; then
+	test_set_prereq STAT
+fi
+if PATH_FLOCK=$(which flock) >/dev/null; then
+	test_set_prereq FLOCK
 fi
 
 # Usage: waitsock sockpath [retries]
