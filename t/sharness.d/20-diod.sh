@@ -97,9 +97,15 @@ diod_term_asroot() {
 test_under_diod() {
 	local method=$1; shift
 	local diodrun_opts
+	local diodsudo
 	case "$method" in
 	socketpair)
-		diodrun_opts=
+		diodrun_opts="--socketpair"
+		;;
+	unixsocket)
+		;;
+	unixsocketroot)
+		diodsudo="$SUDO"
 		;;
 	*)
 		error "unknown test method $method"
@@ -130,6 +136,6 @@ test_under_diod() {
 	export TEST_UNDER_DIOD_ACTIVE=t
 
 	exec $PATH_DIODRUN $diodrun_opts \
-	    "$PATH_DIOD -r0 -w0 -L $log_file $*" \
+	    "$diodsudo $PATH_DIOD -L $log_file $*" \
 	    "sh $0 ${flags}"
 }
