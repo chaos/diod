@@ -17,7 +17,8 @@ TESTSCRIPTS = \
 	t0004-npclient-basic.t \
 	t0005-npclient-xattr.t \
 	t0006-npclient-issues.t \
-	t0010-v9fs-runasuser.t
+	t0010-v9fs-runasuser.t \
+	t0011-v9fs-allsquash.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \
