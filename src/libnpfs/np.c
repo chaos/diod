@@ -391,7 +391,9 @@ np_create_rflush_static(void *buf, int buflen)
 
 	fc = np_create_common_static(bufp, size, Rflush, buf, buflen);
 
-	return np_post_check(fc, bufp);
+	if (buf_check_overflow(bufp))
+		return NULL;
+	return fc;
 }
 
 Npfcall *
@@ -649,8 +651,10 @@ np_create_rlerror_static(u32 ecode, void *buf, int bufsize)
 
 	fc = np_create_common_static(bufp, size, Rlerror, buf, bufsize);
 	buf_put_int32(bufp, ecode, &fc->u.rlerror.ecode);
+	if (buf_check_overflow(bufp))
+		return NULL;
 
-	return np_post_check(fc, bufp);
+	return fc;
 }
 
 Npfcall *
