@@ -283,6 +283,37 @@ done:
     return rc;
 }
 
+// see issue chaos/diod#93
+int cmd_create_rename (Npcfid *root, int argc, char **argv)
+{
+    Npcfid *fid;
+    int rc = -1;
+
+    if (argc != 3) {
+        fprintf (stderr, "Usage npclient %s name newname\n", argv[0]);
+        return -1;
+    }
+    char *name = argv[1];
+    char *newname = argv[2];
+    fid = npc_create_bypath (root, name, 0, 0, getgid ());
+    if (fid == NULL) {
+        errn (np_rerror (), "create %s", name);
+        return -1;
+    }
+    if (npc_rename (fid, root, newname) < 0) {
+        errn (np_rerror (), "rename %s %s", name, newname);
+        goto done;
+    }
+    name = newname; // in case of clunk error, show the new name
+    rc = 0;
+done:
+    if (npc_clunk (fid) < 0) {
+        errn (np_rerror (), "clunk %s", name);
+        return -1;
+    }
+    return rc;
+}
+
 int cmd_sysgetxattr (Npcfid *root, int argc, char **argv)
 {
     char *filename;
@@ -837,6 +868,11 @@ static struct subcmd subcmds[] = {
         .name = "bug-open-move-setattr",
         .desc = "Tsetattr on open fid after move",
         .cmd = cmd_open_remove_create_setattr,
+    },
+    {
+        .name = "bug-create-rename",
+        .desc = "Trename on a newly created fid",
+        .cmd = cmd_create_rename,
     },
 };
 

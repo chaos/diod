@@ -48,6 +48,10 @@ test_expect_success 'Tsetattr on an open fid works after move' '
 	dd if=/dev/urandom count=1 of=export/testfile4 &&
         $PATH_NPCLIENT bug-open-move-setattr testfile4
 '
+# chaos/diod#93
+test_expect_success 'Trename on fid from Tcreate works' '
+        $PATH_NPCLIENT bug-create-rename testfile5 testfile5b
+'
 test_expect_success 'Tflush works' '
 	$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tflush
 '

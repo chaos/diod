@@ -428,7 +428,6 @@ ioctx_qid (IOCtx ioctx)
 static void
 _path_free (Path path)
 {
-    NP_ASSERT (path->ioctx == NULL);
     if (path->s)
         free (path->s);
     pthread_mutex_destroy (&path->lock);
