@@ -19,7 +19,11 @@ TESTSCRIPTS = \
 	t0006-npclient-issues.t \
 	t0010-v9fs-runasuser.t \
 	t0011-v9fs-allsquash.t \
-	t0012-v9fs-multiuser.t
+	t0012-v9fs-multiuser.t \
+	t0020-dbench.t \
+	t0021-postmark.t \
+	t0022-scrub.t \
+	t0023-rsync.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \
