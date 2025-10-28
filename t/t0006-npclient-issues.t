@@ -16,6 +16,8 @@ if ! grep -q "Operation not supported" probe.err; then
 	test_set_prereq XATTR
 fi
 
+diodlog="${SHARNESS_TEST_DIRECTORY}/${SHARNESS_TEST_NAME}.diod.log"
+
 test_expect_success '(re-)create export directory' '
 	rm -rf export &&
 	mkdir export &&
@@ -47,6 +49,16 @@ test_expect_success 'Tsetattr on an open fid works after removal' '
 test_expect_success 'Tsetattr on an open fid works after move' '
 	dd if=/dev/urandom count=1 of=export/testfile4 &&
         $PATH_NPCLIENT bug-open-move-setattr testfile4
+'
+# chaos/diod#93
+test_expect_success 'Trename on fid from Tcreate works' '
+        $PATH_NPCLIENT bug-create-rename testfile5 testfile5b
+'
+# chaos/diod#146 - diod logs a crap stderr message
+test_expect_success 'access to an unexported aname fails with EPERM' '
+	test_must_fail $PATH_NPCLIENT -a badaname null &&
+	grep "access denied for export" $diodlog >badaname.log &&
+	test_must_fail grep Success badaname.log
 '
 test_expect_success 'Tflush works' '
 	$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tflush

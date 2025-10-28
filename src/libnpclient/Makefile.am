@@ -9,7 +9,6 @@ noinst_LIBRARIES = libnpclient.a
 libnpclient_a_SOURCES = \
 	fid.c \
 	fsys.c \
-	mtfsys.c \
 	mount.c \
 	npcimpl.h \
 	npclient.h \
@@ -21,6 +20,7 @@ libnpclient_a_SOURCES = \
 	mkdir.c \
 	stat.c \
 	remove.c \
+	rename.c \
 	readdir.c \
 	chmod.c \
 	xattr.c \

@@ -230,7 +230,7 @@ np_attach(Npreq *req, Npfcall *tc)
 	 */
 	if (srv->exportok) {
 		if (!srv->exportok(fid)) {
-			np_logerr (srv, "%s: access denied for export", a);
+			np_logmsg (srv, "%s: access denied for export", a);
 			np_uerror (EPERM);
 			goto error;
 		}

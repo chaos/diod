@@ -60,23 +60,9 @@ struct Npcfsys {
 	RefFun		incref;
 	RefFun		decref;
 	DiscFun		disconnect;
-
-	/* mtfsys only */
-        pthread_cond_t  cond;
-
-        Npcreq*         unsent_first;
-        Npcreq*         unsent_last;
-        Npcreq*         pend_first;
-
-        pthread_t       readproc;
-        pthread_t       writeproc;
-
-	int		rfd;
-	int		wfd;
 };
 
 Npcfsys *npc_create_fsys(int rfd, int wfd, int msize, int flags);
-Npcfsys *npc_create_mtfsys(int rfd, int wfd, int msize, int flags);
 
 Npcpool *npc_create_pool(u32 maxid);
 void npc_destroy_pool(Npcpool *p);
