@@ -42,10 +42,7 @@ npc_start (int rfd, int wfd, int msize, int flags)
 	Npcfsys *fs;
 	Npfcall *tc = NULL, *rc = NULL;
 
-	if ((flags & NPC_MULTI_RPC))
-		fs = npc_create_mtfsys (rfd, wfd, msize, flags);
-	else
-		fs = npc_create_fsys (rfd, wfd, msize, flags);
+	fs = npc_create_fsys (rfd, wfd, msize, flags);
 	if (!fs)
 		goto done;
 	if (!(tc = np_create_tversion (msize, "9P2000.L"))) {
