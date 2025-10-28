@@ -35,7 +35,7 @@ mountcmd="$SUDO mount -n -t 9p"
 mountopts="trans=unix,uname=$(id -un)"
 
 test_expect_success 'create export/mount directories' '
-	mkdir -p exp mnt
+	mkdir -p exp mnt mnt2
 '
 test_expect_success 'wait for server socket' '
 	waitsock $DIOD_SOCKET 30
@@ -61,7 +61,29 @@ test_expect_success STAT 'chgrp the file to gid 42' '
 	$SUDO chgrp  42 mnt/a &&
 	test "$($PATH_STAT -c %u:%g mnt/a)" = "0:42"
 '
-
+test_expect_success 'mount helper fails with -ouname but no -oaccess' '
+	test_must_fail $SUDO $PATH_DIODMOUNT -ouname=fred foo mnt \
+	    2>mounthelp.out &&
+	grep "Common examples:" mounthelp.out
+'
+test_expect_success 'mount helper fails with -oaccess but no -ouname' '
+	test_must_fail $SUDO $PATH_DIODMOUNT -oaccess=any foo mnt \
+	    2>mounthelp.out &&
+	grep "Common examples:" mounthelp.out
+'
+test_expect_success 'mount helper works with unix domain socket, no auth' '
+	$SUDO $PATH_DIODMOUNT -n $DIOD_SOCKET:$exportdir mnt2
+'
+test_expect_success 'unmount mnt2' '
+	$umountcmd mnt2
+'
+test_expect_success 'mount helper allows -oaccess=client' '
+	$SUDO $PATH_DIODMOUNT -n -oaccess=client,uname=root \
+	    $DIOD_SOCKET:$exportdir mnt2
+'
+test_expect_success 'unmount mnt2' '
+	$umountcmd mnt2
+'
 test_expect_success 'unmount mnt' '
 	$umountcmd mnt
 '
