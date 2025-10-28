@@ -20,6 +20,7 @@ libnpclient_a_SOURCES = \
 	mkdir.c \
 	stat.c \
 	remove.c \
+	rename.c \
 	readdir.c \
 	chmod.c \
 	xattr.c \

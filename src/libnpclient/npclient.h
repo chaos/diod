@@ -148,6 +148,11 @@ int npc_setattr (Npcfid *fid, u32 valid, u32 mode, u32 uid, u32 gid, u64 size,
  */
 int npc_remove (Npcfid *fid);
 
+/* Send a RENAME request to change the name of the file system object
+ * associated with 'fid' to 'name' in the directory associated with 'dfid'.
+ */
+int npc_rename (Npcfid *fid, Npcfid *dfid, char *name);
+
 /* Send READDIR request to list contents of directory 'fid'.
  * 'data' will contain up to 'count' bytes of packed variable length
  * directory structures of the form: qid[13] offset[8] type[1] name[s]
@@ -176,7 +181,6 @@ int npc_getlock (Npcfid *fid, Npclockinfo *info_in, Npclockinfo *info_out);
 /* TODO:
  * npc_statfs ()
  * npc_symlink ()
- * npc_rename ()
  * npc_readlink ()
  * npc_fsync ()
  * npc_link ()
