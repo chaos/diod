@@ -187,7 +187,6 @@ AC_CONFIG_FILES( \
   tests/Makefile \
   tests/kern/Makefile \
   tests/kern/fstest/Makefile \
-  tests/kern/postmark/Makefile \
   tests/kern/fsx/Makefile \
   tests/kern/fsstress/Makefile \
   etc/Makefile \

@@ -7,10 +7,6 @@ These tests all run the same way:
 - <test>.out is compared wtih <test>.exp 
 
 The tests are:
-t00	Run bash interactively in 9p mounted directory (not run automatically)
-t05	Simple mount/unmount sanity test for diod (default options).
-t06	Simple mount/read/unmount sanity test for diod
-t07	Simple mount/write/unmount sanity test for diod
 t12	Create a file and check that file creation mode was honored
 t13	Demonstrate that rename works across directories.
 t14	Demonstrate that statfs returns correct data.
@@ -22,31 +18,17 @@ t18	Simple test to check that BSD advisory file locks are properly
 	arbitrated between two processes.
 t19	Simple test to check that POSIX advisory record locks are properly
 	arbitrated between two processes.
-t22	Append to a file.  I added this test because I was momentarily
-	freaked out by a pwrite at offset 0 during an append, but it turns
-	out this is OK when the device is opened in append mode.
 t23	Simple test to check that POSIX advisory record locks are handled
 	as advertised within one process.
 t24	Simple test to check that BSD advisory file locks are handled
 	as advertised within one process.
 t25	Verify that files are created with the users effective gid.
 	Verify that files created in a setgid directory have the parent gid.
-t26	Verify that chgrp works.
-t27	Check that negative dentries are not cached.
-t28	Rsync /etc into 9p and compare.
-t29	Check that tcl file -delete works.
-t30	Test allsquash option.
 t31	Run fstest with server --no-userdb option (takes a couple minutes)
-t32	Run dbench for one minute.
-t33	Run postmark (takes about a minute)
 t34	Run an svnadmin create, which uncovered a bug in fsync
-t35	Trigger a tflush by aborting a streaming write.
-t36	List a long directory that will be broken into multiple P9_READDIRs
 t37	Run fsx.
 t38	Run fsstress.
 t39	Run fsstress out of 9p, against host fs.
-t40	Run "scrub" (scrub < v2.5 O_SYNC; scrub >= v2.5 O_DIRECT+fsync)
-t41     Watch for fs/inode.c WARN_ON() triggered by rm -r dir hierarchy
 t42	Set/get user.* extended attributes
 t43	Set/get ACL attrs
 t44	Test atomic create with O_CREAT|O_EXCL

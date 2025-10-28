@@ -5,7 +5,8 @@ test_description='check extended attribute support with libnpclient'
 . `dirname $0`/sharness.sh
 
 export DIOD_SERVER_ANAME=$SHARNESS_TRASH_DIRECTORY/export
-test_under_diod --config-file=/dev/null --debug=0x1 \
+test_under_diod socketpair \
+    --config-file=/dev/null --debug=0x1 \
     --runas=$(id -u) --no-auth \
     --export=$DIOD_SERVER_ANAME --export=ctl
 

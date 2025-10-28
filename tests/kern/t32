@@ -1,3 +1,0 @@
-#!/bin/bash -e
-
-dbench -t 60 -D $PATH_MNTDIR 64 >t32.dbench

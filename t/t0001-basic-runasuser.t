@@ -12,10 +12,6 @@ diodcat=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcat
 diodls=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodls
 diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
 
-if stat / >/dev/null; then
-	test_set_prereq STAT
-fi
-
 test_expect_success 'create export dir' '
 	mkdir -p net/1 &&
 	for file in net/a net/1/b net/1/c; do \
@@ -38,8 +34,8 @@ test_expect_success STAT 'permissions on unix domain socket are ok' '
 	drwxr-xr-x
 	srw-rw-rw-
 	EOT
-	stat -c "%A" $(dirname $DIOD_SOCKET) >stat.out &&
-	stat -c "%A" $DIOD_SOCKET >>stat.out &&
+	$PATH_STAT -c "%A" $(dirname $DIOD_SOCKET) >stat.out &&
+	$PATH_STAT -c "%A" $DIOD_SOCKET >>stat.out &&
 	test_cmp stat.exp stat.out
 '
 

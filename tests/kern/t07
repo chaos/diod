@@ -1,7 +1,0 @@
-#!/bin/bash -e
-
-echo creating file in diod file system
-dd status=noxfer if=/dev/zero of=$PATH_MNTDIR/a count=128
-
-echo comparing file in regular and diod file systems
-cmp $PATH_EXPDIR/a $PATH_MNTDIR/a

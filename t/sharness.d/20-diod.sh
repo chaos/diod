@@ -14,6 +14,10 @@ PATH_NPCLIENT=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_npclient
 # AUTH          munge authentication support was built
 # MULTIUSER     multiuser support was built
 #
+# V9FS_CLIENT   9p linux filesystem is available
+# STAT          stat(1) is available
+# FLOCK		flock(1) is available
+#
 ##
 get_buildopts() {
 	$PATH_DIOD -v | grep buildopts \
@@ -29,6 +33,19 @@ if test_have_prereq SUDO; then
 	if $SUDO -u nobody true 2>/dev/null; then
 		test_set_prereq NOBODY
 	fi
+fi
+if test_have_prereq SUDO; then
+	errmsg=$($SUDO mount -t 9p check / 2>&1)
+	case "$errmsg" in
+		*'unknown filesystem type'*) ;;
+		*) test_set_prereq V9FS_CLIENT ;;
+	esac
+fi
+if PATH_STAT=$(which stat) >/dev/null; then
+	test_set_prereq STAT
+fi
+if PATH_FLOCK=$(which flock) >/dev/null; then
+	test_set_prereq FLOCK
 fi
 
 # Usage: waitsock sockpath [retries]
@@ -93,8 +110,24 @@ diod_term_asroot() {
 }
 
 # Re-exec the test script "under" a test instance of diod.
-# Usage: test_under_diod ARGS ...
+# Usage: test_under_diod method ARGS ...
 test_under_diod() {
+	local method=$1; shift
+	local diodrun_opts
+	local diodsudo
+	case "$method" in
+	socketpair)
+		diodrun_opts="--socketpair"
+		;;
+	unixsocket)
+		;;
+	unixsocketroot)
+		diodsudo="$SUDO"
+		;;
+	*)
+		error "unknown test method $method"
+		;;
+	esac
 	log_file="$SHARNESS_TEST_NAME.diod.log"
 	if test -n "$TEST_UNDER_DIOD_ACTIVE"; then
 		test "$debug" = "t" || cleanup rm -f "${SHARNESS_TEST_DIRECTORY:-..}/$log_file"
@@ -119,8 +152,7 @@ test_under_diod() {
 	export MALLOC_CHECK_=3
 	export TEST_UNDER_DIOD_ACTIVE=t
 
-	exec $PATH_DIODRUN \
-	    "$PATH_DIOD -r0 -w0 -L $log_file $*" \
+	exec $PATH_DIODRUN $diodrun_opts \
+	    "$diodsudo $PATH_DIOD -L $log_file $*" \
 	    "sh $0 ${flags}"
 }
-# -c /dev/null -n -d 1 -e $DIOD_SERVER_ANAME \

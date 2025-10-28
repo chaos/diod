@@ -19,7 +19,8 @@ jobs:
         sudo apt-get install -y \
             ncurses-dev automake autoconf pkgconf \
             lua5.3 liblua5.3-dev libmunge-dev libcap-dev \
-            libattr1-dev dbench attr scrub valgrind ${{matrix.cc}}
+            libattr1-dev rsync dbench attr scrub postmark valgrind \
+            ${{matrix.cc}}
     - name: Display configuration
       run: |
         echo "C compiler:"
