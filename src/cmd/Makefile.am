@@ -10,7 +10,6 @@ AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 sbin_PROGRAMS = \
 	diod \
 	diodcli \
-	diodcat \
 	dtop \
 	diodload \
 	diodls \
@@ -42,9 +41,6 @@ diodcli_SOURCES = diodcli.c $(common_sources)
 
 mount_diod_LDADD = $(common_ldadd)
 mount_diod_SOURCES = mount.diod.c $(common_sources)
-
-diodcat_LDADD = $(common_ldadd)
-diodcat_SOURCES = diodcat.c $(common_sources)
 
 dtop_LDADD = $(common_ldadd)
 dtop_SOURCES = dtop.c sample.c sample.h
