@@ -10,7 +10,10 @@
 
 /* diodcli.c - poke at 9p server using libnpclient
  *
- * Environment used in the test suite:
+ * Optional environment variables (command line takes precedence):
+ *
+ * DIOD_SOCKET
+ *   Attach to unix domain socket or IP:PORT
  *
  * DIOD_SERVER_FD
  *   Attach to pre-connected file server and don't close it.
@@ -881,6 +884,8 @@ main (int argc, char *argv[])
     if (!subcmd)
         usage ();
 
+    if (!server)
+        server = getenv ("DIOD_SOCKET");
     const char *s = getenv ("DIOD_SERVER_FD");
     if (server || !s) {
         server_fd = diod_sock_connect (server, flags);
