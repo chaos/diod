@@ -54,7 +54,6 @@ struct subcmd {
     const char *name;
     const char *desc;
     subcommand_f cmd;
-    bool no_server_setup;
 };
 
 static char *prog;
@@ -316,45 +315,6 @@ done:
         errn (np_rerror (), "clunk %s", name);
         return -1;
     }
-    return rc;
-}
-
-int cmd_sysgetxattr (Npcfid *root, int argc, char **argv)
-{
-    char *filename;
-    char *attrname;
-    char *attrvalue;
-    ssize_t n;
-    int rc = -1;
-
-    if (argc != 3) {
-        fprintf (stderr, "Usage: %s %s filename attrname\n", prog, argv[0]);
-        return -1;
-    }
-    filename = argv[1];
-    attrname = argv[2];
-
-    /* First see how big our buffer should be.
-     */
-    n = getxattr (filename, attrname, NULL, 0);
-    if (n < 0) {
-        err ("%s", attrname);
-        return -1;
-    }
-    if (!(attrvalue = calloc (1, n)))
-        err_exit ("allocating buffer");
-    /* Now fetch the value.
-     */
-    n = getxattr (filename, attrname, attrvalue, n);
-    if (n < 0) {
-        err ("%s", attrname);
-        goto done;
-    }
-    printf ("%.*s\n", (int)n, attrvalue);
-    fflush (stdout);
-    rc = 0;
-done:
-    free (attrvalue);
     return rc;
 }
 
@@ -717,19 +677,17 @@ static int run_subcmd (struct subcmd *subcmd,
     Npcfid *root = NULL;
     int ret = -1;
 
-    if (!subcmd->no_server_setup) {
-        if (!(fs = npc_start (server_fd, server_fd, msize, 0))) {
-            errn (np_rerror (), "start");
-            goto done;
-        }
-        if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0) {
-            errn (np_rerror (), "auth");
-            goto done;
-        }
-        if (!(root = npc_attach (fs, afid, aname, uid))) {
-            errn (np_rerror (), "attach");
-            goto done;
-        }
+    if (!(fs = npc_start (server_fd, server_fd, msize, 0))) {
+        errn (np_rerror (), "start");
+        goto done;
+    }
+    if (!(afid = npc_auth (fs, aname, uid, diod_auth)) && np_rerror () != 0) {
+        errn (np_rerror (), "auth");
+        goto done;
+    }
+    if (!(root = npc_attach (fs, afid, aname, uid))) {
+        errn (np_rerror (), "attach");
+        goto done;
     }
 
     if (subcmd->cmd (root, argc, argv) < 0)
@@ -801,12 +759,6 @@ static struct subcmd subcmds[] = {
         .name = "delxattr",
         .desc = "delete extended attribute",
         .cmd = cmd_delxattr,
-    },
-    {
-        .name = "sysgetxattr",
-        .desc = "get extended attribute using getxattr(2)",
-        .cmd = cmd_sysgetxattr,
-        .no_server_setup = true,
     },
     {
         .name = "listxattr",
