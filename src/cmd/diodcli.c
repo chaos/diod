@@ -672,6 +672,7 @@ static int run_subcmd (struct subcmd *subcmd,
                        int server_fd,
                        uid_t uid,
                        int msize,
+                       int npc_flags,
                        char *aname,
                        int argc,
                        char **argv)
@@ -681,7 +682,7 @@ static int run_subcmd (struct subcmd *subcmd,
     Npcfid *root = NULL;
     int ret = -1;
 
-    if (!(fs = npc_start (server_fd, server_fd, msize, 0))) {
+    if (!(fs = npc_start (server_fd, server_fd, msize, npc_flags))) {
         errn (np_rerror (), "start");
         goto done;
     }
@@ -712,7 +713,7 @@ done:
     return ret;
 }
 
-static const char *options = "+a:s:m:u:p";
+static const char *options = "+a:s:m:u:pt";
 
 static const struct option longopts[] = {
     {"aname",   required_argument,      0, 'a'},
@@ -720,6 +721,7 @@ static const struct option longopts[] = {
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
     {"privport",no_argument,            0, 'p'},
+    {"trace",   no_argument,            0, 't'},
     {0, 0, 0, 0},
 };
 
@@ -822,8 +824,8 @@ usage (void)
 "   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
-"   -t,--timeout SECS     give up after specified seconds\n"
 "   -p,--privport         connect from a privileged port (root user only)\n"
+"   -t,--trace            trace 9P protocol on stderr\n"
 "Subcommands:\n",
     prog);
     for (int i = 0; i < sizeof (subcmds) / sizeof (subcmds[0]); i++) {
@@ -845,6 +847,7 @@ main (int argc, char *argv[])
     int msize = 65536;
     uid_t uid = geteuid ();
     int flags = 0;
+    int npc_flags = 0;
     int c;
     int server_fd;
     struct subcmd *subcmd = NULL;
@@ -870,6 +873,9 @@ main (int argc, char *argv[])
                 break;
             case 'p':   /* --privport */
                 flags |= DIOD_SOCK_PRIVPORT;
+                break;
+            case 't':   /* --trace */
+                npc_flags |= NPC_TRACE;
                 break;
             default:
                 usage ();
@@ -903,6 +909,7 @@ main (int argc, char *argv[])
                     server_fd,
                     uid,
                     msize,
+                    npc_flags,
                     aname,
                     argc - optind,
                     argv + optind) < 0)
