@@ -8,9 +8,9 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
-/* diodmount.c - diod file system mount helper
+/* mount.diod.c - diod file system mount helper
  *
- * Usage: /sbin/mount.diod spec dir [-sfnv] [-o options]
+ * Usage: mount.diod spec dir [-sfnv] [-o options]
  */
 
 #if HAVE_CONFIG_H

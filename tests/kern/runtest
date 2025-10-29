@@ -10,8 +10,8 @@ fi
 TEST=$(basename $1)
 rm -f $TEST.out $TEST.diod
 
-if [ -z "$PATH_DIODMOUNT" ]; then
-    echo "PATH_DIODMOUNT is not set" 2>&1
+if [ -z "$PATH_MOUNT_DIOD" ]; then
+    echo "PATH_MOUNT_DIOD is not set" 2>&1
     exit 1
 fi
 if [ -z "$PATH_DIOD" ]; then
@@ -123,7 +123,7 @@ export MALLOC_CHECK_=3
 if [ "`basename $TEST`" = "t00" ]; then
 ./kconjoin \
     "$PATH_DIOD -r80 -w81 -c /dev/null -n -d 1 -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_MOUNT_DIOD -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "${KERN_SRCDIR}/$TEST"
     [ -d "$PATH_EXPDIR" ] && rm -rf $PATH_EXPDIR
     [ -d "$PATH_MNTDIR" ] && rm -rf $PATH_MNTDIR
@@ -132,7 +132,7 @@ fi
 
 ./kconjoin \
     "$PATH_DIOD $opt -r80 -w81 -c /dev/null -n -d 1 -L $TEST.diod -e $PATH_EXPDIR" \
-    "$PATH_DIODMOUNT -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
+    "$PATH_MOUNT_DIOD -n $mntopts nohost:$PATH_EXPDIR $PATH_MNTDIR" \
     "${KERN_SRCDIR}/$TEST" \
     >$TEST.out 2>&1
 rc=$?

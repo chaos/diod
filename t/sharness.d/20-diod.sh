@@ -1,12 +1,12 @@
 PATH_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/diod
-PATH_DIODMOUNT=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodmount
+PATH_MOUNT_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/mount.diod
 PATH_DIODRUN=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_diodrun
 PATH_NPCLIENT=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_npclient
 
 ##
 # Set test prerequisites
 #
-# DIODMOUNT     diodmount build was not suppressed
+# DIODMOUNT     mount.diod build was not suppressed
 # NOBODY        sudo -u nobody works
 #
 # CONFIG        diod has config file support
@@ -26,7 +26,7 @@ get_buildopts() {
 for feature in $(get_buildopts); do
 	test_set_prereq $feature
 done
-if test -x $PATH_DIODMOUNT; then
+if test -x $PATH_MOUNT_DIOD; then
 	test_set_prereq DIODMOUNT
 fi
 if test_have_prereq SUDO; then

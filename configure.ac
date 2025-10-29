@@ -105,7 +105,7 @@ AC_SYS_LARGEFILE
 # Optional features
 ##
 AC_ARG_ENABLE([diodmount],
-  [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])])
+  [AS_HELP_STRING([--disable-diodmount], [do not build mount.diod])])
 
 AC_ARG_ENABLE([multiuser],
   [AS_HELP_STRING([--disable-multiuser], [build without multi-user support])])
@@ -170,7 +170,7 @@ AC_CONFIG_FILES( \
   src/libnpclient/Makefile \
   man/Makefile \
   man/diod.8 \
-  man/diodmount.8 \
+  man/mount.diod.8 \
   man/diodcat.8 \
   man/dtop.8 \
   man/diodload.8 \

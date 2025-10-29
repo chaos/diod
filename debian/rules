@@ -24,5 +24,3 @@ override_dh_autoreconf:
 override_dh_auto_install:
 	dh_auto_install
 	mkdir -p debian/diod/sbin
-	ln -s /usr/sbin/diodmount debian/diod/sbin/mount.diod
-	ln -s diodmount.8.gz debian/diod/usr/share/man/man8/mount.diod.8.gz

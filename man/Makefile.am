@@ -11,5 +11,5 @@ man8_MANS = \
 	dtop.8
 
 if ENABLE_DIODMOUNT
-man8_MANS += diodmount.8
+man8_MANS += mount.diod.8
 endif
