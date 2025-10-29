@@ -24,6 +24,9 @@
 #endif
 #include <sys/types.h>
 #include <sys/stat.h>
+#if HAVE_SYS_SYSMACROS_H
+#include <sys/sysmacros.h>
+#endif
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -552,53 +555,26 @@ done:
     return rc;
 }
 
-void print_stat (struct stat *sb, bool full, bool decode)
+/* equivalent to
+ *   stat -c "mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o
+ *            links=%h device=%t:%T mtime=%Y ctime=%Z atime=%X"
+ */
+void print_stat (struct stat *sb)
 {
-    if (decode) {
-        printf ("%-10s %s\n", "type",
-                S_ISREG (sb->st_mode) ? "regular file" :
-                S_ISDIR (sb->st_mode) ? "directory" :
-                S_ISCHR (sb->st_mode) ? "character device" :
-                S_ISBLK (sb->st_mode) ? "block device" :
-                S_ISLNK (sb->st_mode) ? "symbolic link" :
-                S_ISSOCK (sb->st_mode) ? "socket" : "unknown");
-        printf ("%-10s 0%.4jo\n", "mode", (uintmax_t)(sb->st_mode & 07777));
-    }
-    else
-        printf ("%-10s 0x%jx\n", "st_mode", (uintmax_t)sb->st_ino);
-    printf ("%-10s %ju\n", "st_nlink", (uintmax_t)sb->st_nlink);
-    printf ("%-10s %ju\n", "st_uid", (uintmax_t)sb->st_uid);
-    printf ("%-10s %ju\n", "st_gid", (uintmax_t)sb->st_gid);
-    printf ("%-10s %ju\n", "st_size", (uintmax_t)sb->st_size);
-    printf ("%-10s %ju\n", "st_blksize", (uintmax_t)sb->st_blksize);
-    printf ("%-10s %ju\n", "st_blocks", (uintmax_t)sb->st_blocks);
-
-    if (full) {
-        printf ("%-10s %ju\n", "st_dev", (uintmax_t)sb->st_dev);
-        printf ("%-10s %ju\n", "st_ino", (uintmax_t)sb->st_ino);
-        printf ("%-10s %ju\n", "st_rdev", (uintmax_t)sb->st_rdev);
-        printf ("%-10s %ju\n", "st_atime", (uintmax_t)sb->st_atime);
-        printf ("%-10s %ju\n", "st_mtime", (uintmax_t)sb->st_mtime);
-        printf ("%-10s %ju\n", "st_ctime", (uintmax_t)sb->st_ctime);
-    }
-}
-
-int cmd_sysstat (Npcfid *root, int argc, char **argv)
-{
-    char *filename;
-    struct stat sb;
-
-    if (argc != 2) {
-        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
-        return -1;
-    }
-    filename = argv[1];
-    if (stat (filename, &sb) < 0) {
-        err ("%s", filename);
-        return -1;
-    }
-    print_stat (&sb, false, true);
-    return 0;
+    printf ("mode=%x owner=%d:%d size=%ju blocks=%ju blocksize=%lu"
+            " links=%lu device=%x:%x mtime=%ju ctime=%ju atime=%ju\n",
+            sb->st_mode,
+            sb->st_uid,
+            sb->st_gid,
+            (uintmax_t)sb->st_size,
+            (uintmax_t)sb->st_blocks,
+            sb->st_blksize,
+            sb->st_nlink,
+            major (sb->st_rdev),
+            minor (sb->st_rdev),
+            (uintmax_t)sb->st_mtime,
+            (uintmax_t)sb->st_ctime,
+            (uintmax_t)sb->st_atime);
 }
 
 int cmd_stat (Npcfid *root, int argc, char **argv)
@@ -615,7 +591,7 @@ int cmd_stat (Npcfid *root, int argc, char **argv)
         errn (np_rerror (), "%s", filename);
         return -1;
     }
-    print_stat (&sb, false, true);
+    print_stat (&sb);
     return 0;
 }
 
@@ -810,12 +786,6 @@ static struct subcmd subcmds[] = {
         .name = "stat",
         .desc = "display file statistics",
         .cmd = cmd_stat,
-    },
-    {
-        .name = "sysstat",
-        .desc = "display file statistics using stat(2)",
-        .cmd = cmd_sysstat,
-        .no_server_setup = true,
     },
     {
         .name = "getxattr",
