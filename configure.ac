@@ -105,7 +105,7 @@ AC_SYS_LARGEFILE
 # Optional features
 ##
 AC_ARG_ENABLE([diodmount],
-  [AS_HELP_STRING([--disable-diodmount], [do not build diodmount])])
+  [AS_HELP_STRING([--disable-diodmount], [do not build mount.diod])])
 
 AC_ARG_ENABLE([multiuser],
   [AS_HELP_STRING([--disable-multiuser], [build without multi-user support])])
@@ -162,7 +162,6 @@ RRA_WITH_SYSTEMD_UNITDIR
 ##
 AC_CONFIG_FILES( \
   Makefile \
-  diod.spec \
   src/libtap/Makefile \
   src/libtest/Makefile \
   src/libdiod/Makefile \
@@ -171,7 +170,7 @@ AC_CONFIG_FILES( \
   src/libnpclient/Makefile \
   man/Makefile \
   man/diod.8 \
-  man/diodmount.8 \
+  man/mount.diod.8 \
   man/diodcat.8 \
   man/dtop.8 \
   man/diodload.8 \
@@ -180,7 +179,6 @@ AC_CONFIG_FILES( \
   man/dioddate.8 \
   man/diod.conf.5 \
   etc/diod.service \
-  etc/auto.diod \
   src/cmd/Makefile \
   src/Makefile \
   t/Makefile \

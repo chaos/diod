@@ -1,4 +1,4 @@
-kconjoin: diodmount exited with rc=0
+kconjoin: mount.diod exited with rc=0
 tests/chflags/00.t ... ok
 tests/chflags/01.t ... ok
 tests/chflags/02.t ... ok

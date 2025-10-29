@@ -10,7 +10,7 @@ AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 sbin_PROGRAMS = diod diodcat dtop diodload diodls diodshowmount dioddate
 
 if ENABLE_DIODMOUNT
-sbin_PROGRAMS += diodmount
+sbin_PROGRAMS += mount.diod
 endif
 
 common_ldadd = \
@@ -29,8 +29,8 @@ common_sources = \
 diod_LDADD = $(common_ldadd)
 diod_SOURCES = diod.c $(common_sources)
 
-diodmount_LDADD = $(common_ldadd)
-diodmount_SOURCES = diodmount.c $(common_sources)
+mount_diod_LDADD = $(common_ldadd)
+mount_diod_SOURCES = mount.diod.c $(common_sources)
 
 diodcat_LDADD = $(common_ldadd)
 diodcat_SOURCES = diodcat.c $(common_sources)

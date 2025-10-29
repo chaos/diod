@@ -1,4 +1,4 @@
-kconjoin: diodmount exited with rc=0
+kconjoin: mount.diod exited with rc=0
 creating setgid directory
 testing host file system create with effective gid
 tfsgid: file gid is same as egid and different than gid
