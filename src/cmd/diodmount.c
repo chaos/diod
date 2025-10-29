@@ -106,7 +106,7 @@ main (int argc, char *argv[])
     char *dir = NULL;
     char *spec, *host;
     char *nspec = NULL;
-    int c, i;
+    int c;
     int nopt = 0;
     int vopt = 0;
     int fopt = 0;
@@ -262,16 +262,10 @@ main (int argc, char *argv[])
         opt_addf (o, "wfdno=%d", wfd);
     }
 
-    NP_ASSERT (opt_find (o, "trans=fd"));
-    NP_ASSERT (opt_scanf (o, "msize=%d", &i));
-    NP_ASSERT (opt_find (o, "version=9p2000.L"));
-    NP_ASSERT (opt_scanf (o, "debug=%d", &i) || opt_scanf (o, "debug=%x", &i));
-    NP_ASSERT (opt_scanf (o, "wfdno=%d", &i) && opt_scanf (o, "rfdno=%d", &i));
-    NP_ASSERT ((opt_find (o, "access=user") && opt_find(o, "uname=root"))
-         || (opt_scanf (o, "access=%d", &i) && opt_find(o, "uname")));
-
-    NP_ASSERT (!opt_find (o, "port"));
-
+    /* At this point options (o) will include:
+     *   trans=fd,rfdno=N,wfdno=N,msize=N,version=9p2000.L,debug=N,
+     *   uname=USERNAME,access=MODE
+     */
     _diod_mount (o, rfd, wfd, nspec ? nspec : spec, dir, vopt, fopt, nopt);
 
 done:
@@ -289,6 +283,11 @@ _uname2uid (char *uname)
     return pw->pw_uid;
 }
 
+/* Parse HOST[:ANAME] specification.
+ * If ANAME is specified, add -oaname=ANAME to mount options.
+ * Returns a heap copy of host.
+ * Exits on error.
+ */
 static char *
 _parse_spec (char *spec, Opt o)
 {
@@ -346,61 +345,27 @@ _verify_mountpoint (char *path)
         msg_exit ("%s: not a directory", path);
 }
 
-/* Private or public mount?  Only allow two modes:
- *    private:        -ouname=USER,access=UID (uname could be root)
- *    public (dflt):  -ouname=root,access=user
+/* Provide defaults for uname and access mount options.
+ * If either are unset, abort with helpful hints.
  */
 static void
 _parse_uname_access (Opt o)
 {
     char *uname = opt_find (o, "uname");
-    int uname_uid = -1;
     char *access = opt_find (o, "access");
-    int access_uid = -1;
-    char *access_name = NULL;
-    struct passwd *pw;
-
-    if (uname) {
-        if (!(pw = getpwnam (uname)))
-            msg_exit ("could not look up uname='%s'", uname);
-        uname_uid = pw->pw_uid;
-    }
-    if (access && opt_scanf (o, "access=%d", &access_uid)) {
-        if (!(pw = getpwuid (access_uid)))
-            msg_exit ("could not look up access='%d'", access_uid);
-        if (!(access_name = strdup (pw->pw_name)))
-            msg_exit ("out of memory");
-    }
 
     if (!uname && !access) {
         opt_addf (o, "uname=%s", "root");
         opt_addf (o, "access=%s", "user");
-
-    } else if (uname && !access) {
-        if (uname_uid == 0)
-            opt_addf (o, "access=%s", "user");
-        else
-            opt_addf (o, "access=%d", uname_uid);
-
-    } else if (!uname && access) {
-        if (strcmp (access, "user") == 0)
-            opt_addf (o, "uname=%s", "root");
-        else if (access_name) /* access=<uid> */
-            opt_addf (o, "uname=%s", access_name);
-        else
-            msg_exit ("unsupported -oaccess=%s", access);
-    } else { /* if (uname && access) */
-        if (strcmp (access, "user") == 0) {
-            if (uname_uid != 0)
-                msg_exit ("-oaccess=user can only be used with -ouname=root");
-        } else if (access_name) { /* access=<uid> */
-            if (uname_uid != access_uid)
-                msg_exit ("-oaccess=<uid> requires matching -ouname=<name>");
-        } else
-            msg_exit ("unsupported -oaccess=%s", access);
     }
-    if (access_name)
-        free (access_name);
+    else if (!uname || !access) {
+        msg_exit (
+"access,uname mount options must be set\n"
+"Common examples:\n"
+"  -o uname=root,access=user            Multi-user with UNIX access controls\n"
+"  -o uname=root,access=client,posixacl Multi-user with POSIX ACLs\n"
+"  -o uname=USERNAME,access=UID         Single-user access");
+    }
 }
 
 typedef struct {

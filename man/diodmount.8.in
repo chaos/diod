@@ -63,16 +63,28 @@ like NFS, or it can be specified with this option.
 mounted with aname of \fIctl\fR.
 Note that "ctl" must be explicitly exported.
 .TP
-.I "uname=name"
+.I "uname=USERNAME"
 The user name to authenticate to the \fBdiod\fR server.
-The default is \fIuname=root\fR.
+If neither \fIuname\fR nor \fIaccess\fR are specified,
+\fIuname=root,access=user\fR is assumed.
 .TP
-.I "access=mode"
-Select the access mode.
-\fIaccess=user\fR (default) causes the mount to support multiple users,
-and requires root authentication.
-\fIaccess=<uid>\fR restricts access at the client to only the
-specified user.
+.I "access=user"
+The client allows any user to access the file system and enforces traditional
+UNIX access controls.  Each new user attaches to the server.
+Requires \fIuname=root\fR.
+.TP
+.I "access=client,posixacl"
+The client allows any user to access the file system and enforces POSIX ACLs.
+Only the authenticated user attaches to the server.
+Requires \fIuname=root\fR.
+.TP
+.I "access=UID"
+The client only allows UID to access the filesystem.
+Only the authenticated user attaches to the server.
+.TP
+.I "access=any"
+The client allows any user to access the filesystem.
+Only the authenticated user attaches to the server.
 .TP
 .I "port=n"
 Connect to the \fIdiod\fR server on the specified port.
