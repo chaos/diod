@@ -179,7 +179,6 @@ AC_CONFIG_FILES( \
   man/dioddate.8 \
   man/diod.conf.5 \
   etc/diod.service \
-  etc/auto.diod \
   src/cmd/Makefile \
   src/Makefile \
   t/Makefile \
