@@ -13,7 +13,7 @@ Note: this test runs even with
 . `dirname $0`/sharness.sh
 
 if ! test_have_prereq SUDO; then
-        skip_all='passwordless udo is required'
+        skip_all='passwordless sudo is required'
         test_done
 fi
 if ! test_have_prereq V9FS_CLIENT; then
