@@ -23,7 +23,8 @@ TESTSCRIPTS = \
 	t0020-dbench.t \
 	t0021-postmark.t \
 	t0022-scrub.t \
-	t0023-rsync.t
+	t0023-rsync.t \
+	t0024-selfhost.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \
