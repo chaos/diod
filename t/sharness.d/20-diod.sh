@@ -1,7 +1,7 @@
 PATH_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/diod
 PATH_MOUNT_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/mount.diod
 PATH_DIODRUN=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_diodrun
-PATH_NPCLIENT=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_npclient
+PATH_DIODCLI=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcli
 
 ##
 # Set test prerequisites

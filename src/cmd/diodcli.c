@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
-/* npclient.c - poke at 9p server using libnpclient
+/* diodcli.c - poke at 9p server using libnpclient
  *
  * Environment used in the test suite:
  *
@@ -54,6 +54,8 @@ struct subcmd {
     bool no_server_setup;
 };
 
+static char *prog;
+
 /* Try to Twalk an open fid.
  * This mimics what the linux kernel v9fs client does when
  * we ls -l a mounted directory.
@@ -65,7 +67,7 @@ int cmd_open_walk (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -97,7 +99,7 @@ int cmd_open_remove_read (Npcfid *root, int argc, char **argv)
     char buf[3];
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -133,7 +135,7 @@ int cmd_open_remove_getattr (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -173,7 +175,7 @@ int cmd_open_remove_setattr (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -237,7 +239,7 @@ int cmd_open_remove_create_setattr (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -290,7 +292,7 @@ int cmd_create_rename (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 3) {
-        fprintf (stderr, "Usage npclient %s name newname\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s name newname\n", prog, argv[0]);
         return -1;
     }
     char *name = argv[1];
@@ -323,7 +325,7 @@ int cmd_sysgetxattr (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 3) {
-        fprintf (stderr, "Usage npclient %s filename attrname\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename attrname\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -361,7 +363,7 @@ int cmd_listxattr (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -406,7 +408,7 @@ int cmd_delxattr (Npcfid *root, int argc, char **argv)
     char *attrname;
 
     if (argc != 3) {
-        fprintf (stderr, "Usage npclient %s filename attrname\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename attrname\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -422,8 +424,10 @@ int cmd_delxattr (Npcfid *root, int argc, char **argv)
 void usage_setxattr (const char *cmdname)
 {
     fprintf (stderr,
-             "Usage npclient %s"
-             " [--create | --replace] filename attrname value\n", cmdname);
+             "Usage: %s %s"
+             " [--create | --replace] filename attrname value\n",
+             prog,
+             cmdname);
 }
 
 int cmd_setxattr (Npcfid *root, int argc, char **argv)
@@ -481,7 +485,7 @@ int cmd_setxattr_wildoffset (Npcfid *root, int argc, char **argv)
 
     if (argc != 4) {
         fprintf (stderr,
-                 "Usage: npclient %s filename attrname value\n", argv[0]);
+                 "Usage: %s %s filename attrname value\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -518,7 +522,7 @@ int cmd_getxattr (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 3) {
-        fprintf (stderr, "Usage npclient %s filename attrname\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename attrname\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -585,7 +589,7 @@ int cmd_sysstat (Npcfid *root, int argc, char **argv)
     struct stat sb;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -603,7 +607,7 @@ int cmd_stat (Npcfid *root, int argc, char **argv)
     struct stat sb;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -620,7 +624,7 @@ int cmd_mkdir (Npcfid *root, int argc, char **argv)
     char *directory;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s directory\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s directory\n", prog, argv[0]);
         return -1;
     }
     directory = argv[1];
@@ -640,7 +644,7 @@ int cmd_write (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -683,7 +687,7 @@ int cmd_read (Npcfid *root, int argc, char **argv)
     int rc = -1;
 
     if (argc != 2) {
-        fprintf (stderr, "Usage npclient %s filename\n", argv[0]);
+        fprintf (stderr, "Usage: %s %s filename\n", prog, argv[0]);
         return -1;
     }
     filename = argv[1];
@@ -880,15 +884,15 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: npclient [OPTIONS] subcommand [SUBOPTIONS] ...\n"
+"Usage: %s [OPTIONS] subcommand [SUBOPTIONS] ...\n"
 "   -a,--aname NAME       file system (default ctl)\n"
 "   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -t,--timeout SECS     give up after specified seconds\n"
 "   -p,--privport         connect from a privileged port (root user only)\n"
-"Subcommands:\n"
-);
+"Subcommands:\n",
+    prog);
     for (int i = 0; i < sizeof (subcmds) / sizeof (subcmds[0]); i++) {
         fprintf (stderr, "    %-30s %s\n", subcmds[i].name, subcmds[i].desc);
     }
@@ -908,7 +912,8 @@ main (int argc, char *argv[])
     struct subcmd *subcmd = NULL;
     bool not_my_serverfd = false;
 
-    diod_log_init ("npclient");
+    prog = basename (argv[0]);
+    diod_log_init (prog);
 
     opterr = 0;
     while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
