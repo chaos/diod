@@ -8,7 +8,6 @@ Note: this test runs even with
 
 . `dirname $0`/sharness.sh
 
-diodcat=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcat
 diodls=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodls
 diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
 
@@ -29,25 +28,25 @@ test_expect_success 'start diod in allsquash mode with implied squashuser' '
 '
 
 test_expect_success 'the squash user can access ctl:/version' '
-	$diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$PATH_DIODCLI --aname=ctl read version
 '
 
 test_expect_success SUDO 'the root user can access ctl:/version' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$SUDO -E $PATH_DIODCLI --aname=ctl read version
 '
 
 test_expect_success NOBODY 'the nobody user can access ctl:/version' '
-	$SUDO -u nobody $diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$SUDO -E -u nobody $PATH_DIODCLI  --aname=ctl read version
 '
 
 test_expect_success 'the squash user can access net:/a' '
-	$diodcat --server=$DIOD_SOCKET --aname=$exportdir /a
+	$PATH_DIODCLI --aname=$exportdir read /a
 '
 test_expect_success SUDO 'the root user can access net:/a' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=$exportdir /a
+	$SUDO -E $PATH_DIODCLI --aname=$exportdir read /a
 '
 test_expect_success NOBODY 'the nobody user can access net:/a' '
-	$SUDO -u nobody $diodcat --server=$DIOD_SOCKET --aname=$exportdir /a
+	$SUDO -E -u nobody $PATH_DIODCLI --aname=$exportdir read /a
 '
 
 test_expect_success 'stop diod' '
