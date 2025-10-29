@@ -1,0 +1,80 @@
+.TH diodcli 8 "@PACKAGE_VERSION@" "@PACKAGE_NAME@" "@PACKAGE_NAME@"
+.SH NAME
+diodcli \- perform file operations by attaching directly to diod server
+.SH SYNOPSIS
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBread\fR \fIPATH\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBwrite\fR \fIPATH\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBmkdir\fR \fIPATH\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBstat\fR \fIPATH\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBnull\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBgetxattr\fR \fIPATH NAME\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBsetxattr\fR \fI[--create|--replace] PATH NAME VALUE\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR PATH NAME\fR
+.SH DESCRIPTION
+.B diodcli
+connects to a \fBdiod\fR server, attaches to the mount point \fIaname\fR,
+and performs a file operation.
+.SH OPTIONS
+These are the options that apply to all subcommanads:
+.TP
+.I "-a, --aname NAME"
+The file system name on the server (default "ctl").
+Note that the "ctl" synthetic file system must be explicitly exported.
+.TP
+.I "-s, --server NAME"
+The server in IP[:PORT], HOST[:PORT], or /path/to/socket form
+(default localhost:564).
+.TP
+.I "-m, --msize SIZE"
+The maximum request size including 9P headers (default 65536).
+.TP
+.I "-u, --uid UID"
+Try to attach to the server as the specified user (default your effective uid).
+.TP
+.I "-p, --privport"
+Connect from a socket bound to a port in the range of 512-1023,
+available to root only.  This can be used in conjunction with the
+\fIprivport\fR export option.
+.TP
+.I "-t, --trace"
+Show 9P protocol on stderr.
+.SH SUBCOMMANDS
+.TP
+.TP
+.B read
+Read a file and write to stdout.
+.TP
+.B write
+Read stdin to EOF and write to a file.
+.TP
+.B mkdir
+Create a directory.
+.TP
+.B stat
+Display file status.  The compatible stat(1) format string is:
+.sp 1
+.nf
+mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o links=%h \\
+device=%t:%T mtime=%Y ctime=%Z atime=%X
+.fi
+.TP
+.B null
+Once attached, do nothing.
+.TP
+.B getxattr
+Get the value of an extended attribute.
+.TP
+.B setxattr
+Set the value of an extended attribute.
+.TP
+.B delxattr
+Remove an extended attribute.
+.SH "SEE ALSO"
+diod (8)
