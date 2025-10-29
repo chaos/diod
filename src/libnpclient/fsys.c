@@ -111,6 +111,14 @@ npc_decref_fsys(Npcfsys *fs)
 	free(fs);
 }
 
+static void
+debug_trace (Npfcall *fc)
+{
+	char s[512];
+	np_snprintfcall(s, sizeof (s), fc);
+	fprintf(stderr, "%s\n", s);
+}
+
 static int
 npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 {
@@ -126,6 +134,9 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 		tag = npc_get_id(fs->tagpool);
 	np_set_tag(tc, tag);
 
+	if (fs->flags & NPC_TRACE)
+		debug_trace (tc);
+
 	xpthread_mutex_lock(&fs->lock);
 	n = np_trans_send (fs->trans, tc);
 	if (n >= 0)
@@ -137,6 +148,8 @@ npc_rpc(Npcfsys *fs, Npfcall *tc, Npfcall **rcp)
 		np_uerror (EPROTO); /* premature EOF */
 		goto done;
 	}
+	if (fs->flags & NPC_TRACE)
+		debug_trace (rc);
 	if (tc->tag != rc->tag) {
 		np_uerror (EPROTO); /* unmatched response */
 		goto done;

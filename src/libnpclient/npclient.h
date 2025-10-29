@@ -50,6 +50,10 @@ enum {
 struct utimbuf;
 struct dirent;
 
+enum {
+	NPC_TRACE = 1,
+};
+
 
 /**
  ** Basic functions
