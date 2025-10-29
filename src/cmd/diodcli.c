@@ -904,6 +904,8 @@ main (int argc, char *argv[])
     }
     if (!aname)
         aname = getenv ("DIOD_SERVER_ANAME");
+    if (!aname)
+        aname = "ctl";
 
     if (run_subcmd (subcmd,
                     server_fd,
