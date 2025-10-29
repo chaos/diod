@@ -54,6 +54,7 @@ struct subcmd {
     const char *name;
     const char *desc;
     subcommand_f cmd;
+    bool hidden;
 };
 
 static char *prog;
@@ -769,36 +770,43 @@ static struct subcmd subcmds[] = {
         .name = "bug-setxattr-offsetcheck",
         .desc = "Tsetxattr with wild offset",
         .cmd = cmd_setxattr_wildoffset,
+        .hidden = true,
     },
     {
         .name = "bug-open-walk",
         .desc = "Twalk on open fid",
         .cmd = cmd_open_walk,
+        .hidden = true,
     },
     {
         .name = "bug-open-rm-read",
         .desc = "Tread on open fid after remove",
         .cmd = cmd_open_remove_read,
+        .hidden = true,
     },
     {
         .name = "bug-open-rm-getattr",
         .desc = "Tgetattr on open fid after remove",
         .cmd = cmd_open_remove_getattr,
+        .hidden = true,
     },
     {
         .name = "bug-open-rm-setattr",
         .desc = "Tsetattr on open fid after remove",
         .cmd = cmd_open_remove_setattr,
+        .hidden = true,
     },
     {
         .name = "bug-open-move-setattr",
         .desc = "Tsetattr on open fid after move",
         .cmd = cmd_open_remove_create_setattr,
+        .hidden = true,
     },
     {
         .name = "bug-create-rename",
         .desc = "Trename on a newly created fid",
         .cmd = cmd_create_rename,
+        .hidden = true,
     },
 };
 
@@ -816,7 +824,12 @@ usage (void)
 "Subcommands:\n",
     prog);
     for (int i = 0; i < sizeof (subcmds) / sizeof (subcmds[0]); i++) {
-        fprintf (stderr, "    %-30s %s\n", subcmds[i].name, subcmds[i].desc);
+        if (!subcmds[i].hidden) {
+            fprintf (stderr,
+                     "    %-20s %s\n",
+                     subcmds[i].name,
+                     subcmds[i].desc);
+        }
     }
     exit (1);
 }
