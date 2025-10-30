@@ -8,7 +8,7 @@ Note: this test runs even with
 
 . `dirname $0`/sharness.sh
 
-diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
+loadgen=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_loadgen
 
 test_expect_success 'create export dir' '
 	mkdir -p net/1 &&
@@ -47,7 +47,7 @@ test_expect_success 'list ctl:/ directory' '
 '
 
 test_expect_success 'copy ctl:/zero to ctl:null' '
-	$diodload --server=$DIOD_SOCKET --runtime=1
+	$loadgen --server=$DIOD_SOCKET --runtime=1
 '
 
 # N.B. root/nobody attach to ctl is allowed in runas mode because ctl is
