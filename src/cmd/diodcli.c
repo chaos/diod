@@ -32,6 +32,11 @@
 #endif
 #include <unistd.h>
 #include <fcntl.h>
+#include <dirent.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -519,6 +524,156 @@ done:
     return rc;
 }
 
+static char *mode2str (mode_t mode)
+{
+    static char s[16];
+
+    /* FIXME: represent other file types, sticky bits */
+    s[0] = S_ISDIR(mode) ? 'd' : '-';
+
+    s[1] = mode & S_IRUSR ? 'r' : '-';
+    s[2] = mode & S_IWUSR ? 'w' : '-';
+    s[3] = mode & S_IXUSR ? 'x' : '-';
+
+    s[4] = mode & S_IRGRP ? 'r' : '-';
+    s[5] = mode & S_IWGRP ? 'w' : '-';
+    s[6] = mode & S_IXGRP ? 'x' : '-';
+
+    s[7] = mode & S_IROTH ? 'r' : '-';
+    s[8] = mode & S_IWOTH ? 'w' : '-';
+    s[9] = mode & S_IXOTH ? 'x' : '-';
+
+    s[10] = '.';
+    s[11] = '\0';
+
+    return s;
+}
+
+static void lsfile_l (Npcfid *dir, char *name)
+{
+    Npcfid *fid = NULL;
+    struct stat sb;
+    struct passwd *pw;
+    struct group *gr;
+    char uid[16], gid[16];
+    char *mtime;
+
+    if (!(fid = npc_walk (dir, name))) {
+        errn (np_rerror (), "npc_walk %s\n", name);
+        goto error;
+    }
+    if (npc_fstat (fid, &sb) < 0) {
+        errn (np_rerror (), "npc_fstat %s\n", name);
+        goto error;
+    }
+    if (npc_clunk (fid) < 0) {
+        errn (np_rerror (), "npc_clunk %s\n", name);
+        goto error;
+    }
+    if (!(pw = getpwuid (sb.st_uid)))
+        snprintf (uid, sizeof (uid), "%d", sb.st_uid);
+    if (!(gr = getgrgid (sb.st_gid)))
+        snprintf (gid, sizeof (gid), "%d", sb.st_gid);
+    mtime = ctime (&sb.st_mtime);
+    printf ("%10s %4lu %s %s %12ju %.*s %s\n",
+            mode2str (sb.st_mode),
+            (unsigned long)sb.st_nlink,
+            pw ? pw->pw_name : uid,
+            gr ? gr->gr_name : gid,
+            (uintmax_t)sb.st_size,
+            (int)strlen (mtime) - 13, mtime + 4,
+            name);
+    return;
+error:
+    if (fid)
+        (void)npc_clunk (fid);
+}
+
+static int lsdir (int i, int count, Npcfid *root, bool lopt, char *path)
+{
+    Npcfid *dir = NULL;
+    struct dirent d, *dp;
+
+    if (!(dir = npc_opendir (root, path))) {
+        if (np_rerror () == ENOTDIR) {
+            if (lopt)
+                lsfile_l (root, path);
+            else
+                printf ("%s\n", path);
+            return 0;
+        }
+        errn (np_rerror (), "%s", path);
+        goto error;
+    }
+    if (count > 1)
+        printf ("%s:\n", path);
+    do {
+        if ((npc_readdir_r (dir, &d, &dp)) > 0) {
+            errn (np_rerror (), "npc_readdir: %s", path);
+            goto error;
+        }
+        if (dp) {
+            if (lopt)
+                lsfile_l (dir, dp->d_name);
+            else if (strcmp (dp->d_name, ".") && strcmp (dp->d_name, ".."))
+                printf ("%s\n", dp->d_name);
+        }
+    } while (dp != NULL);
+    if (npc_clunk (dir) < 0) {
+        errn (np_rerror (), "npc_clunk: %s", path);
+        goto error;
+    }
+    if (count > 1 && i < count - 1)
+        printf ("\n");
+    return 0;
+error:
+    if (dir)
+        (void)npc_clunk (dir);
+    return -1;
+}
+
+static const char *lsoptions = "l";
+
+static const struct option lslongopts[] = {
+    {"long",    no_argument,            0, 'l'},
+    {0, 0, 0, 0},
+};
+
+void usage_ls (void)
+{
+    fprintf (stderr, "Usage: %s ls [-l] [path...]\n", prog);
+}
+
+int cmd_ls (Npcfid *root, int argc, char **argv)
+{
+    bool lopt = false;
+    int c;
+
+    opterr = 0;
+    optind = 0;
+    while ((c = getopt_long (argc, argv, lsoptions, lslongopts, NULL)) != -1) {
+        switch (c) {
+            case 'l': // --long
+                lopt = true;
+                break;
+            default:
+                usage_ls ();
+                return -1;
+        }
+    }
+    if (optind == argc) {
+        if (lsdir (1, 1, root, lopt, NULL) < 0)
+            return -1;
+    }
+    else {
+        for (int i = 0; i < argc - optind; i++) {
+            if (lsdir (i, argc - optind, root, lopt, argv[optind + i]) < 0)
+                return -1;
+        }
+    }
+    return 0;
+}
+
 /* equivalent to
  *   stat -c "mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o
  *            links=%h device=%t:%T mtime=%Y ctime=%Z atime=%X"
@@ -750,6 +905,11 @@ static struct subcmd subcmds[] = {
         .name = "stat",
         .desc = "display file statistics",
         .cmd = cmd_stat,
+    },
+    {
+        .name = "ls",
+        .desc = "list directory contents",
+        .cmd = cmd_ls,
     },
     {
         .name = "getxattr",
