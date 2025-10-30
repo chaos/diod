@@ -22,7 +22,7 @@ diodcli \- perform file operations by attaching directly to diod server
 connects to a \fBdiod\fR server, attaches to the mount point \fIaname\fR,
 and performs a file operation.
 .SH OPTIONS
-These are the options that apply to all subcommanads:
+These are the options that apply to all subcommands:
 .TP
 .I "-a, --aname NAME"
 The file system name on the server (default "ctl").
