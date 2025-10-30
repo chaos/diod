@@ -11,8 +11,7 @@ sbin_PROGRAMS = \
 	diod \
 	diodcli \
 	dtop \
-	diodload \
-	dioddate
+	diodload
 
 if ENABLE_DIODMOUNT
 sbin_PROGRAMS += mount.diod
@@ -45,9 +44,6 @@ dtop_SOURCES = dtop.c sample.c sample.h
 
 diodload_LDADD = $(common_ldadd)
 diodload_SOURCES = diodload.c $(common_sources)
-
-dioddate_LDADD = $(common_ldadd)
-dioddate_SOURCES = dioddate.c $(common_sources)
 
 TESTS = \
 	test_opt.t

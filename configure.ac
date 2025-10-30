@@ -174,7 +174,6 @@ AC_CONFIG_FILES( \
   man/diodcli.8 \
   man/dtop.8 \
   man/diodload.8 \
-  man/dioddate.8 \
   man/diod.conf.5 \
   etc/diod.service \
   src/cmd/Makefile \
