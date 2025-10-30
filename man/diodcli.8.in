@@ -21,6 +21,8 @@ diodcli \- perform file operations by attaching directly to diod server
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR PATH NAME\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBshowmount\fR \fI[--long]\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBdate\fR \fI[--set-time]\fR
 .SH DESCRIPTION
 .B diodcli
 connects to a \fBdiod\fR server, attaches to the mount point \fIaname\fR,
@@ -89,5 +91,11 @@ List the server's connected clients.  By default, the client list is
 compressed into one line in hostlist form, with domain suffixes removed.
 With \fI--long\fR, the clients are listed one per line, without compression or
 abbreviation.
+.TP
+.B date
+Show the server system time.  If \fI--set-time\fR is specified, the local
+system time is updated to match the server's.  This may be useful in a pre-boot
+environment prior to authenticating with MUNGE, to avoid running afoul of its
+replay attack prevention.
 .SH "SEE ALSO"
 diod (8)
