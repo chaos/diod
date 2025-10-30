@@ -28,5 +28,16 @@ default:group::r-x
 default:mask::r-x
 default:other::r-x
 
+# file: testdir
+# owner: root
+# group: root
+user::rwx
+group::r-x
+other::r-x
+default:user::rwx
+default:group::r-x
+default:mask::r-x
+default:other::r-x
+
 kconjoin: t43 exited with rc=0
 kconjoin: diod exited with rc=0

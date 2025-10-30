@@ -90,7 +90,7 @@ if [ "$TEST" = "t42" ] || [ "$TEST" = "t43" ]; then
 fi
 # t43 requires posixacl mount option
 if [ "$TEST" = "t43" ]; then
-    mntopts="$mntopts,posixacl"
+    mntopts="$mntopts,posixacl,access=client,uname=root"
 fi
 
 ulimit -c unlimited
