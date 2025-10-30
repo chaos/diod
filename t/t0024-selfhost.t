@@ -1,13 +1,11 @@
 #!/bin/sh
 
-test_description='Test Linux kernel 9p client with scrub
+test_description='Build diod in diod
 
-Run scrub against diod in "runas" mode.
-
-See also: https://github.com/chaos/scrub
+Checkout a copy of git locally, then configure and build it
 
 Note: this test runs even with
-  --disable-auth --disable-config
+  --disable-auth --disable-config --disable-multiuser
 '
 
 . `dirname $0`/sharness.sh
@@ -20,10 +18,16 @@ if ! test_have_prereq V9FS_CLIENT; then
 	skip_all='linux 9p kernel client is required'
 	test_done
 fi
-if ! PATH_SCRUB=$(which scrub 2>/dev/null); then
-	skip_all='scrub is not installed'
+clonefrom=$(realpath $SHARNESS_TEST_SRCDIR/..)
+if ! test -d $clonefrom/.git; then
+	skip_all='source tree is not a git clone'
 	test_done
 fi
+if ! git version; then
+	skip_all='git is unavailable'
+	test_done
+fi
+
 
 exportdir=$SHARNESS_TRASH_DIRECTORY/exp
 test_under_diod unixsocket \
@@ -48,11 +52,23 @@ test_expect_success 'mount filesystem with access=<uid> mnt' '
 	$mountcmd -oaname=$exportdir,$mountopts,access=$(id -u) \
 	    $DIOD_SOCKET mnt
 '
-test_expect_success 'create a 20mb file' '
-	dd if=/dev/zero of=mnt/file bs=1024k count=20 status=noxfer
+test_expect_success 'clone git repository' '
+	(cd mnt && git clone $clonefrom)
 '
-test_expect_success 'scrub using default pattern' '
-	$PATH_SCRUB mnt/file
+test_expect_success 'autogen' '
+	(cd mnt/diod && ./autogen.sh)
+'
+# minicheck ci builder will fail if we depend on packages
+# that aren't installed there, hence the --disable options below
+test_expect_success 'configure' '
+	(cd mnt/diod && \
+	    ./configure --disable-auth --disable-config --disable-multiuser)
+'
+test_expect_success 'make' '
+	(cd mnt/diod && make)
+'
+test_expect_success 'diod --version works' '
+	mnt/diod/src/cmd/diod --version
 '
 test_expect_success 'unmount mnt' '
 	$umountcmd mnt
