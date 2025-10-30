@@ -6,8 +6,7 @@ diod \- distributed I/O daemon
 .I "[OPTIONS]"
 .SH DESCRIPTION
 .B diod
-is the distributed I/O daemon server, which
-implements I/O forwarding on Linux clusters.
+is a 9P2000.L file server.
 .LP
 Configuration is read from the diod.conf (5) config file.
 Some configuration can be overridden on the command line, as described below.
@@ -48,6 +47,7 @@ This option overrides the \fIexportopts\fR setting in diod.conf (5).
 .I "-n, --no-auth"
 This option allows users to attach without security credentials.
 It overrides  the \fIauth_required\fR setting in diod.conf (5).
+See SECURITY below.
 .TP
 .I "-H, --no-hostname-lookup"
 This option disables hostname lookups.
@@ -90,6 +90,72 @@ Set the debug mask.  The bit values are:
 .TP
 .I "-c, --config-file PATH"
 Set config file path.
+.SH SECURITY
+\fBdiod\fR optionally uses MUNGE for authentication.
+Briefly, a MUNGE credential is a user's uid and gid plus optional payload,
+encrypted using a secret shared between client and server, then base64
+encoded.
+.LP
+The 9P2000.L authentication sequence with MUNGE looks like this:
+.sp 1
+.nf
+Tauth afid uname aname n_uname
+Rauth aqid
+Twrite afid offset count <munge cred>
+Rwrite count
+Tattach fid afid uname aname n_uname
+Rattach qid
+Tclunk afid
+Rclunk
+.fi
+.LP
+\fITauth\fR and \fITwrite\fR authenticate \fIuname\fR to the server on
+\fIafid\fR, which, if the server accepts the credential, can then be used
+in the \fITattach\fR to obtain access to the root of a file system represented
+by \fIaname\fR as the \fIuname\fR user.  The server knows that all accesses
+to fids walked from the attachment fid are being performed by \fIuname\fR.
+.LP
+If authentication is disabled in the server, the \fITauth\fR may be skipped
+and an \fIafid\fR of -1 may be presented in the \fITattach\fR.
+.LP
+It should be noted that even when authentication is enabled, network
+connections between client and server are not protected from eavesdropping
+or other attacks.  It is best to use \fBdiod\fR only on networks that are
+physically secure.
+.LP
+When the server is running as an unprivileged user, including when it starts
+as root but drops that capability because it is squashing all requests down
+to one user, all its file operations are performed as that user.  This is
+the simplest and safest mode for \fBdiod\fR to operate in from a security
+standpoint.
+.LP
+Multi-user support is intended to be paired with the Linux v9fs client
+and makes assumptions in the interest of correct functioning with v9fs
+that may be surprising, notably:
+.IP 1.
+After \fITattach\fR is accepted for \fIuname=root\fR on a given connection,
+subsequent \fITattach\fR requests as other users on the same connection will
+be accepted without authentication (\fIafid\fR set to -1).
+.IP 2.
+Server worker threads handling a request on behalf of a user call setfsuid (2)
+and setfsgid (2) to switch to the user's credentials.  Supplementary groups
+are also loaded, but only if the server determines that it can do so
+in a thread-safe manner.  A warning is issued at server startup if it cannot.
+.IP 3.
+Server worker threads handling a request on behalf of a non-root user on
+a connection authenticated as root set \fBCAP_DAC_OVERRIDE\fR, \fBCAP_CHOWN\fR,
+and \fBCAP_FOWNER\fR.  The v9fs client is assumed to be performing access
+checks.  This largely works around complications that arise when supplementary
+groups cannot be loaded.
+.LP
+Since the v9fs client does not know how to authenticate with MUNGE,
+mount.diod (8) establishes the server connection and performs the
+authentication exchange and an initial \fITattach\fR as root, then passes
+the open file descriptor into the kernel with the mount (2) system call.
+The kernel v9fs client then re-introduces itself as root with \fIafid\fR
+set to -1.  As noted above this \fITattach\fR and subsequent ones on this
+connection are accepted by the server by virtue of the initial authenticated
+root attachment.
 .SH "FILES"
 @X_SBINDIR@/diod
 .br
