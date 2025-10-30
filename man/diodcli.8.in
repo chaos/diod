@@ -10,6 +10,8 @@ diodcli \- perform file operations by attaching directly to diod server
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBstat\fR \fIPATH\fR
 .br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBls\fR \fI[--long] [PATH ...]\fR
+.br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBnull\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBgetxattr\fR \fIPATH NAME\fR
@@ -17,12 +19,16 @@ diodcli \- perform file operations by attaching directly to diod server
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBsetxattr\fR \fI[--create|--replace] PATH NAME VALUE\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR PATH NAME\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBshowmount\fR \fI[--long]\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBdate\fR \fI[--set-time]\fR
 .SH DESCRIPTION
 .B diodcli
 connects to a \fBdiod\fR server, attaches to the mount point \fIaname\fR,
 and performs a file operation.
 .SH OPTIONS
-These are the options that apply to all subcommanads:
+These are the options that apply to all subcommands:
 .TP
 .I "-a, --aname NAME"
 The file system name on the server (default "ctl").
@@ -65,6 +71,9 @@ mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o links=%h \\
 device=%t:%T mtime=%Y ctime=%Z atime=%X
 .fi
 .TP
+.B ls
+List directory contents.
+.TP
 .B null
 Once attached, do nothing.
 .TP
@@ -76,5 +85,17 @@ Set the value of an extended attribute.
 .TP
 .B delxattr
 Remove an extended attribute.
+.TP
+.B showmount
+List the server's connected clients.  By default, the client list is
+compressed into one line in hostlist form, with domain suffixes removed.
+With \fI--long\fR, the clients are listed one per line, without compression or
+abbreviation.
+.TP
+.B date
+Show the server system time.  If \fI--set-time\fR is specified, the local
+system time is updated to match the server's.  This may be useful in a pre-boot
+environment prior to authenticating with MUNGE, to avoid running afoul of its
+replay attack prevention.
 .SH "SEE ALSO"
 diod (8)

@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: GPL-2.0-or-later
 \************************************************************/
 
-/* diodload.c - load generator for diod */
+/* loadgen.c - load generator for diod */
 
 #if HAVE_CONFIG_H
 #include "config.h"
@@ -77,7 +77,7 @@ static void
 usage (void)
 {
     fprintf (stderr,
-"Usage: diodload [OPTIONS]\n"
+"Usage: loadgen [OPTIONS]\n"
 "   -s,--server HOST:PORT server (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -n,--numthreads       specify thread count (default 16)\n"

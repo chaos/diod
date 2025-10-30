@@ -4,7 +4,7 @@ test_description='Run diod under valgrind with test client'
 
 . `dirname $0`/sharness.sh
 
-diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
+loadgen=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_loadgen
 
 if ! valgrind --version; then
         skip_all='skipping valgrind tests'
@@ -21,7 +21,7 @@ test_expect_success 'start diod under valgrind in runasuser mode' '
 '
 
 test_expect_success 'copy ctl:/zero to ctl:null' '
-        $diodload --server=$DIOD_SOCKET --runtime=1
+        $loadgen --server=$DIOD_SOCKET --runtime=1
 '
 
 test_expect_success 'stop diod' '

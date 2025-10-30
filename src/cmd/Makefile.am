@@ -10,11 +10,7 @@ AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 sbin_PROGRAMS = \
 	diod \
 	diodcli \
-	dtop \
-	diodload \
-	diodls \
-	diodshowmount \
-	dioddate
+	dtop
 
 if ENABLE_DIODMOUNT
 sbin_PROGRAMS += mount.diod
@@ -45,18 +41,6 @@ mount_diod_SOURCES = mount.diod.c $(common_sources)
 dtop_LDADD = $(common_ldadd)
 dtop_SOURCES = dtop.c sample.c sample.h
 
-diodload_LDADD = $(common_ldadd)
-diodload_SOURCES = diodload.c $(common_sources)
-
-diodls_LDADD = $(common_ldadd)
-diodls_SOURCES = diodls.c $(common_sources)
-
-diodshowmount_LDADD = $(common_ldadd)
-diodshowmount_SOURCES = diodshowmount.c $(common_sources)
-
-dioddate_LDADD = $(common_ldadd)
-dioddate_SOURCES = dioddate.c $(common_sources)
-
 TESTS = \
 	test_opt.t
 
@@ -64,6 +48,7 @@ check_PROGRAMS = \
 	test_diodrun \
 	test_tflush \
 	test_tattach \
+	test_loadgen \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -86,4 +71,8 @@ test_tflush_LDADD = \
 
 test_tattach_SOURCES = test/tattach.c $(common_sources)
 test_tattach_LDADD = \
+	$(common_ldadd)
+
+test_loadgen_SOURCES = test/loadgen.c $(common_sources)
+test_loadgen_LDADD = \
 	$(common_ldadd)
