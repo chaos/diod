@@ -49,6 +49,7 @@ check_PROGRAMS = \
 	test_tflush \
 	test_tattach \
 	test_loadgen \
+	test_pathwalk \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -75,4 +76,8 @@ test_tattach_LDADD = \
 
 test_loadgen_SOURCES = test/loadgen.c $(common_sources)
 test_loadgen_LDADD = \
+	$(common_ldadd)
+
+test_pathwalk_SOURCES = test/pathwalk.c $(common_sources)
+test_pathwalk_LDADD = \
 	$(common_ldadd)

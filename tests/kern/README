@@ -30,7 +30,6 @@ t38	Run fsstress.
 t39	Run fsstress out of 9p, against host fs.
 t42	Set/get user.* extended attributes
 t44	Test atomic create with O_CREAT|O_EXCL
-t45	Pathwalk test
 t46	Set/get trusted.* extended attributes
 t47	Set/get security.* extended attributes
 t48	Run fsx with mmap read test enabled
