@@ -19,6 +19,8 @@ diodcli \- perform file operations by attaching directly to diod server
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBsetxattr\fR \fI[--create|--replace] PATH NAME VALUE\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR PATH NAME\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBshowmount\fR \fI[--long]\fR
 .SH DESCRIPTION
 .B diodcli
 connects to a \fBdiod\fR server, attaches to the mount point \fIaname\fR,
@@ -81,5 +83,11 @@ Set the value of an extended attribute.
 .TP
 .B delxattr
 Remove an extended attribute.
+.TP
+.B showmount
+List the server's connected clients.  By default, the client list is
+compressed into one line in hostlist form, with domain suffixes removed.
+With \fI--long\fR, the clients are listed one per line, without compression or
+abbreviation.
 .SH "SEE ALSO"
 diod (8)
