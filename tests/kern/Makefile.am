@@ -25,9 +25,9 @@ LOG_COMPILER = ${srcdir}/runtest
 
 TESTS = t12 t13 t14 t15 t16 t17 t18 \
 	t24 t25 t31 \
-	t37 t38 t39 t42 t43 t44 t45 t46 t47
+	t37 t38 t39 t42 t44 t45 t46 t47
 
-XFAIL_TESTS = t43
+XFAIL_TESTS =
 
 CLEANFILES = *.out *.diff *.diod
 

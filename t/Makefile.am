@@ -20,6 +20,7 @@ TESTSCRIPTS = \
 	t0010-v9fs-runasuser.t \
 	t0011-v9fs-allsquash.t \
 	t0012-v9fs-multiuser.t \
+	t0013-v9fs-acl.t \
 	t0020-dbench.t \
 	t0021-postmark.t \
 	t0022-scrub.t \
