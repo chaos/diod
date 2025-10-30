@@ -10,6 +10,8 @@ diodcli \- perform file operations by attaching directly to diod server
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBstat\fR \fIPATH\fR
 .br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBls\fR \fI[--long] [PATH ...]\fR
+.br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBnull\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBgetxattr\fR \fIPATH NAME\fR
@@ -64,6 +66,9 @@ Display file status.  The compatible stat(1) format string is:
 mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o links=%h \\
 device=%t:%T mtime=%Y ctime=%Z atime=%X
 .fi
+.TP
+.B ls
+List directory contents.
 .TP
 .B null
 Once attached, do nothing.
