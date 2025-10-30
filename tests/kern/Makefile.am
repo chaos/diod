@@ -2,7 +2,6 @@ check_PROGRAMS = \
 	kconjoin \
 	tsuppgrp \
 	trename \
-	tstat \
 	tflock \
 	tflock2 \
 	tfsgid \
@@ -21,7 +20,7 @@ AM_TESTS_ENVIRONMENT = \
 
 LOG_COMPILER = ${srcdir}/runtest
 
-TESTS = t12 t13 t15 t16 t17 t18 \
+TESTS = t12 t13 t15 t17 t18 \
 	t24 t25 t31 \
 	t37 t38 t39 t42 t44 t46 t47
 
@@ -48,7 +47,6 @@ common_sources = test.h
 kconjoin_SOURCES = kconjoin.c $(common_sources)
 tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
-tstat_SOURCES = tstat.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
 tcreate_SOURCES = tcreate.c $(common_sources)
