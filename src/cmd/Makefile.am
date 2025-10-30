@@ -12,7 +12,6 @@ sbin_PROGRAMS = \
 	diodcli \
 	dtop \
 	diodload \
-	diodls \
 	diodshowmount \
 	dioddate
 
@@ -47,9 +46,6 @@ dtop_SOURCES = dtop.c sample.c sample.h
 
 diodload_LDADD = $(common_ldadd)
 diodload_SOURCES = diodload.c $(common_sources)
-
-diodls_LDADD = $(common_ldadd)
-diodls_SOURCES = diodls.c $(common_sources)
 
 diodshowmount_LDADD = $(common_ldadd)
 diodshowmount_SOURCES = diodshowmount.c $(common_sources)

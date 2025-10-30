@@ -6,7 +6,6 @@ man8_MANS = \
 	diodcli.8 \
 	dioddate.8 \
 	diodload.8 \
-	diodls.8 \
 	diodshowmount.8 \
 	dtop.8
 
