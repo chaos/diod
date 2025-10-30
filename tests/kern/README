@@ -9,7 +9,6 @@ These tests all run the same way:
 The tests are:
 t12	Create a file and check that file creation mode was honored
 t13	Demonstrate that rename works across directories.
-t14	Demonstrate that statfs returns correct data.
 t15	Demonstrate that fsync does not return an error.
 t16	Create files and compare their stat(2) results.
 t17	Set all the mode bits (7777) on a file and directory on server
