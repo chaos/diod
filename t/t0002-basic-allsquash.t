@@ -8,7 +8,6 @@ Note: this test runs even with
 
 . `dirname $0`/sharness.sh
 
-diodls=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodls
 diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
 
 test_expect_success 'create export dir' '

@@ -8,7 +8,6 @@ Note: this test runs even with
 
 . `dirname $0`/sharness.sh
 
-diodls=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodls
 diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
 
 test_expect_success 'create export dir' '
@@ -44,7 +43,7 @@ for ctlfile in version exports connections date files tpools usercache; do
 done
 
 test_expect_success 'list ctl:/ directory' '
-	$diodls --server=$DIOD_SOCKET --aname=ctl /
+	$PATH_DIODCLI --aname=ctl ls /
 '
 
 test_expect_success 'copy ctl:/zero to ctl:null' '
@@ -67,7 +66,7 @@ test_expect_success 'ls net:/ shows test files' '
 	1
 	a
 	EOT
-	$diodls --server=$DIOD_SOCKET --aname=$exportdir / \
+	$PATH_DIODCLI --aname=$exportdir ls / \
 	    | sort >net-ls.out &&
 	test_cmp net-ls.exp net-ls.out
 '
@@ -76,7 +75,7 @@ test_expect_success 'ls net:/1 shows test files' '
 	b
 	c
 	EOT
-	$diodls --server=$DIOD_SOCKET --aname=$exportdir /1 \
+	$PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir ls /1 \
 	    | sort >net-ls1.out &&
 	test_cmp net-ls1.exp net-ls1.out
 '
