@@ -6,7 +6,6 @@ man8_MANS = \
 	diodcli.8 \
 	dioddate.8 \
 	diodload.8 \
-	diodshowmount.8 \
 	dtop.8
 
 if ENABLE_DIODMOUNT
