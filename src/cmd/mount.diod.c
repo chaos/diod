@@ -163,7 +163,7 @@ main (int argc, char *argv[])
         goto done;
     }
 
-    /* Ensure uname and access are set, and to diod-compatible values.
+    /* Ensure uname and access are set.
      * The uname user becomes the euid which will be used by munge auth.
      */
     _parse_uname_access (o);
@@ -356,15 +356,14 @@ _parse_uname_access (Opt o)
 
     if (!uname && !access) {
         opt_addf (o, "uname=%s", "root");
-        opt_addf (o, "access=%s", "user");
+        opt_addf (o, "access=%s", "client");
     }
     else if (!uname || !access) {
         msg_exit (
 "access,uname mount options must be set\n"
 "Common examples:\n"
-"  -o uname=root,access=user            Multi-user with UNIX access controls\n"
-"  -o uname=root,access=client,posixacl Multi-user with POSIX ACLs\n"
-"  -o uname=USERNAME,access=UID         Single-user access");
+"  -o uname=root,access=client     Multi-user\n"
+"  -o uname=USERNAME,access=UID    Single-user");
     }
 }
 
