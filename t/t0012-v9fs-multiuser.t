@@ -40,8 +40,8 @@ test_expect_success 'create export/mount directories' '
 test_expect_success 'wait for server socket' '
 	waitsock $DIOD_SOCKET 30
 '
-test_expect_success 'mount filesystem with access=user on mnt' '
-	$mountcmd -oaname=$exportdir,$mountopts,access=user \
+test_expect_success 'mount filesystem with access=client on mnt' '
+	$mountcmd -oaname=$exportdir,$mountopts,access=client \
 	    $DIOD_SOCKET mnt
 '
 test_expect_success STAT 'create a file' '
@@ -77,8 +77,8 @@ test_expect_success DIODMOUNT 'mount helper works with unix domain socket, no au
 test_expect_success DIODMOUNT 'unmount mnt2' '
 	$umountcmd mnt2
 '
-test_expect_success DIODMOUNT 'mount helper allows -oaccess=client' '
-	$SUDO $PATH_MOUNT_DIOD -n -oaccess=client,uname=root \
+test_expect_success DIODMOUNT 'mount helper allows -oaccess=user' '
+	$SUDO $PATH_MOUNT_DIOD -n -oaccess=user,uname=root \
 	    $DIOD_SOCKET:$exportdir mnt2
 '
 test_expect_success 'unmount mnt2' '

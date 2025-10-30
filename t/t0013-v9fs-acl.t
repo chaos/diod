@@ -35,8 +35,6 @@ test_under_diod unixsocketroot \
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
 umountcmd="$SUDO umount --lazy"
-mountcmd="$SUDO mount -n -t 9p"
-mountopts="trans=unix,uname=$(id -un)"
 
 test_expect_success 'create export/mount directories' '
 	mkdir -p exp mnt
@@ -44,9 +42,8 @@ test_expect_success 'create export/mount directories' '
 test_expect_success 'wait for server socket' '
 	waitsock $DIOD_SOCKET 30
 '
-test_expect_success 'mount filesystem with access=client,posixacl on mnt' '
-	$mountcmd -oaname=$exportdir,$mountopts,access=client,posixacl \
-	    $DIOD_SOCKET mnt
+test_expect_success 'mount filesystem with -o posixacl on mnt' '
+	$SUDO $PATH_MOUNT_DIOD -n -o posixacl $DIOD_SOCKET:$exportdir mnt
 '
 test_expect_success 'create a test file and setfacl -m u:root:r' '
 	touch mnt/testfile &&
