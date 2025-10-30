@@ -171,7 +171,7 @@ AC_CONFIG_FILES( \
   man/Makefile \
   man/diod.8 \
   man/mount.diod.8 \
-  man/diodcat.8 \
+  man/diodcli.8 \
   man/dtop.8 \
   man/diodload.8 \
   man/diodls.8 \

@@ -8,7 +8,6 @@ Note: this test runs even with
 
 . `dirname $0`/sharness.sh
 
-diodcat=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcat
 diodls=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodls
 diodload=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodload
 
@@ -41,7 +40,7 @@ test_expect_success STAT 'permissions on unix domain socket are ok' '
 
 for ctlfile in version exports connections date files tpools usercache; do
 	test_expect_success "cat ctl:$ctlfile" \
-	    "$diodcat --server=$DIOD_SOCKET --aname=ctl $ctlfile"
+	    "$PATH_DIODCLI --aname=ctl read $ctlfile"
 done
 
 test_expect_success 'list ctl:/ directory' '
@@ -56,11 +55,11 @@ test_expect_success 'copy ctl:/zero to ctl:null' '
 # implemented directly in libnpfs, bypassing diod_ops.c, where op_attach()
 # gates access to all other exports.
 test_expect_success SUDO 'the root user can access ctl:/version' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$SUDO -E $PATH_DIODCLI --aname=ctl read version
 '
 
 test_expect_success NOBODY 'the nobody user can access ctl:/version' '
-	$SUDO -u nobody $diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$SUDO -E -u nobody $PATH_DIODCLI --aname=ctl read version
 '
 
 test_expect_success 'ls net:/ shows test files' '
@@ -83,21 +82,20 @@ test_expect_success 'ls net:/1 shows test files' '
 '
 test_expect_success 'cat net:/1/c produced test file content' '
 	echo TESTING >cat-c.exp &&
-	$diodcat --server=$DIOD_SOCKET --aname=$exportdir /1/c \
+	$PATH_DIODCLI --aname=$exportdir read /1/c \
 	    | sort >cat-c.out &&
 	test_cmp cat-c.exp cat-c.out
 '
 
 test_expect_success SUDO 'cat net:/1/c fails as root' '
-	test_must_fail $SUDO \
-	    $diodcat --server=$DIOD_SOCKET --aname=$exportdir /1/c \
-	        2>rootcat.err &&
+	test_must_fail $SUDO -E \
+	    $PATH_DIODCLI --aname=$exportdir read /1/c 2>rootcat.err &&
 	grep "Operation not permitted" rootcat.err
 '
 
 test_expect_success NOBODY 'cat net:/1/c fails as nobody' '
-	test_must_fail $SUDO -u nobody \
-	    $diodcat --server=$DIOD_SOCKET --aname=$exportdir /1/c \
+	test_must_fail $SUDO -E -u nobody \
+	    $PATH_DIODCLI --aname=$exportdir read /1/c \
 	        2>nobodycat.err &&
 	grep "Operation not permitted" nobodycat.err
 '

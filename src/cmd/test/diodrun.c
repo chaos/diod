@@ -89,6 +89,8 @@ setenvf (const char *name, const char *fmt, ...)
 }
 
 /* Run the client, usually a test script.
+ * Call setsid() to put the client command in a new session.  Without this,
+ * the terminal seems to get mangled under parallel make check, e.g. -jN.
  * In socketpair mode, the server exits when the test script exits
  * and implicitly closes its end of socketpair.
  * In unix mode, the test script has to manage server connections such
@@ -103,6 +105,8 @@ client (const char *cmd, int *pair, const char *sockpath)
         err_exit ("client fork");
     if (pid != 0)
         return pid;
+    if ((setsid () == -1))
+        err_exit ("setsid");
     if (pair) {
         close (pair[0]);
         setenvf ("DIOD_SERVER_FD", "%d", pair[1]);

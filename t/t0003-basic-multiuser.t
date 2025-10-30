@@ -21,8 +21,6 @@ if ! test_have_prereq NOBODY; then
         test_done
 fi
 
-diodcat=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcat
-
 test_expect_success 'create export dir' '
 	mkdir -p net &&
 	chmod 755 net &&
@@ -46,46 +44,46 @@ test_expect_success 'start diod as root in multiuser mode' '
 '
 
 test_expect_success 'the squash user can access ctl:/version' '
-	$diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$PATH_DIODCLI --aname=ctl read version
 '
 test_expect_success 'the root user can access ctl:/version' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$SUDO -E $PATH_DIODCLI --aname=ctl read version
 '
 test_expect_success 'the nobody user can access ctl:/version' '
-	$SUDO -u nobody $diodcat --server=$DIOD_SOCKET --aname=ctl version
+	$SUDO -E -u nobody $PATH_DIODCLI --aname=ctl read version
 '
 
 test_expect_success 'user can access net:/user' '
-	$diodcat --server=$DIOD_SOCKET --aname=$exportdir /user
+	$PATH_DIODCLI --aname=$exportdir read /user
 '
 test_expect_success 'nobody cannot access net:/user' '
-	test_must_fail $SUDO -u nobody \
-	    $diodcat --server=$DIOD_SOCKET --aname=$exportdir /user
+	test_must_fail $SUDO -E -u nobody \
+	    $PATH_DIODCLI --aname=$exportdir read /user
 '
 test_expect_success 'root can access net:/user' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=$exportdir /user
+	$SUDO -E $PATH_DIODCLI --aname=$exportdir read /user
 '
 
 test_expect_success 'user cannot access net:/nobody' '
-	test_must_fail $diodcat --server=$DIOD_SOCKET --aname=$exportdir /nobody
+	test_must_fail $PATH_DIODCLI --aname=$exportdir read /nobody
 '
 test_expect_success 'nobody can access net:/nobody' '
-	$SUDO -u nobody \
-	    $diodcat --server=$DIOD_SOCKET --aname=$exportdir /nobody
+	$SUDO -E -u nobody \
+	    $PATH_DIODCLI --aname=$exportdir read /nobody
 '
 test_expect_success 'root can access net:/nobody' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=$exportdir /nobody
+	$SUDO -E $PATH_DIODCLI --aname=$exportdir read /nobody
 '
 
 test_expect_success 'user cannot access net:/root' '
-	test_must_fail $diodcat --server=$DIOD_SOCKET --aname=$exportdir /root
+	test_must_fail $PATH_DIODCLI --aname=$exportdir read /root
 '
 test_expect_success 'nobody cannot access net:/root' '
-	test_must_fail $SUDO -u nobody \
-	    $diodcat --server=$DIOD_SOCKET --aname=$exportdir /root
+	test_must_fail $SUDO -E -u nobody \
+	    $PATH_DIODCLI --aname=$exportdir read /root
 '
 test_expect_success 'root can access net:/root' '
-	$SUDO $diodcat --server=$DIOD_SOCKET --aname=$exportdir /root
+	$SUDO -E $PATH_DIODCLI --aname=$exportdir read /root
 '
 
 test_expect_success 'stop diod' '

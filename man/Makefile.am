@@ -3,7 +3,7 @@ man5_MANS = \
 
 man8_MANS = \
 	diod.8 \
-	diodcat.8 \
+	diodcli.8 \
 	dioddate.8 \
 	diodload.8 \
 	diodls.8 \

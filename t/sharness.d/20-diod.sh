@@ -1,7 +1,7 @@
 PATH_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/diod
 PATH_MOUNT_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/mount.diod
 PATH_DIODRUN=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_diodrun
-PATH_NPCLIENT=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_npclient
+PATH_DIODCLI=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcli
 
 ##
 # Set test prerequisites
@@ -68,7 +68,7 @@ diod_start() {
 	echo $! >$sockdir/pid
 	waitsock $sockdir/sock || return 1
 	chmod go=u-w $sockdir || return 1
-	DIOD_SOCKET=$sockdir/sock
+	DIOD_SOCKET=$sockdir/sock; export DIOD_SOCKET
 }
 
 diod_start_asroot() {
@@ -80,7 +80,7 @@ diod_start_asroot() {
 	chmod go=u-w $sockdir || return 1
 	# the background sudo seems to mess up the tty (if any) - fix here
 	reset 2>/dev/null
-	DIOD_SOCKET=$sockdir/sock
+	DIOD_SOCKET=$sockdir/sock; export DIOD_SOCKET
 }
 
 # Usage: diod_term $DIOD_SOCKET

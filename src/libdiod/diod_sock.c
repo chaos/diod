@@ -310,7 +310,7 @@ diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id, int flags)
     conn = np_conn_create (srv, trans, client_id, flags);
     if (!conn) {
         errn (np_rerror (), "error creating connection for %s", client_id);
-	/* trans is destroyed in np_conn_create on failure */
+        /* trans is destroyed in np_conn_create on failure */
         return;
     }
 }
@@ -511,19 +511,19 @@ static int _diod_sock_connect_inet6(char *name, int flags)
 
     hoststart = name + 1;
     if ((hostend = strchr (hoststart, ']'))) {
-	port = strchr (hostend, ':');
-	*hostend = '\0';
+        port = strchr (hostend, ':');
+        *hostend = '\0';
     } else {
-	errno = EINVAL;
-	if (!(flags & DIOD_SOCK_QUIET))
-	    err ("diod_sock_connect invalid address %s", name);
-	return -1;
+        errno = EINVAL;
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("diod_sock_connect invalid address %s", name);
+        return -1;
     }
     if (port) {
-	port++;
-	return diod_sock_connect_inet (hoststart, port, flags);
+        port++;
+        return diod_sock_connect_inet (hoststart, port, flags);
     } else {
-	return diod_sock_connect_inet (hoststart, "564", flags);
+        return diod_sock_connect_inet (hoststart, "564", flags);
     }
 }
 
@@ -547,10 +547,10 @@ diod_sock_connect (char *name, int flags)
                 err ("diod_sock_connect %s", name);
             goto done;
         }
-	if (host[0] == '[') {
-	    fd = _diod_sock_connect_inet6(host, flags);
-	    goto done;
-	}
+        if (host[0] == '[') {
+            fd = _diod_sock_connect_inet6(host, flags);
+            goto done;
+        }
         if (!(port = strchr (host, ':'))) {
             errno = EINVAL;
             if (!(flags & DIOD_SOCK_QUIET))
