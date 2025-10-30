@@ -1,6 +1,5 @@
 check_PROGRAMS = \
 	kconjoin \
-	tsuppgrp \
 	trename \
 	tflock \
 	tflock2 \
@@ -45,7 +44,6 @@ LDADD = $(top_builddir)/src/libdiod/libdiod.a \
 common_sources = test.h
 
 kconjoin_SOURCES = kconjoin.c $(common_sources)
-tsuppgrp_SOURCES = tsuppgrp.c $(common_sources)
 trename_SOURCES = trename.c $(common_sources)
 tflock_SOURCES = tflock.c $(common_sources)
 tfsgid_SOURCES = tfsgid.c $(common_sources)
