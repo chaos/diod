@@ -52,6 +52,7 @@
 #include "src/libnpclient/npclient.h"
 
 #include "src/liblsd/list.h"
+#include "src/liblsd/hostlist.h"
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_sock.h"
 #include "src/libdiod/diod_auth.h"
@@ -441,6 +442,88 @@ int cmd_setxattr (Npcfid *root, int argc, char **argv)
         return -1;
     }
     return 0;
+}
+
+void usage_showmount (void)
+{
+    fprintf (stderr, "Usage: %s showmount [-l]\n", prog);
+}
+
+static const char *smoptions = "l";
+
+static const struct option smlongopts[] = {
+    {"long",    no_argument,            0, 'l'},
+    {0, 0, 0, 0},
+};
+
+int cmd_showmount (Npcfid *root, int argc, char **argv)
+{
+    Npcfid *fid;
+    char buf[80], *host, *p;
+    hostlist_t hl = NULL;
+    hostlist_iterator_t itr;
+    int c;
+    bool lopt = false;
+    int rc = -1;
+
+    opterr = 0;
+    optind = 0;
+    while ((c = getopt_long (argc, argv, smoptions, smlongopts, NULL)) != -1) {
+        switch (c) {
+            case 'l': // --long
+                lopt = true;
+                break;
+            default:
+                usage_showmount ();
+                return -1;
+        }
+    }
+    if (optind < argc) {
+        usage_showmount ();
+        return -1;
+    }
+    if (!(fid = npc_open_bypath (root, "connections", O_RDONLY))) {
+        errn (np_rerror (), "open connections");
+        return -1;
+    }
+    if (!(hl = hostlist_create (NULL))) {
+        err ("hostlist_create");
+        goto done;
+    }
+    while (npc_gets (fid, buf, sizeof(buf))) {
+        if ((p = strchr (buf, ' ')))
+            *p = '\0';
+        if (!lopt && (p = strchr (buf, '.')))
+            *p = '\0';
+        if (!hostlist_push_host (hl, buf)) {
+            err ("hostlist_push_host");
+            goto done;
+        }
+    }
+    hostlist_uniq (hl);
+    if (lopt) {
+        if (!(itr = hostlist_iterator_create (hl))) {
+            err ("hostlist_iterator_create");
+            goto done;
+        }
+        while ((host = hostlist_next (itr)))
+            printf ("%s\n", host);
+        hostlist_iterator_destroy (itr);
+    } else {
+        char s[1024];
+
+        if (hostlist_ranged_string (hl, sizeof (s), s) < 0) {
+            msg ("hostlist output would be too long (use -l)");
+            goto done;
+        }
+        printf ("%s\n", s);
+    }
+    rc = 0;
+done:
+    hostlist_destroy (hl);
+    if (npc_clunk (fid) < 0)
+        errn (np_rerror (), "clunk connections");
+    return rc;
 }
 
 /* Regression test for missing bounds check
@@ -930,6 +1013,11 @@ static struct subcmd subcmds[] = {
         .name = "listxattr",
         .desc = "list extended attributes",
         .cmd = cmd_listxattr,
+    },
+    {
+        .name = "showmount",
+        .desc = "list diod server connections",
+        .cmd = cmd_showmount,
     },
     {
         .name = "bug-setxattr-offsetcheck",
