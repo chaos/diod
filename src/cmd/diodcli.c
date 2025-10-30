@@ -35,11 +35,14 @@
 #include <dirent.h>
 #include <pwd.h>
 #include <grp.h>
+#include <sys/time.h>
 #include <time.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include <string.h>
 #include <getopt.h>
 #if HAVE_SYS_XATTR_H
@@ -523,6 +526,75 @@ done:
     hostlist_destroy (hl);
     if (npc_clunk (fid) < 0)
         errn (np_rerror (), "clunk connections");
+    return rc;
+}
+
+void usage_date (void)
+{
+    fprintf (stderr, "Usage: %s date [--set-time]\n", prog);
+}
+
+static const char *doptions = "S";
+
+static const struct option dlongopts[] = {
+    {"set-time",    no_argument,            0, 'S'},
+    {0, 0, 0, 0},
+};
+
+int cmd_date (Npcfid *root, int argc, char **argv)
+{
+    int c;
+    bool Sopt = false;
+    char *buf = NULL;
+    struct timeval tv;
+    struct timezone tz;
+    int rc = -1;
+
+    opterr = 0;
+    optind = 0;
+    while ((c = getopt_long (argc, argv, doptions, dlongopts, NULL)) != -1) {
+        switch (c) {
+            case 'S': // --set-time
+                Sopt = true;
+                break;
+            default:
+                usage_date ();
+                return -1;
+        }
+    }
+    if (optind < argc) {
+        usage_date ();
+        return -1;
+    }
+    buf = npc_aget (root, "date");
+    if (!buf) {
+        errn (np_rerror (), "error reading date");
+        return -1;
+    }
+    int64_t sec = 0, usec = 0;
+    if (sscanf (buf,
+                "%"SCNd64".%"SCNd64" %d.%d",
+                &sec,
+                &usec,
+                &tz.tz_minuteswest,
+                &tz.tz_dsttime) != 4) {
+        msg ("error scanning returned date: %s", buf);
+        goto done;
+    }
+    tv.tv_sec = sec;
+    tv.tv_usec = usec;
+    if (Sopt) {
+        if (settimeofday (&tv, &tz) < 0) {
+            err ("settimeofday");
+            goto done;
+        }
+    } else {
+        time_t t = tv.tv_sec;
+        printf ("%s", ctime (&t));
+    }
+    rc = 0;
+done:
+    free (buf);
     return rc;
 }
 
@@ -1018,6 +1090,11 @@ static struct subcmd subcmds[] = {
         .name = "showmount",
         .desc = "list diod server connections",
         .cmd = cmd_showmount,
+    },
+    {
+        .name = "date",
+        .desc = "get the server system time",
+        .cmd = cmd_date,
     },
     {
         .name = "bug-setxattr-offsetcheck",
