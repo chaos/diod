@@ -20,8 +20,6 @@ t23	Simple test to check that POSIX advisory record locks are handled
 	as advertised within one process.
 t24	Simple test to check that BSD advisory file locks are handled
 	as advertised within one process.
-t25	Verify that files are created with the users effective gid.
-	Verify that files created in a setgid directory have the parent gid.
 t31	Run fstest with server --no-userdb option (takes a couple minutes)
 t34	Run an svnadmin create, which uncovered a bug in fsync
 t37	Run fsx.

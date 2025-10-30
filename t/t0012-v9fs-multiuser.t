@@ -61,6 +61,15 @@ test_expect_success STAT 'chgrp the file to gid 42' '
 	$SUDO chgrp  42 mnt/a &&
 	test "$($PATH_STAT -c %u:%g mnt/a)" = "0:42"
 '
+test_expect_success 'create a directory with gid 44 and setgid bit' '
+	mkdir mnt/dir &&
+	$SUDO chgrp 44 mnt/dir &&
+	$SUDO chmod g+s mnt/dir
+'
+test_expect_success STAT 'a file in that directory gets gid 44' '
+	touch mnt/dir/a &&
+	test "$($PATH_STAT -c %g mnt/dir/a)" = 44
+'
 test_expect_success DIODMOUNT 'mount helper fails with -ouname but no -oaccess' '
 	test_must_fail $SUDO $PATH_MOUNT_DIOD -ouname=fred foo mnt \
 	    2>mounthelp.out &&
