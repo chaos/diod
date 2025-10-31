@@ -51,10 +51,11 @@ Connect from a socket bound to a port in the range of 512-1023,
 available to root only.  This can be used in conjunction with the
 \fIprivport\fR export option.
 .SH MOUNT OPTIONS
-The following file system specific mount options are handled by
-\fBmount.diod\fR.
+For a complete list of v9fs mount options, refer to the kernel
+documentation at https://docs.kernel.org/filesystems/9p.html.
+Some common options are described below.
 .TP
-.I "aname=name"
+.I "aname=PATH"
 The aname is the path of the exported file system on the server.
 It can be specified in the mount spec in \fIhost:aname\fR format
 like NFS, or it can be specified with this option.
@@ -66,16 +67,17 @@ Note that "ctl" must be explicitly exported.
 .I "uname=USERNAME"
 The user name to authenticate to the \fBdiod\fR server.
 If neither \fIuname\fR nor \fIaccess\fR are specified,
-\fIuname=root,access=user\fR is assumed.
+\fIuname=root,access=client\fR is assumed.
 .TP
-.I "access=user"
-The client allows any user to access the file system and enforces traditional
-UNIX access controls.  Each new user attaches to the server.
+.I "access=client"
+The client allows any user to access the file system and enforces access
+control.  Each new user attaches to the server.
 Requires \fIuname=root\fR.
 .TP
-.I "access=client,posixacl"
-The client allows any user to access the file system and enforces POSIX ACLs.
-Only the authenticated user attaches to the server.
+.I "access=user"
+The same as \fIaccess=client\fR, but a weaker guarantee that the client
+performs access control.  \fBdiod\fR users are encouraged to use
+\fIaccess=client\fR.
 Requires \fIuname=root\fR.
 .TP
 .I "access=UID"
@@ -86,47 +88,39 @@ Only the authenticated user attaches to the server.
 The client allows any user to access the filesystem.
 Only the authenticated user attaches to the server.
 .TP
-.I "port=n"
+.I "posixacl"
+Enforce POSIX access control lists.
+Requires \fIuname=root\fR and \fIaccess=client\fR.
+.TP
+.I "port=N"
 Connect to the \fIdiod\fR server on the specified port.
 The default is the IANA-assigned 9pfs port 564.
 .TP
-.I "trans=name"
+.I "trans=fd"
 Select a transport.
 \fBmount.diod\fR only supports \fItrans=fd\fR
 because of its strategy for authentication.
 .TP
-.I "rfdno=n,wfdno=n"
+.I "rfdno=N,wfdno=N"
 The file descriptor for reading and writing with \fItrans=fd\fR.
 If set, \fBmount.diod\fR assumes this file descriptor is already
 connected to a \fBdiod\fR server and ignores \fIhost\fR in the
 device specification, and the \fIport=n\fR option.
 .TP
-.I "msize=n"
+.I "msize=N"
 The msize is the max 9P packet payload size.
 The default is 65512 (65536-24)
 .TP
-.I "version=name"
+.I "version=9p20000.L"
 Select 9P protocol version.
 \fBdiod\fR only supports \fI9p2000.L\fR.
 .TP
-.I "cache=mode"
-Specify a caching policy.  By default, no caches are used.
-If \fIcache=loose\fR, no attempts are made at consistency.
-This mode is intended for exclusive, read-only mounts.
-If \fIcache=fscache\fR, use FS-Cache for a persistent, read-only
-cache backend.
+.I "cache=MODE"
+Specify a caching policy.
+Cache modes include \fInone\fR (default), \fIreadahead\fR, \fImmap\fR,
+\fIloose\fR, and \fIfscache.
 .TP
-.I "cachetag"
-In the context of \fIcache=fscache\fR, select the cache tag
-to use for this session.
-Cache tags for existing cache sessions are listed in /sys/fs/9p/caches.
-.TP
-.I "nodevmap"
-Do not map special files.  Represent them as normal files.
-This can be used to share devices/named pipes/sockets between
-hosts.
-.TP
-.I "debug=n"
+.I "debug=MASK"
 Specifies debug level for the kernel 9p module.  The debug level is a bitmask.
 .br
 0x01  = display verbose error messages
