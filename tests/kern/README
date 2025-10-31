@@ -7,7 +7,6 @@ These tests all run the same way:
 - <test>.out is compared wtih <test>.exp 
 
 The tests are:
-t12	Create a file and check that file creation mode was honored
 t15	Demonstrate that fsync does not return an error.
 t17	Set all the mode bits (7777) on a file and directory on server
 	and verify that they are reflected in client stat, then do the reverse.

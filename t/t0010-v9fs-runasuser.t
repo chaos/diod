@@ -240,6 +240,47 @@ test_expect_success 'root cannot create file' '
 	test_must_fail $SUDO touch mnt/dir/asroot 2>rootwrite.err &&
 	grep "not permitted" rootwrite.err
 '
+
+# Usage: makefiles dir
+makefiles () {
+    local path=$1
+    local seq=0
+    local rc=0
+    local u g o
+    for u in 0 1 2 3 4 5 6 7; do
+        for g in 0 1 2 3 4 5 6 7; do
+            for o in 0 1 2 3 4 5 6 7; do
+                install -m 0$u$g$o /dev/null $path/f.$seq || rc=1
+                seq=$(($seq + 1))
+            done
+        done
+    done
+    return $rc
+}
+# Usage: checkmodes dir
+checkmodes () {
+    local path=$1
+    local seq=0
+    local rc=0
+    local u g o
+    for u in 0 1 2 3 4 5 6 7; do
+        for g in 0 1 2 3 4 5 6 7; do
+            for o in 0 1 2 3 4 5 6 7; do
+                test "$($PATH_STAT -c "%a" $path/f.$seq)" -eq "$u$g$o" || rc=1
+                seq=$(($seq + 1))
+            done
+        done
+    done
+    return $rc
+}
+
+test_expect_success 'atomically create files with all the modes' '
+	mkdir mnt/ptest &&
+	makefiles mnt/ptest
+'
+test_expect_success 'all the modes were set on the server' '
+	checkmodes exp/ptest
+'
 test_expect_success 'mount filesystem with access=any on mnt2' '
 	$mountcmd \
 	    -oaname=$exportdir,$mountopts,access=any \

@@ -1,6 +1,5 @@
 check_PROGRAMS = \
 	kconjoin \
-	tcreate \
 	tatomic
 
 SUBDIRS = fstest fsx fsstress
@@ -16,7 +15,6 @@ AM_TESTS_ENVIRONMENT = \
 LOG_COMPILER = ${srcdir}/runtest
 
 TESTS = \
-	t12 \
 	t15 \
 	t17 \
 	t31 \
@@ -44,7 +42,6 @@ LDADD = $(top_builddir)/src/libdiod/libdiod.a \
         $(LIBPTHREAD) $(LUA_LIB) $(MUNGE_LIBS) $(CAP_LIBS) $(LIBTCMALLOC)
 
 kconjoin_SOURCES = kconjoin.c $(common_sources)
-tcreate_SOURCES = tcreate.c $(common_sources)
 tatomic_SOURCES = tatomic.c $(common_sources)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
