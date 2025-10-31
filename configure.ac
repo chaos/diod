@@ -178,11 +178,6 @@ AC_CONFIG_FILES( \
   src/cmd/Makefile \
   src/Makefile \
   t/Makefile \
-  tests/Makefile \
-  tests/kern/Makefile \
-  tests/kern/fstest/Makefile \
-  tests/kern/fsx/Makefile \
-  tests/kern/fsstress/Makefile \
   etc/Makefile \
 )
 

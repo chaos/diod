@@ -1,3 +1,0 @@
-#!/bin/bash -e
-
-fsstress/fsstress -d $PATH_MNTDIR -n 10 -p 10 -l 10

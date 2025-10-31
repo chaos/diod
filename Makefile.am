@@ -2,8 +2,7 @@ SUBDIRS = \
 	src \
 	man \
 	etc \
-	t \
-	tests
+	t
 
 export DEB_BUILD_OPTIONS ?= nocheck terse
 deb: debian scripts/debbuild.sh
