@@ -19,23 +19,20 @@
 
 int main(int argc, char *argv[])
 {
-        int fd;
+	int fd;
 
-        /* first create the file */
-        fd = open(argv[1], O_CREAT|O_WRONLY, 0644);
-        if (fd < 0) {
-                perror("open");
-                return -1;
-       	}
+	/* first create the file */
+	fd = open(argv[1], O_CREAT|O_WRONLY, 0644);
+	if (fd < 0) {
+		perror("open");
+		return 1;
+	}
 	close(fd);
 
-        /* Now opening same file with O_CREAT|O_EXCL should fail */
-        fd = open(argv[1], O_CREAT|O_EXCL, 0644);
-        if (fd < 0 && errno == EEXIST)
-                printf("test case pass\n");
-        else
-            	printf("test case failed\n");
-        close(fd);
-        return 0;
+	/* Now opening same file with O_CREAT|O_EXCL should fail */
+	fd = open(argv[1], O_CREAT|O_EXCL, 0644);
+	if (!(fd < 0 && errno == EEXIST))
+		return 1;
+	close(fd);
+	return 0;
 }
-

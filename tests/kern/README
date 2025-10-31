@@ -19,6 +19,5 @@ t34	Run an svnadmin create, which uncovered a bug in fsync
 t37	Run fsx.
 t38	Run fsstress.
 t39	Run fsstress out of 9p, against host fs.
-t44	Test atomic create with O_CREAT|O_EXCL
 t48	Run fsx with mmap read test enabled
 t49	Run fsx with mmap write test enabled

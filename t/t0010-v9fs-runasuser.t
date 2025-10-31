@@ -36,6 +36,7 @@ mountopts="trans=unix,uname=$(id -un)"
 
 test_flock=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock
 test_flock_single=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock_single
+test_atomic_create=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_atomic_create
 
 # usage: create_file name [block_count]
 create_file() {
@@ -280,6 +281,9 @@ test_expect_success 'atomically create files with all the modes' '
 '
 test_expect_success 'all the modes were set on the server' '
 	checkmodes exp/ptest
+'
+test_expect_success 'creating a file with O_CREAT|OEXCL fails if file exists' '
+	$test_atomic_create mnt/atomic_create
 '
 test_expect_success 'mount filesystem with access=any on mnt2' '
 	$mountcmd \

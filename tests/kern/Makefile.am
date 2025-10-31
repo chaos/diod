@@ -1,6 +1,5 @@
 check_PROGRAMS = \
-	kconjoin \
-	tatomic
+	kconjoin
 
 SUBDIRS = fstest fsx fsstress
 
@@ -20,8 +19,7 @@ TESTS = \
 	t31 \
 	t37 \
 	t38 \
-	t39 \
-	t44
+	t39
 
 XFAIL_TESTS =
 
@@ -42,6 +40,5 @@ LDADD = $(top_builddir)/src/libdiod/libdiod.a \
         $(LIBPTHREAD) $(LUA_LIB) $(MUNGE_LIBS) $(CAP_LIBS) $(LIBTCMALLOC)
 
 kconjoin_SOURCES = kconjoin.c $(common_sources)
-tatomic_SOURCES = tatomic.c $(common_sources)
 
 EXTRA_DIST = $(TESTS) $(TESTS:%=%.exp) runtest
