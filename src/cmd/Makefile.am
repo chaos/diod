@@ -50,6 +50,8 @@ check_PROGRAMS = \
 	test_tattach \
 	test_loadgen \
 	test_pathwalk \
+	test_flock \
+	test_flock_single \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -80,4 +82,12 @@ test_loadgen_LDADD = \
 
 test_pathwalk_SOURCES = test/pathwalk.c $(common_sources)
 test_pathwalk_LDADD = \
+	$(common_ldadd)
+
+test_flock_SOURCES = test/flock.c $(common_sources)
+test_flock_LDADD = \
+	$(common_ldadd)
+
+test_flock_single_SOURCES = test/flock_single.c $(common_sources)
+test_flock_single_LDADD = \
 	$(common_ldadd)

@@ -1,7 +1,5 @@
 check_PROGRAMS = \
 	kconjoin \
-	tflock \
-	tflock2 \
 	tcreate \
 	tatomic
 
@@ -17,9 +15,18 @@ AM_TESTS_ENVIRONMENT = \
 
 LOG_COMPILER = ${srcdir}/runtest
 
-TESTS = t12 t15 t17 t18 \
-	t24 t31 \
-	t37 t38 t39 t42 t44 t46 t47
+TESTS = \
+	t12 \
+	t15 \
+	t17 \
+	t31 \
+	t37 \
+	t38 \
+	t39 \
+	t42 \
+	t44 \
+	t46 \
+	t47
 
 XFAIL_TESTS =
 
@@ -39,10 +46,7 @@ LDADD = $(top_builddir)/src/libdiod/libdiod.a \
         $(top_builddir)/src/liblsd/liblsd.a \
         $(LIBPTHREAD) $(LUA_LIB) $(MUNGE_LIBS) $(CAP_LIBS) $(LIBTCMALLOC)
 
-common_sources = test.h
-
 kconjoin_SOURCES = kconjoin.c $(common_sources)
-tflock_SOURCES = tflock.c $(common_sources)
 tcreate_SOURCES = tcreate.c $(common_sources)
 tatomic_SOURCES = tatomic.c $(common_sources)
 

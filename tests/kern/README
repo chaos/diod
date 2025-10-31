@@ -11,13 +11,9 @@ t12	Create a file and check that file creation mode was honored
 t15	Demonstrate that fsync does not return an error.
 t17	Set all the mode bits (7777) on a file and directory on server
 	and verify that they are reflected in client stat, then do the reverse.
-t18	Simple test to check that BSD advisory file locks are properly
-	arbitrated between two processes.
 t19	Simple test to check that POSIX advisory record locks are properly
 	arbitrated between two processes.
 t23	Simple test to check that POSIX advisory record locks are handled
-	as advertised within one process.
-t24	Simple test to check that BSD advisory file locks are handled
 	as advertised within one process.
 t31	Run fstest with server --no-userdb option (takes a couple minutes)
 t34	Run an svnadmin create, which uncovered a bug in fsync

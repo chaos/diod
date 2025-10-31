@@ -34,6 +34,9 @@ umountcmd="$SUDO umount --lazy"
 mountcmd="$SUDO mount -n -t 9p"
 mountopts="trans=unix,uname=$(id -un)"
 
+test_flock=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock
+test_flock_single=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock_single
+
 # usage: create_file name [block_count]
 create_file() {
 	local name=$1
@@ -155,6 +158,12 @@ test_expect_success FLOCK 'flock-write a file' '
 '
 test_expect_success FLOCK 'flock-read a file' '
 	$PATH_FLOCK -s mnt/dir/d true
+'
+test_expect_success 'run flock concurrency test' '
+	$test_flock  mnt/dir/d
+'
+test_expect_success 'run flock single-process test' '
+	$test_flock_single  mnt/dir/d
 '
 test_expect_success 'chown a file to current owner' '
 	chown $(id -u) mnt/dir/d
