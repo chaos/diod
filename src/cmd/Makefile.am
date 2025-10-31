@@ -49,6 +49,10 @@ check_PROGRAMS = \
 	test_tflush \
 	test_tattach \
 	test_loadgen \
+	test_pathwalk \
+	test_flock \
+	test_flock_single \
+	test_atomic_create \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -75,4 +79,20 @@ test_tattach_LDADD = \
 
 test_loadgen_SOURCES = test/loadgen.c $(common_sources)
 test_loadgen_LDADD = \
+	$(common_ldadd)
+
+test_pathwalk_SOURCES = test/pathwalk.c $(common_sources)
+test_pathwalk_LDADD = \
+	$(common_ldadd)
+
+test_flock_SOURCES = test/flock.c $(common_sources)
+test_flock_LDADD = \
+	$(common_ldadd)
+
+test_flock_single_SOURCES = test/flock_single.c $(common_sources)
+test_flock_single_LDADD = \
+	$(common_ldadd)
+
+test_atomic_create_SOURCES = test/atomic_create.c $(common_sources)
+test_atomic_create_LDADD = \
 	$(common_ldadd)

@@ -34,6 +34,10 @@ umountcmd="$SUDO umount --lazy"
 mountcmd="$SUDO mount -n -t 9p"
 mountopts="trans=unix,uname=$(id -un)"
 
+test_flock=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock
+test_flock_single=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock_single
+test_atomic_create=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_atomic_create
+
 # usage: create_file name [block_count]
 create_file() {
 	local name=$1
@@ -156,6 +160,12 @@ test_expect_success FLOCK 'flock-write a file' '
 test_expect_success FLOCK 'flock-read a file' '
 	$PATH_FLOCK -s mnt/dir/d true
 '
+test_expect_success 'run flock concurrency test' '
+	$test_flock  mnt/dir/d
+'
+test_expect_success 'run flock single-process test' '
+	$test_flock_single  mnt/dir/d
+'
 test_expect_success 'chown a file to current owner' '
 	chown $(id -u) mnt/dir/d
 '
@@ -230,6 +240,50 @@ test_expect_success STAT 'root cannot stat file' '
 test_expect_success 'root cannot create file' '
 	test_must_fail $SUDO touch mnt/dir/asroot 2>rootwrite.err &&
 	grep "not permitted" rootwrite.err
+'
+
+# Usage: makefiles dir
+makefiles () {
+    local path=$1
+    local seq=0
+    local rc=0
+    local u g o
+    for u in 0 1 2 3 4 5 6 7; do
+        for g in 0 1 2 3 4 5 6 7; do
+            for o in 0 1 2 3 4 5 6 7; do
+                install -m 0$u$g$o /dev/null $path/f.$seq || rc=1
+                seq=$(($seq + 1))
+            done
+        done
+    done
+    return $rc
+}
+# Usage: checkmodes dir
+checkmodes () {
+    local path=$1
+    local seq=0
+    local rc=0
+    local u g o
+    for u in 0 1 2 3 4 5 6 7; do
+        for g in 0 1 2 3 4 5 6 7; do
+            for o in 0 1 2 3 4 5 6 7; do
+                test "$($PATH_STAT -c "%a" $path/f.$seq)" -eq "$u$g$o" || rc=1
+                seq=$(($seq + 1))
+            done
+        done
+    done
+    return $rc
+}
+
+test_expect_success 'atomically create files with all the modes' '
+	mkdir mnt/ptest &&
+	makefiles mnt/ptest
+'
+test_expect_success 'all the modes were set on the server' '
+	checkmodes exp/ptest
+'
+test_expect_success 'creating a file with O_CREAT|OEXCL fails if file exists' '
+	$test_atomic_create mnt/atomic_create
 '
 test_expect_success 'mount filesystem with access=any on mnt2' '
 	$mountcmd \

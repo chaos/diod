@@ -1,9 +1,0 @@
-#!/bin/bash -e
-
-echo trying rename
-touch $PATH_MNTDIR/a
-./trename $PATH_MNTDIR/a $PATH_MNTDIR/b
-
-echo trying rename to new directory
-mkdir -p $PATH_MNTDIR/dir
-./trename $PATH_MNTDIR/b $PATH_MNTDIR/dir/c

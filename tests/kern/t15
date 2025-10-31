@@ -1,5 +1,0 @@
-#!/bin/bash -e
-
-echo writing file with fsync
-dd if=/dev/zero of=$PATH_MNTDIR/a count=1024 conv=fsync status=noxfer
-cmp $PATH_MNTDIR/a $PATH_EXPDIR/a

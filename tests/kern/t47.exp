@@ -1,8 +1,0 @@
-kconjoin: mount.diod exited with rc=0
-# file: testfile
-security.bar="barval"
-security.baz="bazval"
-security.foo="fooval"
-
-kconjoin: t47 exited with rc=0
-kconjoin: diod exited with rc=0

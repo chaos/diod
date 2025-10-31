@@ -835,15 +835,15 @@ int cmd_ls (Npcfid *root, int argc, char **argv)
  */
 void print_stat (struct stat *sb)
 {
-    printf ("mode=%x owner=%d:%d size=%ju blocks=%ju blocksize=%lu"
-            " links=%lu device=%x:%x mtime=%ju ctime=%ju atime=%ju\n",
+    printf ("mode=%x owner=%d:%d size=%ju blocks=%ju blocksize=%ju"
+            " links=%ju device=%x:%x mtime=%ju ctime=%ju atime=%ju\n",
             sb->st_mode,
             sb->st_uid,
             sb->st_gid,
             (uintmax_t)sb->st_size,
             (uintmax_t)sb->st_blocks,
-            sb->st_blksize,
-            sb->st_nlink,
+            (uintmax_t)sb->st_blksize,
+            (uintmax_t)sb->st_nlink,
             major (sb->st_rdev),
             minor (sb->st_rdev),
             (uintmax_t)sb->st_mtime,

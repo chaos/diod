@@ -45,8 +45,6 @@ jobs:
       run: scripts/check-valgrind.sh
     - name: sudo some unit tests
       run: scripts/check-root.sh
-    - name: check with linux/9p
-      run: sudo make check -C tests/kern
     - name: make distcheck
       run: make distcheck
     - name: get test results on failure
