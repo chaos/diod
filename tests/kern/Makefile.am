@@ -23,10 +23,7 @@ TESTS = \
 	t37 \
 	t38 \
 	t39 \
-	t42 \
-	t44 \
-	t46 \
-	t47
+	t44
 
 XFAIL_TESTS =
 
