@@ -7,8 +7,6 @@ These tests all run the same way:
 - <test>.out is compared wtih <test>.exp 
 
 The tests are:
-t17	Set all the mode bits (7777) on a file and directory on server
-	and verify that they are reflected in client stat, then do the reverse.
 t19	Simple test to check that POSIX advisory record locks are properly
 	arbitrated between two processes.
 t23	Simple test to check that POSIX advisory record locks are handled

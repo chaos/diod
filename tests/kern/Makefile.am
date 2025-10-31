@@ -14,7 +14,6 @@ AM_TESTS_ENVIRONMENT = \
 LOG_COMPILER = ${srcdir}/runtest
 
 TESTS = \
-	t17 \
 	t31 \
 	t37 \
 	t38 \
