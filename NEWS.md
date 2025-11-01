@@ -1,7 +1,135 @@
+diod version 1.1.0 - 2025-11-02
+-------------------------------
+
+This release represents changes over more than a decade.
+Some important changes since the last release to take note of:
+
+ * Configure options have changed.  See ./configure --help for details.
+ * A few 9P client tools were consolidated into a new one called `diodcli`
+ * The `diod` server no longer daemonizes or logs to syslog.
+ * Running `make check` as root is no longer necessary nor will it work.
+   Enable passwordless sudo if you want tests that require root to run.
+
+## New Features
+
+#### 2024-2025
+
+ * change the default access mode to `client` and add SECURITY section to
+   diod(8) (#157)
+ * Implement Trenameat and Tunlinkat (#135)
+ * enable systemctl reload diod + minor logging improvements (#132)
+
+#### 2015-2023
+
+ * Use privport with ipv6 (#94)
+ * Increase server msize up to 1M which is becoming standard and default
+   for 9p tcp buffers as of kernels 5.15-rc1 (#67)
+ * Add option to disable hostname lookups (#66)
+ * Support IPv6 addresses (#64)
+ * Implement access=user on FreeBSD using nfs-ganesha-kmod (#55, #58)
+ * FreeBSD port (#27)
+
+## Deprecations
+
+#### 2024-2025
+
+ * drop TCP Wrappers support + misc. build system cleanup (#128)
+ * diod: do not daemonize, do not syslog (#130, #134)
+ * diodcli: replace diodcat, diodls, dioddate, diodshowmount, and
+   deprecate diodload (#154, #155)
+ * diodmount: drop --9nbd-attach, --9nbd-detach opts (#120)
+ * jettison auto.diod, empty diod.conf, and RPM spec file (#152)
+
+## Fixes
+
+#### 2024-2025
+
+ * mount helper: relax checks on 9p mount options (#151)
+ * fix incorrect assertion and malformed log message (#150)
+ * libnpfs: Fix assert failure when receiving R-type messages (#137)
+ * diod: Fix uint32 overflow when Tread/Twrite count > `UINT32_MAX-IOHDRSZ`
+   (#136)
+ * improve setgroups error message and inline documentation (#129)
+ * fix incorrect fsid in 9P2000.L statfs response (#119)
+ * fix 9P2000.L protocol incompatibility with kernel Tfsync (#118)
+ * handle some malformed 9P requests gracefully (#110)
+ * Handle various `time_t` sizes in printf and scanf (#100)
+ * auto.diod.in: remove bashisms (#96)
+
+#### 2015-2024
+
+ * allow open+walk to get diod working with linux v9fs again (#81)
+ * fix couple issues found when compiling on 32-bit OS (#83)
+ * fix/suppress gcc9 compiler warnings (#78)
+ * Silence warnings when compiling with clang (#69)
+ * Fix some compilation issues on FreeBSD (#57)
+ * diod/ops.c: add header file for makedev (#45)
+ * exporting through symlinks/stat vs lstat in `diod_walk()` (#17)
+ * don't try to update /etc/mtab unless it is a regular file. (#16)
+
+## Cleanup
+
+#### 2024-2025
+
+ * tighten up diod configuration and initialization (#133)
+ * tidy up experimental RDMA feature (#131)
+ * libnpfs: replace kernel 9p.h header (#125)
+ * misc test cleanup and move diod to the src/cmd directory (#123)
+ * move source to src/ and man pages to man/ (#114)
+ * configure: minor cleanup (#113)
+ * Shutdown cleanup (#98)
+
+#### 2015-2023
+
+ * switch to abbreviated SPDX license headers (#80)
+ * Remove empty README (#65)
+ * cleanup: remove files that should not have been committed (#41)
+ * misc cleanup (#40)
+
+## Build/CI/Testsuite/Documentation
+
+#### 2024-2025
+
+ * testsuite: complete sharness framework conversion (#158)
+ * testsuite: fix POSIX ACL test and convert to sharness (#156)
+ * add self-hosting test (#153)
+ * testsuite: convert some v9fs tests to sharness (#149)
+ * testsuite: convert test/misc and test/user to sharness framework (#147)
+ * Fix non-optional LUAJIT support macro in autoconf-archive > 2023.02.20
+   (#143)
+ * testsuite: improve locking tests (#127)
+ * get parallel build/test working (#122)
+ * testsuite: convert unit tests to TAP (#121)
+ * build: add make deb target for debian package (#116)
+ * run the kernel tests in CI (#112)
+ * test fixes (#108)
+ * add mergify support (#111)
+ * Build fixes (#97)
+
+#### 2015-2023
+
+ * github: extend build matrix to include ubuntu18 (#82)
+ * build: fix lua detection (#74)
+ * add clang to CI, fix warning cflags for clang (#79)
+ * ci: add basic github workflow (#77)
+ * move main.yml into the correct directory (#76)
+ * add stubbed github workflow (#75)
+ * Allow pkg-config to obtain needed libs for linking with ncurses (#68)
+ * Fix systemd build with diod.spec, suggestion to split package in
+   diod{,-utils} (#63)
+ * Travis-ci: added support for ppc64le (#62)
+ * Use autoconf rather than platform specific defines (#60)
+ * Update protocol.md (#56)
+ * Misc. build/packaging fixes (#54)
+ * travis-ci: add simple travis build, fix make distcheck (#29)
+ * protocol.md: fix typos (#36)
+ * README.md: trivial fixes (#37)
+ * Build fixing patches (#24)
+
 diod version 1.0.24 - 2015-03-31
 --------------------------------
 
- * Replace sysv-init script with systemd unit file
+ * Replace sysv-init script with systemd unit file (#12)
  * Move fully to github (including docs)
  * Misc. minor updates, mostly tests and build environment, for rhel7
 
