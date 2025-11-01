@@ -550,16 +550,16 @@ P9_RCLUNK tag 1
 ```
 ### References
 
-VirtFS -- A virtualization aware File System pass-through, Jujjuri et al, 2010.
+[VirtFS -- A virtualization aware File System pass-through](https://www.kernel.org/doc/ols/2010/ols2010-pages-109-120.pdf), Jujjuri et al, 2010.
 
-v9fs linux/Documentation/filesystems/9p.txt
+[v9fs: Plan 9 Resource Sharing for Linux](https://docs.kernel.org/filesystems/9p.html)
 
-Plan 9 Remote Resource Protocol Unix Extension experimental-draft-9P2000-unix-extension, Van Hensbergen, 2009.
+[Plan 9 Remote Resource Protocol Unix Extension experimental-draft-9P2000-unix-extension](https://ericvh.github.io/9p-rfc/rfc9p2000.u.html), Van Hensbergen, 2009.
 
-Grave Robbers from Outer Space: Using 9P2000 Under Linux, Van Hensbergen et al, 2005.
+[Grave Robbers from Outer Space: Using 9P2000 Under Linux](https://www.usenix.org/legacy/publications/library/proceedings/usenix05/tech/freenix/full_papers/hensbergen/hensbergen.pdf), Van Hensbergen et al, 2005.
 
-Plan 9 Remote Resource Protocol 9p2000, Van Hensbergen, 2005.
+[Plan 9 Remote Resource Protocol 9p2000](https://ericvh.github.io/9p-rfc/rfc9p2000.html), Van Hensbergen, 2005.
 
-Plan 9 from Bell Labs - Section 5 - Plan 9 File Protocol, 9P, Plan 9 Manual, 4nd edition, 2002.
+[Plan 9 from Bell Labs - Section 5 - Plan 9 File Protocol](https://9p.io/magic/man2html/5/0intro), 9P, Plan 9 Manual, 4nd edition, 2002.
 
-The Use of Name Spaces in Plan 9 Pike et al, 1993.
+[The Use of Name Spaces in Plan 9](https://9p.io/sys/doc/names.pdf), Pike et al, 1993.
