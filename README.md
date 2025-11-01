@@ -1,131 +1,99 @@
 ### diod
 
-`diod` is a multi-threaded, user space file server that speaks
-[9P2000.L protocol](protocol.md).
+`diod` is a file server that speaks [9P2000.L protocol](protocol.md).
 
-### Building
+### Building and Installing
 
-#### On Debian
+The basic installation instructions are:
 ```
-sudo apt-get install build-essential ncurses-dev automake autoconf git pkgconf
-sudo apt-get install lua5.1 liblua5.1-dev libmunge-dev libcap-dev libattr1-dev
-./autogen.sh
-./configure
-make
-make check
+$ ./configure
+$ make
+$ make check
+$ sudo make install
 ```
 
-#### On Red Hat
-
+Or for the minimalists:
 ```
-sudo yum install epel-release gperftools-devel ncurses-devel automake autoconf libattr-devel
-sudo yum install lua lua-devel munge-devel libcap-devel pkgconf
-./autogen.sh
-./configure
-make
-make check
+$ ./configure --disable-diodmount --disable-config \
+  --disable-auth --disable-multiuser
 ```
 
-#### On FreeBSD
-
+To build from the git tree, first do:
 ```
-portmaster security/munge
-portmaster lang/lua53
-./autogen.sh
-./configure
-make
+$ git clone https://github.com/chaos/diod.git
+$ cd diod
+$ ./autogen.sh
 ```
 
-See also the remarks below if you want a server that supports impersonation
-(access=user in v9fs).
-
-### Kernel Client
-
-The kernel 9P client, sometimes referred to as "v9fs", consists
-of the `9p.ko` file system module, and its network transport module,
-`9pnet.ko`.
-
-Although the kernel client supports several 9P variants, diod only supports
-9P2000.L, and only in its feature-complete form, as it appeared in 2.6.38.
-
-Earlier versions of the kernel that do not support 9P2000.L will fail
-at mount time when version negotiation fails.  Some pre-2.6.38 versions
-of the kernel that have 9P2000.L but still send some 9P2000.u ops may
-fail in less obvious ways.  Use a 2.6.38 or later kernel.
-
-### Quick Start
-
-Start the diod server in foreground, with protocol debugging to stderr,
-no authentication, and one export:
+To build and install a test deb package (debian-based systems only):
 ```
-sudo ./diod -f -d 1 -n -e /tmp/9
+$ sudo scripts/install-deps-deb.sh deb test
+$ ./configure
+$ make deb
+$ cd debbuild
+$ sudo dpkg -i *deb
 ```
 
-Mount it using the raw mount command:
+NOTE:  Don't run `make check` as root.  Tests that require root will
+attempt to use passwordless sudo.  If that is unavailable, those tests
+are simply skipped.
+
+### Quick Start: single-user
+
+start the server:
 ```
-sudo mount -t 9p -n 127.0.0.1 /mnt \
-    -oaname=/tmp/9,version=9p2000.L,uname=root,access=user
+$ diod --listen=127.0.0.1:9000 --no-auth --export=/home/bob
+Listening on 127.0.0.1:9000
+Only bob can attach and access files as bob
+No authentication is required
 ```
 
-Or (simpler), mount it using diodmount:
+mount the file system:
 ```
-sudo ./diodmount -n localhost:/tmp/9 /mnt
-```
-Or (even simpler) if diodmount is installed as `/sbin/mount.diod`:
-```
-sudo mount -t diod -n localhost:/tmp/9 /mnt
+$ sudo mount -t 9p -n -o version=9p2000.L,trans=tcp \
+  -o aname=/home/bob,uname=bob,access=1001,port=9000 127.0.0.1 /mnt/bob
 ```
 
-### I/O forwarding on clusters:
+### Quick Start: multi-user
 
-On I/O node, set up `/etc/diod.conf` according to diod.conf(5), then:
+start the server:
 ```
-chkconfig diod on
-service diod start
-```
-
-On compute node, if I/O node is `fritz42`, add entries like this to
-`/etc/fstab`:
-```
-fritz42:/g/g0  /g/g0         diod  default 0 0
+$ sudo diod --no-auth --export=/home
+Listening on 0.0.0.0:564
+Anyone can attach and access files as themselves
+No authentication is required
 ```
 
-Alternatively, use "zero-config" automounter method:
-* set `DIOD_SERVERS="fritz42"` in `/etc/sysconfig/auto.diod1`
-* add `/d /etc/auto.diod` to `/etc/auto.master`
-Then:
+mount the file system:
 ```
-mkdir /d
-chkconfig autofs on
-service autofs start
-ln -s /d/g.g0 /g/g0
+$ sudo mount.diod localhost:/home /mnt/home
 ```
-
-Note that at this point diod is only being tested with NFS file systems.
-Use it with Lustre or GPFS at your own peril - but if you do, please
-report issues!
-
-### Impersonation on FreeBSD
-
-FreeBSD does not support per-thread credentials.  If you want a diod server 
-that supports v9fs' access=user, you can:
- * build diod with `--enable-impersonation` (disabled by default on FreeBSD)
- * install `net/nfs-ganesha-kmod` from ports (or at least the modules
-   `setthreadgid`, `setthreadgroups` and `setthreaduid`) or from
-   [source](https://github.com/nfs-ganesha/nfs-ganesha)
- * before stating diod, load the modules providing additional syscalls:
+or equivalently
 ```
-kldload /path/to/nfs-ganesha-kmod/setthreaduid/setthreaduid.ko
-kldload /path/to/nfs-ganesha-kmod/setthreadgid/setthreadgid.ko
-kldload /path/to/nfs-ganesha-kmod/setthreadgroups/setthreadgroups.ko
+$ sudo mount -t 9p -n -o version=9p2000.L,trans=tcp \
+  -o aname=/home,uname=root,access=client 127.0.0.1 /mnt/home
 ```
 
-Please read nfs-ganesha-kmod's README first, and use at your own risk.
+### Should I use 9P instead of NFS?
 
-# Support
+If you are asking this here, you must mean `diod` with the Linux
+[v9fs kernel client](https://docs.kernel.org/filesystems/9p.html).
+Roughly speaking, `diod` in multi-user mode coupled with v9fs
+`access=client,uname=root` approximates NFS, but be aware of
+the following caveats:
 
-Use GitHub!
+ * If the server restarts or the client loses its connection, the
+   client will need to be remounted.  There is no automatic recovery.
+ * By default, there is no caching so interactive performance is poor.
+   Several v9fs client caching options are available, with different
+   trade-offs, however there is no mechanism in 9P to allow the server
+   to invalidate a cached object.
+ * Even when securely authenticated with MUNGE, connections are not
+   protected against eavesdropping or other attacks.
+ * File locking may not work as expected (test your use case!)
 
-### Release
+9P is compelling for its simplicity.
+
+### License
 
 SPDX-License-Identifier: GPL-2.0-or-later
