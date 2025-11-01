@@ -27,4 +27,6 @@ apt install \
   libcap2-dev \
   lua5.1 \
   liblua5.1-dev \
+  munge \
+  libmunge-dev \
   $EXTRA_PKGS
