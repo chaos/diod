@@ -50,7 +50,7 @@ test_expect_success 'rsync /etc to mnt/etc' '
 	mkdir -p mnt/etc &&
 	$SUDO $PATH_RSYNC -av /etc mnt/etc/ 2>&1 >rsync.out
 '
-test_expect_success 'rsync /etc to mut/etc again should be silent' '
+test_expect_success 'rsync /etc to mnt/etc again should be silent' '
 	$SUDO $PATH_RSYNC -avc /etc mnt/etc/ 2>&1 >rsync2.out &&
 	test_must_fail grep etc/ rsync2.out
 '
