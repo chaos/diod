@@ -30,7 +30,7 @@ test_under_diod unixsocket \
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
-umountcmd="$SUDO umount --lazy"
+umountcmd="$SUDO umount -l"
 mountcmd="$SUDO mount -n -t 9p"
 mountopts="trans=unix,uname=$(id -un)"
 
@@ -83,9 +83,10 @@ test_expect_success 'mount filesystem with access=<uid> on mnt' '
 	$mountcmd -oaname=$exportdir,$mountopts,access=$(id -u) \
 	    $DIOD_SOCKET mnt
 '
+# On alpine/busybox, %T decodes as type=UNKNOWN.  Use %t instead.
 test_expect_success STAT 'file system type is v9fs' '
-	echo v9fs >type.exp &&
-	stat -f -c "%T" mnt >type.out &&
+	echo 1021997 >type.exp &&
+	stat -f -c "%t" mnt >type.out &&
 	test_cmp type.exp type.out
 '
 test_expect_success STAT 'client/server mount point stats match' '

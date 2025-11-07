@@ -333,27 +333,34 @@ diod_sock_accept_one (Npsrv *srv, int fd, int lookup)
             err ("accept");
         return;
     }
-    if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                            ip, sizeof(ip), svc, sizeof(svc),
-                            NI_NUMERICHOST | NI_NUMERICSERV))) {
-        msg ("getnameinfo: %s", gai_strerror(res));
-        close (fd);
-        return;
+    /* N.B. although glibc getnameinfo() sets ip to "localhost" for
+     * AF_UNIX, musl libc fails with EAI_FAMILY.  Hence, getnameinfo() is
+     * only attempted for non-AF_UNIX.  See also chaos/diod#160
+     */
+    if (addr.ss_family == AF_UNIX) {
+        if (!lookup || gethostname (host, sizeof (host)) < 0)
+            snprintf (host, sizeof (host), "localhost");
     }
-    if (addr.ss_family != AF_UNIX) {
+    else {
+        if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
+                                ip, sizeof(ip), svc, sizeof(svc),
+                                NI_NUMERICHOST | NI_NUMERICSERV))) {
+            msg ("getnameinfo: %s", gai_strerror(res));
+            close (fd);
+            return;
+        }
+        if (lookup && (res = getnameinfo ((struct sockaddr *)&addr, addr_size,
+                                          host, sizeof(host), NULL, 0, 0))) {
+            msg ("getnameinfo: %s", gai_strerror(res));
+            close (fd);
+            return;
+        }
+        port = strtoul (svc, NULL, 10);
+        if (port < IPPORT_RESERVED && port >= IPPORT_RESERVED / 2)
+            flags |= CONN_FLAGS_PRIVPORT;
         (void)_disable_nagle (fd);
         (void)_enable_keepalive (fd);
     }
-    host[0] = '\0';
-    if (lookup && (res = getnameinfo ((struct sockaddr *)&addr, addr_size,
-                                      host, sizeof(host), NULL, 0, 0))) {
-        msg ("getnameinfo: %s", gai_strerror(res));
-        close (fd);
-        return;
-    }
-    port = strtoul (svc, NULL, 10);
-    if (port < IPPORT_RESERVED && port >= IPPORT_RESERVED / 2)
-        flags |= CONN_FLAGS_PRIVPORT;
     diod_sock_startfd (srv, fd, fd, strlen(host) > 0 ? host : ip, flags);
 }
 

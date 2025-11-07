@@ -35,7 +35,7 @@ test_under_diod unixsocket \
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
-umountcmd="$SUDO umount --lazy"
+umountcmd="$SUDO umount -l"
 mountcmd="$SUDO mount -n -t 9p"
 mountopts="trans=unix,uname=$(id -un)"
 

@@ -45,6 +45,7 @@
 #include <inttypes.h>
 #include <string.h>
 #include <getopt.h>
+#include <libgen.h>
 #if HAVE_SYS_XATTR_H
 #include <sys/xattr.h>
 #else

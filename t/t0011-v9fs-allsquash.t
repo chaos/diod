@@ -27,7 +27,7 @@ test_under_diod unixsocket \
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
-umountcmd="$SUDO umount --lazy"
+umountcmd="$SUDO umount -l"
 mountcmd="$SUDO mount -n -t 9p"
 mountopts="trans=unix,uname=$(id -un)"
 
@@ -50,8 +50,12 @@ test_expect_success SUDO,STAT 'root can create a directory, mode 755' '
 	$SUDO mkdir -m 755 mnt/rootdir &&
 	test "$($PATH_STAT -c "%u:%g" exp/rootdir)" = "$(id -u):$(id -g)"
 '
+# N.B. fails on alpine/busybox when mkdir -m 755 is used because alpine
+# calls mkdir and chmod separately, so the chmod isn't allowed.
+# Do the chmod as the squashuser instead.
 test_expect_success NOBODY,STAT 'nobody can create a directory, mode 755' '
-	$SUDO -u nobody mkdir -m 755 mnt/nobodydir &&
+	$SUDO -u nobody mkdir mnt/nobodydir &&
+	chmod 755 mnt/nobodydir &&
 	test "$($PATH_STAT -c "%u:%g" exp/nobodydir)" = "$(id -u):$(id -g)"
 '
 
