@@ -35,7 +35,7 @@ test_under_diod unixsocketroot \
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
-umountcmd="$SUDO umount --lazy"
+umountcmd="$SUDO umount -l"
 
 test_expect_success 'create export/mount directories' '
 	mkdir -p exp mnt
