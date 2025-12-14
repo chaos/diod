@@ -159,7 +159,7 @@ diod_init (Npsrv *srv)
 {
     srv->msize = DIOD_SRV_MAX_MSIZE;
     srv->fiddestroy = diod_fiddestroy;
-    srv->logmsg = diod_log_msg;
+    srv->logmsg = diod_log_buf;
     srv->remapuser = diod_remapuser;
     srv->exportok = diod_exportok;
     srv->auth_required = diod_auth_required;

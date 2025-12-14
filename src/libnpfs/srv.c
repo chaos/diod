@@ -869,10 +869,13 @@ void
 np_logmsg(Npsrv *srv, const char *fmt, ...)
 {
 	va_list ap;
+	char buf[1024];
 
 	va_start (ap, fmt);
-	if (srv->logmsg)
-		srv->logmsg (fmt, ap);
+	if (srv->logmsg) {
+		(void)vsnprintf (buf, sizeof (buf), fmt, ap);
+		srv->logmsg (buf);
+	}
 	va_end (ap);
 }
 
