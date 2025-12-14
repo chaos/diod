@@ -131,7 +131,8 @@ spf (char *s, int len, const char *fmt, ...)
 	NP_ASSERT (len > 0);
 
 	va_start (ap, fmt);
-	vsnprintf (s, len, fmt, ap); /* ignore overflow */
+	if (vsnprintf (s, len, fmt, ap) >= len)
+		strncpy (&s[len - 4], "...", 4);
 	va_end (ap);
 }
 
