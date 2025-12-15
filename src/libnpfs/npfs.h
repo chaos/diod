@@ -278,6 +278,10 @@ struct Npsrv {
 	Npauth*		auth;
 	int		flags;
 
+	char		*tracebuf;
+	size_t		tracebuf_size;
+	pthread_mutex_t	tracebuf_lock;
+
 	void		(*fiddestroy)(Npfid *);
 
 	Npfcall*	(*version)(Npconn *conn, u32 msize, Npstr *version);

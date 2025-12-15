@@ -122,21 +122,34 @@ np_conn_destroy(Npconn *conn)
 static void
 _debug_trace (Npsrv *srv, Npfcall *fc)
 {
-	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE)) {
-		char s[512];
-		static struct timeval b = { 0, 0 };
-		struct timeval a, c;
+	if ((srv->flags & SRV_FLAGS_DEBUG_9PTRACE) && srv->logmsg) {
+		xpthread_mutex_lock (&srv->tracebuf_lock);
 
-		np_snprintfcall(s, sizeof (s), fc);
+		char *buf = srv->tracebuf;
+		size_t size = srv->tracebuf_size;
+
 		if ((srv->flags & SRV_FLAGS_DEBUG_TIMES)) {
+			static struct timeval b = { 0, 0 };
+			struct timeval a, c;
+			int n;
+
 			if (b.tv_sec == 0)
 				(void)gettimeofday(&b, NULL);
-			(void)gettimeofday(&a, NULL);
-			timersub(&a, &b, &c);
-			np_logmsg(srv, "[%"PRIdMAX".%-3"PRIdMAX"] %s",
-				  (intmax_t)c.tv_sec, (intmax_t)c.tv_usec/1000, s);
-		} else
-			np_logmsg(srv, "%s", s);
+			(void)gettimeofday (&a, NULL);
+			timersub (&a, &b, &c);
+			n = snprintf (buf, size, "[%"PRIdMAX".%-3"PRIdMAX"] ",
+					(intmax_t)c.tv_sec,
+					(intmax_t)c.tv_usec/1000);
+			if (n < size) {
+				buf += n;
+				size -= n;
+			}
+		}
+		np_snprintfcall (buf, size, fc);
+
+		srv->logmsg (srv->tracebuf);
+
+		xpthread_mutex_unlock (&srv->tracebuf_lock);
 	}
 }
 
