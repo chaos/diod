@@ -11,6 +11,7 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include <sys/param.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,16 +34,21 @@ np_printqid(char *s, int len, Npqid *q)
 
 	if (q->type & Qtdir)
 		buf[n++] = 'd';
+	else if (q->type & Qtauth)
+		buf[n++] = 'A';
+	else if (q->type & Qtsymlink)
+		buf[n++] = 'L';
+	else if (q->type & Qtlink)
+		buf[n++] = 'l';
+	else /* Qtfile = 0 */
+		buf[n++] = 'f';
+
 	if (q->type & Qtappend)
 		buf[n++] = 'a';
-	if (q->type & Qtauth)
-		buf[n++] = 'A';
 	if (q->type & Qtexcl)
-		buf[n++] = 'l';
+		buf[n++] = 'x';
 	if (q->type & Qttmp)
 		buf[n++] = 't';
-	if (q->type & Qtsymlink)
-		buf[n++] = 'L';
 	buf[n] = '\0';
 
 	spf (s, len, "(%.16"PRIx64" %x '%s')", q->path, q->version, buf);
@@ -85,12 +91,32 @@ np_timestr(const u64 sec, const u64 nsec)
 }
 
 static void
+np_printdentry(char *s, int len, Npqid *qid, char *dname, u8 type, u64 off)
+{
+	spf (s, len, "\n");
+	np_printqid (s, len, qid);
+	spf (s, len, " %u %-21ju %s", type, (uintmax_t)off, dname);
+}
+
+static void
 np_printdents(char *s, int len, u8 *buf, int buflen)
 {
-	if (buflen > 0)
-		spf (s, len, "\n");
-	/* FIXME: decode directory entries here */
-	np_sndump(s, len, buf, buflen < 64 ? buflen : 64);
+	int res;
+
+	do {
+		Npqid qid;
+		char dname[PATH_MAX + 1];
+		u64 offset;
+		u8 type;
+
+		res = np_deserialize_p9dirent (&qid, &offset, &type, dname,
+						sizeof (dname), buf, buflen);
+		if (res > 0) {
+			np_printdentry (s, len, &qid, dname, type, offset);
+			buf += res;
+			buflen -= res;
+		}
+	} while (res > 0);
 }
 
 static void

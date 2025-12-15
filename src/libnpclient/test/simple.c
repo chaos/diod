@@ -29,11 +29,11 @@
 
 #define TEST_MSIZE 8192
 
-static void diag_logger (const char *fmt, va_list ap)
+static void diag_logger (const char *buf)
 {
-    char buf[1024]; /* make it large enough for protocol debug output */
-    vsnprintf (buf, sizeof (buf), fmt, ap);  /* ignore overflow */
-    fprintf (stderr, "# %s\n", buf);
+    fputs ("# ", stderr);
+    fputs (buf, stderr);
+    fputc ('\n', stderr);
 }
 
 static void check_data_trimmed (const char *name, const char *s, const char *expect)

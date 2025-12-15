@@ -270,13 +270,17 @@ struct Npsrv {
 	void*		srvaux;
 	Npfile*		ctlroot;
 	void*		usercache;
-	void		(*logmsg)(const char *, va_list);
+	void		(*logmsg)(const char *buf);
 	int		(*remapuser)(Npfid *fid);
 	int		(*auth_required)(Npstr *, u32, Npstr *);
 	int		(*exportok)(Npfid *fid);
 	char*		(*get_path)(Npfid *fid);
 	Npauth*		auth;
 	int		flags;
+
+	char		*tracebuf;
+	size_t		tracebuf_size;
+	pthread_mutex_t	tracebuf_lock;
 
 	void		(*fiddestroy)(Npfid *);
 

@@ -110,12 +110,12 @@ done:
 int
 aspf (char **sp, int *lp, const char *fmt, ...)
 {
-        va_list ap;
-        int n;
+	va_list ap;
+	int n;
 
-        va_start (ap, fmt);
-        n = vaspf (sp, lp, fmt, ap);
-        va_end (ap);
+	va_start (ap, fmt);
+	n = vaspf (sp, lp, fmt, ap);
+	va_end (ap);
 
 	return n;
 }
@@ -123,16 +123,17 @@ aspf (char **sp, int *lp, const char *fmt, ...)
 void
 spf (char *s, int len, const char *fmt, ...)
 {
-        va_list ap;
-        int n = strlen (s);
+	va_list ap;
+	int n = strlen (s);
 
-        len -= n;
-        s += n;
-        NP_ASSERT (len > 0);
+	len -= n;
+	s += n;
+	NP_ASSERT (len > 0);
 
-        va_start (ap, fmt);
-        vsnprintf (s, len, fmt, ap); /* ignore overflow */
-        va_end (ap);
+	va_start (ap, fmt);
+	if (vsnprintf (s, len, fmt, ap) >= len)
+		strncpy (&s[len - 4], "...", 4);
+	va_end (ap);
 }
 
 #if NPSTATS_RWCOUNT_BINS != 12

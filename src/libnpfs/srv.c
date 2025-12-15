@@ -70,6 +70,12 @@ np_srv_create(int nwthread, int flags)
 		goto error;
 	np_tpool_incref (srv->tpool);
 	np_assert_srv = srv;
+	if ((flags & SRV_FLAGS_DEBUG_9PTRACE)) {
+		pthread_mutex_init (&srv->tracebuf_lock, NULL);
+		srv->tracebuf_size = 1048576;
+		if (!(srv->tracebuf = calloc (1, srv->tracebuf_size)))
+			goto error;
+	}
 	return srv;
 error:
 	if (srv)
@@ -102,6 +108,7 @@ np_srv_destroy(Npsrv *srv)
 	np_usercache_destroy (srv);
 	np_ctl_finalize (srv);
 	np_assert_srv = NULL;
+	free (srv->tracebuf);
 	free (srv);
 }
 
@@ -869,10 +876,13 @@ void
 np_logmsg(Npsrv *srv, const char *fmt, ...)
 {
 	va_list ap;
+	char buf[1024];
 
 	va_start (ap, fmt);
-	if (srv->logmsg)
-		srv->logmsg (fmt, ap);
+	if (srv->logmsg) {
+		(void)vsnprintf (buf, sizeof (buf), fmt, ap);
+		srv->logmsg (buf);
+	}
 	va_end (ap);
 }
 
