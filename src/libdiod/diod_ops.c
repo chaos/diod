@@ -218,11 +218,12 @@ diod_ustat2qid (struct stat *st, Npqid *qid)
     qid->path = st->st_ino;
     //qid->version = st->st_mtime ^ (st->st_size << 8);
     qid->version = 0;
-    qid->type = 0;
     if (S_ISDIR(st->st_mode))
-        qid->type |= Qtdir;
-    if (S_ISLNK(st->st_mode))
-        qid->type |= Qtsymlink;
+        qid->type = Qtdir;
+    else if (S_ISLNK(st->st_mode))
+        qid->type = Qtsymlink;
+    else
+        qid->type = Qtfile;
 }
 
 static void
@@ -231,11 +232,12 @@ _dirent2qid (struct dirent *d, Npqid *qid)
     NP_ASSERT (d->d_type != DT_UNKNOWN);
     qid->path = d->d_ino;
     qid->version = 0;
-    qid->type = 0;
     if (d->d_type == DT_DIR)
-        qid->type |= Qtdir;
-    if (d->d_type == DT_LNK)
-        qid->type |= Qtsymlink;
+        qid->type = Qtdir;
+    else if (d->d_type == DT_LNK)
+        qid->type = Qtsymlink;
+    else
+        qid->type = Qtfile;
 }
 
 int
