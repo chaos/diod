@@ -34,16 +34,21 @@ np_printqid(char *s, int len, Npqid *q)
 
 	if (q->type & Qtdir)
 		buf[n++] = 'd';
+	else if (q->type & Qtauth)
+		buf[n++] = 'A';
+	else if (q->type & Qtsymlink)
+		buf[n++] = 'L';
+	else if (q->type & Qtlink)
+		buf[n++] = 'l';
+	else /* Qtfile = 0 */
+		buf[n++] = 'f';
+
 	if (q->type & Qtappend)
 		buf[n++] = 'a';
-	if (q->type & Qtauth)
-		buf[n++] = 'A';
 	if (q->type & Qtexcl)
-		buf[n++] = 'l';
+		buf[n++] = 'x';
 	if (q->type & Qttmp)
 		buf[n++] = 't';
-	if (q->type & Qtsymlink)
-		buf[n++] = 'L';
 	buf[n] = '\0';
 
 	spf (s, len, "(%.16"PRIx64" %x '%s')", q->path, q->version, buf);
