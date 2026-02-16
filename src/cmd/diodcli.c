@@ -75,6 +75,7 @@ static char *prog;
 /* Try to Twalk an open fid.
  * This mimics what the linux kernel v9fs client does when
  * we ls -l a mounted directory.
+ * See also: chaos/diod#47
  */
 int cmd_open_walk (Npcfid *root, int argc, char **argv)
 {
@@ -106,6 +107,7 @@ done:
 }
 
 /* Tread should work on opened fids even if the file has been removed
+ * See also: chaos/diod#47
  */
 int cmd_open_remove_read (Npcfid *root, int argc, char **argv)
 {
@@ -142,6 +144,7 @@ done:
 }
 
 /* Tgetattr should work on opened fids even if the file has been removed
+ * See also: chaos/diod#19
  */
 int cmd_open_remove_getattr (Npcfid *root, int argc, char **argv)
 {
@@ -182,6 +185,7 @@ done:
 }
 
 /* Tsetattr should work on opened fids even if the file has been removed
+ * See also: chaos/diod#47
  */
 int cmd_open_remove_setattr (Npcfid *root, int argc, char **argv)
 {
@@ -246,6 +250,7 @@ done:
 
 /* Tsetattr on a fid opened from path should not affect path when path
  * is no longer the same file
+ * See also: chaos/diod#47
  */
 int cmd_open_remove_create_setattr (Npcfid *root, int argc, char **argv)
 {
