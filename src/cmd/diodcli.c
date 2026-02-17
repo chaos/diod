@@ -362,8 +362,8 @@ int cmd_listxattr (Npcfid *root, int argc, char **argv)
         errn (np_rerror (), "%s", filename);
         goto done;
     }
-    int i, count;
-    for (i = 0, count = 0; i < len && buf[i] != '\0'; count++) {
+    int i;
+    for (i = 0; i < len && buf[i] != '\0';) {
         char *key = &buf[i];
         int klen = len - i;
 
