@@ -320,7 +320,7 @@ ioctx_seekdir (IOCtx ioctx, long offset)
  * taking the lock.
  */
 struct dirent *
-ioctx_readdir(IOCtx ioctx, long *offset)
+ioctx_readdir(IOCtx ioctx, u64 *offset)
 {
     struct dirent *d;
 
