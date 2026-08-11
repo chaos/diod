@@ -1143,7 +1143,7 @@ error_quiet:
 }
 
 static u32
-_copy_dirent_linux (Fid *f, struct dirent *d, long offset, u8 *buf, u32 buflen)
+_copy_dirent_linux (Fid *f, struct dirent *d, u64 offset, u8 *buf, u32 buflen)
 {
     Npqid qid;
     u32 ret = 0;
@@ -1171,7 +1171,7 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 {
     struct dirent *d;
     int i, n = 0;
-    long new_offset;
+    u64 new_offset;
 
     if (offset == 0)
         ioctx_rewinddir (f->ioctx);
