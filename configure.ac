@@ -138,7 +138,7 @@ AC_ARG_ENABLE([config],
   [AS_HELP_STRING([--disable-config], [disable lua config file support])])
 
 AS_IF([test "x$enable_config" != "xno"], [
-  AX_PROG_LUA([5.1],[5.5])
+  AX_PROG_LUA([5.1],[5.6])
   AX_LUA_HEADERS([],[
     AC_MSG_ERROR([Install lua headers or configure with --disable-config])
   ])
