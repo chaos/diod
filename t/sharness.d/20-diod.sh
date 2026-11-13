@@ -122,7 +122,9 @@ test_under_diod() {
 	unixsocket)
 		;;
 	unixsocketroot)
-		diodsudo="$SUDO"
+		#  MALLOC_CHECK_ is exported below, but sudo does not
+		#  preserve the environment, so pass it explicitly.
+		diodsudo="$SUDO MALLOC_CHECK_=3"
 		;;
 	*)
 		error "unknown test method $method"

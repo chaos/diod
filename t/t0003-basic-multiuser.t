@@ -47,10 +47,11 @@ test_expect_success 'the squash user can access ctl:/version' '
 	$PATH_DIODCLI --aname=ctl read version
 '
 test_expect_success 'the root user can access ctl:/version' '
-	$SUDO $PATH_DIODCLI --aname=ctl read version
+	$SUDO $PATH_DIODCLI --server=$DIOD_SOCKET --aname=ctl read version
 '
 test_expect_success 'the nobody user can access ctl:/version' '
-	$SUDO -u nobody $PATH_DIODCLI --aname=ctl read version
+	$SUDO -u nobody $PATH_DIODCLI --server=$DIOD_SOCKET \
+	    --aname=ctl read version
 '
 
 test_expect_success 'user can access net:/user' '
@@ -58,10 +59,10 @@ test_expect_success 'user can access net:/user' '
 '
 test_expect_success 'nobody cannot access net:/user' '
 	test_must_fail $SUDO -u nobody \
-	    $PATH_DIODCLI --aname=$exportdir read /user
+	    $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /user
 '
 test_expect_success 'root can access net:/user' '
-	$SUDO $PATH_DIODCLI --aname=$exportdir read /user
+	$SUDO $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /user
 '
 
 test_expect_success 'user cannot access net:/nobody' '
@@ -69,10 +70,10 @@ test_expect_success 'user cannot access net:/nobody' '
 '
 test_expect_success 'nobody can access net:/nobody' '
 	$SUDO -u nobody \
-	    $PATH_DIODCLI --aname=$exportdir read /nobody
+	    $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /nobody
 '
 test_expect_success 'root can access net:/nobody' '
-	$SUDO $PATH_DIODCLI --aname=$exportdir read /nobody
+	$SUDO $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /nobody
 '
 
 test_expect_success 'user cannot access net:/root' '
@@ -80,10 +81,10 @@ test_expect_success 'user cannot access net:/root' '
 '
 test_expect_success 'nobody cannot access net:/root' '
 	test_must_fail $SUDO -u nobody \
-	    $PATH_DIODCLI --aname=$exportdir read /root
+	    $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /root
 '
 test_expect_success 'root can access net:/root' '
-	$SUDO $PATH_DIODCLI --aname=$exportdir read /root
+	$SUDO $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /root
 '
 
 test_expect_success 'stop diod' '

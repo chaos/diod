@@ -29,21 +29,23 @@ test_expect_success 'the squash user can access ctl:/version' '
 '
 
 test_expect_success SUDO 'the root user can access ctl:/version' '
-	$SUDO $PATH_DIODCLI --aname=ctl read version
+	$SUDO $PATH_DIODCLI --server=$DIOD_SOCKET --aname=ctl read version
 '
 
 test_expect_success NOBODY 'the nobody user can access ctl:/version' '
-	$SUDO -u nobody $PATH_DIODCLI  --aname=ctl read version
+	$SUDO -u nobody $PATH_DIODCLI --server=$DIOD_SOCKET \
+	    --aname=ctl read version
 '
 
 test_expect_success 'the squash user can access net:/a' '
 	$PATH_DIODCLI --aname=$exportdir read /a
 '
 test_expect_success SUDO 'the root user can access net:/a' '
-	$SUDO $PATH_DIODCLI --aname=$exportdir read /a
+	$SUDO $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /a
 '
 test_expect_success NOBODY 'the nobody user can access net:/a' '
-	$SUDO -u nobody $PATH_DIODCLI --aname=$exportdir read /a
+	$SUDO -u nobody $PATH_DIODCLI --server=$DIOD_SOCKET \
+	    --aname=$exportdir read /a
 '
 
 test_expect_success 'stop diod' '
