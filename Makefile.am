@@ -6,7 +6,8 @@ SUBDIRS = \
 
 EXTRA_DIST = \
 	NEWS.md \
-	MAINTAINERS.md
+	MAINTAINERS.md \
+	SECURITY.md
 
 export DEB_BUILD_OPTIONS ?= nocheck terse
 deb: debian scripts/debbuild.sh
