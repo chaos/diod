@@ -1328,7 +1328,12 @@ diod_getlock (Npfid *fid, u8 type, u64 start, u64 length, u32 proc_id,
         np_uerror (ENOMEM);
         goto error;
     }
-    if (type != Lrdlck && type != Lwrlck) {
+    /* The Linux v9fs client always sets type to Lunlck in Tgetlock
+     * (since kernel commit 51b8b4fb3227, 2011) to ask whether any lock
+     * would conflict.  Treat that like a test for a write lock, which
+     * conflicts with any existing lock.
+     */
+    if (type != Lrdlck && type != Lwrlck && type != Lunlck) {
         np_uerror (EINVAL);
         goto error;
     }
