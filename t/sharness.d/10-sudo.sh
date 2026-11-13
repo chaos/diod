@@ -3,7 +3,10 @@
 ##
 if sudo --non-interactive true >/dev/null 2>&1; then
     test_set_prereq SUDO
-    SUDO="sudo -E"
+    #  Do not use -E: the security policy may refuse to preserve the
+    #  environment, and sudo only warns when it does, e.g. on the github
+    #  runners.  Tests must pass what they need on the command line.
+    SUDO="sudo"
 elif _probeenv=xyz doas -n printenv _probeenv >/dev/null 2>&1; then
     test_set_prereq SUDO
     SUDO="doas"

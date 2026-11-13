@@ -37,6 +37,7 @@ mountopts="trans=unix,uname=$(id -un)"
 test_flock=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock
 test_flock_single=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock_single
 test_atomic_create=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_atomic_create
+test_create=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_create
 
 # usage: create_file name [block_count]
 create_file() {
@@ -232,15 +233,16 @@ test_expect_success 'list long directory' '
 test_expect_success 'root cannot read file' '
 	test -f mnt/dir/a &&
 	test_must_fail $SUDO cat mnt/dir/a >/dev/null 2>rootread.err &&
-	grep "not permitted" rootread.err
+	test_grep "not permitted" rootread.err
 '
 test_expect_success STAT 'root cannot stat file' '
 	test_must_fail $SUDO $PATH_STAT mnt/dir/a >/dev/null 2>rootstat.err &&
-	grep "not permitted" rootstat.err
+	test_grep "not permitted" rootstat.err
 '
 test_expect_success 'root cannot create file' '
-	test_must_fail $SUDO touch mnt/dir/asroot 2>rootwrite.err &&
-	grep "not permitted" rootwrite.err
+	test_must_fail $SUDO $test_create mnt/dir/asroot 2>rootwrite.err &&
+	test_grep "not permitted" rootwrite.err &&
+	! test -e exp/dir/asroot
 '
 
 # Usage: makefiles dir
@@ -316,8 +318,9 @@ test_expect_success STAT 'create a file as me' '
 	test "$($PATH_STAT -c "%u:%g" exp/dir/asme)" = "$(id -u):$(id -g)"
 '
 test_expect_success 'root cannot create file' '
-	test_must_fail $SUDO touch mnt2/dir/asroot2 2>rootwrite2.err &&
-	grep "not permitted" rootwrite2.err
+	test_must_fail $SUDO $test_create mnt2/dir/asroot2 2>rootwrite2.err &&
+	test_grep "not permitted" rootwrite2.err &&
+	! test -e exp/dir/asroot2
 '
 test_expect_success 'unmount mnt2' '
 	$umountcmd mnt2

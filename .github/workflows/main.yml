@@ -49,7 +49,7 @@ jobs:
       run: make distcheck
     - name: get test results on failure
       if: failure()
-      run: find . -name test-suite.log | xargs cat >&2
+      run: scripts/check-logs.sh >&2
 
 
   build-rdma:
@@ -95,4 +95,4 @@ jobs:
       run: verbose=t make check
     - name: get test results on failure
       if: failure()
-      run: find . -name test-suite.log | xargs cat >&2
+      run: scripts/check-logs.sh >&2

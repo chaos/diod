@@ -147,12 +147,12 @@ test_expect_success XATTR 'clear user extended attributes' '
 test_expect_success DIODMOUNT 'mount helper fails with -ouname but no -oaccess' '
 	test_must_fail $SUDO $PATH_MOUNT_DIOD -ouname=fred foo mnt \
 	    2>mounthelp.out &&
-	grep "Common examples:" mounthelp.out
+	test_grep "Common examples:" mounthelp.out
 '
 test_expect_success DIODMOUNT 'mount helper fails with -oaccess but no -ouname' '
 	test_must_fail $SUDO $PATH_MOUNT_DIOD -oaccess=any foo mnt \
 	    2>mounthelp.out &&
-	grep "Common examples:" mounthelp.out
+	test_grep "Common examples:" mounthelp.out
 '
 test_expect_success DIODMOUNT 'mount helper works with unix domain socket, no auth' '
 	$SUDO $PATH_MOUNT_DIOD -n $DIOD_SOCKET:$exportdir mnt2

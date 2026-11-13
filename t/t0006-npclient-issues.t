@@ -30,7 +30,7 @@ test_expect_success XATTR 'setxattr with wild offset is rejected' '
 	touch export/xtestfile &&
         test_must_fail $PATH_DIODCLI bug-setxattr-offsetcheck \
             xtestfile user.wildoffset zzz 2>wildoffset.err &&
-        grep "pwrite xtestfile: Invalid argument" wildoffset.err
+        test_grep "pwrite xtestfile: Invalid argument" wildoffset.err
 '
 test_expect_success 'Twalk on an open fid works' '
 	mkdir -p export/subdir &&
