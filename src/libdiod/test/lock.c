@@ -194,9 +194,15 @@ static void test_getlock (Npcfid *root, char *path)
 
     check_getlock (fid1, Lrdlck, Lunlck);
     check_getlock (fid1, Lwrlck, Lunlck);
+    check_getlock (fid1, Lunlck, Lunlck);
     check_lock (fid2, Lrdlck, Lsuccess);
     check_getlock (fid1, Lrdlck, Lunlck);
     check_getlock (fid1, Lwrlck, Lwrlck);
+    check_getlock (fid1, Lunlck, Lwrlck); /* Linux v9fs sends Lunlck */
+    check_lock (fid2, Lunlck, Lsuccess);
+    check_lock (fid2, Lwrlck, Lsuccess);
+    check_getlock (fid1, Lrdlck, Lwrlck);
+    check_getlock (fid1, Lunlck, Lwrlck);
 
     ok (npc_clunk (fid2) == 0, "clunked fid");
     ok (npc_clunk (fid1) == 0, "clunked fid");
@@ -224,6 +230,11 @@ static void test_badparam (Npcfid *root, char *path)
     info.start = info.length = 0;
     ok (npc_lock (fid, 0, &info, &status) < 0 && np_rerror () == EINVAL,
         "npc_lock with illegal type value fails with EINVAL");
+
+    info.type = 42;
+    info.start = info.length = 0;
+    ok (npc_getlock (fid, &info, &info) < 0 && np_rerror () == EINVAL,
+        "npc_getlock with illegal type value fails with EINVAL");
 
     ok (npc_clunk (fid) == 0, "clunked fid");
 
