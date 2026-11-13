@@ -55,7 +55,7 @@ test_expect_success '9p delxattr user.foo works' '
 test_expect_success '9p delxattr user.noexist fails with ENODATA' '
 	test_must_fail $PATH_DIODCLI delxattr \
 	    xtestfile user.noexist 2>noexist.err &&
-	grep "No data available" noexist.err
+	test_grep "No data available" noexist.err
 '
 test_expect_success '9p getxattr user.foo fails' '
 	test_must_fail $PATH_DIODCLI getxattr xtestfile user.foo

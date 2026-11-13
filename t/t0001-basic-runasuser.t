@@ -91,14 +91,14 @@ test_expect_success SUDO 'cat net:/1/c fails as root' '
 	test_must_fail $SUDO \
 	    $PATH_DIODCLI --server=$DIOD_SOCKET \
 	        --aname=$exportdir read /1/c 2>rootcat.err &&
-	grep "Operation not permitted" rootcat.err
+	test_grep "Operation not permitted" rootcat.err
 '
 
 test_expect_success NOBODY 'cat net:/1/c fails as nobody' '
 	test_must_fail $SUDO -u nobody \
 	    $PATH_DIODCLI --server=$DIOD_SOCKET --aname=$exportdir read /1/c \
 	        2>nobodycat.err &&
-	grep "Operation not permitted" nobodycat.err
+	test_grep "Operation not permitted" nobodycat.err
 '
 
 test_expect_success 'stop diod' '
