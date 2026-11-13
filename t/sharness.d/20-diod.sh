@@ -7,7 +7,8 @@ PATH_DIODCLI=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcli
 # Set test prerequisites
 #
 # DIODMOUNT     mount.diod build was not suppressed
-# NOBODY        sudo -u nobody works
+# NOBODY        sudo -u nobody works and nobody can execute diodcli
+#               (e.g. the build tree is not under a 0700 home directory)
 #
 # CONFIG        diod has config file support
 # GANESHA-KMOD  ganesha support was built
@@ -30,7 +31,7 @@ if test -x $PATH_MOUNT_DIOD; then
 	test_set_prereq DIODMOUNT
 fi
 if test_have_prereq SUDO; then
-	if $SUDO -u nobody true 2>/dev/null; then
+	if $SUDO -u nobody test -x $PATH_DIODCLI 2>/dev/null; then
 		test_set_prereq NOBODY
 	fi
 fi
