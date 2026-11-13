@@ -53,6 +53,7 @@ check_PROGRAMS = \
 	test_flock \
 	test_flock_single \
 	test_atomic_create \
+	test_create \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -95,4 +96,8 @@ test_flock_single_LDADD = \
 
 test_atomic_create_SOURCES = test/atomic_create.c $(common_sources)
 test_atomic_create_LDADD = \
+	$(common_ldadd)
+
+test_create_SOURCES = test/create.c $(common_sources)
+test_create_LDADD = \
 	$(common_ldadd)
