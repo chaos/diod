@@ -130,7 +130,14 @@ test_under_diod() {
 	esac
 	log_file="$SHARNESS_TEST_NAME.diod.log"
 	if test -n "$TEST_UNDER_DIOD_ACTIVE"; then
-		test "$debug" = "t" || cleanup rm -f "${SHARNESS_TEST_DIRECTORY:-..}/$log_file"
+		# Keep the server log if the test failed so that CI can
+		# capture the 9P protocol trace.  $test_failure is escaped
+		# so it is evaluated by test_done(), not here.  Use if/fi
+		# rather than && so that a failed test does not alter the
+		# exit status cleanup() preserves.
+		log_path="${SHARNESS_TEST_DIRECTORY:-..}/$log_file"
+		test "$debug" = "t" \
+		    || cleanup "if test \$test_failure -eq 0; then rm -f '$log_path'; fi"
 		return
 	fi
 	if test "$verbose" = "t"; then
