@@ -17,6 +17,7 @@ TESTSCRIPTS = \
 	t0004-npclient-basic.t \
 	t0005-npclient-xattr.t \
 	t0006-npclient-issues.t \
+	t0007-configfile.t \
 	t0010-v9fs-runasuser.t \
 	t0011-v9fs-allsquash.t \
 	t0012-v9fs-multiuser.t \
