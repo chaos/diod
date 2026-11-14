@@ -621,11 +621,24 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
     if (path) {
         lua_State *L = luaL_newstate ();
 
+        /* Only base, table, string, and math are made available to the
+         * config file.  io and os are deliberately left out.
+         * N.B. in lua 5.1, luaopen_*() set the library globals as a side
+         * effect.  In 5.2 and later they only leave the library table on
+         * the stack and luaL_requiref() is needed to make it global.
+         */
+#if LUA_VERSION_NUM >= 502
+        luaL_requiref (L, "_G", luaopen_base, 1);
+        luaL_requiref (L, LUA_TABLIBNAME, luaopen_table, 1);
+        luaL_requiref (L, LUA_STRLIBNAME, luaopen_string, 1);
+        luaL_requiref (L, LUA_MATHLIBNAME, luaopen_math, 1);
+        lua_pop (L, 4);
+#else
         luaopen_base (L);
         luaopen_table (L);
-        //luaopen_io (L);
         luaopen_string (L);
         luaopen_math (L);
+#endif
 
         if (luaL_loadfile (L, path) || lua_pcall (L, 0, 0, 0))
             msg_exit ("%s", lua_tostring (L, -1));
