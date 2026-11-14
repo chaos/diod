@@ -31,7 +31,7 @@ test_ldadd = \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libtap/libtap.a \
-	$(LUA_LIB) \
+	$(LUA_LIBS) \
 	$(CAP_LIBS) \
 	$(LIBPTHREAD)
 

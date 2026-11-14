@@ -4,7 +4,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	$(MUNGE_CFLAGS) \
 	$(CAP_CFLAGS) \
-	$(LUA_INCLUDE)
+	$(LUA_CFLAGS)
 AM_CPPFLAGS += $(ncurses_CPPFLAGS)
 
 sbin_PROGRAMS = \
@@ -22,7 +22,7 @@ common_ldadd = \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libdiod/libdiod.a \
-	$(LIBPTHREAD) $(LUA_LIB) $(MUNGE_LIBS) $(CAP_LIBS) \
+	$(LIBPTHREAD) $(LUA_LIBS) $(MUNGE_LIBS) $(CAP_LIBS) \
 	$(LIBIBVERBS) $(LIBRDMACM) $(LIBTCMALLOC) $(ncurses_LIBS)
 
 common_sources = \
