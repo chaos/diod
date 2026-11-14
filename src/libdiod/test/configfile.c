@@ -194,6 +194,43 @@ exports = { \"/g/g1\" }\n";
     unlink (path);
 }
 
+/* The lua standard libraries that diod opens should be usable from the
+ * config file.  Before lua 5.2 this worked by side effect of luaopen_*();
+ * after, luaL_requiref() is required to set the globals.
+ */
+void test_config3 (void)
+{
+    char *s;
+    char path[] = "/tmp/config.XXXXXX";
+    const char *content = "\
+squashuser = string.format (\"%s%d\", \"nobody\", 1)\n\
+nwthreads = math.floor (64.5)\n\
+listen = { table.concat ({ \"1.2.3.4\", \"42\" }, \":\") }\n\
+exports = { \"/g/g1\" }\n";
+
+    diag ("checking config 3 (standard libraries)");
+
+    create_testfile (path, content);
+    diod_conf_init ();
+    diod_conf_init_config_file (path);
+
+    s = diod_conf_get_squashuser ();
+    is (s, "nobody1", "string library is available");
+    ok (diod_conf_get_nwthreads () == 64, "math library is available");
+
+    ListIterator itr;
+    if (!(itr = list_iterator_create (diod_conf_get_listen ())))
+        BAIL_OUT ("could not create list iterator for listen");
+    ok ((s = list_next (itr)) != NULL
+        && !strcmp (s, "1.2.3.4:42")
+        && list_next (itr) == NULL,
+        "table library is available");
+    list_iterator_destroy (itr);
+
+    diod_conf_fini ();
+    unlink (path);
+}
+
 int main (int argc, char *argv[])
 {
 #ifdef HAVE_CONFIG_FILE
@@ -205,6 +242,7 @@ int main (int argc, char *argv[])
 
     test_config1 ();
     test_config2 ();
+    test_config3 ();
 
     diod_log_fini ();
 
