@@ -28,13 +28,7 @@ test_under_diod unixsocketroot \
     --debug=0x1 \
     --export=$exportdir
 
-if which getfattr setfattr >/dev/null 2>&1; then
-	touch probe.file
-	getfattr -n user.badname probe.file 2>probe.err
-	if ! grep -q "Operation not supported" probe.err; then
-		test_set_prereq XATTR
-	fi
-fi
+test_set_xattr_prereq
 test_set_kernel_prereq 9P_FS_SECURITY
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,

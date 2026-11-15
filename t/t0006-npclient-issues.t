@@ -10,13 +10,7 @@ test_under_diod socketpair \
     --allsquash --no-auth \
     --export $DIOD_SERVER_ANAME --export=ctl
 
-if which getfattr >/dev/null 2>&1; then
-	touch probe.file
-	getfattr -n user.badname probe.file 2>probe.err
-	if ! grep -q "Operation not supported" probe.err; then
-		test_set_prereq XATTR
-	fi
-fi
+test_set_xattr_prereq
 
 diodlog="${SHARNESS_TEST_DIRECTORY}/${SHARNESS_TEST_NAME}.diod.log"
 

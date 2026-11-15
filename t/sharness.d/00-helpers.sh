@@ -18,6 +18,23 @@ test_grep() {
 }
 
 ##
+# Extended attributes
+##
+
+# Set the XATTR prereq if attr(1) tools are installed and user extended
+# attributes work in the trash directory.  Whether xattrs work depends on
+# the file system the build tree is on, so probe rather than infer.
+#
+# usage: test_set_xattr_prereq
+test_set_xattr_prereq() {
+    which getfattr setfattr >/dev/null 2>&1 || return 0
+
+    touch xattr-probe.file || return 0
+    getfattr -n user.badname xattr-probe.file 2>xattr-probe.err
+    grep -q "Operation not supported" xattr-probe.err || test_set_prereq XATTR
+}
+
+##
 # Kernel configuration
 ##
 
