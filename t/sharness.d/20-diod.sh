@@ -49,6 +49,23 @@ if PATH_FLOCK=$(which flock) >/dev/null; then
 	test_set_prereq FLOCK
 fi
 
+# Report the mount(8) and kernel 9p details that a v9fs test failure may
+# turn on, once per run.  mount(8) does not say which of these is
+# responsible when a mount fails.
+report_9p_environment() {
+	# test_report_kernel_config() reports once per run and says so in
+	# its return status, which gates the rest.
+	test_report_kernel_config '9P*' 'NET_9P*' || return 0
+
+	say "mount: $(mount --version 2>/dev/null | head -1)"
+	if grep -qw 9p /proc/filesystems 2>/dev/null; then
+		say "9p: registered in /proc/filesystems"
+	else
+		say "9p: not registered in /proc/filesystems"
+	fi
+}
+report_9p_environment
+
 # Usage: waitsock sockpath [retries]
 waitsock() {
 	local sock=$1
