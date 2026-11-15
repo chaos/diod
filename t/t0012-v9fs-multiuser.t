@@ -28,13 +28,8 @@ test_under_diod unixsocketroot \
     --debug=0x1 \
     --export=$exportdir
 
-if PATH_GETFATTR=$(which getfattr) && PATH_SETFATTR=$(which setfattr); then
-	touch probe.file
-	$PATH_GETFATTR -n user.badname probe.file 2>probe.err
-	if ! grep -q "Operation not supported" probe.err; then
-		test_set_prereq XATTR
-	fi
-fi
+test_set_xattr_prereq
+test_set_kernel_prereq 9P_FS_SECURITY
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
@@ -54,20 +49,20 @@ test_expect_success 'mount filesystem with access=client on mnt' '
 '
 test_expect_success STAT 'create a file' '
 	dd if=/dev/zero of=mnt/file count=10 &&
-	test $($PATH_STAT -c %u exp/file) -eq $(id -u)
+	test $(stat -c %u exp/file) -eq $(id -u)
 '
 test_expect_success STAT,NOBODY 'chown it to nobody' '
 	$SUDO chown nobody mnt/file &&
-	test $($PATH_STAT -c %u exp/file) -eq $(id -u nobody)
+	test $(stat -c %u exp/file) -eq $(id -u nobody)
 '
 test_expect_success STAT 'create a file owner 0 group 0' '
 	touch exp/a &&
 	$SUDO chown 0:0 exp/a &&
-	test "$($PATH_STAT -c %u:%g mnt/a)" = "0:0"
+	test "$(stat -c %u:%g mnt/a)" = "0:0"
 '
 test_expect_success STAT 'chgrp the file to gid 42' '
 	$SUDO chgrp  42 mnt/a &&
-	test "$($PATH_STAT -c %u:%g mnt/a)" = "0:42"
+	test "$(stat -c %u:%g mnt/a)" = "0:42"
 '
 test_expect_success 'create a directory with gid 44 and setgid bit' '
 	mkdir mnt/dir &&
@@ -76,13 +71,13 @@ test_expect_success 'create a directory with gid 44 and setgid bit' '
 '
 test_expect_success STAT 'a file in that directory gets gid 44' '
 	touch mnt/dir/a &&
-	test "$($PATH_STAT -c %g mnt/dir/a)" = 44
+	test "$(stat -c %g mnt/dir/a)" = 44
 '
 test_expect_success XATTR 'set trusted extended attributes' '
 	touch mnt/file.xattr &&
-	$SUDO $PATH_SETFATTR -n trusted.foo -v fooval mnt/file.xattr &&
-	$SUDO $PATH_SETFATTR -n trusted.bar -v barval mnt/file.xattr &&
-	$SUDO $PATH_SETFATTR -n trusted.baz -v bazval mnt/file.xattr &&
+	$SUDO setfattr -n trusted.foo -v fooval mnt/file.xattr &&
+	$SUDO setfattr -n trusted.bar -v barval mnt/file.xattr &&
+	$SUDO setfattr -n trusted.baz -v bazval mnt/file.xattr &&
 	cat >trusted.exp <<-EOT &&
 	# file: mnt/file.xattr
 	trusted.bar="barval"
@@ -90,21 +85,21 @@ test_expect_success XATTR 'set trusted extended attributes' '
 	trusted.foo="fooval"
 
 	EOT
-	$SUDO $PATH_GETFATTR -m- -d  mnt/file.xattr >trusted.out &&
+	$SUDO getfattr -m- -d  mnt/file.xattr >trusted.out &&
 	test_cmp trusted.exp trusted.out
 '
 test_expect_success XATTR 'clear trusted extended attributes' '
-	$SUDO $PATH_SETFATTR -x trusted.foo mnt/file.xattr &&
-	$SUDO $PATH_SETFATTR -x trusted.bar mnt/file.xattr &&
-	$SUDO $PATH_SETFATTR -x trusted.baz mnt/file.xattr &&
-	$SUDO $PATH_GETFATTR -m- -d mnt/file.xattr >trustedx.out &&
+	$SUDO setfattr -x trusted.foo mnt/file.xattr &&
+	$SUDO setfattr -x trusted.bar mnt/file.xattr &&
+	$SUDO setfattr -x trusted.baz mnt/file.xattr &&
+	$SUDO getfattr -m- -d mnt/file.xattr >trustedx.out &&
 	test_must_fail test $(wc -l <trustedx.out) -gt 0
 '
-test_expect_success XATTR,SECURITY 'set security extended attributes' '
+test_expect_success XATTR,9P_FS_SECURITY 'set security extended attributes' '
 	touch mnt/file2.xattr &&
-	$SUDO $PATH_SETFATTR -n security.foo -v fooval mnt/file2.xattr &&
-	$SUDO $PATH_SETFATTR -n security.bar -v barval mnt/file2.xattr &&
-	$SUDO $PATH_SETFATTR -n security.baz -v bazval mnt/file2.xattr &&
+	$SUDO setfattr -n security.foo -v fooval mnt/file2.xattr &&
+	$SUDO setfattr -n security.bar -v barval mnt/file2.xattr &&
+	$SUDO setfattr -n security.baz -v bazval mnt/file2.xattr &&
 	cat >security.exp <<-EOT &&
 	# file: mnt/file2.xattr
 	security.bar="barval"
@@ -112,21 +107,21 @@ test_expect_success XATTR,SECURITY 'set security extended attributes' '
 	security.foo="fooval"
 
 	EOT
-	$SUDO $PATH_GETFATTR -m- -d  mnt/file2.xattr >security.out &&
+	$SUDO getfattr -m- -d  mnt/file2.xattr >security.out &&
 	test_cmp security.exp security.out
 '
-test_expect_success XATTR,SECURITY 'clear security extended attributes' '
-	$SUDO $PATH_SETFATTR -x security.foo mnt/file2.xattr &&
-	$SUDO $PATH_SETFATTR -x security.bar mnt/file2.xattr &&
-	$SUDO $PATH_SETFATTR -x security.baz mnt/file2.xattr &&
-	$SUDO $PATH_GETFATTR -m- -d mnt/file2.xattr >securityx.out &&
+test_expect_success XATTR,9P_FS_SECURITY 'clear security extended attributes' '
+	$SUDO setfattr -x security.foo mnt/file2.xattr &&
+	$SUDO setfattr -x security.bar mnt/file2.xattr &&
+	$SUDO setfattr -x security.baz mnt/file2.xattr &&
+	$SUDO getfattr -m- -d mnt/file2.xattr >securityx.out &&
 	test_must_fail test $(wc -l <securityx.out) -gt 0
 '
 test_expect_success XATTR 'set user extended attributes' '
 	touch mnt/file3.xattr &&
-	$PATH_SETFATTR -n user.foo -v fooval mnt/file3.xattr &&
-	$PATH_SETFATTR -n user.bar -v barval mnt/file3.xattr &&
-	$PATH_SETFATTR -n user.baz -v bazval mnt/file3.xattr &&
+	setfattr -n user.foo -v fooval mnt/file3.xattr &&
+	setfattr -n user.bar -v barval mnt/file3.xattr &&
+	setfattr -n user.baz -v bazval mnt/file3.xattr &&
 	cat >user.exp <<-EOT &&
 	# file: mnt/file3.xattr
 	user.bar="barval"
@@ -134,14 +129,14 @@ test_expect_success XATTR 'set user extended attributes' '
 	user.foo="fooval"
 
 	EOT
-	$PATH_GETFATTR -m- -d  mnt/file3.xattr >user.out &&
+	getfattr -m- -d  mnt/file3.xattr >user.out &&
 	test_cmp user.exp user.out
 '
 test_expect_success XATTR 'clear user extended attributes' '
-	$PATH_SETFATTR -x user.foo mnt/file3.xattr &&
-	$PATH_SETFATTR -x user.bar mnt/file3.xattr &&
-	$PATH_SETFATTR -x user.baz mnt/file3.xattr &&
-	$PATH_GETFATTR -m- -d mnt/file3.xattr >userx.out &&
+	setfattr -x user.foo mnt/file3.xattr &&
+	setfattr -x user.bar mnt/file3.xattr &&
+	setfattr -x user.baz mnt/file3.xattr &&
+	getfattr -m- -d mnt/file3.xattr >userx.out &&
 	test_must_fail test $(wc -l <userx.out) -gt 0
 '
 test_expect_success DIODMOUNT 'mount helper fails with -ouname but no -oaccess' '

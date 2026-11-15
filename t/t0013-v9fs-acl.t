@@ -20,8 +20,13 @@ if ! test_have_prereq MULTIUSER; then
         skip_all='diod was configured with --disable-multiuser'
         test_done
 fi
-if ! PATH_GETFACL=$(which getfacl) || ! PATH_SETFACL=$(which setfacl); then
+if ! which getfacl setfacl >/dev/null 2>&1; then
         skip_all='getfacl/setfacl is not installed'
+        test_done
+fi
+test_set_kernel_prereq 9P_FS_POSIX_ACL
+if ! test_have_prereq 9P_FS_POSIX_ACL; then
+        skip_all='kernel 9p was built without POSIX ACL support'
         test_done
 fi
 
@@ -48,7 +53,7 @@ test_expect_success 'mount filesystem with -o posixacl on mnt' '
 test_expect_success 'create a test file and setfacl -m u:root:r' '
 	touch mnt/testfile &&
 	chmod 644 mnt/testfile &&
-	$PATH_SETFACL -m u:root:r mnt/testfile
+	setfacl -m u:root:r mnt/testfile
 '
 test_expect_success 'getfacl confirms ACL is set' '
 	cat >getfacl.exp <<-EOT &&
@@ -59,15 +64,15 @@ test_expect_success 'getfacl confirms ACL is set' '
 	other::r--
 
 	EOT
-	$PATH_GETFACL --omit-header mnt/testfile >getfacl.out &&
+	getfacl --omit-header mnt/testfile >getfacl.out &&
 	test_cmp getfacl.exp getfacl.out
 '
 test_expect_success 'it is set on the server too' '
-	$PATH_GETFACL --omit-header exp/testfile >exp_getfacl.out &&
+	getfacl --omit-header exp/testfile >exp_getfacl.out &&
 	test_cmp getfacl.exp exp_getfacl.out
 '
 test_expect_success 'setfacl -x u:root' '
-	$PATH_SETFACL -x u:root mnt/testfile
+	setfacl -x u:root mnt/testfile
 '
 test_expect_success 'getfacl confirms ACL is unset' '
 	cat >getfaclx.exp <<-EOT &&
@@ -77,17 +82,17 @@ test_expect_success 'getfacl confirms ACL is unset' '
 	other::r--
 
 	EOT
-	$PATH_GETFACL --omit-header mnt/testfile >getfaclx.out &&
+	getfacl --omit-header mnt/testfile >getfaclx.out &&
 	test_cmp getfaclx.exp getfaclx.out
 '
 test_expect_success 'it is unset on the server too' '
-	$PATH_GETFACL --omit-header exp/testfile >exp_getfaclx.out &&
+	getfacl --omit-header exp/testfile >exp_getfaclx.out &&
 	test_cmp getfaclx.exp exp_getfaclx.out
 '
 test_expect_success 'create a test directory and setfacl -d -m u:root:r' '
 	mkdir mnt/testdir &&
 	chmod 755 mnt/testdir &&
-	$SUDO $PATH_SETFACL -d -m u:root:r mnt/testdir
+	$SUDO setfacl -d -m u:root:r mnt/testdir
 '
 test_expect_success 'getfacl confirms ACL is set' '
 	cat >getfacld.exp <<-EOT &&
@@ -101,15 +106,15 @@ test_expect_success 'getfacl confirms ACL is set' '
 	default:other::r-x
 
 	EOT
-	$PATH_GETFACL --omit-header mnt/testdir >getfacld.out &&
+	getfacl --omit-header mnt/testdir >getfacld.out &&
 	test_cmp getfacld.exp getfacld.out
 '
 test_expect_success 'it is set on the server too' '
-	$PATH_GETFACL --omit-header exp/testdir >exp_getfacld.out &&
+	getfacl --omit-header exp/testdir >exp_getfacld.out &&
 	test_cmp getfacld.exp exp_getfacld.out
 '
 test_expect_success 'setfacl -d -x u:root' '
-	$PATH_SETFACL -d -x u:root mnt/testdir
+	setfacl -d -x u:root mnt/testdir
 '
 test_expect_success 'getfacl confirms ACL is unset' '
 	cat >getfacldx.exp <<-EOT &&
@@ -122,11 +127,11 @@ test_expect_success 'getfacl confirms ACL is unset' '
 	default:other::r-x
 
 	EOT
-	$PATH_GETFACL --omit-header mnt/testdir >getfacldx.out &&
+	getfacl --omit-header mnt/testdir >getfacldx.out &&
 	test_cmp getfacldx.exp getfacldx.out
 '
 test_expect_success 'it is unset on the server too' '
-	$PATH_GETFACL --omit-header exp/testdir >exp_getfacldx.out &&
+	getfacl --omit-header exp/testdir >exp_getfacldx.out &&
 	test_cmp getfacldx.exp exp_getfacldx.out
 '
 test_expect_success 'unmount mnt' '

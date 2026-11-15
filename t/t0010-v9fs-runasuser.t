@@ -48,19 +48,19 @@ create_file() {
 
 # usage: stat_min path
 stat_min() {
-	$PATH_STAT -c "mode=%f owner=%u:%g size=%s blocks=%b blocksize=%B links=%h device=%t:%T mtime=%y ctime=%z atime=%x" $1
+	stat -c "mode=%f owner=%u:%g size=%s blocks=%b blocksize=%B links=%h device=%t:%T mtime=%y ctime=%z atime=%x" $1
 }
 
 # usage: statfs_min path
 statfs_min() {
-	$PATH_STAT -f -c "blocks=% bsize=%S files=%c namelen=%l" $1
+	stat -f -c "blocks=% bsize=%S files=%c namelen=%l" $1
 }
 
 # Usage: check_chmod src-path dst-path
 check_chmod () {
 	for i in 0 1 2 3 4 5 6 7; do
 	    chmod $i$i$i $1
-	    test "$($PATH_STAT -c %a $1)" = "$($PATH_STAT -c %a $2)" || return 1
+	    test "$(stat -c %a $1)" = "$(stat -c %a $2)" || return 1
 	done
 	return 0;
 }
@@ -143,9 +143,9 @@ test_expect_success 'create a large file, then fsync+fdatasync' '
 	cmp exp/dir/c mnt/dir/c
 '
 test_expect_success STAT 'append 3 bytes to a file' '
-	orig_size=$($PATH_STAT -c "%s" mnt/dir/a) &&
+	orig_size=$(stat -c "%s" mnt/dir/a) &&
 	echo -n foo >>mnt/dir/a &&
-	new_size=$($PATH_STAT -c "%s" mnt/dir/a) &&
+	new_size=$(stat -c "%s" mnt/dir/a) &&
 	test $new_size -eq $(($orig_size+3)) &&
 	cmp exp/dir/a mnt/dir/a
 '
@@ -157,10 +157,10 @@ test_expect_success 'create a file' '
 	create_file mnt/dir/d 1024
 '
 test_expect_success FLOCK 'flock-write a file' '
-	$PATH_FLOCK -x mnt/dir/d true
+	flock -x mnt/dir/d true
 '
 test_expect_success FLOCK 'flock-read a file' '
-	$PATH_FLOCK -s mnt/dir/d true
+	flock -s mnt/dir/d true
 '
 test_expect_success 'run flock concurrency test' '
 	$test_flock  mnt/dir/d
@@ -192,7 +192,7 @@ test_expect_success 'mktemp -d works' '
 '
 test_expect_success STAT 'create a fifo' '
 	mkfifo mnt/fifo &&
-	test $($PATH_STAT -c %F exp/fifo) = fifo
+	test $(stat -c %F exp/fifo) = fifo
 '
 test_expect_success 'df works' '
 	df mnt
@@ -236,7 +236,7 @@ test_expect_success 'root cannot read file' '
 	test_grep "not permitted" rootread.err
 '
 test_expect_success STAT 'root cannot stat file' '
-	test_must_fail $SUDO $PATH_STAT mnt/dir/a >/dev/null 2>rootstat.err &&
+	test_must_fail $SUDO stat mnt/dir/a >/dev/null 2>rootstat.err &&
 	test_grep "not permitted" rootstat.err
 '
 test_expect_success 'root cannot create file' '
@@ -270,7 +270,7 @@ checkmodes () {
     for u in 0 1 2 3 4 5 6 7; do
         for g in 0 1 2 3 4 5 6 7; do
             for o in 0 1 2 3 4 5 6 7; do
-                test "$($PATH_STAT -c "%a" $path/f.$seq)" -eq "$u$g$o" || rc=1
+                test "$(stat -c "%a" $path/f.$seq)" -eq "$u$g$o" || rc=1
                 seq=$(($seq + 1))
             done
         done
@@ -295,7 +295,7 @@ test_expect_success 'mount filesystem with access=any on mnt2' '
 '
 test_expect_success STAT 'create file as root on mnt2' '
 	$SUDO touch mnt2/dir/asroot &&
-	test "$($PATH_STAT -c "%u:%g" exp/dir/asroot)" = "$(id -u):$(id -g)"
+	test "$(stat -c "%u:%g" exp/dir/asroot)" = "$(id -u):$(id -g)"
 '
 test_expect_success 'create file on server, appears on client' '
 	touch exp/dir/z &&
@@ -315,7 +315,7 @@ test_expect_success 'mount filesystem with access=user on mnt2' '
 '
 test_expect_success STAT 'create a file as me' '
 	create_file mnt2/dir/asme &&
-	test "$($PATH_STAT -c "%u:%g" exp/dir/asme)" = "$(id -u):$(id -g)"
+	test "$(stat -c "%u:%g" exp/dir/asme)" = "$(id -u):$(id -g)"
 '
 test_expect_success 'root cannot create file' '
 	test_must_fail $SUDO $test_create mnt2/dir/asroot2 2>rootwrite2.err &&
