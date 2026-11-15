@@ -35,6 +35,7 @@ if PATH_GETFATTR=$(which getfattr) && PATH_SETFATTR=$(which setfattr); then
 		test_set_prereq XATTR
 	fi
 fi
+test_set_kernel_prereq 9P_FS_SECURITY
 
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
@@ -100,7 +101,7 @@ test_expect_success XATTR 'clear trusted extended attributes' '
 	$SUDO $PATH_GETFATTR -m- -d mnt/file.xattr >trustedx.out &&
 	test_must_fail test $(wc -l <trustedx.out) -gt 0
 '
-test_expect_success XATTR,SECURITY 'set security extended attributes' '
+test_expect_success XATTR,9P_FS_SECURITY 'set security extended attributes' '
 	touch mnt/file2.xattr &&
 	$SUDO $PATH_SETFATTR -n security.foo -v fooval mnt/file2.xattr &&
 	$SUDO $PATH_SETFATTR -n security.bar -v barval mnt/file2.xattr &&
@@ -115,7 +116,7 @@ test_expect_success XATTR,SECURITY 'set security extended attributes' '
 	$SUDO $PATH_GETFATTR -m- -d  mnt/file2.xattr >security.out &&
 	test_cmp security.exp security.out
 '
-test_expect_success XATTR,SECURITY 'clear security extended attributes' '
+test_expect_success XATTR,9P_FS_SECURITY 'clear security extended attributes' '
 	$SUDO $PATH_SETFATTR -x security.foo mnt/file2.xattr &&
 	$SUDO $PATH_SETFATTR -x security.bar mnt/file2.xattr &&
 	$SUDO $PATH_SETFATTR -x security.baz mnt/file2.xattr &&
