@@ -24,6 +24,11 @@ if ! PATH_GETFACL=$(which getfacl) || ! PATH_SETFACL=$(which setfacl); then
         skip_all='getfacl/setfacl is not installed'
         test_done
 fi
+test_set_kernel_prereq 9P_FS_POSIX_ACL
+if ! test_have_prereq 9P_FS_POSIX_ACL; then
+        skip_all='kernel 9p was built without POSIX ACL support'
+        test_done
+fi
 
 exportdir=$SHARNESS_TRASH_DIRECTORY/exp
 test_under_diod unixsocketroot \
