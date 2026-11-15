@@ -42,10 +42,10 @@ if test_have_prereq SUDO; then
 		*) test_set_prereq V9FS_CLIENT ;;
 	esac
 fi
-if PATH_STAT=$(which stat) >/dev/null; then
+if which stat >/dev/null 2>&1; then
 	test_set_prereq STAT
 fi
-if PATH_FLOCK=$(which flock) >/dev/null; then
+if which flock >/dev/null 2>&1; then
 	test_set_prereq FLOCK
 fi
 

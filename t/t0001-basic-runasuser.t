@@ -32,8 +32,8 @@ test_expect_success STAT 'permissions on unix domain socket are ok' '
 	drwxr-xr-x
 	srw-rw-rw-
 	EOT
-	$PATH_STAT -c "%A" $(dirname $DIOD_SOCKET) >stat.out &&
-	$PATH_STAT -c "%A" $DIOD_SOCKET >>stat.out &&
+	stat -c "%A" $(dirname $DIOD_SOCKET) >stat.out &&
+	stat -c "%A" $DIOD_SOCKET >>stat.out &&
 	test_cmp stat.exp stat.out
 '
 

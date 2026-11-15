@@ -10,9 +10,9 @@ test_under_diod socketpair \
     --allsquash --no-auth \
     --export $DIOD_SERVER_ANAME --export=ctl
 
-if PATH_GETFATTR=$(which getfattr); then
+if which getfattr >/dev/null 2>&1; then
 	touch probe.file
-	$PATH_GETFATTR -n user.badname probe.file 2>probe.err
+	getfattr -n user.badname probe.file 2>probe.err
 	if ! grep -q "Operation not supported" probe.err; then
 		test_set_prereq XATTR
 	fi

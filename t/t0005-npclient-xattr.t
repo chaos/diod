@@ -4,7 +4,7 @@ test_description='check extended attribute support with libnpclient'
 
 . `dirname $0`/sharness.sh
 
-if ! PATH_GETFATTR=$(which getfattr); then
+if ! which getfattr >/dev/null 2>&1; then
         skip_all='getfattr is not installed'
         test_done
 fi
@@ -16,7 +16,7 @@ test_under_diod socketpair \
     --export=$DIOD_SERVER_ANAME --export=ctl
 
 touch probe.file
-$PATH_GETFATTR -n user.badname probe.file 2>probe.err
+getfattr -n user.badname probe.file 2>probe.err
 if grep -q "Operation not supported" probe.err; then
 	skip_all='skipping xattr tests - no support in test file system'
 	test_done
@@ -38,7 +38,7 @@ test_expect_success 'the attribute is set' '
 	cat >xattr.exp <<-EOT &&
 	fooval
 	EOT
-	$PATH_GETFATTR --only-values -n user.foo export/xtestfile >xattr.out &&
+	getfattr --only-values -n user.foo export/xtestfile >xattr.out &&
 	echo >>xattr.out &&
 	test_cmp xattr.exp xattr.out
 '
