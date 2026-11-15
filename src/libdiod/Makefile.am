@@ -4,7 +4,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir) \
 	$(MUNGE_CFLAGS) \
 	$(CAP_CFLAGS) \
-	$(LUA_INCLUDE)
+	$(LUA_CFLAGS)
 
 noinst_LIBRARIES = libdiod.a
 
@@ -41,7 +41,7 @@ test_ldadd = \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(builddir)/libdiod.a \
 	$(top_builddir)/src/libtap/libtap.a \
-	$(LUA_LIB) \
+	$(LUA_LIBS) \
 	$(CAP_LIBS) \
 	$(MUNGE_LIBS) \
 	$(LIBPTHREAD)

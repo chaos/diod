@@ -138,13 +138,22 @@ AC_ARG_ENABLE([config],
   [AS_HELP_STRING([--disable-config], [disable lua config file support])])
 
 AS_IF([test "x$enable_config" != "xno"], [
-  AX_PROG_LUA([5.1],[5.5])
-  AX_LUA_HEADERS([],[
-    AC_MSG_ERROR([Install lua headers or configure with --disable-config])
+  dnl Find lua with pkg-config.  The module is named "lua" on systems that
+  dnl ship one lua (e.g. fedora, arch), and is versioned on systems that
+  dnl allow several to be installed side by side (e.g. debian), so try the
+  dnl unversioned name first, then versioned ones newest first.
+  lua_module=
+  AC_MSG_CHECKING([for lua with pkg-config])
+  for try in lua lua5.5 lua5.4 lua5.3 lua5.2 lua5.1; do
+    PKG_CHECK_EXISTS([$try >= 5.1], [lua_module=$try; break])
+  done
+  AS_IF([test -z "$lua_module"], [
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([Install lua devel package or configure with --disable-config])
+  ], [
+    AC_MSG_RESULT([$lua_module])
   ])
-  AX_LUA_LIBS([],[
-    AC_MSG_ERROR([Install lua libs or configure with --disable-config])
-  ])
+  PKG_CHECK_MODULES([LUA], [$lua_module >= 5.1])
   AC_DEFINE([HAVE_CONFIG_FILE], [1], [lua config file support])
 ])
 
