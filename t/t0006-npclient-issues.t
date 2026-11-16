@@ -59,6 +59,12 @@ test_expect_success 'access to an unexported aname fails with EPERM' '
 test_expect_success 'Tflush works' '
 	$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tflush
 '
+test_expect_success 'Tflush of a request blocked in the server works' '
+	mkfifo export/fifo &&
+	$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tflush --timeout=30 \
+	    --fifo=fifo --unblock=export/fifo &&
+	rm -f export/fifo
+'
 
 # Usage: test_tattach users threads getattrs iterations
 test_tattach=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tattach \

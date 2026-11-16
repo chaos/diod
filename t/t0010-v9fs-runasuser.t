@@ -214,14 +214,6 @@ test_expect_success TCLSH 'tclsh file delete -force works' '
 	) &&
 	! test -d mnt/tcldir/x
 '
-# Trigger a Tflush
-test_expect_success 'start a streaming write then abort it' '
-	dd if=/dev/zero of=mnt/stream bs=1024k count=500 status=noxfer &
-	pid=$! &&
-	sleep 0.5 &&
-	kill -15 $pid &&
-	test_expect_code 143 wait $pid
-'
 test_expect_success 'create 1000 files in a exp/bigdir' '
 	mkdir -p exp/bigdir &&
 	for i in $(seq 1 1000); do \
