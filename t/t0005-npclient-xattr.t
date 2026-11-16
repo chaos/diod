@@ -4,6 +4,11 @@ test_description='check extended attribute support with libnpclient'
 
 . `dirname $0`/sharness.sh
 
+if ! which getfattr setfattr >/dev/null 2>&1; then
+	skip_all='getfattr/setfattr is not installed'
+	test_done
+fi
+
 export DIOD_SERVER_ANAME=$SHARNESS_TRASH_DIRECTORY/export
 test_under_diod socketpair \
     --config-file=/dev/null --debug=0x1 \
