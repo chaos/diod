@@ -160,5 +160,33 @@ root attachment.
 @X_SBINDIR@/diod
 .br
 @X_SYSCONFDIR@/diod.conf
+.SH CAVEATS
+\fImount -t diod\fR runs the mount.diod (8) helper, which handles
+authentication and must be installed on the client.  A client without
+it, such as a small or embedded system, can still mount a server that
+does not require authentication with \fImount -t 9p\fR.
+.LP
+However, some builds of the util-linux \fImount(8)\fR look up a new
+mount right after making it, as the user running \fImount(8)\fR,
+normally root.  When that is denied, \fImount(8)\fR unmounts the file
+system again and reports
+.LP
+.nf
+    filesystem was mounted, but any subsequent operation failed:
+    Operation not permitted
+.fi
+.LP
+It is denied whenever root may not access the file system, for example
+with \fIaccess=UID\fR for another UID, or with \fBdiod\fR running as
+\fB--runas-uid\fR.  Affected builds use the kernel's file descriptor
+based mount API and list \fIfd-based-mount\fR in the output of
+\fImount --version\fR.  \fImount -t diod\fR is not affected, and neither
+is the BusyBox \fImount\fR, which uses the classic mount system call.
+.LP
+To work around it with \fImount -t 9p\fR, set
+\fBLIBMOUNT_FORCE_MOUNT2=always\fR in the environment of \fImount(8)\fR,
+which makes it use the classic mount system call.  That variable needs
+util-linux 2.40 or later, is ignored when \fImount(8)\fR runs setuid,
+and is dropped by \fIsudo\fR unless passed with \fIenv\fR (1).
 .SH "SEE ALSO"
 diod.conf (5), mount.diod (8), hosts_access (5)
