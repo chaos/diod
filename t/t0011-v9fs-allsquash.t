@@ -62,25 +62,25 @@ test_expect_success NOBODY,STAT 'nobody can create a directory, mode 755' '
 test_expect_success 'user can create a file in rootdir' '
 	dd if=/dev/zero count=1 of=mnt/rootdir/userfile
 '
-test_expect_success 'user can create a file in nobodydir' '
+test_expect_success NOBODY,STAT 'user can create a file in nobodydir' '
 	dd if=/dev/zero count=1 of=mnt/nobodydir/userfile
 '
 
 test_expect_success SUDO 'root can create a file in user directory' '
 	$SUDO dd if=/dev/zero count=1 of=mnt/userdir/rootfile
 '
-test_expect_success SUDO 'root can create a file in nobody directory' '
+test_expect_success SUDO,NOBODY,STAT 'root can create a file in nobody directory' '
 	$SUDO dd if=/dev/zero count=1 of=mnt/nobodydir/rootfile
 '
 
-test_expect_success NOBODY 'nobody cannot create a file in nobody directory' '
+test_expect_success NOBODY,STAT 'nobody cannot create a file in nobody directory' '
 	test_must_fail sh -c "$SUDO -u nobody \
 	    dd if=/dev/zero count=1 of=mnt/nobodydir/nobodyfile"
 '
-test_expect_success 'user can chmod 777 nobody directory' '
+test_expect_success NOBODY,STAT 'user can chmod 777 nobody directory' '
 	chmod 777 mnt/nobodydir
 '
-test_expect_success NOBODY 'now nobody can create a file in nobody directory' '
+test_expect_success NOBODY,STAT 'now nobody can create a file in nobody directory' '
 	$SUDO -u nobody dd if=/dev/zero count=1 of=mnt/nobodydir/nobodyfile
 '
 test_expect_success 'unmount mnt' '
