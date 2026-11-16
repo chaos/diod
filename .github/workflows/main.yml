@@ -87,8 +87,8 @@ jobs:
       run: sudo chmod go+rx ~
     - name: autogen
       run: ./autogen.sh
-    - name: configure without auth, config, multiuser
-      run: ./configure --disable-auth --disable-config --disable-multiuser
+    - name: configure without auth, config, multiuser, diodmount
+      run: ./configure --disable-auth --disable-config --disable-multiuser --disable-diodmount
     - name: make
       run: make
     - name: make check
