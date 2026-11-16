@@ -20,6 +20,10 @@ if ! test_have_prereq MULTIUSER; then
         skip_all='diod was configured with --disable-multiuser'
         test_done
 fi
+if ! test_have_prereq DIODMOUNT; then
+        skip_all='diod was configured with --disable-diodmount'
+        test_done
+fi
 if ! which getfacl setfacl >/dev/null 2>&1; then
         skip_all='getfacl/setfacl is not installed'
         test_done
