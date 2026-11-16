@@ -16,6 +16,10 @@ if ! test_have_prereq V9FS_CLIENT; then
 	skip_all='linux 9p kernel client is required'
 	test_done
 fi
+if ! test_have_prereq DIODMOUNT; then
+	skip_all='diod was configured with --disable-diodmount'
+	test_done
+fi
 
 exportdir=$SHARNESS_TRASH_DIRECTORY/exp
 test_under_diod unixsocket \
@@ -27,8 +31,8 @@ test_under_diod unixsocket \
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
 umountcmd="$SUDO umount -l"
-mountcmd="$SUDO mount -n -t 9p"
-mountopts="trans=unix,uname=$(id -un)"
+mountcmd="$SUDO $PATH_MOUNT_DIOD -n"
+mountopts="uname=$(id -un)"
 
 pathwalk=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_pathwalk
 
@@ -39,8 +43,7 @@ test_expect_success 'wait for server socket' '
 	waitsock $DIOD_SOCKET 30
 '
 test_expect_success 'mount filesystem with access=<uid> mnt' '
-	$mountcmd -oaname=$exportdir,$mountopts,access=$(id -u) \
-	    $DIOD_SOCKET mnt
+	$mountcmd -o$mountopts,access=$(id -u) $DIOD_SOCKET:$exportdir mnt
 '
 test_expect_success 'run pathwalk create' '
 	$pathwalk mnt/pw --create --files=500 --quiet
