@@ -50,6 +50,7 @@ TESTS = \
 	test_configfile.t \
 	test_read.t \
 	test_directory.t \
+	test_rename.t \
 	test_lock.t \
 	test_multiuser.t
 
@@ -66,6 +67,9 @@ test_read_t_LDADD = $(test_ldadd)
 
 test_directory_t_SOURCES = test/directory.c
 test_directory_t_LDADD = $(test_ldadd)
+
+test_rename_t_SOURCES = test/rename.c
+test_rename_t_LDADD = $(test_ldadd)
 
 test_lock_t_SOURCES = test/lock.c
 test_lock_t_LDADD = $(test_ldadd)
