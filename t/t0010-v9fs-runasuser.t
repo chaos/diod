@@ -16,6 +16,10 @@ if ! test_have_prereq V9FS_CLIENT; then
         skip_all='linux 9p kernel client is required'
         test_done
 fi
+if ! test_have_prereq DIODMOUNT; then
+        skip_all='diod was configured with --disable-diodmount'
+        test_done
+fi
 if PATH_TCLSH=$(which tclsh); then
 	test_set_prereq TCLSH
 fi
@@ -31,8 +35,7 @@ test_under_diod unixsocket \
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
 umountcmd="$SUDO umount -l"
-mountcmd="$SUDO mount -n -t 9p"
-mountopts="trans=unix,uname=$(id -un)"
+mountcmd="$SUDO $PATH_MOUNT_DIOD -n"
 
 test_flock=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock
 test_flock_single=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_flock_single
@@ -81,8 +84,7 @@ test_expect_success 'wait for server socket' '
 	waitsock $DIOD_SOCKET 30
 '
 test_expect_success 'mount filesystem with access=<uid> on mnt' '
-	$mountcmd -oaname=$exportdir,$mountopts,access=$(id -u) \
-	    $DIOD_SOCKET mnt
+	$mountcmd -ouname=$(id -un),access=$(id -u) $DIOD_SOCKET:$exportdir mnt
 '
 # On alpine/busybox, %T decodes as type=UNKNOWN.  Use %t instead.
 test_expect_success STAT 'file system type is v9fs' '
@@ -212,14 +214,6 @@ test_expect_success TCLSH 'tclsh file delete -force works' '
 	) &&
 	! test -d mnt/tcldir/x
 '
-# Trigger a Tflush
-test_expect_success 'start a streaming write then abort it' '
-	dd if=/dev/zero of=mnt/stream bs=1024k count=500 status=noxfer &
-	pid=$! &&
-	sleep 0.5 &&
-	kill -15 $pid &&
-	test_expect_code 143 wait $pid
-'
 test_expect_success 'create 1000 files in a exp/bigdir' '
 	mkdir -p exp/bigdir &&
 	for i in $(seq 1 1000); do \
@@ -289,9 +283,7 @@ test_expect_success 'creating a file with O_CREAT|OEXCL fails if file exists' '
 	$test_atomic_create mnt/atomic_create
 '
 test_expect_success 'mount filesystem with access=any on mnt2' '
-	$mountcmd \
-	    -oaname=$exportdir,$mountopts,access=any \
-	    $DIOD_SOCKET mnt2
+	$mountcmd -ouname=$(id -un),access=any $DIOD_SOCKET:$exportdir mnt2
 '
 test_expect_success STAT 'create file as root on mnt2' '
 	$SUDO touch mnt2/dir/asroot &&
@@ -309,9 +301,7 @@ test_expect_success 'unmount mnt2' '
 	$umountcmd mnt2
 '
 test_expect_success 'mount filesystem with access=user on mnt2' '
-	$mountcmd \
-	    -oaname=$exportdir,$mountopts,access=user \
-	    $DIOD_SOCKET mnt2
+	$mountcmd -ouname=$(id -un),access=user $DIOD_SOCKET:$exportdir mnt2
 '
 test_expect_success STAT 'create a file as me' '
 	create_file mnt2/dir/asme &&
@@ -326,9 +316,8 @@ test_expect_success 'unmount mnt2' '
 	$umountcmd mnt2
 '
 test_expect_success 'mount filesystem with uname=root,access=any fails' '
-	test_must_fail $mountcmd \
-	    -oaname=$exportdir,uname=root,trans=unix,access=any \
-	    $DIOD_SOCKET mnt2
+	test_must_fail $mountcmd -ouname=root,access=any \
+	    $DIOD_SOCKET:$exportdir mnt2
 '
 test_expect_success 'clean up mnt2, if mount unexpectedly succeeded' '
 	$umountcmd mnt2 2>/dev/null || :

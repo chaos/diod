@@ -18,6 +18,28 @@ test_grep() {
 }
 
 ##
+# mount(8)
+##
+
+# Set the MOUNT_NOSTAT prereq if mount(8) does not stat a mount after
+# making it.  libmount built with the fd-based mount API does, as the
+# user calling mount(8) -- root, normally -- and tears the mount down
+# when that stat is denied, which it is for a 9p file system in every
+# access= mode except any.  libmount reports the feature in
+# "mount --version".  See issue #181.
+#
+# usage: test_set_mount_nostat_prereq
+test_set_mount_nostat_prereq() {
+    which mount >/dev/null 2>&1 || return 0
+
+    # The fd-based mount API is what makes mount(8) stat the new mount.
+    if mount --version 2>/dev/null | grep -q fd-based-mount; then
+        return 0
+    fi
+    test_set_prereq MOUNT_NOSTAT
+}
+
+##
 # Extended attributes
 ##
 

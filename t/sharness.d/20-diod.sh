@@ -18,6 +18,8 @@ PATH_DIODCLI=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcli
 # V9FS_CLIENT   9p linux filesystem is available
 # STAT          stat(1) is available
 # FLOCK		flock(1) is available
+# MOUNT_NOSTAT  mount(8) does not stat a mount after making it, so it
+#               can mount a 9p file system that excludes root (#181)
 #
 ##
 get_buildopts() {
@@ -48,6 +50,7 @@ fi
 if which flock >/dev/null 2>&1; then
 	test_set_prereq FLOCK
 fi
+test_set_mount_nostat_prereq
 
 # Report the mount(8) and kernel 9p details that a v9fs test failure may
 # turn on, once per run.  mount(8) does not say which of these is

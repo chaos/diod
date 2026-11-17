@@ -18,6 +18,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <getopt.h>
@@ -36,6 +37,8 @@
 #include "src/libdiod/diod_auth.h"
 
 static void flush_series (Npcfsys *fs, Npcfid *root);
+static void flush_blocked (Npcfsys *fs, Npcfid *root, const char *fifo,
+                           const char *unblock);
 
 static void usage (void)
 {
@@ -46,18 +49,24 @@ static void usage (void)
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -t,--timeout SECS     give up after specified seconds\n"
 "   -p,--privport         connect from a privileged port (root user only)\n"
+"   -f,--fifo PATH        flush a Tlopen of the named FIFO, blocked in the\n"
+"                         server, then open UNBLOCK to let it complete\n"
+"   -U,--unblock PATH     local path of the same FIFO (required with -f)\n"
 );
     exit (1);
 }
 
-static const char *options = "a:s:m:u:p";
+static const char *options = "a:s:m:u:t:pf:U:";
 
 static const struct option longopts[] = {
     {"aname",   required_argument,      0, 'a'},
     {"server",  required_argument,      0, 's'},
     {"msize",   required_argument,      0, 'm'},
     {"uid",     required_argument,      0, 'u'},
+    {"timeout", required_argument,      0, 't'},
     {"privport",no_argument,            0, 'p'},
+    {"fifo",    required_argument,      0, 'f'},
+    {"unblock", required_argument,      0, 'U'},
     {0, 0, 0, 0},
 };
 
@@ -68,6 +77,8 @@ int main (int argc, char *argv[])
     int msize = 65536;
     uid_t uid = geteuid ();
     int flags = 0;
+    char *fifo = NULL;
+    char *unblock = NULL;
     int server_fd;
     bool not_my_serverfd = false;
     Npcfsys *fs;
@@ -91,14 +102,25 @@ int main (int argc, char *argv[])
             case 'u':   /* --uid UID */
                 uid = strtoul (optarg, NULL, 10);
                 break;
+            case 't':   /* --timeout SECS */
+                alarm (strtoul (optarg, NULL, 10));
+                break;
             case 'p':   /* --privport */
                 flags |= DIOD_SOCK_PRIVPORT;
+                break;
+            case 'f':   /* --fifo PATH */
+                fifo = optarg;
+                break;
+            case 'U':   /* --unblock PATH */
+                unblock = optarg;
                 break;
             default:
                 usage ();
         }
     }
     if (optind != argc)
+        usage ();
+    if (!fifo != !unblock)
         usage ();
 
     const char *s = getenv ("DIOD_SERVER_FD");
@@ -123,7 +145,10 @@ int main (int argc, char *argv[])
     if (afid && npc_clunk (afid) < 0)
         errn_exit (np_rerror (), "npc_clunk afid");
 
-    flush_series (fs, root);
+    if (fifo)
+        flush_blocked (fs, root, fifo, unblock);
+    else
+        flush_series (fs, root);
 
     if (npc_clunk (root) < 0)
         errn_exit (np_rerror (), "npc_clunk root");
@@ -223,6 +248,115 @@ static void flush_series (Npcfsys *fs, Npcfid *root)
     msg ("received either 199 or 200 Rfsyncs");
 
     (void)npc_clunk (f);
+}
+
+/* Unblock the FIFO by opening it for reading.  This blocks until the
+ * server's open for writing completes, so do it in a thread while this
+ * process reads replies.
+ */
+static void *unblock_thread (void *arg)
+{
+    const char *path = arg;
+    int fd;
+
+    if ((fd = open (path, O_RDONLY)) < 0)
+        err_exit ("open %s", path);
+    close (fd);
+    return NULL;
+}
+
+/* Send a Tlopen of a FIFO that has no reader, so the server's open(2)
+ * blocks in a worker thread.  Flush it, then unblock the FIFO.  The
+ * flushed request must not be answered after its Rflush.
+ */
+static void flush_blocked (Npcfsys *fs, Npcfid *root, const char *fifo,
+                           const char *unblock)
+{
+    Npfcall *tc, *rc;
+    Npcfid *f;
+    u16 tag, flushtag;
+    pthread_t t;
+    int orig_reply_received = 0;
+    int rflush_received = 0;
+    int e;
+
+    if (!(f = npc_walk (root, (char *)fifo)))
+        errn_exit (np_rerror (), "walk %s", fifo);
+
+    if (!(tc = np_create_tlopen (f->fid, O_WRONLY)))
+        msg_exit ("out of memory");
+    flushtag = npc_get_id (fs->tagpool);
+    np_set_tag (tc, flushtag);
+    if (np_trans_send (fs->trans, tc) < 0)
+        errn_exit (np_rerror (), "np_trans_write");
+    free (tc);
+    msg ("sent Tlopen of %s", fifo);
+
+    /* The open cannot complete until the FIFO has a reader, so give the
+     * server time to pick it up, making the flush land on a running
+     * request rather than a queued one.
+     */
+    sleep (1);
+
+    if (!(tc = np_create_tflush (flushtag)))
+        msg_exit ("out of memory");
+    tag = npc_get_id (fs->tagpool);
+    np_set_tag (tc, tag);
+    if (np_trans_send (fs->trans, tc) < 0)
+        errn_exit (np_rerror (), "np_trans_write");
+    free (tc);
+    msg ("sent Tflush");
+
+    if ((e = pthread_create (&t, NULL, unblock_thread, (void *)unblock)))
+        errn_exit (e, "pthread_create");
+
+    while (!rflush_received) {
+        if (np_trans_recv (fs->trans, &rc, fs->msize) < 0)
+            errn_exit (np_rerror (), "np_trans_read");
+        if (rc == NULL)
+            msg_exit ("np_trans_read: unexpected EOF");
+        if (rc->tag == flushtag) {
+            if (orig_reply_received)
+                msg_exit ("received two replies to the flushed request");
+            orig_reply_received = 1;
+            msg ("received reply to the flushed request (type %d)",
+                 rc->type);
+        }
+        else if (rc->type == Rflush)
+            rflush_received = 1;
+        else
+            msg_exit ("received unexpected reply type (%d)", rc->type);
+        free (rc);
+    }
+    msg ("received Rflush");
+
+    /* The open completes once the FIFO is unblocked.  Make sure its reply,
+     * if the server sends one, did not come after the Rflush: a request
+     * sent now is answered only after anything already in flight.
+     */
+    if ((e = pthread_join (t, NULL)))
+        errn_exit (e, "pthread_join");
+    if (!(tc = np_create_tclunk (f->fid)))
+        msg_exit ("out of memory");
+    tag = npc_get_id (fs->tagpool);
+    np_set_tag (tc, tag);
+    if (np_trans_send (fs->trans, tc) < 0)
+        errn_exit (np_rerror (), "np_trans_write");
+    free (tc);
+    for (;;) {
+        if (np_trans_recv (fs->trans, &rc, fs->msize) < 0)
+            errn_exit (np_rerror (), "np_trans_read");
+        if (rc == NULL)
+            msg_exit ("np_trans_read: unexpected EOF");
+        if (rc->tag == flushtag)
+            msg_exit ("received reply to the flushed request after Rflush");
+        if (rc->tag == tag) {
+            free (rc);
+            break;
+        }
+        msg_exit ("received unexpected reply type (%d)", rc->type);
+    }
+    msg ("no reply to the flushed request after Rflush");
 }
 
 /*

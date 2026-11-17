@@ -20,6 +20,10 @@ if ! test_have_prereq V9FS_CLIENT; then
         skip_all='linux 9p kernel client is required'
         test_done
 fi
+if ! test_have_prereq DIODMOUNT; then
+        skip_all='diod was configured with --disable-diodmount'
+        test_done
+fi
 if ! PATH_POSTMARK=$(which postmark 2>/dev/null); then
 	skip_all='postmark is not installed'
 	test_done
@@ -36,8 +40,8 @@ test_under_diod unixsocket \
 # gnome probes for .Trash, autorun.inf, etc asynchronously on new mounts,
 # causing umount to fail with EBUSY if still in progress.  Therefore --lazy.
 umountcmd="$SUDO umount -l"
-mountcmd="$SUDO mount -n -t 9p"
-mountopts="trans=unix,uname=$(id -un)"
+mountcmd="$SUDO $PATH_MOUNT_DIOD -n"
+mountopts="uname=$(id -un)"
 
 test_expect_success 'create export/mount directories' '
 	mkdir -p exp mnt
@@ -46,8 +50,7 @@ test_expect_success 'wait for server socket' '
 	waitsock $DIOD_SOCKET 30
 '
 test_expect_success 'mount filesystem with access=<uid> mnt' '
-	$mountcmd -oaname=$exportdir,$mountopts,access=$(id -u) \
-	    $DIOD_SOCKET mnt
+	$mountcmd -o$mountopts,access=$(id -u) $DIOD_SOCKET:$exportdir mnt
 '
 test_expect_success 'run postmark' '
 	(cd mnt && $PATH_POSTMARK <<-EOT
