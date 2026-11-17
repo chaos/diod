@@ -136,6 +136,8 @@ size[4] Rlerror tag[2] ecode[4]
 ```
 lerror replaces the reply message used in a successful call. ecode is a numerical Linux errno.
 
+Linux errno values are not the same on every architecture; for example 95 is EOPNOTSUPP on most, but ENOTSOCK on MIPS. ecode uses the generic Linux numbering found in `include/uapi/asm-generic/errno-base.h` and `include/uapi/asm-generic/errno.h`, which most Linux architectures (including x86, arm, arm64, and riscv) use as is. A client or server whose native errno values differ, such as Linux on alpha, mips, parisc, or sparc, or a non-Linux system such as FreeBSD, must translate to and from the generic values.
+
 See the Plan 9 manual page for
 [error(5)](http://9p.io/magic/man2html/5/error).
 
