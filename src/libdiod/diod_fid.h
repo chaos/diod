@@ -27,6 +27,9 @@ typedef struct {
     IOCtx           ioctx;
     Xattr           xattr;
     int             flags;
+    pthread_mutex_t lock;          // protects stream_* fields
+    u64             stream_offset; // next offset for nonseekable files
+    int             stream_busy;   // stream I/O is in progress
 } Fid;
 
 Fid *diod_fidalloc (Npfid *fid, Npstr *ns);

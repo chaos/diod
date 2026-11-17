@@ -462,6 +462,74 @@ error_quiet:
     return 0;
 }
 
+/* Some files, such as relayfs or tracefs trace_pipe, are opened with
+ * nonseekable_open() or stream_open() and reject pread/pwrite with ESPIPE.
+ * 9P has no unpositioned read or write, so emulate one: if the requested
+ * offset is where the previous stream I/O on this fid left off, use
+ * read/write.  Any other offset fails with ESPIPE, as it would locally.
+ * Reads and writes share one offset, as they share one file position on
+ * the client.
+ *
+ * Stream I/O may block indefinitely, so the fid lock is not held across
+ * it.  Instead, a request that arrives while another is in progress on
+ * the same fid fails with ESPIPE.  That is not a normal v9fs workload:
+ * the client kernel serializes read(2) and write(2) on an open file, so
+ * overlapping requests on one fid come only from concurrent pread(2) or
+ * pwrite(2), which fail with ESPIPE on a local stream file too.
+ */
+static int
+_stream_begin (Fid *f, u64 offset)
+{
+    int rc = 0;
+
+    xpthread_mutex_lock (&f->lock);
+    if (f->stream_busy || offset != f->stream_offset) {
+        errno = ESPIPE;
+        rc = -1;
+    }
+    else
+        f->stream_busy = 1;
+    xpthread_mutex_unlock (&f->lock);
+    return rc;
+}
+
+static void
+_stream_end (Fid *f, ssize_t n)
+{
+    int saved_errno = errno;
+
+    xpthread_mutex_lock (&f->lock);
+    if (n > 0)
+        f->stream_offset += n;
+    f->stream_busy = 0;
+    xpthread_mutex_unlock (&f->lock);
+    errno = saved_errno;
+}
+
+static ssize_t
+_stream_read (Fid *f, void *buf, u32 count, u64 offset)
+{
+    ssize_t n;
+
+    if (_stream_begin (f, offset) < 0)
+        return -1;
+    n = ioctx_read (f->ioctx, buf, count);
+    _stream_end (f, n);
+    return n;
+}
+
+static ssize_t
+_stream_write (Fid *f, void *buf, u32 count, u64 offset)
+{
+    ssize_t n;
+
+    if (_stream_begin (f, offset) < 0)
+        return -1;
+    n = ioctx_write (f->ioctx, buf, count);
+    _stream_end (f, n);
+    return n;
+}
+
 /* Tread - read from a file or directory.
  */
 Npfcall*
@@ -482,8 +550,11 @@ diod_read (Npfid *fid, u64 offset, u32 count, Npreq *req)
     }
     if (f->flags & DIOD_FID_FLAGS_XATTR)
         n = xattr_pread (f->xattr, ret->u.rread.data, count, offset);
-    else
+    else {
         n = ioctx_pread (f->ioctx, ret->u.rread.data, count, offset);
+        if (n < 0 && errno == ESPIPE)
+            n = _stream_read (f, ret->u.rread.data, count, offset);
+    }
     if (n < 0) {
         np_uerror (errno);
         goto error_quiet;
@@ -516,8 +587,11 @@ diod_write (Npfid *fid, u64 offset, u32 count, u8 *data, Npreq *req)
     }
     if (f->flags & DIOD_FID_FLAGS_XATTR)
         n = xattr_pwrite (f->xattr, data, count, offset);
-    else
+    else {
         n = ioctx_pwrite (f->ioctx, data, count, offset);
+        if (n < 0 && errno == ESPIPE)
+            n = _stream_write (f, data, count, offset);
+    }
     if (n < 0) {
         np_uerror (errno);
         goto error_quiet;

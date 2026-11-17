@@ -29,6 +29,8 @@ char    *path_s (Path path);
 int     ioctx_open (Npfid *fid, u32 flags, u32 mode);
 int     ioctx_close (Npfid *fid, int seterrno);
 int     ioctx_pread (IOCtx ioctx, void *buf, size_t count, off_t offset);
+int     ioctx_read (IOCtx ioctx, void *buf, size_t count);
+int     ioctx_write (IOCtx ioctx, const void *buf, size_t count);
 int     ioctx_pwrite (IOCtx ioctx, const void *buf, size_t count, off_t offset);
 struct dirent *ioctx_readdir(IOCtx ioctx, long *new_offset);
 void    ioctx_rewinddir (IOCtx ioctx);

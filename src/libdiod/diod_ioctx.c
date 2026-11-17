@@ -255,6 +255,18 @@ ioctx_pread (IOCtx ioctx, void *buf, size_t count, off_t offset)
 }
 
 int
+ioctx_read (IOCtx ioctx, void *buf, size_t count)
+{
+    return read (ioctx->fd, buf, count);
+}
+
+int
+ioctx_write (IOCtx ioctx, const void *buf, size_t count)
+{
+    return write (ioctx->fd, buf, count);
+}
+
+int
 ioctx_pwrite (IOCtx ioctx, const void *buf, size_t count, off_t offset)
 {
     return pwrite (ioctx->fd, buf, count, offset);
