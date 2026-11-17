@@ -51,6 +51,7 @@ TESTS = \
 	test_read.t \
 	test_directory.t \
 	test_rename.t \
+	test_stream.t \
 	test_lock.t \
 	test_multiuser.t
 
@@ -70,6 +71,9 @@ test_directory_t_LDADD = $(test_ldadd)
 
 test_rename_t_SOURCES = test/rename.c
 test_rename_t_LDADD = $(test_ldadd)
+
+test_stream_t_SOURCES = test/stream.c
+test_stream_t_LDADD = $(test_ldadd)
 
 test_lock_t_SOURCES = test/lock.c
 test_lock_t_LDADD = $(test_ldadd)
