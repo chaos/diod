@@ -157,6 +157,15 @@ static void
 np_conn_cleanup(void *a)
 {
 	Npconn *conn = (Npconn *)a;
+	int oldstate;
+
+	/* np_srv_shutdown() may cancel this thread while it is already
+	 * tearing down after EOF.  Teardown contains cancellation points
+	 * (cond wait, close, logging), so a cancel landing here would
+	 * exit the thread before np_srv_remove_conn_post() decrements
+	 * srv->conncount, leaving np_srv_shutdown() waiting forever.
+	 */
+	pthread_setcancelstate (PTHREAD_CANCEL_DISABLE, &oldstate);
 
 	np_conn_flush (conn);
 
