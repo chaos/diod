@@ -54,6 +54,7 @@ check_PROGRAMS = \
 	test_flock_single \
 	test_atomic_create \
 	test_create \
+	test_vsockcheck \
 	$(TESTS)
 
 TEST_EXTENSIONS = .t
@@ -101,3 +102,5 @@ test_atomic_create_LDADD = \
 test_create_SOURCES = test/create.c $(common_sources)
 test_create_LDADD = \
 	$(common_ldadd)
+
+test_vsockcheck_SOURCES = test/vsockcheck.c
