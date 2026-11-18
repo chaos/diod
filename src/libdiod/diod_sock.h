@@ -30,6 +30,18 @@ int  diod_sock_listen (List l, struct pollfd **fdsp, int *nfdsp);
 int diod_sock_connect (char *name, int flags);
 int diod_sock_connect_inet (char *host, char *port, int flags);
 int diod_sock_connect_unix (char *path, int flags);
+int diod_sock_connect_vsock (char *addr, int flags);
+
+/* Return true if 'name' is a vsock address, "vsock:[CID:]PORT".
+ */
+#define DIOD_SOCK_VSOCK_PREFIX "vsock:"
+int diod_sock_is_vsock (const char *name);
+
+/* Parse "vsock:[CID:]PORT" into cid and port.  If CID is omitted, use
+ * 'default_cid'.  Return 0 on success, -1 with errno set on failure.
+ */
+int diod_sock_parse_vsock (const char *name, unsigned int default_cid,
+                           unsigned int *cid, unsigned int *port);
 
 #endif
 
