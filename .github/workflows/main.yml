@@ -33,6 +33,8 @@ jobs:
         CC: ${{matrix.cc}}
     - name: allow nobody user into home
       run: sudo chmod go+rx ~
+    - name: load vsock loopback module for vsock tests
+      run: sudo modprobe vsock_loopback || true
     - name: autogen
       run: ./autogen.sh
     - name: configure
