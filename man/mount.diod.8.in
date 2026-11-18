@@ -108,8 +108,14 @@ connected to a \fBdiod\fR server and ignores \fIhost\fR in the
 device specification, and the \fIport=n\fR option.
 .TP
 .I "msize=N"
-The msize is the max 9P packet payload size.
-The default is 65512 (65536-24)
+The msize is the maximum size of a 9P message, including its header.
+The default is 1048576 (1M), which is also the largest msize \fBdiod\fR
+supports.
+A larger msize allows larger reads and writes per request, which helps
+large sequential I/O, at the cost of more memory per request on the
+client and server.
+The kernel limits msize to the maximum supported by the transport,
+which for \fItrans=fd\fR is 1M as of Linux 5.15 and 64K before that.
 .TP
 .I "version=9p20000.L"
 Select 9P protocol version.
