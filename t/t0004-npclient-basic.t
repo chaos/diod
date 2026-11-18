@@ -55,7 +55,7 @@ test_expect_success '9p write of testfile2 works' '
 	$PATH_DIODCLI write testfile2.copy <testfile2
 '
 test_expect_success STAT '9p stat reports expected values' '
-	stat -c "mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o links=%h device=%t:%T mtime=%Y ctime=%Z atime=%X" testfile2 >stat.exp &&
+	stat -c "mode=%f owner=%u:%g size=%s blocks=%b blocksize=%o links=%h device=%t:%T mtime=%Y ctime=%Z atime=%X" export/testfile2.copy >stat.exp &&
 	$PATH_DIODCLI stat testfile2.copy >stat.out &&
 	test_cmp stat.exp stat.out
 '
