@@ -14,6 +14,8 @@ The variables are described below.
 .TP
 .I "listen = { ""IP:PORT"" [,""IP:PORT"",...] }"
 List the interfaces and ports that \fBdiod\fR should listen on.
+Each entry may be IP:PORT, vsock:[CID:]PORT, or /path/to/unix_domain_socket.
+See \fBdiod\fR(8) for details.
 The default is "0.0.0.0:564".
 .TP
 .I "exports = { ""/path"" [, ""/path"", ...] }"

@@ -21,8 +21,16 @@ the two options may be set to the same value.
 .TP
 .I "-l, --listen address"
 Set the listen address.  The address may be in the form of
-HOST:PORT, IP:PORT, or /path/to/unix_domain_socket form (default 0.0.0.0:564).
+HOST:PORT, IP:PORT, vsock:[CID:]PORT, or /path/to/unix_domain_socket form
+(default 0.0.0.0:564).
 IPv6 addresses must be enclosed in square brackets.
+A vsock address listens for connections from virtual machines over
+\fIvsock(7)\fR.
+If CID is omitted, any local CID is accepted, which is usual on a host.
+Clients connecting over vsock are identified by "vsock:CID" for the
+purposes of export host restrictions and logging, so an export may be
+limited to particular guests with e.g. \fIhosts = "vsock:[3-5]"\fR.
+The \fIprivport\fR export option does not apply to vsock connections.
 This option may be specified more than once.
 It overrides the \fIlisten\fR config file setting.
 .TP

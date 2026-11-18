@@ -32,6 +32,13 @@ it refers to the path to a UNIX domain socket.
 .LP
 IPv6 addresses may be used for the \fIhost\fR portion of the mount spec if they
 are enclosed in square brackets.
+.LP
+If the \fIhost\fR portion of the mount spec is \fIvsock:CID\fR, the
+connection is made over \fIvsock(7)\fR to that context ID, using the
+port given by \fIport=n\fR (default 564).
+A virtual machine mounting from its host would use \fIvsock:2\fR,
+e.g. vsock:2:/export.
+The \fI--privport\fR option cannot be used with vsock.
 .SH COMMAND LINE OPTIONS
 .TP
 .I "-f, --fake-mount"
@@ -157,4 +164,4 @@ The debug level is global, i.e. it applies to all 9P file systems and
 it remains set after the file system is unmounted.
 The default is \fIdebug=0\fR.
 .SH "SEE ALSO"
-diod (8)
+diod (8), vsock (7)
