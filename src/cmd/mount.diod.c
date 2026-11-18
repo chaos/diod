@@ -74,7 +74,7 @@ static const struct option longopts[] = {
 #define NBD_SET_ADDR    _IOW( 0xab, 11, char* )
 #define NBD_SET_PATH    _IOW( 0xab, 12, char* )
 
-#define DIOD_DEFAULT_MSIZE 65536
+#define DIOD_DEFAULT_MSIZE 1048576
 static uid_t _uname2uid (char *uname);
 static void _diod_mount (Opt o, int rfd, int wfd, char *spec, char *dir,
                          int vopt, int fopt, int nopt);
