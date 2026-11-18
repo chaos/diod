@@ -133,6 +133,73 @@ test_expect_success 'stop diod again' '
 	diod_term $DIOD_SOCKET
 '
 
+# Client identity for the hosts attribute: with hostname_lookup = 0, a
+# client on a UNIX domain socket is "localhost".  The users attribute is
+# not implemented and must deny every attach rather than allow it.
+# Only the first exports entry whose path matches is considered.
+test_expect_success 'create export directories for access restrictions' '
+	mkdir -p restrict/hostsok restrict/hostsno restrict/users \
+	    restrict/firstmatch/sub &&
+	for dir in hostsok hostsno users firstmatch firstmatch/sub; do \
+	    echo TESTING >restrict/$dir/file || return 1; \
+	done &&
+	rdir=$SHARNESS_TRASH_DIRECTORY/restrict
+'
+
+test_expect_success 'create config file with access restrictions' '
+	cat >restrict.conf <<-EOT
+	auth_required = 0
+	hostname_lookup = 0
+	exports = {
+	    "ctl",
+	    { path="$rdir/hostsok", hosts="nosuchhost,localhost" },
+	    { path="$rdir/hostsno", hosts="nosuchhost[1-4]" },
+	    { path="$rdir/users", users="$(id -un)" },
+	    { path="$rdir/firstmatch/sub", hosts="nosuchhost" },
+	    "$rdir/firstmatch",
+	}
+	EOT
+'
+
+test_expect_success 'start diod with access restrictions' '
+	diod_start --config-file=$SHARNESS_TRASH_DIRECTORY/restrict.conf \
+	    --runas-uid=$(id -u)
+'
+
+test_expect_success 'export with matching hosts can be attached' '
+	echo TESTING >hostsok.exp &&
+	$PATH_DIODCLI --aname=$rdir/hostsok read /file >hostsok.out &&
+	test_cmp hostsok.exp hostsok.out
+'
+
+test_expect_success 'export without matching hosts cannot be attached' '
+	test_must_fail $PATH_DIODCLI --aname=$rdir/hostsno read /file \
+	    2>hostsno.err &&
+	test_grep "Operation not permitted" hostsno.err
+'
+
+test_expect_success 'export with users cannot be attached' '
+	test_must_fail $PATH_DIODCLI --aname=$rdir/users read /file \
+	    2>users.err &&
+	test_grep "Operation not permitted" users.err
+'
+
+test_expect_success 'first matching export denies even if a later one allows' '
+	test_must_fail $PATH_DIODCLI --aname=$rdir/firstmatch/sub read /file \
+	    2>first.err &&
+	test_grep "Operation not permitted" first.err
+'
+
+test_expect_success 'parent of a denied export can be attached' '
+	echo TESTING >parent.exp &&
+	$PATH_DIODCLI --aname=$rdir/firstmatch read /file >parent.out &&
+	test_cmp parent.exp parent.out
+'
+
+test_expect_success 'stop diod with access restrictions' '
+	diod_term $DIOD_SOCKET
+'
+
 test_done
 
 # vi: set ft=sh
