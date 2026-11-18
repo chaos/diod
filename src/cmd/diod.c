@@ -96,7 +96,7 @@ usage()
 "   -f,--foreground         do not daemonize (default)\n"
 "   -r,--rfdno              service connected client on read file descriptor\n"
 "   -w,--wfdno              service connected client on write file descriptor\n"
-"   -l,--listen IP:PORT     set interface to listen on (multiple -l allowed)\n"
+"   -l,--listen ADDR        set address to listen on (multiple -l allowed)\n"
 "   -t,--nwthreads INT      set number of I/O worker threads to spawn\n"
 "   -e,--export PATH        export PATH (multiple -e allowed)\n"
 "   -E,--export-all         export all mounted file systems\n"
@@ -186,10 +186,15 @@ main(int argc, char **argv)
             case 'd':   /* --debug MASK */
                 diod_conf_set_debuglevel (strtoul (optarg, NULL, 0));
                 break;
-            case 'l':   /* --listen HOST:PORT or /path/to/socket */
+            case 'l':   /* --listen HOST:PORT, vsock:[CID:]PORT, or /path */
                 if (!diod_conf_opt_listen ())
                     diod_conf_clr_listen ();
-                if (!strchr (optarg, ':') && optarg[0] != '/')
+                if (diod_sock_is_vsock (optarg)) {
+                    unsigned int cid, port;
+                    if (diod_sock_parse_vsock (optarg, 0, &cid, &port) < 0)
+                        msg_exit ("invalid vsock address: %s", optarg);
+                }
+                else if (!strchr (optarg, ':') && optarg[0] != '/')
                     usage ();
                 if (optarg[0] == '[') {
                     char *end = strchr (optarg, ']');
