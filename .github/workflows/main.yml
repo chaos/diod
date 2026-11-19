@@ -59,6 +59,52 @@ jobs:
       run: scripts/check-logs.sh >&2
 
 
+  build-alpine:
+    name: check on alpine (musl, busybox)
+    runs-on: ubuntu-latest
+    container:
+      image: alpine:latest
+      # privileged so the v9fs tests can mount, if the host has 9p
+      options: --privileged
+    steps:
+    - name: Install dependencies
+      # git first, so actions/checkout makes a clone that git describe
+      # can use for the version.  Alpine has no munge package.
+      run: |
+        apk add --no-cache \
+            git build-base linux-headers automake autoconf pkgconf \
+            ncurses-dev libcap-dev attr-dev lua5.3-dev \
+            attr rsync sudo
+        git config --system --add safe.directory '*'
+    - uses: actions/checkout@v7
+    - name: Display configuration
+      run: |
+        cat /etc/alpine-release
+        gcc --version
+        uname -r
+        ls -l /bin/sh
+        df /tmp
+    - name: create unprivileged user with passwordless sudo
+      # The container runs as root, but the tests expect a user with sudo.
+      run: |
+        adduser -D builder
+        echo 'builder ALL=(ALL) NOPASSWD: ALL' >/etc/sudoers.d/builder
+        chown -R builder .
+    - name: autogen
+      run: su builder -c ./autogen.sh
+    - name: configure
+      run: su builder -c './configure --disable-auth'
+    - name: make
+      run: su builder -c make
+    - name: make check
+      run: su builder -c 'verbose=t make check'
+    - name: sudo some unit tests
+      run: su builder -c scripts/check-root.sh
+    - name: get test results on failure
+      if: failure()
+      run: scripts/check-logs.sh >&2
+
+
   build-rdma:
     name: build-only check for RDMA (experimental)
     runs-on: ubuntu-latest
