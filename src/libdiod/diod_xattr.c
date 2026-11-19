@@ -52,6 +52,13 @@
 #include "diod_xattr.h"
 #include "diod_fid.h"
 
+#ifdef __linux__
+#include <linux/limits.h>
+#endif
+#ifndef XATTR_SIZE_MAX
+#define XATTR_SIZE_MAX 65536
+#endif
+
 #define XATTR_FLAGS_GET     1
 #define XATTR_FLAGS_SET     2
 
@@ -192,6 +199,14 @@ int xattr_create (Npfid *fid, Npstr *name, u64 size, u32 setflags)
     Fid *f = fid->aux;
 
     assert (f->xattr == NULL);
+
+    /* The buffer is allocated up front, so bound it by the largest value
+     * the kernel will accept.
+     */
+    if (size > XATTR_SIZE_MAX) {
+        np_uerror (E2BIG);
+        return -1;
+    }
 
     f->xattr = _xattr_create (name, size, XATTR_FLAGS_SET, setflags);
     if (!f->xattr)
