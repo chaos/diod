@@ -38,6 +38,7 @@ test_ldadd = \
 	$(builddir)/libdiod.a \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
+	$(top_builddir)/src/libhostlist/libhostlist.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(builddir)/libdiod.a \
 	$(top_builddir)/src/libtap/libtap.a \

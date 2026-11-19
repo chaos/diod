@@ -40,7 +40,7 @@
 #include "src/libnpfs/xpthread.h"
 
 #include "src/liblsd/list.h"
-#include "src/liblsd/hostlist.h"
+#include "src/libhostlist/hostlist.h"
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_sock.h"
 #include "src/libdiod/diod_auth.h"
@@ -129,7 +129,7 @@ static List servers = NULL; /* static list of servers we are polling */
 
 static pthread_mutex_t dtop_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static Server *_create_server (char *host, char *port, double poll_sec);
+static Server *_create_server (const char *host, char *port, double poll_sec);
 static void _destroy_server  (Server *sp);
 static int _compare_aname(AnameStats *ap1, AnameStats *ap2);
 static int _match_aname(AnameStats *ap, char *aname);
@@ -156,10 +156,10 @@ usage (void)
 int
 main (int argc, char *argv[])
 {
-    hostlist_t hl = NULL;
-    hostlist_iterator_t itr;
+    struct hostlist *hl = NULL;
     double poll_sec = 1;
-    char *host, *port = "564";
+    const char *host;
+    char *port = "564";
     int c;
     sigset_t sigs;
     Server *sp;
@@ -171,13 +171,10 @@ main (int argc, char *argv[])
     while ((c = getopt_long (argc, argv, options, longopts, NULL)) != -1) {
         switch (c) {
             case 'h':   /* --hostlist NAME */
-                if (!hl) {
-                    if (!(hl = hostlist_create (optarg)))
-                        err_exit ("failed to create hostlist");
-                } else {
-                    if (hostlist_push (hl, optarg) == 0)
-                        err_exit ("failed to append to hostlist");
-                }
+                if (!hl && !(hl = hostlist_create ()))
+                    err_exit ("failed to create hostlist");
+                if (hostlist_append (hl, optarg) <= 0)
+                    err_exit ("failed to append to hostlist");
                 break;
             case 'P':   /* --poll-period SEC */
                 poll_sec = strtod (optarg, NULL);
@@ -194,7 +191,7 @@ main (int argc, char *argv[])
     if (optind < argc)
         usage ();
     if (!hl) {
-        if (!(hl = hostlist_create ("localhost")))
+        if (!(hl = hostlist_decode ("localhost")))
             err_exit ("failed to create hostlist");
     }
 
@@ -210,13 +207,12 @@ main (int argc, char *argv[])
      */
     if (!(servers = list_create (NULL)))
         err_exit ("out of memory");
-    if (!(itr = hostlist_iterator_create (hl)))
-        err_exit ("out of memory");
-    while ((host = hostlist_next (itr))) {
+    host = hostlist_first (hl);
+    while (host) {
         if (!(list_append (servers, _create_server (host, port, poll_sec))))
             err_exit ("out of memory");
+        host = hostlist_next (hl);
     }
-    hostlist_iterator_destroy (itr);
 
     _curses_watcher (poll_sec/2);
 
@@ -957,7 +953,7 @@ skip:
 }
 
 static Server *
-_create_server (char *host, char *port, double poll_sec)
+_create_server (const char *host, char *port, double poll_sec)
 {
     Server *sp;
     int err;

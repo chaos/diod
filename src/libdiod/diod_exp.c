@@ -33,7 +33,7 @@
 
 #include "src/libnpfs/npfs.h"
 #include "src/liblsd/list.h"
-#include "src/liblsd/hostlist.h"
+#include "src/libhostlist/hostlist.h"
 
 #include "diod_conf.h"
 #include "diod_log.h"
@@ -56,7 +56,7 @@ static int
 _match_export_hosts (Export *x, Npconn *conn)
 {
     char *client_id = np_conn_get_client_id (conn);
-    hostlist_t hl = NULL;
+    struct hostlist *hl = NULL;
     int res = 0; /* no match */
 
     /* privport is required */
@@ -70,7 +70,7 @@ _match_export_hosts (Export *x, Npconn *conn)
         res = 1;
         goto done;
     }
-    if (!(hl = hostlist_create (x->hosts))) {
+    if (!(hl = hostlist_decode (x->hosts))) {
         np_uerror (ENOMEM);
         goto done;
     }
