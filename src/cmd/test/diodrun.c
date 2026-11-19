@@ -39,6 +39,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <getopt.h>
+#include <errno.h>
 
 #include "src/libdiod/diod_log.h"
 
@@ -158,6 +159,17 @@ server (const char *server_command, int *pair, const char *sockpath)
     err_exit ("client exec");
 }
 
+/* Remove the socket and the temporary directory that holds it.
+ */
+static void
+cleanup_tmpdir (const char *tmpdir, const char *sockpath)
+{
+    if (unlink (sockpath) < 0 && errno != ENOENT)
+        err ("unlink %s", sockpath);
+    if (rmdir (tmpdir) < 0)
+        err ("rmdir %s", tmpdir);
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -235,6 +247,8 @@ main (int argc, char *argv[])
     if (!WIFEXITED (status)
         || WEXITSTATUS (status) != 0) {
         log_status (status, "server");
+        if (!socketpair_flag)
+            cleanup_tmpdir (tmpdir, sockpath);
         exit (1);
     }
 
@@ -242,15 +256,12 @@ main (int argc, char *argv[])
      */
     if (waitpid (client_pid, &status, 0) < 0)
         err_exit ("waitpid client");
+    if (!socketpair_flag)
+        cleanup_tmpdir (tmpdir, sockpath);
     if (!WIFEXITED (status)
         || WEXITSTATUS (status) != 0) {
         log_status (status, "client");
         exit (1);
-    }
-
-    if (!socketpair_flag) {
-        (void)unlink (sockpath);
-        (void)unlink (tmpdir);
     }
     exit (0);
 }
