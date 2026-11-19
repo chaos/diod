@@ -62,6 +62,19 @@ test_expect_success NOBODY 'the nobody user can access ctl:/version' '
 	    --aname=ctl read version
 '
 
+# A UNIX domain socket client is identified by the server's hostname,
+# truncated at the first dot unless --long.
+test_expect_success 'showmount lists the client host' '
+	hostname | cut -d. -f1 >showmount.exp &&
+	$PATH_DIODCLI showmount >showmount.out &&
+	test_cmp showmount.exp showmount.out
+'
+test_expect_success 'showmount --long lists the client host' '
+	hostname >showmount-long.exp &&
+	$PATH_DIODCLI showmount --long >showmount-long.out &&
+	test_cmp showmount-long.exp showmount-long.out
+'
+
 test_expect_success 'ls net:/ shows test files' '
 	cat >net-ls.exp <<-EOT &&
 	1
