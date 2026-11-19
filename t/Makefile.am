@@ -29,7 +29,8 @@ TESTSCRIPTS = \
 	t0022-scrub.t \
 	t0023-rsync.t \
 	t0024-selfhost.t \
-	t0025-pathwalk.t
+	t0025-pathwalk.t \
+	t0026-munge-auth.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \

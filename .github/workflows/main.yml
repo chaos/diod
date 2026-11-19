@@ -20,7 +20,12 @@ jobs:
             ncurses-dev automake autoconf pkgconf \
             lua5.3 liblua5.3-dev libmunge-dev libcap-dev \
             libattr1-dev rsync dbench attr scrub postmark valgrind \
+            munge \
             ${{matrix.cc}}
+    - name: start munged
+      run: |
+        sudo systemctl start munge
+        munge -n | unmunge
     - name: Display configuration
       run: |
         echo "C compiler:"
