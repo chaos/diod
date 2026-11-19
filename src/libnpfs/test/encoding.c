@@ -972,6 +972,28 @@ static void test_huge_rread (void)
     free (fc);
 }
 
+static void test_long_string (void)
+{
+    Npfcall *fc;
+    char *s;
+
+    if (!(s = malloc (UINT16_MAX + 2)))
+        BAIL_OUT ("out of memory");
+    memset (s, 'a', UINT16_MAX + 1);
+    s[UINT16_MAX + 1] = '\0';
+    fc = np_create_rreadlink (s);
+    ok (fc == NULL,
+        "Rreadlink encode fails when target is longer than UINT16_MAX");
+    free (fc);
+
+    s[UINT16_MAX] = '\0';
+    fc = np_create_rreadlink (s);
+    ok (fc != NULL && fc->u.rreadlink.target.len == UINT16_MAX,
+        "Rreadlink encode works when target is UINT16_MAX");
+    free (fc);
+    free (s);
+}
+
 int main (int argc, char *argv[])
 {
     plan (NO_PLAN);
@@ -1009,6 +1031,7 @@ int main (int argc, char *argv[])
     test_truncated_tlink ();
     test_bad_size ();
     test_huge_rread ();
+    test_long_string ();
 
     done_testing ();
 
