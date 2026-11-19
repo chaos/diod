@@ -938,6 +938,40 @@ static void test_truncated_tlink (void)
     free (fc);
 }
 
+static void _set_size (Npfcall *fc, u32 size)
+{
+    fc->size = size;
+    fc->pkt[0] = size;
+    fc->pkt[1] = size >> 8;
+    fc->pkt[2] = size >> 16;
+    fc->pkt[3] = size >> 24;
+}
+
+static void test_bad_size (void)
+{
+    Npfcall *fc;
+
+    if (!(fc = np_create_tclunk (1)))
+        BAIL_OUT ("np_create_tclunk failed");
+    _set_size (fc, 3);
+    ok (np_deserialize (fc) == 0,
+        "decode fails when size is smaller than the size field");
+    _set_size (fc, 6);
+    ok (np_deserialize (fc) == 0,
+        "decode fails when size is smaller than the header");
+    free (fc);
+}
+
+static void test_huge_rread (void)
+{
+    Npfcall *fc;
+
+    fc = np_create_rread (0xfffffffc, NULL);
+    ok (fc == NULL,
+        "Rread encode fails when count is 0xfffffffc");
+    free (fc);
+}
+
 int main (int argc, char *argv[])
 {
     plan (NO_PLAN);
@@ -973,6 +1007,8 @@ int main (int argc, char *argv[])
     test_remove ();
 
     test_truncated_tlink ();
+    test_bad_size ();
+    test_huge_rread ();
 
     done_testing ();
 
