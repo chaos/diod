@@ -1248,8 +1248,10 @@ _read_dir_linux (Fid *f, u8* buf, u64 offset, u32 count)
 
     if (offset == 0)
         ioctx_rewinddir (f->ioctx);
-    else
-        ioctx_seekdir (f->ioctx, offset);
+    else if (ioctx_seekdir (f->ioctx, offset) < 0) {
+        np_uerror (errno);
+        return 0;
+    }
     do {
         errno = 0;
         d = ioctx_readdir (f->ioctx, &new_offset);
