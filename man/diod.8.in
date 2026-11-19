@@ -189,4 +189,4 @@ which makes it use the classic mount system call.  That variable needs
 util-linux 2.40 or later, is ignored when \fImount(8)\fR runs setuid,
 and is dropped by \fIsudo\fR unless passed with \fIenv\fR (1).
 .SH "SEE ALSO"
-diod.conf (5), mount.diod (8), hosts_access (5)
+diod.conf (5), mount.diod (8)

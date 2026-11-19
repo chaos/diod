@@ -24,6 +24,8 @@ or an alternate table element form \fI{ path="/path", opts="ro" }\fR.
 In the alternate form, the (optional) opts attribute is a comma-separated
 list of export options, as described below in EXPORT OPTIONS.
 The two table element forms can be mixed in the exports table.
+The alternate form may also have a \fIhosts\fR attribute, described below
+in EXPORT ATTRIBUTES.
 Note that although \fBdiod\fR will not traverse file system boundaries
 for a given mount due to inode uniqueness constraints, subdirectories of
 a file system can be separately exported.
@@ -96,6 +98,29 @@ as it is vulnerable to IP spoofing attacks.
 .TP
 .I noauth
 Allow attach to succeed without authentication.
+.SH "EXPORT ATTRIBUTES"
+In addition to \fIpath\fR and \fIopts\fR, an exports table element
+may have the following attributes:
+.TP
+.I "hosts = ""HOSTLIST"""
+Allow attach only from clients whose identity is in HOSTLIST,
+a comma-separated list of names in which a numeric range may be given
+in brackets, e.g. \fI"node[1-4],login"\fR or \fI"192.168.1.[1-10]"\fR.
+Matching is exact and case-sensitive.
+A TCP client is identified by the name that a reverse lookup of its
+address returns, which may be fully qualified, or by its numeric IP
+address if \fIhostname_lookup = 0\fR or the address has no name.
+A client on a UNIX domain socket is identified by the local host name,
+or by "localhost" if \fIhostname_lookup = 0\fR.
+Without this attribute, clients from any host may attach.
+.TP
+.I "users = ""..."""
+Reserved for restricting attach by user, but not implemented:
+an export that sets this attribute denies every attach.
+.LP
+When more than one exports element matches the requested path, the first
+one decides, so if its \fIhosts\fR attribute does not match the client,
+the attach is denied even if a later element would allow it.
 .SH "EXAMPLE"
 .nf
 --
@@ -107,6 +132,7 @@ exports = {
 	"/usr/global",
 	{ path="ctl", opts="ro,noauth" },
 	{ path="/usr/local", opts="ro" },
+	{ path="/scratch", hosts="node[1-64]" },
 }
 nwthreads = 8
 .fi

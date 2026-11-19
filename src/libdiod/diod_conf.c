@@ -366,13 +366,21 @@ _parse_expopt (char *s, int *fp)
     free (cpy);
     *fp = flags;
 }
+/* Apply the global exportopts to an export that has no opts of its own,
+ * then parse whichever opts the export ended up with into x->oflags.
+ */
+static void
+_apply_expopt (Export *x)
+{
+    if (!x->opts && config.exportopts)
+        x->opts = _xstrdup (config.exportopts);
+    if (x->opts)
+        _parse_expopt (x->opts, &x->oflags);
+}
 void diod_conf_add_exports (char *path)
 {
     Export *x = _xcreate_export (path);
-    if (config.exportopts)
-	x->opts = _xstrdup (config.exportopts);
-    if (x->opts)
-	_parse_expopt (x->opts, &x->oflags);
+    _apply_expopt (x);
     _xlist_append (config.exports, x);
     config.ro_mask |= RO_EXPORTS;
 
@@ -428,10 +436,7 @@ List diod_conf_get_mounts (void)
         *p = '\0';
         if (!(x = _create_export (path)))
             goto error;
-        if (config.exportopts)
-            x->opts = _xstrdup (config.exportopts);
-        if (x->opts)
-            _parse_expopt (x->opts, &x->oflags);
+        _apply_expopt (x);
         if (!list_append (l, x)) {
             _destroy_export (x);
             goto error;
@@ -570,6 +575,7 @@ _lua_getglobal_exports (char *path, lua_State *L, List *lp)
                 break;
             if (lua_isstring (L, -1)) {
                 x = _xcreate_export ((char *)lua_tostring (L, -1));
+                _apply_expopt (x);
                 _xlist_append (l, x);
             } else if (lua_istable(L, -1)) {
                 char *p = NULL;
@@ -580,10 +586,7 @@ _lua_getglobal_exports (char *path, lua_State *L, List *lp)
                 x = _xcreate_export (p);
                 free (p);
                 _lua_get_expattr (path, i, L, "opts", &x->opts);
-                if (!x->opts && config.exportopts)
-                    x->opts = _xstrdup (config.exportopts);
-                if (x->opts)
-                    _parse_expopt (x->opts, &x->oflags);
+                _apply_expopt (x);
                 _lua_get_expattr (path, i, L, "users", &x->users);
                 _lua_get_expattr (path, i, L, "hosts", &x->hosts);
                 /* FIXME: check for illegal export attributes */
