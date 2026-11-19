@@ -91,6 +91,7 @@ usage (void)
 {
     fprintf (stderr,
 "Usage: mount.diod [OPTIONS] host[:aname] directory\n"
+"       mount.diod [OPTIONS] vsock:cid[:aname] directory\n"
 "   -f,--fake-mount               do everything but the actual mount\n"
 "   -n,--no-mtab                  do not update /etc/mtab\n"
 "   -v,--verbose                  verbose mode\n"
@@ -221,6 +222,27 @@ main (int argc, char *argv[])
         opt_addf (o, "rfdno=%d", rfd);
         opt_addf (o, "wfdno=%d", wfd);
 
+    /* Connect to server on vsock CID, on IANA port (or user-specified).
+     */
+    } else if (diod_sock_is_vsock (host)) {
+        char *port = opt_find (o, "port");
+        char addr[64];
+
+        if (privport)
+            msg_exit ("--privport won't work with vsock");
+        if (snprintf (addr, sizeof (addr), "%s:%s", host,
+                      port ? port : "564") >= sizeof (addr))
+            msg_exit ("vsock address is too long");
+        if (vopt)
+            msg ("trying to connect to %s", addr);
+        if ((rfd = diod_sock_connect_vsock (addr, 0)) < 0)
+            exit (1);
+        wfd = rfd;
+
+        opt_delete (o, "port");
+        opt_addf (o, "rfdno=%d", rfd);
+        opt_addf (o, "wfdno=%d", wfd);
+
     /* Connect to server on IANA port (or user-specified) and host.
      */
     } else {
@@ -294,6 +316,18 @@ _parse_spec (char *spec, Opt o)
     char *host, *hostend, *aname;
     int ipv6 = 0;
 
+    /* vsock:CID[:aname] - the host part includes the "vsock:" prefix
+     */
+    if (diod_sock_is_vsock (spec)) {
+        if (!(host = strdup (spec)))
+            msg_exit ("out of memory");
+        hostend = host + strlen (DIOD_SOCK_VSOCK_PREFIX);
+        if ((aname = strchr (hostend, ':')))
+            *aname++ = '\0';
+        if (strlen (hostend) == 0)
+            msg_exit ("no vsock CID specified");
+        goto have_host;
+    }
     if (spec[0] == '[') {
         ipv6 = 1;
         spec++;
@@ -313,6 +347,7 @@ _parse_spec (char *spec, Opt o)
         *aname++ = '\0';
     if (strlen (host) == 0)
         msg_exit ("no host specified");
+have_host:
     if (!aname || strlen (aname) == 0)
         ; /* aname = opt_find (o, "aname"); */
     else if (!opt_addf (o, "aname=%s", aname))
@@ -324,7 +359,9 @@ _parse_spec (char *spec, Opt o)
 static const char *
 _get_spec_suffix (const char *spec)
 {
-    if (spec[0] == '[') {
+    if (diod_sock_is_vsock (spec))
+        spec += strlen (DIOD_SOCK_VSOCK_PREFIX);
+    else if (spec[0] == '[') {
         spec = strchr(spec, ']');
         NP_ASSERT (spec);
     }

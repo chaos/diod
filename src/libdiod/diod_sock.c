@@ -24,6 +24,9 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+#ifdef HAVE_LINUX_VM_SOCKETS_H
+#include <linux/vm_sockets.h>
+#endif
 #include <signal.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -221,6 +224,101 @@ error:
     return 0;
 }
 
+int
+diod_sock_is_vsock (const char *name)
+{
+    return name && !strncmp (name, DIOD_SOCK_VSOCK_PREFIX,
+                             strlen (DIOD_SOCK_VSOCK_PREFIX));
+}
+
+static int
+_parse_uint (const char *s, unsigned int *vp)
+{
+    char *end;
+    unsigned long v;
+
+    if (*s < '0' || *s > '9')
+        return -1;
+    errno = 0;
+    v = strtoul (s, &end, 10);
+    if (errno != 0 || *end != '\0' || v > UINT32_MAX)
+        return -1;
+    *vp = v;
+    return 0;
+}
+
+int
+diod_sock_parse_vsock (const char *name, unsigned int default_cid,
+                       unsigned int *cid, unsigned int *port)
+{
+    char *cpy = NULL, *s, *colon;
+    unsigned int c = default_cid, p;
+
+    if (!diod_sock_is_vsock (name))
+        goto inval;
+    if (!(cpy = strdup (name + strlen (DIOD_SOCK_VSOCK_PREFIX))))
+        return -1;
+    s = cpy;
+    if ((colon = strchr (s, ':'))) {
+        *colon = '\0';
+        if (_parse_uint (s, &c) < 0)
+            goto inval;
+        s = colon + 1;
+    }
+    if (_parse_uint (s, &p) < 0)
+        goto inval;
+    free (cpy);
+    *cid = c;
+    *port = p;
+    return 0;
+inval:
+    free (cpy);
+    errno = EINVAL;
+    return -1;
+}
+
+#ifdef HAVE_LINUX_VM_SOCKETS_H
+static int
+_setup_one_vsock (char *name, struct pollfd **fdsp, int *nfdsp)
+{
+    struct sockaddr_vm addr;
+    unsigned int cid, port;
+    int fd = -1;
+
+    if (diod_sock_parse_vsock (name, VMADDR_CID_ANY, &cid, &port) < 0) {
+        msg ("invalid vsock address: %s", name);
+        goto error;
+    }
+    if ((fd = socket (AF_VSOCK, SOCK_STREAM, 0)) < 0) {
+        err ("socket: %s", name);
+        goto error;
+    }
+    memset (&addr, 0, sizeof (addr));
+    addr.svm_family = AF_VSOCK;
+    addr.svm_cid = cid;
+    addr.svm_port = port;
+    if (bind (fd, (struct sockaddr *)&addr, sizeof (addr)) < 0) {
+        err ("bind: %s", name);
+        goto error;
+    }
+    if (_poll_add (fdsp, nfdsp, fd) < 0)
+        goto error;
+    msg ("Listening on %s", name);
+    return 1;
+error:
+    if (fd != -1)
+        close (fd);
+    return 0;
+}
+#else
+static int
+_setup_one_vsock (char *name, struct pollfd **fdsp, int *nfdsp)
+{
+    msg ("vsock is not supported on this platform: %s", name);
+    return 0;
+}
+#endif
+
 static int
 _listen_fds (struct pollfd *fds, int nfds)
 {
@@ -234,8 +332,8 @@ _listen_fds (struct pollfd *fds, int nfds)
     return ret;
 }
 
-/* Set up listen ports based on list of strings, which can be either
- * host:port or /path/to/unix_domain_socket format.
+/* Set up listen ports based on list of strings, which can be
+ * host:port, vsock:[cid:]port, or /path/to/unix_domain_socket format.
  * Return the number of file descriptors opened (can return 0).
  */
 int
@@ -252,6 +350,10 @@ diod_sock_listen (List l, struct pollfd **fdsp, int *nfdsp)
     while ((s = list_next(itr))) {
         if (s[0] == '/') {
             if ((n = _setup_one_unix (s, fdsp, nfdsp)) == 0)
+                goto done;
+            ret += n;
+        } else if (diod_sock_is_vsock (s)) {
+            if ((n = _setup_one_vsock (s, fdsp, nfdsp)) == 0)
                 goto done;
             ret += n;
         } else {
@@ -341,6 +443,16 @@ diod_sock_accept_one (Npsrv *srv, int fd, int lookup)
         if (!lookup || gethostname (host, sizeof (host)) < 0)
             snprintf (host, sizeof (host), "localhost");
     }
+#ifdef HAVE_LINUX_VM_SOCKETS_H
+    /* A vsock peer has no host name or IP address, so identify it by its
+     * context ID.  The peer port is not checked for privport: it only
+     * shows the peer bound it with privilege in its own (guest) kernel.
+     */
+    else if (addr.ss_family == AF_VSOCK) {
+        struct sockaddr_vm *vm = (struct sockaddr_vm *)&addr;
+        snprintf (host, sizeof (host), "vsock:%u", vm->svm_cid);
+    }
+#endif
     else {
         if ((res = getnameinfo ((struct sockaddr *)&addr, addr_size,
                                 ip, sizeof(ip), svc, sizeof(svc),
@@ -510,6 +622,60 @@ error:
     return -1;
 }
 
+/* Connect to vsock:[cid:]port.  CID defaults to VMADDR_CID_HOST,
+ * i.e. a guest connecting to a server on its host.
+ * Return fd on success, -1 on failure.
+ */
+#ifdef HAVE_LINUX_VM_SOCKETS_H
+int
+diod_sock_connect_vsock (char *name, int flags)
+{
+    struct sockaddr_vm addr;
+    unsigned int cid, port;
+    int fd = -1;
+
+    if (diod_sock_parse_vsock (name, VMADDR_CID_HOST, &cid, &port) < 0) {
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("invalid vsock address %s", name);
+        goto error;
+    }
+    if (flags & DIOD_SOCK_PRIVPORT) {
+        errno = EINVAL;
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("privport is not supported with vsock");
+        goto error;
+    }
+    if ((fd = socket (AF_VSOCK, SOCK_STREAM, 0)) < 0) {
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("socket");
+        goto error;
+    }
+    memset (&addr, 0, sizeof (addr));
+    addr.svm_family = AF_VSOCK;
+    addr.svm_cid = cid;
+    addr.svm_port = port;
+    if (connect (fd, (struct sockaddr *)&addr, sizeof (addr)) < 0) {
+        if (!(flags & DIOD_SOCK_QUIET))
+            err ("connect %s", name);
+        goto error;
+    }
+    return fd;
+error:
+    if (fd != -1)
+        close (fd);
+    return -1;
+}
+#else
+int
+diod_sock_connect_vsock (char *name, int flags)
+{
+    errno = EAFNOSUPPORT;
+    if (!(flags & DIOD_SOCK_QUIET))
+        err ("connect %s", name);
+    return -1;
+}
+#endif
+
 static int _diod_sock_connect_inet6(char *name, int flags)
 {
     char *hoststart;
@@ -545,6 +711,8 @@ diod_sock_connect (char *name, int flags)
         fd = diod_sock_connect_inet ("localhost", "564", flags);
     else if (name[0] == '/')
         fd = diod_sock_connect_unix (name, flags);
+    else if (diod_sock_is_vsock (name))
+        fd = diod_sock_connect_vsock (name, flags);
     else if (!strchr (name, ':'))
         fd = diod_sock_connect_inet (name, "564", flags);
     else {

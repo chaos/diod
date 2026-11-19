@@ -1152,7 +1152,8 @@ usage (void)
     fprintf (stderr,
 "Usage: %s [OPTIONS] subcommand [SUBOPTIONS] ...\n"
 "   -a,--aname NAME       file system (default ctl)\n"
-"   -s,--server HOST:PORT server (default localhost:564)\n"
+"   -s,--server ADDR      HOST[:PORT], vsock:[CID:]PORT, or /path/to/socket\n"
+"                         (default localhost:564)\n"
 "   -m,--msize            msize (default 65536)\n"
 "   -u,--uid              authenticate as uid (default is your euid)\n"
 "   -p,--privport         connect from a privileged port (root user only)\n"
@@ -1193,7 +1194,7 @@ main (int argc, char *argv[])
             case 'a':   /* --aname NAME */
                 aname = optarg;
                 break;
-            case 's':   /* --server HOST[:PORT] or /path/to/socket */
+            case 's':   /* --server HOST[:PORT], vsock:[CID:]PORT, or /path */
                 server = optarg;
                 break;
             case 'm':   /* --msize SIZE */

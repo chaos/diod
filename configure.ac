@@ -74,6 +74,7 @@ AC_CHECK_HEADERS( \
   sys/sysmacros.h \
   sys/xattr.h \
 )
+AC_CHECK_HEADERS([linux/vm_sockets.h], [], [], [[#include <sys/socket.h>]])
 
 ##
 # Checks for typedefs, structures, and compiler characteristics

@@ -35,7 +35,7 @@ The file system name on the server (default "ctl").
 Note that the "ctl" synthetic file system must be explicitly exported.
 .TP
 .I "-s, --server NAME"
-The server in IP[:PORT], HOST[:PORT], or /path/to/socket form
+The server in IP[:PORT], HOST[:PORT], vsock:[CID:]PORT, or /path/to/socket form
 (default localhost:564).
 .TP
 .I "-m, --msize SIZE"
