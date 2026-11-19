@@ -645,6 +645,42 @@ done:
     return rc;
 }
 
+/* Txattrcreate with an attr_size the server should refuse to allocate.
+ */
+int cmd_setxattr_hugesize (Npcfid *root, int argc, char **argv)
+{
+    char *filename;
+    char *attrname;
+    Npcfid *fid;
+    u64 size;
+    int rc = -1;
+
+    if (argc != 4) {
+        fprintf (stderr,
+                 "Usage: %s %s filename attrname size\n", prog, argv[0]);
+        return -1;
+    }
+    filename = argv[1];
+    attrname = argv[2];
+    size = strtoull (argv[3], NULL, 0);
+
+    if (!(fid = npc_walk (root, filename))) {
+        errn (np_rerror (), "walk %s", filename);
+        return -1;
+    }
+    if (npc_xattrcreate (fid, attrname, size, 0) < 0) {
+        errn (np_rerror (), "xattrcreate %s", filename);
+        goto done;
+    }
+    rc = 0;
+done:
+    /* Clunk sets the attribute, which may fail for reasons that depend
+     * on the file system.  Only the xattrcreate result is of interest.
+     */
+    (void)npc_clunk (fid);
+    return rc;
+}
+
 int cmd_getxattr (Npcfid *root, int argc, char **argv)
 {
     char *filename;
@@ -1105,6 +1141,12 @@ static struct subcmd subcmds[] = {
         .name = "bug-setxattr-offsetcheck",
         .desc = "Tsetxattr with wild offset",
         .cmd = cmd_setxattr_wildoffset,
+        .hidden = true,
+    },
+    {
+        .name = "bug-setxattr-hugesize",
+        .desc = "Txattrcreate with huge attr_size",
+        .cmd = cmd_setxattr_hugesize,
         .hidden = true,
     },
     {

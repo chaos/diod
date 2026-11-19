@@ -26,6 +26,18 @@ test_expect_success XATTR 'setxattr with wild offset is rejected' '
             xtestfile user.wildoffset zzz 2>wildoffset.err &&
         test_grep "pwrite xtestfile: Invalid argument" wildoffset.err
 '
+test_expect_success 'xattrcreate with attr_size over XATTR_SIZE_MAX fails' '
+	touch export/xtestfile &&
+	test_must_fail $PATH_DIODCLI bug-setxattr-hugesize \
+	    xtestfile user.huge 0xffffffffffffffff 2>huge.err &&
+	test_grep "xattrcreate xtestfile: Argument list too long" huge.err &&
+	test_must_fail $PATH_DIODCLI bug-setxattr-hugesize \
+	    xtestfile user.huge 65537 2>huge2.err &&
+	test_grep "Argument list too long" huge2.err
+'
+test_expect_success 'xattrcreate with attr_size of XATTR_SIZE_MAX works' '
+	$PATH_DIODCLI bug-setxattr-hugesize xtestfile user.max 65536
+'
 test_expect_success 'Twalk on an open fid works' '
 	mkdir -p export/subdir &&
         $PATH_DIODCLI bug-open-walk subdir
