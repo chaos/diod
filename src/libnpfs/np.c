@@ -131,11 +131,18 @@ buf_put_int64(struct cbuf *buf, u64 val, u64 *pval)
 static inline void
 buf_put_str(struct cbuf *buf, char *s, Npstr *ps)
 {
-	int slen = 0;
+	size_t slen = 0;
 
 	if (s)
 		slen = strlen(s);
-
+	/* The length field is 16 bits.  Mark the buffer as overflowed
+	 * rather than encode a truncated length.
+	 */
+	if (slen > UINT16_MAX) {
+		if (buf->p <= buf->ep)
+			buf->p = buf->ep + 1;
+		return;
+	}
 	if (buf_check_size(buf, 2+slen)) {
 		ps->len = slen;
 		buf_put_int16(buf, slen, NULL);
