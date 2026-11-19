@@ -29,7 +29,7 @@ np_version(Npreq *req, Npfcall *tc)
 {
 	Npsrv *srv = req->conn->srv;
 	Npfcall *rc = NULL;
-	int msize = tc->u.tversion.msize;
+	u32 msize = tc->u.tversion.msize;
 
 	if (msize < IOHDRSZ + 1) {
 		np_uerror(EIO);

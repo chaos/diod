@@ -528,7 +528,7 @@ np_create_rread(u32 count, u8* data)
 void
 np_set_rread_count(Npfcall *fc, u32 count)
 {
-	int size = sizeof(u32) + sizeof(u8) + sizeof(u16)
+	u32 size = sizeof(u32) + sizeof(u8) + sizeof(u16)
 		 + sizeof(u32) + count;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -1082,7 +1082,7 @@ np_create_rreaddir(u32 count)
 void
 np_finalize_rreaddir(Npfcall *fc, u32 count)
 {
-	int size = sizeof(u32) + sizeof(u8) + sizeof(u16)
+	u32 size = sizeof(u32) + sizeof(u8) + sizeof(u16)
 		 + sizeof(u32) + count;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
@@ -1359,11 +1359,11 @@ np_peek_size(u8 *buf, int len)
 }
 
 Npfcall *
-np_alloc_fcall(int msize)
+np_alloc_fcall(u32 msize)
 {
         Npfcall *fc;
 
-        if ((fc = malloc(sizeof(*fc) + msize))) {
+        if ((fc = malloc(sizeof(*fc) + (size_t)msize))) {
                 fc->pkt = (u8*) fc + sizeof(*fc);
 		fc->size = msize;
 	}
