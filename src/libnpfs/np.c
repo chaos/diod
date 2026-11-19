@@ -241,8 +241,11 @@ np_create_common(struct cbuf *bufp, u32 size, u8 id)
 {
 	Npfcall *fc;
 
+	if (size > UINT32_MAX - (sizeof(fc->size) + sizeof(fc->type)
+				 + sizeof(fc->tag)))
+		return NULL;
 	size += sizeof(fc->size) + sizeof(fc->type) + sizeof (fc->tag);
-	if (!(fc = malloc(sizeof(Npfcall) + size)))
+	if (!(fc = malloc(sizeof(Npfcall) + (size_t)size)))
 		return NULL;
 	fc->pkt = (u8 *) fc + sizeof(*fc);
 	buf_init(bufp, (char *) fc->pkt, size);
@@ -494,11 +497,13 @@ np_create_tread(u32 fid, u64 offset, u32 count)
 Npfcall *
 np_alloc_rread(u32 count)
 {
-	int size = sizeof(u32) + count;
+	u32 size = sizeof(u32) + count;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
+	if (count > UINT32_MAX - sizeof(u32))
+		return NULL;
 	if (!(fc = np_create_common(bufp, size, Rread)))
 		return NULL;
 	buf_put_int32(bufp, count, &fc->u.rread.count);
@@ -1375,6 +1380,8 @@ np_deserialize(Npfcall *fc)
 
 	buf_init(bufp, fc->pkt, 4);
 	fc->size = buf_get_int32(bufp);
+	if (fc->size < 7) /* size[4] type[1] tag[2] */
+		goto error;
 
 	buf_init(bufp, fc->pkt + 4, fc->size - 4);
 	fc->type = buf_get_int8(bufp);
