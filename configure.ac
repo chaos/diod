@@ -176,6 +176,7 @@ AC_CONFIG_FILES( \
   src/libtest/Makefile \
   src/libdiod/Makefile \
   src/liblsd/Makefile \
+  src/libhostlist/Makefile \
   src/libnpfs/Makefile \
   src/libnpclient/Makefile \
   man/Makefile \

@@ -139,8 +139,9 @@ test_expect_success 'stop diod again' '
 # Only the first exports entry whose path matches is considered.
 test_expect_success 'create export directories for access restrictions' '
 	mkdir -p restrict/hostsok restrict/hostsno restrict/users \
-	    restrict/firstmatch/sub &&
-	for dir in hostsok hostsno users firstmatch firstmatch/sub; do \
+	    restrict/firstmatch/sub restrict/rangeok &&
+	for dir in hostsok hostsno users firstmatch firstmatch/sub \
+	    rangeok; do \
 	    echo TESTING >restrict/$dir/file || return 1; \
 	done &&
 	rdir=$SHARNESS_TRASH_DIRECTORY/restrict
@@ -157,6 +158,7 @@ test_expect_success 'create config file with access restrictions' '
 	    { path="$rdir/users", users="$(id -un)" },
 	    { path="$rdir/firstmatch/sub", hosts="nosuchhost" },
 	    "$rdir/firstmatch",
+	    { path="$rdir/rangeok", hosts="nosuchhost[1-4,7],localhost" },
 	}
 	EOT
 '
@@ -170,6 +172,12 @@ test_expect_success 'export with matching hosts can be attached' '
 	echo TESTING >hostsok.exp &&
 	$PATH_DIODCLI --aname=$rdir/hostsok read /file >hostsok.out &&
 	test_cmp hostsok.exp hostsok.out
+'
+
+test_expect_success 'export with matching hosts after a range can be attached' '
+	echo TESTING >rangeok.exp &&
+	$PATH_DIODCLI --aname=$rdir/rangeok read /file >rangeok.out &&
+	test_cmp rangeok.exp rangeok.out
 '
 
 test_expect_success 'export without matching hosts cannot be attached' '

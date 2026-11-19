@@ -34,7 +34,6 @@
 #include "src/libnpfs/npfs.h"
 #include "src/liblsd/list.h"
 #include "src/liblsd/hash.h"
-#include "src/liblsd/hostlist.h"
 #include "src/libnpfs/xpthread.h"
 
 #include "diod_conf.h"

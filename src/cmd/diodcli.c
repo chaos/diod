@@ -56,7 +56,7 @@
 #include "src/libnpclient/npclient.h"
 
 #include "src/liblsd/list.h"
-#include "src/liblsd/hostlist.h"
+#include "src/libhostlist/hostlist.h"
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_sock.h"
 #include "src/libdiod/diod_auth.h"
@@ -468,9 +468,9 @@ static const struct option smlongopts[] = {
 int cmd_showmount (Npcfid *root, int argc, char **argv)
 {
     Npcfid *fid;
-    char buf[80], *host, *p;
-    hostlist_t hl = NULL;
-    hostlist_iterator_t itr;
+    char buf[80], *p;
+    const char *host;
+    struct hostlist *hl = NULL;
     int c;
     bool lopt = false;
     int rc = -1;
@@ -495,7 +495,7 @@ int cmd_showmount (Npcfid *root, int argc, char **argv)
         errn (np_rerror (), "open connections");
         return -1;
     }
-    if (!(hl = hostlist_create (NULL))) {
+    if (!(hl = hostlist_create ())) {
         err ("hostlist_create");
         goto done;
     }
@@ -504,28 +504,27 @@ int cmd_showmount (Npcfid *root, int argc, char **argv)
             *p = '\0';
         if (!lopt && (p = strchr (buf, '.')))
             *p = '\0';
-        if (!hostlist_push_host (hl, buf)) {
-            err ("hostlist_push_host");
+        if (hostlist_append (hl, buf) < 0) {
+            err ("hostlist_append");
             goto done;
         }
     }
     hostlist_uniq (hl);
     if (lopt) {
-        if (!(itr = hostlist_iterator_create (hl))) {
-            err ("hostlist_iterator_create");
-            goto done;
-        }
-        while ((host = hostlist_next (itr)))
+        host = hostlist_first (hl);
+        while (host) {
             printf ("%s\n", host);
-        hostlist_iterator_destroy (itr);
+            host = hostlist_next (hl);
+        }
     } else {
-        char s[1024];
+        char *s;
 
-        if (hostlist_ranged_string (hl, sizeof (s), s) < 0) {
-            msg ("hostlist output would be too long (use -l)");
+        if (!(s = hostlist_encode (hl))) {
+            err ("hostlist_encode");
             goto done;
         }
         printf ("%s\n", s);
+        free (s);
     }
     rc = 0;
 done:

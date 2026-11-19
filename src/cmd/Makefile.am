@@ -20,6 +20,7 @@ common_ldadd = \
 	$(top_builddir)/src/libdiod/libdiod.a \
 	$(top_builddir)/src/libnpclient/libnpclient.a \
 	$(top_builddir)/src/libnpfs/libnpfs.a \
+	$(top_builddir)/src/libhostlist/libhostlist.a \
 	$(top_builddir)/src/liblsd/liblsd.a \
 	$(top_builddir)/src/libdiod/libdiod.a \
 	$(LIBPTHREAD) $(LUA_LIBS) $(MUNGE_LIBS) $(CAP_LIBS) \

@@ -48,7 +48,7 @@
 #include "src/libnpfs/npfs.h"
 #include "src/libnpclient/npclient.h"
 #include "src/liblsd/list.h"
-#include "src/liblsd/hostlist.h"
+#include "src/libhostlist/hostlist.h"
 #include "src/libdiod/diod_log.h"
 #include "src/libdiod/diod_sock.h"
 #include "src/libdiod/diod_auth.h"
@@ -247,24 +247,26 @@ main (int argc, char *argv[])
      */
     } else {
         char *port = opt_find (o, "port");
-        hostlist_iterator_t hi;
-        hostlist_t hl;
-        char *h;
+        struct hostlist *hl;
+        char *h = NULL;
+        const char *s;
 
         if (!port)
             port = "564";
-        if (!(hl = hostlist_create (host)))
+        if (!(hl = hostlist_decode (host)))
             msg_exit ("error parsing host string: %s", host);
-        if (!(hi = hostlist_iterator_create (hl)))
-            msg_exit ("out of memory");
-        while ((h = hostlist_next (hi))) {
+        for (s = hostlist_first (hl); s != NULL; s = hostlist_next (hl)) {
             int flags = DIOD_SOCK_QUIET;
             if (privport)
                 flags |= DIOD_SOCK_PRIVPORT;
+            if (!(h = strdup (s)))
+                msg_exit ("out of memory");
             if (vopt)
                 msg ("trying to connect to %s:%s", h, port);
             if ((rfd = diod_sock_connect_inet (h, port, flags )) >= 0)
                 break;
+            free (h);
+            h = NULL;
         }
         if (h) { /* create new 'spec' string identifying successful host */
             const char *p = _get_spec_suffix (spec);
@@ -273,6 +275,7 @@ main (int argc, char *argv[])
             if (!(nspec = malloc (len)))
                 msg_exit ("out of memory");
             snprintf (nspec, len, "%s%s", h, p ? p : "");
+            free (h);
         }
         hostlist_destroy (hl);
         if (rfd < 0)
