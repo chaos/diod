@@ -66,6 +66,16 @@ test_expect_success 'Tflush of a request blocked in the server works' '
 	rm -f export/fifo
 '
 
+tversion=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tversion
+test_expect_success 'Tversion with msize 2^31 is clamped to the server max' '
+	$tversion 0x80000000 >msize.out &&
+	test $(cat msize.out) -lt 2147483648
+'
+test_expect_success 'Tversion with msize UINT32_MAX is clamped to the server max' '
+	$tversion 0xffffffff >msize2.out &&
+	test $(cat msize2.out) -lt 2147483648
+'
+
 # Usage: test_tattach users threads getattrs iterations
 test_tattach=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_tattach \
 
