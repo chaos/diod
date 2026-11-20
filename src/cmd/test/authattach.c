@@ -14,13 +14,16 @@
  *
  * Each STEP attaches to the server on one connection, which is kept
  * open across steps, then stats the root and clunks it.  A step is
- * METHOD[:UID], where UID defaults to the effective uid, and METHOD is
+ * METHOD[:UID][@ANAME], where UID defaults to the effective uid, ANAME
+ * defaults to --aname, and METHOD is
  *
  *   munge     Tauth, write a fresh MUNGE credential, Tattach with afid
  *   cred      Tauth, write the credential read from --cred FILE
  *   garbage   Tauth, write a string that is not a MUNGE credential
  *   empty     Tauth, write nothing
  *   none      Tattach with no afid
+ *   tpools    attach to ctl with a fresh MUNGE credential and print the
+ *             number of thread pools the server has
  *
  * Print "N: ok" or "N: <error>" for each step.  Exit 0 if every step
  * succeeded, otherwise 1.  This lets tests reach server auth paths
@@ -51,11 +54,11 @@
 static void usage (void)
 {
     fprintf (stderr,
-"Usage: test_authattach [OPTIONS] METHOD[:UID] ...\n"
+"Usage: test_authattach [OPTIONS] METHOD[:UID][@ANAME] ...\n"
 "   -a,--aname NAME       file system (default $DIOD_SERVER_ANAME)\n"
 "   -s,--server ADDR      server (default $DIOD_SOCKET)\n"
 "   -c,--cred FILE        credential for the cred method\n"
-"METHOD is munge, cred, garbage, empty, or none\n");
+"METHOD is munge, cred, garbage, empty, none, or tpools\n");
     exit (1);
 }
 
@@ -152,6 +155,43 @@ done:
     return rc;
 }
 
+/* Attach to ctl, read the tpools file, and print the number of lines,
+ * one per thread pool.  Returns 0 on success, -1 with np_rerror() set
+ * on failure.
+ */
+static int count_tpools (Npcfsys *fs, u32 uid, int n)
+{
+    Npcfid *afid, *root;
+    char *s, *p;
+    int count = 0;
+
+    np_uerror (0);
+    if (!(afid = npc_auth (fs, "ctl", uid, diod_auth)) && np_rerror () != 0)
+        return -1;
+    root = npc_attach (fs, afid, "ctl", uid);
+    if (afid) {
+        int saved = np_rerror ();
+        (void)npc_clunk (afid);
+        np_uerror (saved);
+    }
+    if (!root)
+        return -1;
+    s = npc_aget (root, "tpools");
+    if (!s) {
+        int saved = np_rerror ();
+        (void)npc_clunk (root);
+        np_uerror (saved);
+        return -1;
+    }
+    for (p = s; *p; p++)
+        if (*p == '\n')
+            count++;
+    free (s);
+    (void)npc_clunk (root);
+    printf ("%d: tpools=%d\n", n, count);
+    return 0;
+}
+
 int main (int argc, char *argv[])
 {
     char *aname = NULL;
@@ -198,13 +238,25 @@ int main (int argc, char *argv[])
         char *p;
         u32 uid = geteuid ();
 
+        char *step_aname = aname;
+
         if (!method)
             msg_exit ("out of memory");
+        if ((p = strchr (method, '@'))) {
+            *p++ = '\0';
+            step_aname = p;
+        }
         if ((p = strchr (method, ':'))) {
             *p++ = '\0';
             uid = strtoul (p, NULL, 10);
         }
-        if (step (fs, aname, method, uid) < 0) {
+        if (!strcmp (method, "tpools")) {
+            if (count_tpools (fs, uid, i - optind + 1) < 0) {
+                printf ("%d: %s\n", i - optind + 1, strerror (np_rerror ()));
+                failed = 1;
+            }
+        }
+        else if (step (fs, step_aname, method, uid) < 0) {
             printf ("%d: %s\n", i - optind + 1, strerror (np_rerror ()));
             failed = 1;
         }
