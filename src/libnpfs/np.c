@@ -252,6 +252,8 @@ np_create_common(struct cbuf *bufp, u32 size, u8 id)
 				 + sizeof(fc->tag)))
 		return NULL;
 	size += sizeof(fc->size) + sizeof(fc->type) + sizeof (fc->tag);
+	if ((size_t)size > SIZE_MAX - sizeof(Npfcall))
+		return NULL;
 	if (!(fc = malloc(sizeof(Npfcall) + (size_t)size)))
 		return NULL;
 	fc->pkt = (u8 *) fc + sizeof(*fc);
@@ -1370,6 +1372,8 @@ np_alloc_fcall(u32 msize)
 {
         Npfcall *fc;
 
+        if ((size_t)msize > SIZE_MAX - sizeof(*fc))
+                return NULL;
         if ((fc = malloc(sizeof(*fc) + (size_t)msize))) {
                 fc->pkt = (u8*) fc + sizeof(*fc);
 		fc->size = msize;
