@@ -424,7 +424,7 @@ diod_sock_accept_one (Npsrv *srv, int fd, int lookup)
 {
     struct sockaddr_storage addr = {0};
     socklen_t addr_size = sizeof(addr);
-    char host[NI_MAXHOST], ip[NI_MAXHOST], svc[NI_MAXSERV];
+    char host[NI_MAXHOST] = "", ip[NI_MAXHOST] = "", svc[NI_MAXSERV];
     int res, port;
     int flags = 0;
 
