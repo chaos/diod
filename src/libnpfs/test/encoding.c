@@ -970,6 +970,14 @@ static void test_huge_rread (void)
     ok (fc == NULL,
         "Rread encode fails when count is 0xfffffffc");
     free (fc);
+
+    /* 0xfffffffb passes the np_alloc_rread() check, so this exercises
+     * the size check in np_create_common().
+     */
+    fc = np_create_rread (0xfffffffb, NULL);
+    ok (fc == NULL,
+        "Rread encode fails when count is 0xfffffffb");
+    free (fc);
 }
 
 static void test_long_string (void)
