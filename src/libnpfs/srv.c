@@ -492,10 +492,10 @@ np_preprocess_request(Npreq *req)
 			req->fid->aname = np_strdup (&tc->u.tattach.aname);
 			if (!req->fid->aname)
 				np_fid_decref (&req->fid);
-			/* Here we select the tpool that will handle this
-			 * request and requests on fids walked from this fid.
+			/* The attach itself runs in the default tpool.  The
+			 * tpool for this fid, and the fids walked from it, is
+			 * selected in np_attach() once the attach succeeds.
 			 */
-			np_tpool_select (req);
 			break;
 		case Tflush:
 			break;

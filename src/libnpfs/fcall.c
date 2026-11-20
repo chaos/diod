@@ -244,8 +244,14 @@ np_attach(Npreq *req, Npfcall *tc)
 		}
 		rc = (*srv->attach)(fid, afid, &tc->u.tattach.aname);
 	}
-	if (rc)
+	if (rc) {
 		np_fid_incref (fid);
+		/* Select the tpool only after the attach succeeds, so a
+		 * client cannot create one per aname without passing the
+		 * auth and export checks.
+		 */
+		np_tpool_select (req);
+	}
 error:
 	if (afid)
 		np_fid_decref (&afid);
