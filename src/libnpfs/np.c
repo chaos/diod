@@ -543,6 +543,8 @@ np_set_rread_count(Npfcall *fc, u32 count)
 	struct cbuf *bufp = &buffer;
 
 	NP_ASSERT (count <= fc->u.rread.count);
+	NP_ASSERT (count <= UINT32_MAX - (sizeof(u32) + sizeof(u8)
+					  + sizeof(u16) + sizeof(u32)));
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
@@ -1097,6 +1099,8 @@ np_finalize_rreaddir(Npfcall *fc, u32 count)
 	struct cbuf *bufp = &buffer;
 
 	NP_ASSERT (count <= fc->u.rreaddir.count);
+	NP_ASSERT (count <= UINT32_MAX - (sizeof(u32) + sizeof(u8)
+					  + sizeof(u16) + sizeof(u32)));
 
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
