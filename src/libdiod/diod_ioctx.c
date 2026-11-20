@@ -17,6 +17,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stdint.h>
+#include <limits.h>
 #include <pthread.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -317,11 +318,19 @@ ioctx_rewinddir (IOCtx ioctx)
         rewinddir (ioctx->dir);
 }
 
-void
-ioctx_seekdir (IOCtx ioctx, long offset)
+/* seekdir(3) takes a long, which is 32 bits on some systems.  Fail rather
+ * than seek to a truncated offset.
+ */
+int
+ioctx_seekdir (IOCtx ioctx, u64 offset)
 {
+    if (offset > LONG_MAX) {
+        errno = EINVAL;
+        return -1;
+    }
     if (ioctx->dir)
-        seekdir (ioctx->dir, offset);
+        seekdir (ioctx->dir, (long)offset);
+    return 0;
 }
 
 /* Modern readdir() is thread-safe, however, if d_off is not available,
@@ -331,7 +340,7 @@ ioctx_seekdir (IOCtx ioctx, long offset)
  * taking the lock.
  */
 struct dirent *
-ioctx_readdir(IOCtx ioctx, long *offset)
+ioctx_readdir(IOCtx ioctx, u64 *offset)
 {
     struct dirent *d;
 

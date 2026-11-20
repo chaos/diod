@@ -938,6 +938,70 @@ static void test_truncated_tlink (void)
     free (fc);
 }
 
+static void _set_size (Npfcall *fc, u32 size)
+{
+    fc->size = size;
+    fc->pkt[0] = size;
+    fc->pkt[1] = size >> 8;
+    fc->pkt[2] = size >> 16;
+    fc->pkt[3] = size >> 24;
+}
+
+static void test_bad_size (void)
+{
+    Npfcall *fc;
+
+    if (!(fc = np_create_tclunk (1)))
+        BAIL_OUT ("np_create_tclunk failed");
+    _set_size (fc, 3);
+    ok (np_deserialize (fc) == 0,
+        "decode fails when size is smaller than the size field");
+    _set_size (fc, 6);
+    ok (np_deserialize (fc) == 0,
+        "decode fails when size is smaller than the header");
+    free (fc);
+}
+
+static void test_huge_rread (void)
+{
+    Npfcall *fc;
+
+    fc = np_create_rread (0xfffffffc, NULL);
+    ok (fc == NULL,
+        "Rread encode fails when count is 0xfffffffc");
+    free (fc);
+
+    /* 0xfffffffb passes the np_alloc_rread() check, so this exercises
+     * the size check in np_create_common().
+     */
+    fc = np_create_rread (0xfffffffb, NULL);
+    ok (fc == NULL,
+        "Rread encode fails when count is 0xfffffffb");
+    free (fc);
+}
+
+static void test_long_string (void)
+{
+    Npfcall *fc;
+    char *s;
+
+    if (!(s = malloc (UINT16_MAX + 2)))
+        BAIL_OUT ("out of memory");
+    memset (s, 'a', UINT16_MAX + 1);
+    s[UINT16_MAX + 1] = '\0';
+    fc = np_create_rreadlink (s);
+    ok (fc == NULL,
+        "Rreadlink encode fails when target is longer than UINT16_MAX");
+    free (fc);
+
+    s[UINT16_MAX] = '\0';
+    fc = np_create_rreadlink (s);
+    ok (fc != NULL && fc->u.rreadlink.target.len == UINT16_MAX,
+        "Rreadlink encode works when target is UINT16_MAX");
+    free (fc);
+    free (s);
+}
+
 int main (int argc, char *argv[])
 {
     plan (NO_PLAN);
@@ -973,6 +1037,9 @@ int main (int argc, char *argv[])
     test_remove ();
 
     test_truncated_tlink ();
+    test_bad_size ();
+    test_huge_rread ();
+    test_long_string ();
 
     done_testing ();
 

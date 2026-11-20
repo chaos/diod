@@ -48,6 +48,7 @@ TESTS = \
 check_PROGRAMS = \
 	test_diodrun \
 	test_tflush \
+	test_tversion \
 	test_tattach \
 	test_authattach \
 	test_loadgen \
@@ -75,6 +76,10 @@ test_diodrun_LDADD = \
 
 test_tflush_SOURCES = test/tflush.c $(common_sources)
 test_tflush_LDADD = \
+	$(common_ldadd)
+
+test_tversion_SOURCES = test/tversion.c $(common_sources)
+test_tversion_LDADD = \
 	$(common_ldadd)
 
 test_tattach_SOURCES = test/tattach.c $(common_sources)

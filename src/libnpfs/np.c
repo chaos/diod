@@ -131,11 +131,18 @@ buf_put_int64(struct cbuf *buf, u64 val, u64 *pval)
 static inline void
 buf_put_str(struct cbuf *buf, char *s, Npstr *ps)
 {
-	int slen = 0;
+	size_t slen = 0;
 
 	if (s)
 		slen = strlen(s);
-
+	/* The length field is 16 bits.  Mark the buffer as overflowed
+	 * rather than encode a truncated length.
+	 */
+	if (slen > UINT16_MAX) {
+		if (buf->p <= buf->ep)
+			buf->p = buf->ep + 1;
+		return;
+	}
 	if (buf_check_size(buf, 2+slen)) {
 		ps->len = slen;
 		buf_put_int16(buf, slen, NULL);
@@ -241,8 +248,13 @@ np_create_common(struct cbuf *bufp, u32 size, u8 id)
 {
 	Npfcall *fc;
 
+	if (size > UINT32_MAX - (sizeof(fc->size) + sizeof(fc->type)
+				 + sizeof(fc->tag)))
+		return NULL;
 	size += sizeof(fc->size) + sizeof(fc->type) + sizeof (fc->tag);
-	if (!(fc = malloc(sizeof(Npfcall) + size)))
+	if ((size_t)size > SIZE_MAX - sizeof(Npfcall))
+		return NULL;
+	if (!(fc = malloc(sizeof(Npfcall) + (size_t)size)))
 		return NULL;
 	fc->pkt = (u8 *) fc + sizeof(*fc);
 	buf_init(bufp, (char *) fc->pkt, size);
@@ -494,11 +506,13 @@ np_create_tread(u32 fid, u64 offset, u32 count)
 Npfcall *
 np_alloc_rread(u32 count)
 {
-	int size = sizeof(u32) + count;
+	u32 size = sizeof(u32) + count;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 	Npfcall *fc;
 
+	if (count > UINT32_MAX - sizeof(u32))
+		return NULL;
 	if (!(fc = np_create_common(bufp, size, Rread)))
 		return NULL;
 	buf_put_int32(bufp, count, &fc->u.rread.count);
@@ -523,12 +537,14 @@ np_create_rread(u32 count, u8* data)
 void
 np_set_rread_count(Npfcall *fc, u32 count)
 {
-	int size = sizeof(u32) + sizeof(u8) + sizeof(u16)
+	u32 size = sizeof(u32) + sizeof(u8) + sizeof(u16)
 		 + sizeof(u32) + count;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
 	NP_ASSERT (count <= fc->u.rread.count);
+	NP_ASSERT (count <= UINT32_MAX - (sizeof(u32) + sizeof(u8)
+					  + sizeof(u16) + sizeof(u32)));
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
 	buf_init(bufp, (char *) fc->pkt + 7, size - 7);
@@ -1077,12 +1093,14 @@ np_create_rreaddir(u32 count)
 void
 np_finalize_rreaddir(Npfcall *fc, u32 count)
 {
-	int size = sizeof(u32) + sizeof(u8) + sizeof(u16)
+	u32 size = sizeof(u32) + sizeof(u8) + sizeof(u16)
 		 + sizeof(u32) + count;
 	struct cbuf buffer;
 	struct cbuf *bufp = &buffer;
 
 	NP_ASSERT (count <= fc->u.rreaddir.count);
+	NP_ASSERT (count <= UINT32_MAX - (sizeof(u32) + sizeof(u8)
+					  + sizeof(u16) + sizeof(u32)));
 
 	buf_init(bufp, (char *) fc->pkt, size);
 	buf_put_int32(bufp, size, &fc->size);
@@ -1354,11 +1372,13 @@ np_peek_size(u8 *buf, int len)
 }
 
 Npfcall *
-np_alloc_fcall(int msize)
+np_alloc_fcall(u32 msize)
 {
         Npfcall *fc;
 
-        if ((fc = malloc(sizeof(*fc) + msize))) {
+        if ((size_t)msize > SIZE_MAX - sizeof(*fc))
+                return NULL;
+        if ((fc = malloc(sizeof(*fc) + (size_t)msize))) {
                 fc->pkt = (u8*) fc + sizeof(*fc);
 		fc->size = msize;
 	}
@@ -1375,6 +1395,8 @@ np_deserialize(Npfcall *fc)
 
 	buf_init(bufp, fc->pkt, 4);
 	fc->size = buf_get_int32(bufp);
+	if (fc->size < 7) /* size[4] type[1] tag[2] */
+		goto error;
 
 	buf_init(bufp, fc->pkt + 4, fc->size - 4);
 	fc->type = buf_get_int8(bufp);

@@ -44,7 +44,10 @@ npc_readdir (Npcfid *fid, u64 offset, char *data, u32 count)
 	}
 	if (fid->fsys->rpc(fid->fsys, tc, &rc) < 0)
 		goto done;
-	NP_ASSERT(rc->u.rreaddir.count <= count);
+	if (rc->u.rreaddir.count > count) {
+		np_uerror (EPROTO);
+		goto done;
+	}
 	memcpy (data, rc->u.rreaddir.data, rc->u.rreaddir.count);
 	ret = rc->u.rreaddir.count;
 done:
