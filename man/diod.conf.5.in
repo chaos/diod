@@ -122,6 +122,8 @@ Matching is exact and case-sensitive.
 A TCP client is identified by the name that a reverse lookup of its
 address returns, which may be fully qualified, or by its numeric IP
 address if \fIhostname_lookup = 0\fR or the address has no name.
+The name is used only if a forward lookup of it returns the client's
+address; otherwise the client is identified by its numeric IP address.
 A client on a UNIX domain socket is identified by the local host name,
 or by "localhost" if \fIhostname_lookup = 0\fR.
 Without this attribute, clients from any host may attach.
