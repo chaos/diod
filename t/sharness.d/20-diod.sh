@@ -1,3 +1,8 @@
+# diod refuses a config file that group or other can write, so make
+# sure files the tests create are not group writable even if the
+# user's umask is 002.
+umask 022
+
 PATH_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/diod
 PATH_MOUNT_DIOD=$SHARNESS_BUILD_DIRECTORY/src/cmd/mount.diod
 PATH_DIODRUN=$SHARNESS_BUILD_DIRECTORY/src/cmd/test_diodrun

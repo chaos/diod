@@ -18,6 +18,11 @@ fi
 exportdir=$SHARNESS_TRASH_DIRECTORY/export
 rodir=$SHARNESS_TRASH_DIRECTORY/ro
 
+# Keep config files in a private directory under /tmp, not in the trash
+# directory, since the build tree's parent directories may be owned by
+# another user (e.g. in a CI container).
+confdir=$(mktemp -d /tmp/diod-t0007.XXXXXX) || exit 1
+
 test_expect_success 'create export directories' '
 	mkdir -p $exportdir $rodir &&
 	echo TESTING >$exportdir/file &&
@@ -25,7 +30,7 @@ test_expect_success 'create export directories' '
 '
 
 test_expect_success 'create config file' '
-	cat >diod.conf <<-EOT
+	cat >$confdir/diod.conf <<-EOT
 	nwthreads = 4
 	auth_required = 0
 	exportopts = "sharefd"
@@ -38,7 +43,7 @@ test_expect_success 'create config file' '
 '
 
 test_expect_success 'start diod with config file' '
-	diod_start --config-file=$SHARNESS_TRASH_DIRECTORY/diod.conf \
+	diod_start --config-file=$confdir/diod.conf \
 	    --runas-uid=$(id -u)
 '
 
@@ -97,28 +102,28 @@ test_expect_success 'stop diod' '
 '
 
 test_expect_success 'diod fails on a config file with a syntax error' '
-	cat >bad.conf <<-EOT &&
+	cat >$confdir/bad.conf <<-EOT &&
 	exports = { "$exportdir" }
 	this is not lua
 	EOT
 	test_must_fail $PATH_DIOD --foreground \
-	    --config-file=$SHARNESS_TRASH_DIRECTORY/bad.conf \
+	    --config-file=$confdir/bad.conf \
 	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>bad.err &&
 	test_grep "bad.conf" bad.err
 '
 
 test_expect_success 'diod fails on a config file with an unknown export option' '
-	cat >badopt.conf <<-EOT &&
+	cat >$confdir/badopt.conf <<-EOT &&
 	exports = { { path="$exportdir", opts="xxx" } }
 	EOT
 	test_must_fail $PATH_DIOD --foreground \
-	    --config-file=$SHARNESS_TRASH_DIRECTORY/badopt.conf \
+	    --config-file=$confdir/badopt.conf \
 	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>badopt.err &&
 	test_grep "unknown export option" badopt.err
 '
 
 test_expect_success 'restart diod with a command line export' '
-	diod_start --config-file=$SHARNESS_TRASH_DIRECTORY/diod.conf \
+	diod_start --config-file=$confdir/diod.conf \
 	    --no-auth \
 	    --export=ctl --export=$exportdir \
 	    --runas-uid=$(id -u)
@@ -148,7 +153,7 @@ test_expect_success 'create export directories for access restrictions' '
 '
 
 test_expect_success 'create config file with access restrictions' '
-	cat >restrict.conf <<-EOT
+	cat >$confdir/restrict.conf <<-EOT
 	auth_required = 0
 	hostname_lookup = 0
 	exports = {
@@ -164,7 +169,7 @@ test_expect_success 'create config file with access restrictions' '
 '
 
 test_expect_success 'start diod with access restrictions' '
-	diod_start --config-file=$SHARNESS_TRASH_DIRECTORY/restrict.conf \
+	diod_start --config-file=$confdir/restrict.conf \
 	    --runas-uid=$(id -u)
 '
 
@@ -206,6 +211,10 @@ test_expect_success 'parent of a denied export can be attached' '
 
 test_expect_success 'stop diod with access restrictions' '
 	diod_term $DIOD_SOCKET
+'
+
+test_expect_success 'remove config directory' '
+	rm -rf $confdir
 '
 
 test_done
