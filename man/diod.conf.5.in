@@ -10,6 +10,15 @@ Config settings take the form of LUA global variables which are read out
 after the config file is executed.  Therefore, the values of said variables
 can either be statically assigned or computed.
 The variables are described below.
+.LP
+Because the file controls exports and authentication, \fBdiod\fR refuses
+to start if it, or any directory above it, is writable by group or other,
+or owned by a user other than root or the user running \fBdiod\fR.
+A directory that is owned by root and has the sticky bit set, such as
+/tmp, is allowed.
+If the path is a symbolic link, the directories above the file it points
+to are checked.
+The file must be a regular file, or /dev/null for an empty config.
 .SH "CONFIG VARIABLES"
 .TP
 .I "listen = { ""IP:PORT"" [,""IP:PORT"",...] }"
