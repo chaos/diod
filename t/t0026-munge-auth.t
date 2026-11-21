@@ -101,6 +101,14 @@ test_expect_success DAEMONUSER 'an authenticated connection does not extend to a
 	check_steps "1: ok\n2: Operation not permitted" \
 	    -a $exportdir munge none:$(id -u daemon)
 '
+test_expect_success 'failed attaches do not create thread pools' '
+	check_steps "1: tpools=1\n2: Operation not permitted\n3: Operation not permitted\n4: Operation not permitted\n5: tpools=1" \
+	    -a $exportdir tpools none@/nope1 garbage@/nope2 munge@/nope3 tpools
+'
+test_expect_success 'a successful attach creates a thread pool' '
+	check_steps "1: tpools=1\n2: ok\n3: tpools=2" \
+	    -a $exportdir tpools munge tpools
+'
 test_expect_success 'ctl requires auth too' '
 	check_steps "1: Operation not permitted" -a ctl none &&
 	check_steps "1: ok" -a ctl munge
