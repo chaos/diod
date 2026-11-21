@@ -18,9 +18,10 @@ fi
 exportdir=$SHARNESS_TRASH_DIRECTORY/export
 rodir=$SHARNESS_TRASH_DIRECTORY/ro
 
-# Keep config files in a private directory under /tmp, not in the trash
-# directory, since the build tree's parent directories may be owned by
-# another user (e.g. in a CI container).
+# diod refuses a config file if any directory above it could let someone
+# else replace it.  The trash directory is under the build tree, whose
+# parents may be owned by another user (e.g. in a CI container), so keep
+# config files in a private directory under /tmp instead.
 confdir=$(mktemp -d /tmp/diod-t0007.XXXXXX) || exit 1
 
 test_expect_success 'create export directories' '
@@ -120,6 +121,84 @@ test_expect_success 'diod fails on a config file with an unknown export option' 
 	    --config-file=$confdir/badopt.conf \
 	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>badopt.err &&
 	test_grep "unknown export option" badopt.err
+'
+
+test_expect_success 'diod fails on a group writable config file' '
+	cp $confdir/diod.conf $confdir/gwrite.conf &&
+	chmod g+w $confdir/gwrite.conf &&
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir/gwrite.conf \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>gwrite.err &&
+	test_grep "must not be writable" gwrite.err
+'
+
+test_expect_success 'diod fails on a world writable config file' '
+	cp $confdir/diod.conf $confdir/owrite.conf &&
+	chmod o+w $confdir/owrite.conf &&
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir/owrite.conf \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>owrite.err &&
+	test_grep "must not be writable" owrite.err
+'
+
+test_expect_success 'diod fails on a missing config file' '
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir/nosuch.conf \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>nosuch.err &&
+	test_grep "nosuch.conf" nosuch.err
+'
+
+test_expect_success 'diod fails on a config file in a group writable directory' '
+	mkdir $confdir/gwdir &&
+	cp $confdir/diod.conf $confdir/gwdir/diod.conf &&
+	chmod g+w $confdir/gwdir &&
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir/gwdir/diod.conf \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>gwdir.err &&
+	test_grep "directory .*gwdir must not be writable" gwdir.err
+'
+
+test_expect_success 'diod fails on a symlink to a config file in an unsafe directory' '
+	ln -s gwdir/diod.conf $confdir/link.conf &&
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir/link.conf \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>link.err &&
+	test_grep "directory .*gwdir must not be writable" link.err
+'
+
+test_expect_success 'a config file in a root-owned sticky directory is accepted' '
+	test "$(stat -c %u /tmp)" = 0 && test -k /tmp &&
+	tmpconf=$(mktemp /tmp/diod-t0007.XXXXXX) &&
+	cp $confdir/diod.conf $tmpconf &&
+	diod_start --config-file=$tmpconf --runas-uid=$(id -u) &&
+	diod_term $DIOD_SOCKET &&
+	rm -f $tmpconf
+'
+
+test_expect_success 'diod fails on a directory as config file' '
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>dir.err &&
+	test_grep "not a regular file" dir.err
+'
+
+test_expect_success 'diod fails on a FIFO as config file' '
+	mkfifo $confdir/fifo.conf &&
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=$confdir/fifo.conf \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>fifo.err &&
+	test_grep "not a regular file" fifo.err
+'
+
+test_expect_success 'diod fails on a character device other than /dev/null' '
+	test_must_fail $PATH_DIOD --foreground \
+	    --config-file=/dev/zero \
+	    --listen=$SHARNESS_TRASH_DIRECTORY/nosuchsock 2>zero.err &&
+	test_grep "not a regular file" zero.err
+'
+
+test_expect_success 'syntax errors are still reported as path:line' '
+	test_grep "bad.conf:2:" bad.err
 '
 
 test_expect_success 'restart diod with a command line export' '
