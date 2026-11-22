@@ -61,6 +61,10 @@ See SECURITY below.
 This option disables hostname lookups.
 It overrides the \fIhostname_lookup\fR setting in diod.conf (5).
 .TP
+.I "-p, --statfs-passthru"
+Make statfs report the exported file system's type rather than V9FS_MAGIC.
+This option overrides the \fIstatfs_passthru\fR setting in diod.conf (5).
+.TP
 .I "-N, --no-userdb"
 This option disables password/group lookups.
 It allows any uid to attach and assumes gid=uid, and supplementary groups
