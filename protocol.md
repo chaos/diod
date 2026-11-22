@@ -170,7 +170,7 @@ fid initially represents the parent directory of the new file. After the call it
 
 mode contains Linux creat(2) mode bits.
 
-flags is used to pass Linux kernel intent bits (FIXME: diod ignores flags)
+flags contains Linux open(2) flags.  diod adds O_CREAT if it is missing and fails with EINVAL if O_DIRECT is set.
 
 gid is the effective gid of the caller.
 
