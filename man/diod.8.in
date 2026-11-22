@@ -99,6 +99,13 @@ Set the debug mask.  The bit values are:
 .br
 0x01 - log decoded 9P protocol messages
 .br
+0x02 - log user lookups
+.br
+0x04 - log fids still in use when a connection closes
+.br
+0x08 - log Tflush handling
+.br
+0x10 - add timestamps to 9P protocol messages
 .TP
 .I "-c, --config-file PATH"
 Set config file path.
