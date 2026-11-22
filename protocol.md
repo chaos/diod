@@ -562,6 +562,6 @@ P9_RCLUNK tag 1
 
 [Plan 9 Remote Resource Protocol 9p2000](https://ericvh.github.io/9p-rfc/rfc9p2000.html), Van Hensbergen, 2005.
 
-[Plan 9 from Bell Labs - Section 5 - Plan 9 File Protocol](https://9p.io/magic/man2html/5/0intro), 9P, Plan 9 Manual, 4nd edition, 2002.
+[Plan 9 from Bell Labs - Section 5 - Plan 9 File Protocol](https://9p.io/magic/man2html/5/0intro), 9P, Plan 9 Manual, 4th edition, 2002.
 
 [The Use of Name Spaces in Plan 9](https://9p.io/sys/doc/names.pdf), Pike et al, 1993.
