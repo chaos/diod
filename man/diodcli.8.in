@@ -18,7 +18,9 @@ diodcli \- perform file operations by attaching directly to diod server
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBsetxattr\fR \fI[--create|--replace] PATH NAME VALUE\fR
 .br
-\fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR PATH NAME\fR
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR \fIPATH NAME\fR
+.br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBlistxattr\fR \fIPATH\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBshowmount\fR \fI[--long]\fR
 .br
@@ -53,7 +55,6 @@ available to root only.  This can be used in conjunction with the
 Show 9P protocol on stderr.
 .SH SUBCOMMANDS
 .TP
-.TP
 .B read
 Read a file and write to stdout.
 .TP
@@ -85,6 +86,9 @@ Set the value of an extended attribute.
 .TP
 .B delxattr
 Remove an extended attribute.
+.TP
+.B listxattr
+List the names of a file's extended attributes.
 .TP
 .B showmount
 List the server's connected clients.  By default, the client list is

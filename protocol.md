@@ -98,7 +98,7 @@ size[4] Rremove tag[2]
 ```
 remove removes the file system object represented by fid.
 
-See the Plan 9 manual page for.
+See the Plan 9 manual page for
 [remove(5)](http://9p.io/magic/man2html/5/remove).
 
 This operation will eventually be replaced by unlinkat (see below).
@@ -170,7 +170,7 @@ fid initially represents the parent directory of the new file. After the call it
 
 mode contains Linux creat(2) mode bits.
 
-flags is used to pass Linux kernel intent bits (FIXME: diod ignores flags)
+flags contains Linux open(2) flags.  diod adds O_CREAT if it is missing and fails with EINVAL if O_DIRECT is set.
 
 gid is the effective gid of the caller.
 
@@ -321,11 +321,11 @@ size[4] Rxattrcreate tag[2]
 ```
 xattrcreate gets a fid pointing to the xattr name. This fid can later be used to set the xattr value.
 
-flag is derived from set Linux setxattr. The manpage says 
+flags is derived from Linux setxattr(2). The manpage says
 
 > The flags parameter can be used to refine the semantics of the operation. XATTR_CREATE specifies a pure create, which fails if the named attribute exists already. XATTR_REPLACE specifies a pure replace operation, which fails if the named attribute does not already exist. By default (no flags), the extended attribute will be created if need be, or will simply replace the value if the attribute exists.
 
-The actual setxattr operation happens when the fid is clunked. At that point the written byte count and the attr_size specified in TXATTRCREATE should be same otherwise an error will be returned.
+The actual setxattr operation happens when the fid is clunked. At that point the written byte count and the attr_size specified in TXATTRCREATE should be the same, otherwise an error will be returned.
 
 #### readdir - read a directory
 ```
@@ -386,7 +386,7 @@ status can be:
 ```
 The Linux v9fs client implements the fcntl(F_SETLKW) (blocking) lock request by calling lock with P9_LOCK_FLAGS_BLOCK set. If the response is P9_LOCK_BLOCKED, it retries the lock request in an interruptible loop until status is no longer P9_LOCK_BLOCKED.
 
-The Linux v9fs client translates BSD advisory locks (flock) to whole-file POSIX record locks. v9fs does not implement mandatory locks and will return ENOLCK if use is attempted.
+The Linux v9fs client translates BSD advisory locks (flock) to whole-file POSIX record locks. v9fs does not implement mandatory locks and will return ENOLCK if their use is attempted.
 
 Because of POSIX record lock inheritance and upgrade properties, pass-through servers must be implemented carefully.
 
@@ -397,7 +397,7 @@ size[4] Rgetlock tag[2] type[1] start[8] length[8] proc_id[4] client_id[s]
 ```
 getlock tests for the existence of a POSIX record lock and has semantics similar to Linux fcntl(F_GETLK).
 
-As with lock, type has one of the values defined above, and start, length, and proc_id correspond to the analogous fields in struct flock passed to Linux fcntl(F_GETLK), and client_Id is an additional mechanism for uniquely identifying the lock requester and is set to the nodename by the Linux v9fs client.
+As with lock, type has one of the values defined above, and start, length, and proc_id correspond to the analogous fields in struct flock passed to Linux fcntl(F_GETLK), and client_id is an additional mechanism for uniquely identifying the lock requester and is set to the nodename by the Linux v9fs client.
 
 #### link - create hard link
 ```
@@ -406,7 +406,7 @@ size[4] Rlink tag[2]
 ```
 link creates a hard link name in directory dfid. The link target is referenced by fid.
 
-### mkdir - create directory
+#### mkdir - create directory
 ```
 size[4] Tmkdir tag[2] dfid[4] name[s] mode[4] gid[4]
 size[4] Rmkdir tag[2] qid[13]
@@ -424,16 +424,16 @@ The qid of the new directory is returned in the response.
 size[4] Trenameat tag[2] olddirfid[4] oldname[s] newdirfid[4] newname[s]
 size[4] Rrenameat tag[2]
 ```
-Change the name of a file from oldname to newname, possible moving it from old directory represented by olddirfid to new directory represented by newdirfid.
+Change the name of a file from oldname to newname, possibly moving it from old directory represented by olddirfid to new directory represented by newdirfid.
 
-If the server returns ENOTSUPP, the client should fall back to the rename operation.
+If the server returns EOPNOTSUPP, the client should fall back to the rename operation.
 
 #### unlinkat - unlink a file or directory
 ```
 size[4] Tunlinkat tag[2] dirfd[4] name[s] flags[4]
 size[4] Runlinkat tag[2]
 ```
-Unlink name from directory represented by dirfd. If the file is represented by a fid, that fid is not clunked. If the server returns ENOTSUPP, the client should fall back to the remove operation.
+Unlink name from directory represented by dirfd. If the file is represented by a fid, that fid is not clunked. If the server returns EOPNOTSUPP, the client should fall back to the remove operation.
 
 ### Sample Session
 diod server is started:
@@ -562,6 +562,6 @@ P9_RCLUNK tag 1
 
 [Plan 9 Remote Resource Protocol 9p2000](https://ericvh.github.io/9p-rfc/rfc9p2000.html), Van Hensbergen, 2005.
 
-[Plan 9 from Bell Labs - Section 5 - Plan 9 File Protocol](https://9p.io/magic/man2html/5/0intro), 9P, Plan 9 Manual, 4nd edition, 2002.
+[Plan 9 from Bell Labs - Section 5 - Plan 9 File Protocol](https://9p.io/magic/man2html/5/0intro), 9P, Plan 9 Manual, 4th edition, 2002.
 
 [The Use of Name Spaces in Plan 9](https://9p.io/sys/doc/names.pdf), Pike et al, 1993.

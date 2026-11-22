@@ -124,14 +124,14 @@ client and server.
 The kernel limits msize to the maximum supported by the transport,
 which for \fItrans=fd\fR is 1M as of Linux 5.15 and 64K before that.
 .TP
-.I "version=9p20000.L"
+.I "version=9p2000.L"
 Select 9P protocol version.
 \fBdiod\fR only supports \fI9p2000.L\fR.
 .TP
 .I "cache=MODE"
 Specify a caching policy.
 Cache modes include \fInone\fR (default), \fIreadahead\fR, \fImmap\fR,
-\fIloose\fR, and \fIfscache.
+\fIloose\fR, and \fIfscache\fR.
 .TP
 .I "debug=MASK"
 Specifies debug level for the kernel 9p module.  The debug level is a bitmask.
