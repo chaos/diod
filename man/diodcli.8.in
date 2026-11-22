@@ -18,7 +18,7 @@ diodcli \- perform file operations by attaching directly to diod server
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBsetxattr\fR \fI[--create|--replace] PATH NAME VALUE\fR
 .br
-\fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR PATH NAME\fR
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR \fIPATH NAME\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBshowmount\fR \fI[--long]\fR
 .br
