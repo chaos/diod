@@ -20,6 +20,8 @@ diodcli \- perform file operations by attaching directly to diod server
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBdelxattr\fR \fIPATH NAME\fR
 .br
+\fBdiodcli\fR \fI[OPTIONS]\fR \fBlistxattr\fR \fIPATH\fR
+.br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBshowmount\fR \fI[--long]\fR
 .br
 \fBdiodcli\fR \fI[OPTIONS]\fR \fBdate\fR \fI[--set-time]\fR
@@ -84,6 +86,9 @@ Set the value of an extended attribute.
 .TP
 .B delxattr
 Remove an extended attribute.
+.TP
+.B listxattr
+List the names of a file's extended attributes.
 .TP
 .B showmount
 List the server's connected clients.  By default, the client list is
