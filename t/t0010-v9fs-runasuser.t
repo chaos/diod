@@ -326,6 +326,28 @@ test_expect_success 'unmount mnt' '
 	$umountcmd mnt
 '
 
+# --statfs-passthru makes statfs report the exported file system's type
+# instead of V9FS_MAGIC.  Use a second server so the main one is
+# unaffected.
+test_expect_success STAT 'start a second server with --statfs-passthru' '
+	diod_start --config-file=/dev/null --runas=$(id -u) --no-auth \
+	    --export=$exportdir --statfs-passthru &&
+	PASSTHRU_SOCKET=$DIOD_SOCKET
+'
+test_expect_success STAT 'mount the --statfs-passthru server on mnt2' '
+	$mountcmd -ouname=$(id -un),access=$(id -u) \
+	    $PASSTHRU_SOCKET:$exportdir mnt2
+'
+test_expect_success STAT 'file system type is passed through' '
+	stat -f -c "%t" exp >ptype.exp &&
+	stat -f -c "%t" mnt2 >ptype.out &&
+	test_cmp ptype.exp ptype.out
+'
+test_expect_success STAT 'unmount mnt2 and stop the second server' '
+	$umountcmd mnt2 &&
+	diod_term $PASSTHRU_SOCKET
+'
+
 # N.B. Server exits when conn count drops to zero.
 
 test_done
