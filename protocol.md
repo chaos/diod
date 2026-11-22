@@ -325,7 +325,7 @@ flags is derived from Linux setxattr(2). The manpage says
 
 > The flags parameter can be used to refine the semantics of the operation. XATTR_CREATE specifies a pure create, which fails if the named attribute exists already. XATTR_REPLACE specifies a pure replace operation, which fails if the named attribute does not already exist. By default (no flags), the extended attribute will be created if need be, or will simply replace the value if the attribute exists.
 
-The actual setxattr operation happens when the fid is clunked. At that point the written byte count and the attr_size specified in TXATTRCREATE should be same otherwise an error will be returned.
+The actual setxattr operation happens when the fid is clunked. At that point the written byte count and the attr_size specified in TXATTRCREATE should be the same, otherwise an error will be returned.
 
 #### readdir - read a directory
 ```
