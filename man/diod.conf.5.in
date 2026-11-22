@@ -151,6 +151,6 @@ nwthreads = 8
 .SH "FILES"
 @X_SYSCONFDIR@/diod.conf
 .SH "SEE ALSO"
-lua (1), diod (8), openlog (3)
+lua (1), diod (8)
 .LP
 http://www.lua.org/
