@@ -124,7 +124,7 @@ client and server.
 The kernel limits msize to the maximum supported by the transport,
 which for \fItrans=fd\fR is 1M as of Linux 5.15 and 64K before that.
 .TP
-.I "version=9p20000.L"
+.I "version=9p2000.L"
 Select 9P protocol version.
 \fBdiod\fR only supports \fI9p2000.L\fR.
 .TP
