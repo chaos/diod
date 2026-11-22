@@ -53,7 +53,6 @@ available to root only.  This can be used in conjunction with the
 Show 9P protocol on stderr.
 .SH SUBCOMMANDS
 .TP
-.TP
 .B read
 Read a file and write to stdout.
 .TP
