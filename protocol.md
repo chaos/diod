@@ -397,7 +397,7 @@ size[4] Rgetlock tag[2] type[1] start[8] length[8] proc_id[4] client_id[s]
 ```
 getlock tests for the existence of a POSIX record lock and has semantics similar to Linux fcntl(F_GETLK).
 
-As with lock, type has one of the values defined above, and start, length, and proc_id correspond to the analogous fields in struct flock passed to Linux fcntl(F_GETLK), and client_Id is an additional mechanism for uniquely identifying the lock requester and is set to the nodename by the Linux v9fs client.
+As with lock, type has one of the values defined above, and start, length, and proc_id correspond to the analogous fields in struct flock passed to Linux fcntl(F_GETLK), and client_id is an additional mechanism for uniquely identifying the lock requester and is set to the nodename by the Linux v9fs client.
 
 #### link - create hard link
 ```
