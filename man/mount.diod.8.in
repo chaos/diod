@@ -131,7 +131,7 @@ Select 9P protocol version.
 .I "cache=MODE"
 Specify a caching policy.
 Cache modes include \fInone\fR (default), \fIreadahead\fR, \fImmap\fR,
-\fIloose\fR, and \fIfscache.
+\fIloose\fR, and \fIfscache\fR.
 .TP
 .I "debug=MASK"
 Specifies debug level for the kernel 9p module.  The debug level is a bitmask.
