@@ -102,10 +102,11 @@ opened O_RDONLY by the same user.
 .I privport
 Reject attach request unless client is bound to a port in the privileged
 port range (512-1023).
-The \fBdiodcat\fR utility has a \fI--privport\fR option which, when run
-as root, binds to a privileged socket before connecting.
-This provides limited additional security, especially in open networks,
-as it is vulnerable to IP spoofing attacks.
+The \fBdiodcli\fR(8) and \fBmount.diod\fR(8) commands have a
+\fI--privport\fR option which, when run as root, binds to a privileged
+port before connecting.
+This provides limited additional security, since any host where an
+attacker has root can connect from a privileged port.
 .TP
 .I noauth
 Allow attach to succeed without authentication.
