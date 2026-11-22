@@ -406,7 +406,7 @@ size[4] Rlink tag[2]
 ```
 link creates a hard link name in directory dfid. The link target is referenced by fid.
 
-### mkdir - create directory
+#### mkdir - create directory
 ```
 size[4] Tmkdir tag[2] dfid[4] name[s] mode[4] gid[4]
 size[4] Rmkdir tag[2] qid[13]
