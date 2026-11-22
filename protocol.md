@@ -426,14 +426,14 @@ size[4] Rrenameat tag[2]
 ```
 Change the name of a file from oldname to newname, possible moving it from old directory represented by olddirfid to new directory represented by newdirfid.
 
-If the server returns ENOTSUPP, the client should fall back to the rename operation.
+If the server returns EOPNOTSUPP, the client should fall back to the rename operation.
 
 #### unlinkat - unlink a file or directory
 ```
 size[4] Tunlinkat tag[2] dirfd[4] name[s] flags[4]
 size[4] Runlinkat tag[2]
 ```
-Unlink name from directory represented by dirfd. If the file is represented by a fid, that fid is not clunked. If the server returns ENOTSUPP, the client should fall back to the remove operation.
+Unlink name from directory represented by dirfd. If the file is represented by a fid, that fid is not clunked. If the server returns EOPNOTSUPP, the client should fall back to the remove operation.
 
 ### Sample Session
 diod server is started:
