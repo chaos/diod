@@ -227,7 +227,7 @@ main(int argc, char **argv)
                 diod_conf_set_hostname_lookup (0);
                 break;
             case 'p':   /* --statfs-passthru */
-                diod_conf_set_statfs_passthru (0);
+                diod_conf_set_statfs_passthru (1);
                 break;
             case 'N':   /* --no-userdb */
                 diod_conf_set_userdb (0);
