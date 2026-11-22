@@ -424,7 +424,7 @@ The qid of the new directory is returned in the response.
 size[4] Trenameat tag[2] olddirfid[4] oldname[s] newdirfid[4] newname[s]
 size[4] Rrenameat tag[2]
 ```
-Change the name of a file from oldname to newname, possible moving it from old directory represented by olddirfid to new directory represented by newdirfid.
+Change the name of a file from oldname to newname, possibly moving it from old directory represented by olddirfid to new directory represented by newdirfid.
 
 If the server returns EOPNOTSUPP, the client should fall back to the rename operation.
 
