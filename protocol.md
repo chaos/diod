@@ -386,7 +386,7 @@ status can be:
 ```
 The Linux v9fs client implements the fcntl(F_SETLKW) (blocking) lock request by calling lock with P9_LOCK_FLAGS_BLOCK set. If the response is P9_LOCK_BLOCKED, it retries the lock request in an interruptible loop until status is no longer P9_LOCK_BLOCKED.
 
-The Linux v9fs client translates BSD advisory locks (flock) to whole-file POSIX record locks. v9fs does not implement mandatory locks and will return ENOLCK if use is attempted.
+The Linux v9fs client translates BSD advisory locks (flock) to whole-file POSIX record locks. v9fs does not implement mandatory locks and will return ENOLCK if their use is attempted.
 
 Because of POSIX record lock inheritance and upgrade properties, pass-through servers must be implemented carefully.
 
