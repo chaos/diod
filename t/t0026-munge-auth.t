@@ -130,13 +130,15 @@ test_expect_success 'stop diod' '
 #
 
 test_expect_success CONFIG 'start diod with a noauth export' '
-	cat >noauth.conf <<-EOT &&
+	confdir=$(mktemp -d /tmp/diod-t0026.XXXXXX) &&
+	test_when_finished "rm -rf $confdir" &&
+	cat >$confdir/noauth.conf <<-EOT &&
 	exports = {
 	    "$exportdir",
 	    { path="$noauthdir", opts="noauth" },
 	}
 	EOT
-	diod_start --config-file=$(pwd)/noauth.conf --runas=$myuid
+	diod_start --config-file=$confdir/noauth.conf --runas=$myuid
 '
 test_expect_success CONFIG 'attach to the noauth export without auth works' '
 	check_steps "1: ok" -a $noauthdir none

@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -465,6 +466,105 @@ void diod_conf_set_exportopts(char *opts)
 }
 
 #if HAVE_CONFIG_FILE
+/* Return true if 'sb' is owned by root or the user running diod.
+ */
+static int
+_trusted_owner (struct stat *sb)
+{
+    return (sb->st_uid == 0 || sb->st_uid == geteuid ());
+}
+
+/* The config file controls exports and authentication, so refuse one
+ * that someone other than root or the diod user could modify or replace.
+ * Like sshd StrictModes, check the file and each directory above it:
+ * each must have a trusted owner and must not be writable by group or
+ * other, except that a root-owned sticky directory such as /tmp is
+ * allowed, since others cannot rename or remove a file they do not own
+ * in it.  'sb' is from fstat() on the open file, so the file checked is
+ * the one that is read.
+ */
+static void
+_check_config_perms (const char *path, struct stat *sb)
+{
+    char *rpath, *p;
+    struct stat dsb;
+
+    if (!_trusted_owner (sb))
+        msg_exit ("%s: must be owned by root or uid %d",
+                  path, (int)geteuid ());
+    if ((sb->st_mode & (S_IWGRP | S_IWOTH)))
+        msg_exit ("%s: must not be writable by group or other", path);
+
+    if (!(rpath = realpath (path, NULL)))
+        msg_exit ("%s: %s", path, strerror (errno));
+    while ((p = strrchr (rpath, '/'))) {
+        if (p == rpath)
+            p[1] = '\0';           /* keep "/" */
+        else
+            *p = '\0';
+        if (stat (rpath, &dsb) < 0)
+            msg_exit ("%s: %s", rpath, strerror (errno));
+        if (!_trusted_owner (&dsb))
+            msg_exit ("%s: directory %s must be owned by root or uid %d",
+                      path, rpath, (int)geteuid ());
+        if ((dsb.st_mode & (S_IWGRP | S_IWOTH))
+            && !((dsb.st_mode & S_ISVTX) && dsb.st_uid == 0))
+            msg_exit ("%s: directory %s must not be writable by group"
+                      " or other", path, rpath);
+        if (p == rpath)
+            break;
+    }
+    free (rpath);
+}
+
+/* Open the config file once, check it, and read it into memory, so the
+ * file that is checked is the file that is loaded.  Only a regular file
+ * or /dev/null is accepted.  Return NULL with *lenp = 0 for /dev/null,
+ * which is read as an empty config.
+ */
+static char *
+_read_config_file (const char *path, size_t *lenp)
+{
+    struct stat sb;
+    char *buf = NULL;
+    size_t len = 0;
+    ssize_t n;
+    int fd;
+
+    if ((fd = open (path, O_RDONLY | O_CLOEXEC | O_NONBLOCK)) < 0)
+        msg_exit ("%s: %s", path, strerror (errno));
+    if (fstat (fd, &sb) < 0)
+        msg_exit ("%s: %s", path, strerror (errno));
+    if (S_ISCHR (sb.st_mode)) {
+        struct stat nsb;
+
+        if (stat ("/dev/null", &nsb) < 0
+            || !S_ISCHR (nsb.st_mode) || sb.st_rdev != nsb.st_rdev)
+            msg_exit ("%s: not a regular file or /dev/null", path);
+    }
+    else if (S_ISREG (sb.st_mode)) {
+        _check_config_perms (path, &sb);
+        if (!(buf = malloc (sb.st_size + 1)))
+            msg_exit ("out of memory");
+        while (len < sb.st_size) {
+            n = read (fd, buf + len, sb.st_size - len);
+            if (n < 0) {
+                if (errno == EINTR)
+                    continue;
+                msg_exit ("%s: %s", path, strerror (errno));
+            }
+            if (n == 0)
+                break;
+            len += n;
+        }
+    }
+    else
+        msg_exit ("%s: not a regular file or /dev/null", path);
+    close (fd);
+    *lenp = len;
+    return buf;
+}
+
 static int
 _lua_getglobal_int (char *path, lua_State *L, char *key, int *ip)
 {
@@ -622,7 +722,12 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
             path = config.configpath;  /* missing default file is not fatal */
     }
     if (path) {
-        lua_State *L = luaL_newstate ();
+        lua_State *L;
+        char *buf, *chunkname;
+        size_t len;
+
+        buf = _read_config_file (path, &len);
+        L = luaL_newstate ();
 
         /* Only base, table, string, and math are made available to the
          * config file.  io and os are deliberately left out.
@@ -643,8 +748,15 @@ diod_conf_init_config_file (char *path) /* FIXME: ENOMEM is fatal */
         luaopen_math (L);
 #endif
 
-        if (luaL_loadfile (L, path) || lua_pcall (L, 0, 0, 0))
+        /* "@" makes Lua report errors as path:line, like luaL_loadfile.
+         */
+        if (asprintf (&chunkname, "@%s", path) < 0)
+            msg_exit ("out of memory");
+        if (luaL_loadbuffer (L, buf ? buf : "", len, chunkname)
+            || lua_pcall (L, 0, 0, 0))
             msg_exit ("%s", lua_tostring (L, -1));
+        free (chunkname);
+        free (buf);
 
         /* Don't override cmdline options when rereading config file.
          */
