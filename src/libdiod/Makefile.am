@@ -54,7 +54,8 @@ TESTS = \
 	test_rename.t \
 	test_stream.t \
 	test_lock.t \
-	test_multiuser.t
+	test_multiuser.t \
+	test_fcrdns.t
 
 check_PROGRAMS = $(TESTS)
 TEST_EXTENSIONS = .t
@@ -81,3 +82,6 @@ test_lock_t_LDADD = $(test_ldadd)
 
 test_multiuser_t_SOURCES = test/multiuser.c
 test_multiuser_t_LDADD = $(test_ldadd)
+
+test_fcrdns_t_SOURCES = test/fcrdns.c
+test_fcrdns_t_LDADD = $(test_ldadd)

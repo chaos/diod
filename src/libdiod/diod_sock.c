@@ -417,6 +417,77 @@ diod_sock_startfd (Npsrv *srv, int fdin, int fdout, char *client_id, int flags)
     }
 }
 
+/* If 'addr' is an IPv4-mapped IPv6 address (::ffff:a.b.c.d), as an IPv6
+ * socket sees an IPv4 client, store the IPv4 address in 'sin' and return
+ * it.  Otherwise return 'addr'.
+ */
+static const struct sockaddr *
+_unmap_v4 (const struct sockaddr *addr, struct sockaddr_in *sin)
+{
+    if (addr->sa_family == AF_INET6) {
+        const struct sockaddr_in6 *sin6 = (const struct sockaddr_in6 *)addr;
+        if (IN6_IS_ADDR_V4MAPPED (&sin6->sin6_addr)) {
+            memset (sin, 0, sizeof (*sin));
+            sin->sin_family = AF_INET;
+            memcpy (&sin->sin_addr, &sin6->sin6_addr.s6_addr[12], 4);
+            return (const struct sockaddr *)sin;
+        }
+    }
+    return addr;
+}
+
+/* Return true if 'a' and 'b' are the same IP address.  Ports, and the
+ * IPv6 scope ID and flow info, are ignored.
+ */
+static int
+_addr_equal (const struct sockaddr *a, const struct sockaddr *b)
+{
+    struct sockaddr_in sa, sb;
+
+    a = _unmap_v4 (a, &sa);
+    b = _unmap_v4 (b, &sb);
+    if (a->sa_family != b->sa_family)
+        return 0;
+    if (a->sa_family == AF_INET)
+        return !memcmp (&((const struct sockaddr_in *)a)->sin_addr,
+                        &((const struct sockaddr_in *)b)->sin_addr,
+                        sizeof (struct in_addr));
+    if (a->sa_family == AF_INET6)
+        return !memcmp (&((const struct sockaddr_in6 *)a)->sin6_addr,
+                        &((const struct sockaddr_in6 *)b)->sin6_addr,
+                        sizeof (struct in6_addr));
+    return 0;
+}
+
+int
+diod_sock_addr_in_list (const struct sockaddr *addr,
+                        const struct addrinfo *list)
+{
+    const struct addrinfo *r;
+
+    for (r = list; r != NULL; r = r->ai_next) {
+        if (r->ai_addr && _addr_equal (addr, r->ai_addr))
+            return 1;
+    }
+    return 0;
+}
+
+int
+diod_sock_name_matches_addr (const char *name, const struct sockaddr *addr)
+{
+    struct addrinfo hints, *res;
+    int match;
+
+    memset (&hints, 0, sizeof (hints));
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    if (getaddrinfo (name, NULL, &hints, &res) != 0)
+        return 0;
+    match = diod_sock_addr_in_list (addr, res);
+    freeaddrinfo (res);
+    return match;
+}
+
 /* Accept one connection on a ready fd and pass it on to the npfs 9P engine.
  */
 void
@@ -466,6 +537,17 @@ diod_sock_accept_one (Npsrv *srv, int fd, int lookup)
             msg ("getnameinfo: %s", gai_strerror(res));
             close (fd);
             return;
+        }
+        /* If the name does not map back to the address, fall back to
+         * the numeric address so the name cannot match an exports
+         * hosts attribute.
+         */
+        if (lookup && strcmp (host, ip) != 0
+                   && !diod_sock_name_matches_addr (host,
+                                                    (struct sockaddr *)&addr)) {
+            msg ("%s: reverse lookup returned %s, which does not resolve"
+                 " back to it", ip, host);
+            host[0] = '\0';
         }
         port = strtoul (svc, NULL, 10);
         if (port < IPPORT_RESERVED && port >= IPPORT_RESERVED / 2)
