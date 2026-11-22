@@ -321,7 +321,7 @@ size[4] Rxattrcreate tag[2]
 ```
 xattrcreate gets a fid pointing to the xattr name. This fid can later be used to set the xattr value.
 
-flag is derived from set Linux setxattr. The manpage says 
+flags is derived from Linux setxattr(2). The manpage says
 
 > The flags parameter can be used to refine the semantics of the operation. XATTR_CREATE specifies a pure create, which fails if the named attribute exists already. XATTR_REPLACE specifies a pure replace operation, which fails if the named attribute does not already exist. By default (no flags), the extended attribute will be created if need be, or will simply replace the value if the attribute exists.
 
