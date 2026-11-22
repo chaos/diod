@@ -98,7 +98,7 @@ size[4] Rremove tag[2]
 ```
 remove removes the file system object represented by fid.
 
-See the Plan 9 manual page for.
+See the Plan 9 manual page for
 [remove(5)](http://9p.io/magic/man2html/5/remove).
 
 This operation will eventually be replaced by unlinkat (see below).
