@@ -1,5 +1,8 @@
 [Unit]
 Description=9P File Server
+# diod has no default exports, so it cannot run without a config file.
+# Skip starting it rather than fail until one is created.
+ConditionPathExists=@X_SYSCONFDIR@/diod.conf
 
 [Service]
 Type=exec
