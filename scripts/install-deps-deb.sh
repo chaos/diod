@@ -12,7 +12,7 @@ for pkgset in $*; do
 	    EXTRA_PKGS="$EXTRA_PKGS valgrind acl attr scrub rsync postmark dbench"
 	    ;;
 	deb)
-	    EXTRA_PKGS="$EXTRA_PKGS devscripts debhelper"
+	    EXTRA_PKGS="$EXTRA_PKGS build-essential devscripts debhelper"
 	    ;;
 	esac
 done

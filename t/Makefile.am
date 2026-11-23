@@ -30,7 +30,8 @@ TESTSCRIPTS = \
 	t0023-rsync.t \
 	t0024-selfhost.t \
 	t0025-pathwalk.t \
-	t0026-munge-auth.t
+	t0026-munge-auth.t \
+	t0028-syspackage.t
 
 # make check runs these TAP tests directly (both scripts and programs)
 TESTS = \
@@ -42,7 +43,8 @@ dist_check_SCRIPTS = \
 EXTRA_DIST = \
 	sharness.sh \
 	aggregate-results.sh \
-	sharness.d
+	sharness.d \
+	etc
 
 
 AM_CFLAGS = @WARNING_CFLAGS@

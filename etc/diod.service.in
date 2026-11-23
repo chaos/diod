@@ -1,10 +1,42 @@
 [Unit]
 Description=9P File Server
+# diod has no default exports, so it cannot run without a config file.
+# Skip starting it rather than fail until one is created.
+ConditionPathExists=@X_SYSCONFDIR@/diod.conf
 
 [Service]
 Type=exec
 ExecStart=@X_SBINDIR@/diod
 ExecReload=kill -HUP $MAINPID
+
+# Sandboxing.  diod must be able to reach exported paths, so directives
+# that hide or make read-only ordinary parts of the file system
+# (ProtectSystem, ProtectHome, PrivateTmp, PrivateDevices) are not used.
+# The three marked below do affect exports under the paths they name;
+# to export those, override them with "systemctl edit diod".
+# A multiuser server acts for root clients too, so the capabilities it
+# needs for that (chown, mknod, setuid bits, etc.) are kept.
+NoNewPrivileges=yes
+LockPersonality=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+# hides /usr/lib/modules from exports
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+# makes exports under /proc/sys (and on some systemd versions /sys) read-only
+ProtectKernelTunables=yes
+# makes exports under /sys/fs/cgroup read-only
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_VSOCK AF_NETLINK
+CapabilityBoundingSet=~CAP_SYS_MODULE CAP_SYS_RAWIO CAP_SYS_BOOT \
+	CAP_SYS_TIME CAP_SYS_PTRACE CAP_SYS_PACCT CAP_SYS_TTY_CONFIG \
+	CAP_NET_ADMIN CAP_NET_RAW CAP_MAC_ADMIN CAP_MAC_OVERRIDE \
+	CAP_AUDIT_CONTROL CAP_AUDIT_WRITE CAP_AUDIT_READ CAP_SYSLOG \
+	CAP_WAKE_ALARM CAP_BLOCK_SUSPEND CAP_BPF CAP_PERFMON \
+	CAP_CHECKPOINT_RESTORE CAP_LEASE CAP_LINUX_IMMUTABLE
 
 [Install]
 WantedBy=multi-user.target

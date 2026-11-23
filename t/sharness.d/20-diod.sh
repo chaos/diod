@@ -24,6 +24,8 @@ PATH_DIODCLI=$SHARNESS_BUILD_DIRECTORY/src/cmd/diodcli
 # STAT          stat(1) is available
 # FLOCK		flock(1) is available
 # VSOCK		kernel vsock loopback transport works
+# SYSPACKAGE    an installed diod package runs under systemd with
+#               /etc/diod.conf identical to t/etc/syspackage.conf
 # MOUNT_NOSTAT  mount(8) does not stat a mount after making it, so it
 #               can mount a 9p file system that excludes root (#181)
 #
@@ -63,6 +65,15 @@ test_set_mount_nostat_prereq
 # assuming from the presence of /dev/vsock, which does not imply loopback.
 if $SHARNESS_BUILD_DIRECTORY/src/cmd/test_vsockcheck 2>/dev/null; then
 	test_set_prereq VSOCK
+fi
+
+# Set SYSPACKAGE only if /etc/diod.conf is the test config.  Tests that
+# use it run against the installed server, so this keeps them from ever
+# touching a real one.
+if cmp -s /etc/diod.conf $SHARNESS_TEST_SRCDIR/etc/syspackage.conf \
+    && test -x /usr/sbin/diod \
+    && systemctl is-active -q diod 2>/dev/null; then
+	test_set_prereq SYSPACKAGE
 fi
 
 # Report the mount(8) and kernel 9p details that a v9fs test failure may

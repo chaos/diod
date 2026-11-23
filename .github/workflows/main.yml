@@ -105,6 +105,55 @@ jobs:
       run: scripts/check-logs.sh >&2
 
 
+  build-deb:
+    name: check installed (systemd, deb)
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        # git describe needs history to version the package
+        fetch-depth: 0
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+            ncurses-dev automake autoconf pkgconf \
+            lua5.4 liblua5.4-dev libmunge-dev libcap-dev \
+            libattr1-dev attr munge \
+            build-essential devscripts debhelper
+    - name: start munged
+      run: |
+        sudo systemctl start munge
+        munge -n | unmunge
+    - name: allow nobody user into home
+      run: sudo chmod go+rx ~
+    - name: autogen
+      run: ./autogen.sh
+    - name: configure
+      run: ./configure
+    - name: build the deb
+      run: |
+        # debbuild.sh puts the git identity in debian/changelog
+        git config --global user.name "diod CI"
+        git config --global user.email "ci@localhost"
+        make deb
+    - name: install the deb and start it under systemd
+      run: scripts/install-syspackage.sh
+    - name: make check
+      run: verbose=t make check
+    - name: check that t0028 tested the installed diod with no skips
+      run: |
+        test -f t/t0028-syspackage.log
+        if grep -E "^(SKIP|ok .* # skip)" t/t0028-syspackage.log; then
+            echo "t0028-syspackage.t skipped tests on this builder" >&2
+            exit 1
+        fi
+    - name: get test results on failure
+      if: failure()
+      run: |
+        scripts/check-logs.sh >&2
+        sudo journalctl -u diod --no-pager >&2
+
   build-rdma:
     name: build-only check for RDMA (experimental)
     runs-on: ubuntu-latest

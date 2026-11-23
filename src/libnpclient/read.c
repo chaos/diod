@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <unistd.h>
 #include <pthread.h>
@@ -193,24 +194,38 @@ _strnchr (char *s, char c, int len)
 char *
 npc_gets(Npcfid *fid, char *buf, u32 count)
 {
-	int n = 0, done = 0, extra = 0;
+	size_t size, done = 0;
 	char *nlp = NULL;
+	int n;
 
-	n = _buf_restore (fid, buf, count - 1);
-	while (done < count && !nlp) {
+	/* Leave room for the terminating NUL, and keep the read size within
+	 * what npc_read() can return.
+	 */
+	if (count < 1 || count > INT_MAX) {
+		np_uerror (EINVAL);
+		return NULL;
+	}
+	size = count - 1;
+	n = _buf_restore (fid, buf, size);
+	while (done < size && !nlp) {
 		if (done > 0 || n == 0) {
-			n = npc_read (fid, buf + done, count - done - 1);
+			n = npc_read (fid, buf + done, size - done);
 			if (n < 0)
 				goto error;
 			if (n == 0)
 				break;
 		}
+		if (n < 0 || n > size - done) {
+			np_uerror (EPROTO);
+			goto error;
+		}
 		nlp = _strnchr (buf + done, '\n', n);
 		done += n;
 	}
 	if (nlp) {
+		size_t extra = done - (nlp - buf) - 1;
+
 		*nlp = '\0';
-		extra = done - (nlp - buf) - 1;
 		if (extra > 0 && _buf_save (fid, nlp + 1, extra) < 0)
 			goto error;
 		done = nlp - buf;

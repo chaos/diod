@@ -21,21 +21,22 @@ tarball=$(ls -tr *.tar.gz | tail -1)
 version=$(echo $tarball | sed "s/${PACKAGE}-\(.*\)\.tar\.gz/\1/")
 
 rm -rf debbuild
-mkdir -p debbuild && cd debbuild
+mkdir -p debbuild && cd debbuild || die "cannot create debbuild"
 
 mv ../$tarball .
 
 log "Unpacking $tarball"
-tar xvfz $tarball >/dev/null
+tar xvfz $tarball >/dev/null || die "failed to unpack $tarball"
 
 log "Creating debian directory and files"
-cd ${PACKAGE}-${version}
+cd ${PACKAGE}-${version} || die "cannot cd to ${PACKAGE}-${version}"
 cp -a ${SRCDIR}/debian . || die "failed to copy debian dir"
 
 export DEBEMAIL DEBFULLNAME
 log "Creating debian/changelog"
-dch --create --package=$PACKAGE --newversion $version build tree release
+dch --create --package=$PACKAGE --newversion $version build tree release \
+    || die "failed to create debian/changelog"
 
 log "Running debian-buildpackage -b"
-dpkg-buildpackage -b
+dpkg-buildpackage -b || die "dpkg-buildpackage failed"
 log "Check debbuild directory for results"
