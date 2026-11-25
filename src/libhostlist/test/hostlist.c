@@ -14,9 +14,27 @@
 
 #include <string.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "src/libtap/tap.h"
 #include "src/libhostlist/hostlist.h"
+
+/* Decimal strings for ULONG_MAX and its neighbors, for tests of the
+ * largest host suffix. ULMAX_OVERFLOW is ULONG_MAX + 1.
+ */
+#if ULONG_MAX == 4294967295UL
+#define ULMAX           "4294967295"
+#define ULMAX_1         "4294967294"
+#define ULMAX_2         "4294967293"
+#define ULMAX_OVERFLOW  "4294967296"
+#elif ULONG_MAX == 18446744073709551615UL
+#define ULMAX           "18446744073709551615"
+#define ULMAX_1         "18446744073709551614"
+#define ULMAX_2         "18446744073709551613"
+#define ULMAX_OVERFLOW  "18446744073709551616"
+#else
+#error unsupported ULONG_MAX
+#endif
 
 void test_basic ()
 {
@@ -32,11 +50,21 @@ void test_basic ()
         "hostlist_decode (NULL) returns empty hostlist");
     hostlist_destroy (hl);
 
+    errno = 0;
     ok (hostlist_decode ("foo[0-1048576]") == NULL && errno == ERANGE,
         "hostlist_decode () fails with ERANGE for too large host range");
+    errno = 0;
+    ok (hostlist_decode ("foo[99999999999999999999]") == NULL
+        && errno == ERANGE,
+        "hostlist_decode () fails with ERANGE for too large id");
+    errno = 0;
+    ok (hostlist_decode ("foo[0-" ULMAX "]") == NULL
+        && errno == ERANGE,
+        "hostlist_decode () fails with ERANGE for range of all ids");
 
     ok (hostlist_copy (NULL) == NULL,
         "hostlist_copy (NULL) returns NULL");
+    errno = 0;
     ok (hostlist_append (NULL, "foo") < 0 && errno == EINVAL,
         "hostlist_append (NULL, 'foo') returns EINVAL");
 
@@ -46,17 +74,22 @@ void test_basic ()
     ok (hostlist_append (hl, "") == 0,
         "hostlist_append (hl, '') returns 0");
 
+    errno = 0;
     ok (hostlist_append_list (NULL, NULL) < 0 && errno == EINVAL,
         "hostlist_append_list (NULL, NULL) returns EINVAL");
 
+    errno = 0;
     ok (hostlist_nth (NULL, 0) == NULL && errno == EINVAL,
         "hostlist_nth (NULL, 0) returns NULL");
+    errno = 0;
     ok (hostlist_nth (hl, -1) == NULL && errno == EINVAL,
         "hostlist_nth (hl, -1) returns EINVAL");
 
+    errno = 0;
     ok (hostlist_find (NULL, NULL) < 0 && errno == EINVAL,
         "hostlist_find (NULL, NULL) returns EINVAL");
 
+    errno = 0;
     ok (hostlist_delete (NULL, NULL) < 0 && errno == EINVAL,
         "hostlist_delete (NULL, NULL) returns EINVAL");
 
@@ -77,8 +110,10 @@ void test_encode_decode_basic ()
     struct hostlist * hl;
     char *s;
 
+    errno = 0;
     ok (hostlist_encode (NULL) == NULL && errno == EINVAL,
         "hostlist_encode (NULL) returns EINVAL");
+    errno = 0;
     ok (hostlist_decode (NULL) == NULL && errno == EINVAL,
         "hostlist_decode (NULL) returns EINVAL");
 
@@ -105,14 +140,19 @@ void test_iteration_basic ()
     if (hl == NULL)
         BAIL_OUT ("hostlist_create failed!");
 
+    errno = 0;
     ok (hostlist_first (NULL) == NULL && errno == EINVAL,
         "hostlist_first (NULL) returns EINVAL");
+    errno = 0;
     ok (hostlist_last (NULL) == NULL && errno == EINVAL,
         "hostlist_last (NULL) returns EINVAL");
+    errno = 0;
     ok (hostlist_next (NULL) == NULL && errno == EINVAL,
         "hostlist_next (NULL) returns EINVAL");
+    errno = 0;
     ok (hostlist_current (NULL) == NULL && errno == EINVAL,
         "hostlist_current (NULL) returns EINVAL");
+    errno = 0;
     ok (hostlist_remove_current (NULL) < 0 && errno == EINVAL,
         "hostlist_remove_current (NULL) returns EINVAL");
 
@@ -141,12 +181,25 @@ void test_invalid_decode ()
         "foo]",
         "foo[x-y]",
         "foo[0-1,2--5]",
+        "foo[1]]",
+        "foo[1-2]-[3]",
+        "foo[1]x[",
+        "foo]x[1]",
+        "foo[1-]",
+        "foo[1x-3]",
+        "foo[ 1]",
+        "foo[+1]",
+        "foo[1-+2]",
+        "foo[-1]",
+        "foo[3-1]",
         NULL,
     };
     for (const char **entry = input; *entry; entry++) {
-        struct hostlist *hl = hostlist_decode (*entry);
-        ok (hl == NULL,
-            "hostlist_decode (%s) returns NULL", *entry);
+        struct hostlist *hl;
+        errno = 0;
+        hl = hostlist_decode (*entry);
+        ok (hl == NULL && errno == EINVAL,
+            "hostlist_decode (%s) fails with EINVAL", *entry);
         if (hl) {
             char *s = hostlist_encode (hl);
             diag ("%s", s);
@@ -176,6 +229,14 @@ struct codec_test codec_tests[] = {
     { "[00-03]p",                               "00p,01p,02p,03p",     4 },
     { "p[00-3]p",                               "p00p,p01p,p02p,p03p", 4 },
     { "14636",                                  "14636",               1 },
+    { "foo[1,00000000000000000000002]x",
+      "foo1x,foo00000000000000000000002x",                               2 },
+    { "foo" ULMAX ",foo0",
+      "foo[" ULMAX ",0]",                                                2 },
+    { "foo[" ULMAX_1 "-" ULMAX "]x",
+      "foo" ULMAX_1 "x,foo" ULMAX "x",                                   2 },
+    { "foo" ULMAX_OVERFLOW ",bar",
+      "foo" ULMAX_OVERFLOW ",bar",                                       2 },
     { "mcr[336-359,488-550,553,556,559,561,567,569-571,573-575,578,581,584,587-589,592,594,597,600-602,605,608,610,618-622,627,634,636-670,687-696,699-733,735-742,744-760,762-773]",
        "mcr[336-359,488-550,553,556,559,561,567,569-571,573-575,578,581,584,587-589,592,594,597,600-602,605,608,610,618-622,627,634,636-670,687-696,699-733,735-742,744-760,762-773]", 237 },
     { 0 },
@@ -263,6 +324,7 @@ void test_nth ()
     if (!hl)
         BAIL_OUT ("hostlist_create failed");
 
+    errno = 0;
     ok (hostlist_nth (hl, 0) == NULL && errno == ENOENT,
         "hostlist_nth (hl, 0) on empty list returns ENOENT");
 
@@ -270,6 +332,7 @@ void test_nth ()
     ok (count == 5,
         "Added 5 hosts to hostlist");
 
+    errno = 0;
     ok (hostlist_nth (hl, count) == NULL && errno == ENOENT,
         "hostlist_nth (hl, hostlist_count (hl)) returns ENOENT");
 
@@ -319,6 +382,11 @@ static struct find_test find_tests[] = {
     { "cornp2",        "corn2",      -1  },
     { "corn-p2",       "corn2",      -1  },
     { "corn1-p2",      "corn2",      -1  },
+    { "host20240101000[1-5]", "host202401010003", 2 },
+    { "foo0000000000[1-2]", "foo00000000002", 1 },
+    { "foo" ULMAX, "foo" ULMAX_OVERFLOW, -1 },
+    { "foo" ULMAX_OVERFLOW, "foo" ULMAX_OVERFLOW, 0 },
+    { "foo9999999999999999999[0-1]", "foo99999999999999999991", 1 },
     { 0 },
 };
 
@@ -347,6 +415,7 @@ void test_find_hostname ()
 {
     struct find_test *t = find_tests;
 
+    errno = 0;
     ok (hostlist_find_hostname (NULL, NULL) == -1 && errno == EINVAL,
         "hostlist_find_hostname (NULL, NULL) returns EINVAL");
 
@@ -387,6 +456,27 @@ static struct delete_test delete_tests[] = {
     { "foo[2-5],fooi", "foo[1-2]",     1, "foo[3-5],fooi"       },
     { "foo[0-7]",      "foo[1,0,2-7]", 8, ""                    },
     { "foo[2-4]-eth2", "foo3-eth2",    1, "foo2-eth2,foo4-eth2" },
+    { "foo0,bar",      "foo0",         1, "bar"                 },
+    { "host20240101000[1-5]",
+      "host202401010003",
+      1,
+      "host20240101000[1-2,4-5]"
+    },
+    { "foo[" ULMAX_2 "-" ULMAX "]",
+      "foo" ULMAX_2,
+      1,
+      "foo[" ULMAX_1 "-" ULMAX "]"
+    },
+    { "foo" ULMAX ",bar",
+      "foo" ULMAX,
+      1,
+      "bar"
+    },
+    { "foo9999999999999999999[0-1]",
+      "foo99999999999999999991",
+      1,
+      "foo99999999999999999990"
+    },
     { 0 },
 };
 
@@ -434,6 +524,18 @@ struct sortuniq_test sortuniq_tests[] = {
     { "foo[0-2],foo[0-2],foo[0-2]",
       "foo[0,0,0-1,1,1-2,2,2]",
       "foo[0-2]"
+    },
+    { "foo3000000000,foo1",
+      "foo[1,3000000000]",
+      "foo[1,3000000000]"
+    },
+    { "foo" ULMAX ",foo0",
+      "foo[0," ULMAX "]",
+      "foo[0," ULMAX "]"
+    },
+    { "foo[" ULMAX_2 "-" ULMAX "],foo[" ULMAX_1 "-" ULMAX "]",
+      "foo[" ULMAX_2 "-" ULMAX_1 "," ULMAX_1 "-" ULMAX "," ULMAX "]",
+      "foo[" ULMAX_2 "-" ULMAX "]"
     },
     { 0 }
 };
@@ -577,6 +679,12 @@ struct test_next_delete next_delete_tests[] = {
     { "single hostrange, delete host at beginning",
       "foo[0-100]", 50, "foo0", "foo51"
     },
+    { "delete current at end of hostrange",
+      "foo[0-3],bar", 3, NULL, "bar",
+    },
+    { "delete host before cursor at end of hostrange",
+      "foo[0-3],bar", 2, "foo3", "bar",
+    },
     { 0 },
 };
 
@@ -633,6 +741,200 @@ static void test_encode_large ()
     hostlist_destroy (hl);
 }
 
+/*  Ensure the cursor functions handle a cursor past the end of the list
+ */
+static void test_iteration_end ()
+{
+    struct hostlist *hl;
+    const char *host;
+    int count = 0;
+
+    /* More ranges than the initial hostrange array allocation */
+    hl = hostlist_decode ("a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p[1-2]");
+    if (!hl)
+        BAIL_OUT ("hostlist_decode failed!");
+    host = hostlist_first (hl);
+    while (host) {
+        count++;
+        host = hostlist_next (hl);
+    }
+    ok (count == 17,
+        "iterated over all 17 hosts");
+    ok (hostlist_current (hl) == NULL,
+        "hostlist_current returns NULL at end of list");
+    ok (hostlist_next (hl) == NULL,
+        "hostlist_next returns NULL at end of list");
+    ok (hostlist_remove_current (hl) == 0,
+        "hostlist_remove_current returns 0 at end of list");
+    ok (hostlist_count (hl) == 17,
+        "hostlist_count is unchanged");
+    hostlist_destroy (hl);
+
+    /* Removal of the hostrange at the cursor */
+    hl = hostlist_decode ("foo[0,2,4-5]");
+    if (!hl)
+        BAIL_OUT ("hostlist_decode failed!");
+    hostlist_first (hl);
+    hostlist_next (hl);
+    ok (hostlist_delete (hl, "foo2") == 1,
+        "hostlist_delete of host at cursor works");
+    ok (hostlist_remove_current (hl) == 0,
+        "hostlist_remove_current returns 0 after host at cursor is deleted");
+    ok (hostlist_count (hl) == 3,
+        "hostlist_count is expected value");
+    hostlist_destroy (hl);
+}
+
+static void test_append_self ()
+{
+    struct hostlist *hl;
+    char *s;
+
+    if (!(hl = hostlist_decode ("foo[1,3],bar")))
+        BAIL_OUT ("hostlist_decode failed!");
+    ok (hostlist_append_list (hl, hl) == 3,
+        "hostlist_append_list (hl, hl) returns 3");
+    ok (hostlist_count (hl) == 6,
+        "hostlist_count is now 6");
+    s = hostlist_encode (hl);
+    is (s, "foo[1,3],bar,foo[1,3],bar",
+        "hostlist is now %s", s);
+    free (s);
+    hostlist_destroy (hl);
+}
+
+/*  Ensure hostnames longer than any internal buffer work
+ */
+static void test_long_hostnames ()
+{
+    struct hostlist *hl;
+    char prefix[1501];
+    char host[1600];
+    char *s;
+
+    memset (prefix, 'a', sizeof (prefix) - 1);
+    prefix[sizeof (prefix) - 1] = '\0';
+
+    if (!(hl = hostlist_decode (prefix)))
+        BAIL_OUT ("hostlist_decode failed!");
+    s = hostlist_encode (hl);
+    is (s, prefix,
+        "hostlist_decode of 1500 character hostname works");
+    free (s);
+    is (hostlist_first (hl), prefix,
+        "hostlist_first returns 1500 character hostname");
+    hostlist_destroy (hl);
+
+    snprintf (host, sizeof (host), "%s[1-2]", prefix);
+    if (!(hl = hostlist_decode (host)))
+        BAIL_OUT ("hostlist_decode failed!");
+    snprintf (host, sizeof (host), "%s2", prefix);
+    hostlist_first (hl);
+    is (hostlist_next (hl), host,
+        "hostlist_next returns host with 1500 character prefix");
+    is (hostlist_nth (hl, 1), host,
+        "hostlist_nth returns host with 1500 character prefix");
+    hostlist_destroy (hl);
+}
+
+/*  Ensure an idlist with many ranges can be decoded
+ */
+static void test_many_ranges ()
+{
+    struct hostlist *hl;
+    struct hostlist *hl2;
+    char host[64];
+    char *s;
+
+    if (!(hl = hostlist_create ()))
+        BAIL_OUT ("hostlist_create failed!");
+    for (int i = 0; i < 40000; i += 2) {
+        snprintf (host, sizeof (host), "n%d", i);
+        if (hostlist_append (hl, host) != 1)
+            BAIL_OUT ("hostlist_append failed!");
+    }
+    if (!(s = hostlist_encode (hl)))
+        BAIL_OUT ("hostlist_encode failed!");
+    hl2 = hostlist_decode (s);
+    ok (hl2 != NULL && hostlist_count (hl2) == 20000,
+        "hostlist_decode works with 20000 ranges in idlist");
+    free (s);
+    hostlist_destroy (hl);
+    hostlist_destroy (hl2);
+}
+
+/*  Ensure sort and uniq reset the cursor to the start of the list
+ */
+static void test_sort_cursor ()
+{
+    void (*fns[]) (struct hostlist *) = { hostlist_sort, hostlist_uniq };
+    const char *names[] = { "hostlist_sort", "hostlist_uniq" };
+
+    for (int i = 0; i < 2; i++) {
+        struct hostlist *hl;
+
+        if (!(hl = hostlist_decode ("c,b,a,a,b")))
+            BAIL_OUT ("hostlist_decode failed!");
+        hostlist_last (hl);
+        fns[i] (hl);
+        ok (hostlist_current (hl) == NULL,
+            "%s resets cursor: hostlist_current returns NULL", names[i]);
+        ok (hostlist_remove_current (hl) == 0,
+            "%s resets cursor: hostlist_remove_current returns 0", names[i]);
+        is (hostlist_next (hl), "a",
+            "%s resets cursor: hostlist_next returns first host", names[i]);
+        hostlist_destroy (hl);
+    }
+}
+
+static void test_nth_iteration ()
+{
+    struct hostlist *hl;
+    const char *host;
+    char expected[64];
+    int n;
+
+    if (!(hl = hostlist_decode ("foo[0-4],bar,baz[1-3]")))
+        BAIL_OUT ("hostlist_decode failed!");
+
+    /* Access hosts out of order, then modify the list */
+    is (hostlist_nth (hl, 7), "baz2",
+        "hostlist_nth (hl, 7) returns baz2");
+    is (hostlist_nth (hl, 2), "foo2",
+        "hostlist_nth (hl, 2) returns foo2");
+    is (hostlist_nth (hl, 5), "bar",
+        "hostlist_nth (hl, 5) returns bar");
+    ok (hostlist_delete (hl, "foo[0-1]") == 2,
+        "hostlist_delete removes 2 hosts before last nth");
+    is (hostlist_nth (hl, 5), "baz2",
+        "hostlist_nth (hl, 5) returns baz2");
+    is (hostlist_nth (hl, 0), "foo2",
+        "hostlist_nth (hl, 0) returns foo2");
+    ok (hostlist_append (hl, "foo1") == 1,
+        "hostlist_append works");
+    hostlist_sort (hl);
+    is (hostlist_nth (hl, 4), "foo1",
+        "hostlist_nth (hl, 4) returns foo1 after sort");
+    hostlist_destroy (hl);
+
+    /* Iterate a large list with hostlist_nth() */
+    if (!(hl = hostlist_create ()))
+        BAIL_OUT ("hostlist_create failed!");
+    for (int i = 0; i < 40000; i++) {
+        snprintf (expected, sizeof (expected), "%c%d", i % 2 ? 'b' : 'a', i);
+        if (hostlist_append (hl, expected) != 1)
+            BAIL_OUT ("hostlist_append failed!");
+    }
+    for (n = 0; n < hostlist_count (hl); n++) {
+        snprintf (expected, sizeof (expected), "%c%d", n % 2 ? 'b' : 'a', n);
+        if (!(host = hostlist_nth (hl, n)) || strcmp (host, expected) != 0)
+            break;
+    }
+    ok (n == 40000,
+        "hostlist_nth iterated 40000 ranges in order");
+    hostlist_destroy (hl);
+}
+
 int main (int argc, char *argv[])
 {
     plan (NO_PLAN);
@@ -651,6 +953,12 @@ int main (int argc, char *argv[])
     test_iteration ();
     test_iteration_with_delete ();
     test_encode_large ();
+    test_iteration_end ();
+    test_append_self ();
+    test_long_hostnames ();
+    test_many_ranges ();
+    test_nth_iteration ();
+    test_sort_cursor ();
 
     done_testing ();
 }

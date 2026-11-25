@@ -21,6 +21,7 @@
 #include <ctype.h>
 #include <sys/param.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "errno_safe.h"
 
@@ -34,15 +35,6 @@
 
 /* max host range: anything larger will be assumed to be an error */
 #define MAX_RANGE    1<<20    /* 1M Hosts */
-
-/* max host suffix value */
-#define MAX_HOST_SUFFIX 1<<25
-
-/* max number of ranges that will be processed between brackets */
-#define MAX_RANGES    10240    /* 10K Ranges */
-
-/* max size of internal hostrange buffer */
-#define MAXHOSTRANGELEN 1024
 
 /* Helper structure for hostlist iteration
  */
@@ -61,6 +53,13 @@ struct hostlist {
     struct hostrange **hr;  /* pointer to hostrange array */
 
     struct current current; /* iterator cursor */
+
+    /* hostlist_nth() lookup cache: nth_count is the number of hosts in
+     * ranges before range nth_index. Appending ranges keeps this valid,
+     * other modifications must call nth_cache_reset().
+     */
+    int nth_index;
+    int nth_count;
 };
 
 /* _range struct helper for parsing hostlist strings
@@ -143,18 +142,15 @@ fail:
  */
 static int hostlist_resize (struct hostlist *hl, size_t newsize)
 {
-    int i;
-    size_t oldsize;
+    struct hostrange **hr;
+
     assert (hl != NULL);
-    oldsize = hl->size;
-    hl->size = newsize;
-    hl->hr = realloc ((void *) hl->hr, hl->size*sizeof (struct hostrange *));
-    if (!(hl->hr))
+    if (!(hr = realloc (hl->hr, newsize * sizeof (*hr))))
         return 0;
-
-    for (i = oldsize; i < newsize; i++)
-        hl->hr[i] = NULL;
-
+    for (size_t i = hl->size; i < newsize; i++)
+        hr[i] = NULL;
+    hl->hr = hr;
+    hl->size = newsize;
     return 1;
 }
 
@@ -187,12 +183,13 @@ static int hostlist_append_range (struct hostlist *hl, struct hostrange * hr)
 
     if (hl->nranges > 0
         && hostrange_prefix_cmp (tail, hr) == 0
-        && tail->hi == hr->lo - 1
+        && hostrange_adjacent (tail, hr)
         && hostrange_width_combine (tail, hr)) {
         tail->hi = hr->hi;
     } else {
-        if (!(hl->hr[hl->nranges++] = hostrange_copy (hr)))
+        if (!(hl->hr[hl->nranges] = hostrange_copy (hr)))
             goto error;
+        hl->nranges++;
     }
 
     retval = hostrange_count (hr);
@@ -228,8 +225,7 @@ static int hostlist_insert_range (struct hostlist *hl,
                                   struct hostrange * hr,
                                   int n)
 {
-    int i;
-    struct hostrange * tmp;
+    struct hostrange *copy;
 
     assert (hl != NULL);
     assert (hr != NULL);
@@ -240,16 +236,14 @@ static int hostlist_insert_range (struct hostlist *hl,
     if (hl->size == hl->nranges && !hostlist_expand (hl))
         return 0;
 
-    /* copy new hostrange into slot "n" in array */
-    tmp = hl->hr[n];
-    hl->hr[n] = hostrange_copy (hr);
+    if (!(copy = hostrange_copy (hr)))
+        return 0;
 
-    /* push remaining hostrange entries up */
-    for (i = n + 1; i < hl->nranges + 1; i++) {
-        struct hostrange * last = hl->hr[i];
-        hl->hr[i] = tmp;
-        tmp = last;
-    }
+    /* push remaining hostrange entries up and copy hr into slot "n" */
+    memmove (&hl->hr[n + 1],
+             &hl->hr[n],
+             (hl->nranges - n) * sizeof (hl->hr[0]));
+    hl->hr[n] = copy;
     hl->nranges++;
 
     /* adjust current if necessary
@@ -325,54 +319,63 @@ static void hostlist_delete_range (struct hostlist *hl, int n)
 }
 
 
+/* Convert str to an unsigned long. Unlike strtoul(3), fail with EINVAL
+ * for leading whitespace or sign, or trailing characters, and with
+ * ERANGE on overflow.
+ */
+static int parse_ulong (const char *str, unsigned long *valp)
+{
+    char *endptr;
+    unsigned long val;
+
+    if (!isdigit ((unsigned char) *str)) {
+        errno = EINVAL;
+        return -1;
+    }
+    errno = 0;
+    val = strtoul (str, &endptr, 10);
+    if (errno != 0)
+        return -1;
+    if (*endptr != '\0') {
+        errno = EINVAL;
+        return -1;
+    }
+    *valp = val;
+    return 0;
+}
+
 /* Grab a single range from str
  * returns 0 if str contained a valid number or range,
  *        -1 if conversion of str to a range failed.
  */
-static int parse_next_range (const char *str, struct _range *range)
+static int parse_next_range (char *str, struct _range *range)
 {
-    int saved_errno;
-    char *p, *q;
-    char *orig = strdup (str);
-    if (!orig)
-        return -1;
+    char *p;
 
-    if ((p = strchr (orig, '-'))) {
+    if ((p = strchr (str, '-')))
         *p++ = '\0';
-        if (*p == '-') {  /* don't allow negative numbers */
-            errno = EINVAL;
-            goto error;
-        }
+
+    if (parse_ulong (str, &range->lo) < 0)
+        return -1;
+    if (p) {
+        if (parse_ulong (p, &range->hi) < 0)
+            return -1;
     }
-    range->lo = strtoul (orig, &q, 10);
-    if (q == orig)  {
+    else
+        range->hi = range->lo;
+
+    if (range->lo > range->hi) {
         errno = EINVAL;
-        goto error;
+        return -1;
     }
 
-    range->hi = (p && *p) ? strtoul (p, &q, 10) : range->lo;
-
-    errno = EINVAL;
-    if (q == p || *q != '\0')
-        goto error;
-
-    if (range->lo > range->hi)
-        goto error;
-
-    if (range->hi - range->lo + 1 > MAX_RANGE ) {
+    if (range->hi - range->lo >= MAX_RANGE) {
         errno = ERANGE;
-        goto error;
+        return -1;
     }
 
-    range->width = strlen (orig);
-    free (orig);
+    range->width = strlen (str);
     return 0;
-
-  error:
-    saved_errno = errno;
-    free (orig);
-    errno = saved_errno;
-    return -1;
 }
 
 static int hostlist_append_host (struct hostlist *hl, const char *str)
@@ -408,21 +411,28 @@ static int hostlist_append_host (struct hostlist *hl, const char *str)
 
 /*
  * Convert 'str' containing comma separated digits and ranges into an array
- *  of struct _range types (max 'len' elements).
+ *  of struct _range types. The array is grown as needed, and its address
+ *  and size are returned in 'rangesp' and 'sizep'.
  *
  * Return number of ranges created, or -1 on error.
  */
-static int parse_range_list (char *str, struct _range *ranges, int len)
+static int parse_range_list (char *str, struct _range **rangesp, int *sizep)
 {
     char *p;
     int count = 0;
 
     while (str) {
-        if (count == len)
-            return -1;
+        if (count == *sizep) {
+            int size = *sizep ? *sizep * 2 : 16;
+            struct _range *new;
+            if (!(new = realloc (*rangesp, size * sizeof (*new))))
+                return -1;
+            *rangesp = new;
+            *sizep = size;
+        }
         if ((p = strchr (str, ',')))
             *p++ = '\0';
-        if (parse_next_range (str, &ranges[count++]) < 0)
+        if (parse_next_range (str, &(*rangesp)[count++]) < 0)
             return -1;
         str = p;
     }
@@ -449,31 +459,26 @@ static int append_range_list_with_suffix (struct hostlist *hl,
                                           struct _range *rng,
                                           int n)
 {
-    int i;
-    unsigned long j;
+    for (int i = 0; i < n; i++) {
+        unsigned long j = rng->lo;
+        while (1) {
+            char *host;
+            struct hostrange *hr;
+            int rc;
 
-    /* compute max buffer size for this set of hosts */
-    int size = strlen (pfx) + strlen (sfx) + 20 + rng->width;
-
-
-    for (i = 0; i < n; i++) {
-        for (j = rng->lo; j <= rng->hi; j++) {
-            char host[size];
-            struct hostrange * hr;
-            snprintf (host,
-                      sizeof (host),
-                      "%s%0*lu%s",
-                      pfx,
-                      rng->width,
-                      j,
-                      sfx);
-            if (!(hr = hostrange_create_single (host)))
+            if (asprintf (&host, "%s%0*lu%s", pfx, rng->width, j, sfx) < 0)
                 return -1;
-            hostlist_append_range (hl, hr);
-            /*
-             * hr is copied in hostlist_append_range. Need to free here.
-             */
+            hr = hostrange_create_single (host);
+            ERRNO_SAFE_WRAP (free, host);
+            if (!hr)
+                return -1;
+            rc = hostlist_append_range (hl, hr);
             hostrange_destroy (hr);
+            if (rc < 0)
+                return -1;
+            /* N.B. rng->hi may be ULONG_MAX, so do not increment past it */
+            if (j++ == rng->hi)
+                break;
         }
         rng++;
     }
@@ -484,14 +489,11 @@ static int append_range_list_with_suffix (struct hostlist *hl,
  * Create a hostlist from a string with brackets '[' ']'
  */
 static struct hostlist * hostlist_create_bracketed (const char *hostlist,
-                                                    char *sep,
-                                                    char *r_op)
+                                                    char *sep)
 {
     struct hostlist * new = hostlist_create ();
-    struct {
-        struct _range ranges[MAX_RANGES];
-        char cur_tok[1024];
-    } *ctx;
+    struct _range *ranges = NULL;
+    int size = 0;
     int nr;
     int rc;
     char *p, *tok, *str, *orig;
@@ -502,23 +504,22 @@ static struct hostlist * hostlist_create_bracketed (const char *hostlist,
     if (hostlist == NULL)
         return new;
 
-    if (!(orig = str = strdup (hostlist))
-        || !(ctx = calloc (1, sizeof (*ctx)))) {
+    if (!(orig = str = strdup (hostlist))) {
         hostlist_destroy (new);
-        ERRNO_SAFE_WRAP (free, orig);
         return NULL;
     }
 
     while ((tok = next_tok (sep, &str)) != NULL) {
-        strncpy (ctx->cur_tok, tok, 1024 - 1);
-
         if ((p = strchr (tok, '[')) != NULL) {
             char *q, *prefix = tok;
             *p++ = '\0';
 
             if ((q = strchr (p, ']'))) {
+                /* Only one bracketed idlist is allowed per expression */
+                if (strchr (prefix, ']') || strpbrk (q + 1, "[]"))
+                    goto error_unmatched;
                 *q = '\0';
-                nr = parse_range_list (p, ctx->ranges, MAX_RANGES);
+                nr = parse_range_list (p, &ranges, &size);
                 if (nr < 0)
                     goto error;
 
@@ -526,12 +527,12 @@ static struct hostlist * hostlist_create_bracketed (const char *hostlist,
                     rc = append_range_list_with_suffix (new,
                                                         prefix,
                                                         q,
-                                                        ctx->ranges,
+                                                        ranges,
                                                         nr);
                 else
                     rc = append_range_list (new,
                                             prefix,
-                                            ctx->ranges,
+                                            ranges,
                                             nr);
                 if (rc < 0)
                     goto error;
@@ -541,12 +542,12 @@ static struct hostlist * hostlist_create_bracketed (const char *hostlist,
 
         } else if (strchr (tok, ']')) /* Error: brackets must be balanced */
             goto error_unmatched;
-        else                          /* Ok: No brackets found, single host */
-            hostlist_append_host (new, ctx->cur_tok);
+        else if (hostlist_append_host (new, tok) < 0) /* single host */
+            goto error;
     }
 
     free (orig);
-    free (ctx);
+    free (ranges);
     return new;
 
   error_unmatched:
@@ -554,7 +555,7 @@ static struct hostlist * hostlist_create_bracketed (const char *hostlist,
   error:
     hostlist_destroy (new);
     ERRNO_SAFE_WRAP (free, orig);
-    ERRNO_SAFE_WRAP (free, ctx);
+    ERRNO_SAFE_WRAP (free, ranges);
     return NULL;
 }
 
@@ -564,7 +565,7 @@ struct hostlist * hostlist_decode (const char *str)
         errno = EINVAL;
         return NULL;
     }
-    return hostlist_create_bracketed (str, "\t, ", "-");
+    return hostlist_create_bracketed (str, "\t, ");
 }
 
 struct hostlist * hostlist_copy (const struct hostlist *hl)
@@ -576,18 +577,21 @@ struct hostlist * hostlist_copy (const struct hostlist *hl)
         return NULL;
 
     if (!(new = hostlist_create ()))
-        goto done;
+        return NULL;
 
-    new->nranges = hl->nranges;
+    if (hl->nranges > new->size && !hostlist_resize (new, hl->nranges))
+        goto error;
+
+    for (i = 0; i < hl->nranges; i++) {
+        if (!(new->hr[i] = hostrange_copy (hl->hr[i])))
+            goto error;
+        new->nranges++;
+    }
     new->nhosts = hl->nhosts;
-    if (new->nranges > new->size)
-        hostlist_resize (new, new->nranges);
-
-    for (i = 0; i < hl->nranges; i++)
-        new->hr[i] = hostrange_copy (hl->hr[i]);
-
-  done:
     return new;
+error:
+    hostlist_destroy (new);
+    return NULL;
 }
 
 
@@ -617,8 +621,7 @@ int hostlist_append (struct hostlist *hl, const char *hosts)
     new = hostlist_decode (hosts);
     if (!new)
         return -1;
-    retval = new->nhosts;
-    hostlist_append_list (hl, new);
+    retval = hostlist_append_list (hl, new);
     hostlist_destroy (new);
     return retval;
 }
@@ -632,9 +635,24 @@ int hostlist_append_list (struct hostlist * h1, struct hostlist * h2)
         return -1;
     }
 
-    for (i = 0; i < h2->nranges; i++)
-        n += hostlist_append_range (h1, h2->hr[i]);
+    /*  Appending to h1 modifies h2 if they are the same list,
+     *   so append from a copy.
+     */
+    if (h1 == h2) {
+        struct hostlist *copy;
+        if (!(copy = hostlist_copy (h2)))
+            return -1;
+        n = hostlist_append_list (h1, copy);
+        hostlist_destroy (copy);
+        return n;
+    }
 
+    for (i = 0; i < h2->nranges; i++) {
+        int count = hostlist_append_range (h1, h2->hr[i]);
+        if (count < 0)
+            return -1;
+        n += count;
+    }
     return n;
 }
 
@@ -649,6 +667,12 @@ static inline int nth_args_valid (struct hostlist *hl, int n)
         return -1;
     }
     return 0;
+}
+
+static void nth_cache_reset (struct hostlist *hl)
+{
+    hl->nth_index = 0;
+    hl->nth_count = 0;
 }
 
 static void set_current (struct current *cur, int index, int depth)
@@ -668,12 +692,19 @@ const char * hostlist_nth (struct hostlist *hl, int n)
     if (nth_args_valid (hl, n) < 0)
         return NULL;
 
-    count = 0;
-    for (i = 0; i < hl->nranges; i++) {
+    /* Start from the last range found if possible, so that access in
+     * order is not quadratic.
+     */
+    if (n < hl->nth_count)
+        nth_cache_reset (hl);
+    count = hl->nth_count;
+    for (i = hl->nth_index; i < hl->nranges; i++) {
         int num_in_range = hostrange_count (hl->hr[i]);
 
         if (n <= (num_in_range - 1 + count)) {
             int d = n - count;
+            hl->nth_index = i;
+            hl->nth_count = count;
             set_current (&hl->current, i, d);
             return hostlist_current (hl);
         } else
@@ -734,7 +765,7 @@ int hostlist_find_hostname (struct hostlist *hl, struct hostlist_hostname *hn)
     }
 
     shn = hostname_stack_create_from_hostname (&hn_storage, hn);
-    if (!hn)
+    if (!shn)
         return -1;
     return hostlist_find_host (hl, shn, &hl->current);
 }
@@ -757,8 +788,13 @@ static int hostlist_remove_at (struct hostlist *hl, struct current *cur)
     struct hostrange *hr;
     struct hostrange *new;
 
-    if (cur->index > hl->nhosts - 1)
+    if (cur->index < 0
+        || cur->index >= hl->nranges
+        || cur->depth < 0
+        || cur->depth >= hostrange_count (hl->hr[cur->index]))
         return 0;
+
+    nth_cache_reset (hl);
 
     hr = hl->hr[cur->index];
 
@@ -770,9 +806,15 @@ static int hostlist_remove_at (struct hostlist *hl, struct current *cur)
         hl->current.host = NULL;
     }
 
-    new = hostrange_delete_host (hr, hr->lo + cur->depth);
+    if (hostrange_delete_host (hr, hr->lo + cur->depth, &new) < 0)
+        return -1;
     if (new) {
-        hostlist_insert_range (hl, new, cur->index + 1);
+        if (!hostlist_insert_range (hl, new, cur->index + 1)) {
+            /* undo the split of hr */
+            hr->hi = new->hi;
+            hostrange_destroy (new);
+            return -1;
+        }
         hostrange_destroy (new);
 
         /*  If the split hostrange affects the cursor, adjust it now
@@ -796,10 +838,11 @@ static int hostlist_remove_at (struct hostlist *hl, struct current *cur)
     else if (hl->current.index == cur->index
             && hl->current.depth >= cur->depth) {
         /*
-         *  Current range affected, but range was not split. Adjust
-         *   current cursor appropriately
+         *  Current range affected, but range was not split. The host
+         *   was removed from the start or end of the range, so hosts
+         *   at or after the cursor shift down by one.
          */
-        hl->current.depth = hl->current.depth - cur->depth - 1;
+        hl->current.depth--;
     }
 
     hl->nhosts--;
@@ -839,7 +882,12 @@ int hostlist_delete (struct hostlist *hl, const char *hosts)
 
     host = hostlist_first (hltmp);
     while (host) {
-        n += hostlist_delete_host (hl, host);
+        int rc = hostlist_delete_host (hl, host);
+        if (rc < 0) {
+            hostlist_destroy (hltmp);
+            return -1;
+        }
+        n += rc;
         host = hostlist_next (hltmp);
     }
     hostlist_destroy (hltmp);
@@ -852,19 +900,73 @@ int hostlist_delete (struct hostlist *hl, const char *hosts)
  */
 static void hostlist_collapse (struct hostlist *hl)
 {
-    int i;
+    int i, n;
 
-    for (i = hl->nranges - 1; i > 0; i--) {
-        struct hostrange * hprev = hl->hr[i - 1];
+    if (hl->nranges <= 1)
+        return;
+
+    for (i = 1, n = 0; i < hl->nranges; i++) {
+        struct hostrange * hprev = hl->hr[n];
         struct hostrange * hnext = hl->hr[i];
 
         if (hostrange_prefix_cmp (hprev, hnext) == 0 &&
-            hprev->hi == hnext->lo - 1 &&
+            hostrange_adjacent (hprev, hnext) &&
             hostrange_width_combine (hprev, hnext)) {
             hprev->hi = hnext->hi;
-            hostlist_delete_range (hl, i);
+            hostrange_destroy (hnext);
         }
+        else
+            hl->hr[++n] = hnext;
     }
+    for (i = n + 1; i < hl->nranges; i++)
+        hl->hr[i] = NULL;
+    hl->nranges = n + 1;
+}
+
+/* Insert the duplicated ids lo to hi of range 'hr' at position 'n' of hl
+ * in sorted order, i.e. lo+1 to hi-1 twice each, preceded by lo and
+ * followed by hi. Hosts are inserted as single host ranges and are
+ * joined later by hostlist_collapse(). The hostlist is unchanged on
+ * failure.
+ */
+static int hostlist_insert_dups (struct hostlist *hl,
+                                 int n,
+                                 struct hostrange *hr,
+                                 unsigned long lo,
+                                 unsigned long hi)
+{
+    unsigned long count = 2 * (hi - lo);
+    struct hostrange **ranges;
+    unsigned long k;
+
+    if (count == 0)
+        return 0;
+    if (count > INT_MAX - hl->size) {
+        errno = ERANGE;
+        return -1;
+    }
+    if (hl->nranges + count > hl->size
+        && !hostlist_resize (hl, hl->nranges + count + HOSTLIST_CHUNK))
+        return -1;
+    if (!(ranges = calloc (count, sizeof (*ranges))))
+        return -1;
+    for (k = 0; k < count; k++) {
+        unsigned long id = lo + (k + 1) / 2;
+        if (!(ranges[k] = hostrange_create (hr->prefix, id, id, hr->width)))
+            goto error;
+    }
+    memmove (&hl->hr[n + count],
+             &hl->hr[n],
+             (hl->nranges - n) * sizeof (hl->hr[0]));
+    memcpy (&hl->hr[n], ranges, count * sizeof (ranges[0]));
+    hl->nranges += count;
+    free (ranges);
+    return 0;
+error:
+    for (k = 0; k < count; k++)
+        hostrange_destroy (ranges[k]);
+    ERRNO_SAFE_WRAP (free, ranges);
+    return -1;
 }
 
 /* search through hostlist (hl) for intersecting ranges
@@ -872,8 +974,7 @@ static void hostlist_collapse (struct hostlist *hl)
  */
 static void hostlist_coalesce (struct hostlist *hl)
 {
-    int i, j;
-    struct hostrange * new;
+    int i;
 
     /*  Scan backwards through hostranges, and determine if the
      *   current and previous ranges intersect. If so, then
@@ -882,59 +983,35 @@ static void hostlist_coalesce (struct hostlist *hl)
     for (i = hl->nranges - 1; i > 0; i--) {
         struct hostrange * hprev = hl->hr[i - 1];
         struct hostrange * hnext = hl->hr[i];
+        unsigned long lo, hi;
 
         /* If ranges intersect, then the common (duplicated) hosts
-         *  are returned in 'new'.
+         *  are lo to hi.
          */
-        new = hostrange_intersect (hprev, hnext);
-        if (new) {
-            j = i;
+        if (hostrange_intersect_ids (hprev, hnext, &lo, &hi)) {
+            /*  Insert duplicated hosts between hprev and hnext first,
+             *   so that the list is unchanged on failure.
+             */
+            if (hostlist_insert_dups (hl, i, hprev, lo, hi) < 0)
+                break;
 
             /*  Upper bound of duplicated range is below hprev -
              *   hnext will now hold duplicates, set next->hi to prev->hi
              */
-            if (new->hi < hprev->hi)
+            if (hi < hprev->hi)
                 hnext->hi = hprev->hi;
 
             /*
-             *  The duplicated range will inserted piecemeal below,
+             *  The duplicated range was inserted piecemeal above,
              *   e.g. [5-7,6-8] -> [5-6,6-7,7-8]
-             *  Therefore adjust the end of hprev to new->lo (the
-             *   first duplicated host), and the start of hnext to
-             *   new->hi (the last duplicated host). The rest of the
-             *   duplicates will be inserted below.
+             *  Therefore adjust the end of hprev to lo (the first
+             *   duplicated host), and the start of hnext to hi (the
+             *   last duplicated host).
              */
-            hprev->hi = new->lo;
-            hnext->lo = new->hi;
+            hprev->hi = lo;
+            hnext->lo = hi;
 
-            /*  N.B.: It should not be possible that hprev is now
-             *   empty, so the below should be deadcode
-             *
-             *if (hostrange_empty (hprev))
-             *   hostlist_delete_range (hl, i);
-             */
-
-            /*  Now insert each duplicated number between hprev and
-             *   hnext:
-             */
-            while (new->lo <= new->hi) {
-                struct hostrange * hr = hostrange_create (new->prefix,
-                                                          new->lo,
-                                                          new->lo,
-                                                          new->width);
-
-                if (new->lo > hprev->hi)
-                    hostlist_insert_range (hl, hr, j++);
-
-                if (new->lo < hnext->lo)
-                    hostlist_insert_range (hl, hr, j++);
-
-                hostrange_destroy (hr);
-
-                new->lo++;
-            }
             i = hl->nranges;
-            hostrange_destroy (new);
         }
     }
 
@@ -958,43 +1035,45 @@ void hostlist_sort (struct hostlist *hl)
         return;
     if (hl->nranges <= 1)
         return;
+    nth_cache_reset (hl);
     qsort (hl->hr, hl->nranges, sizeof (struct hostrange *), _cmp);
     hostlist_coalesce (hl);
-}
 
-/* attempt to join ranges at loc and loc-1 in a hostlist  */
-/* delete duplicates, return the number of hosts deleted  */
-/* assumes that the hostlist hl has been locked by caller */
-/* returns -1 if no range join occurred */
-static int attempt_range_join (struct hostlist *hl, int loc)
-{
-    int ndup;
-    assert (hl != NULL);
-    assert (loc > 0);
-    assert (loc < hl->nranges);
-    ndup = hostrange_join (hl->hr[loc - 1], hl->hr[loc]);
-    if (ndup >= 0) {
-        hostlist_delete_range (hl, loc);
-        hl->nhosts -= ndup;
-    }
-    return ndup;
+    /* Sorting invalidates the cursor, so reset it to the start */
+    set_current (&hl->current, 0, -1);
 }
 
 void hostlist_uniq (struct hostlist *hl)
 {
-    int i = 1;
+    int i, n;
+
     if (hl == NULL)
         return;
 
     if (hl->nranges <= 1)
         return;
 
+    nth_cache_reset (hl);
     qsort (hl->hr, hl->nranges, sizeof (struct hostrange *), &_cmp);
 
-    while (i < hl->nranges) {
-        if (attempt_range_join (hl, i) < 0) /* No range join occurred */
-            i++;
+    /*  Join each range into the last kept range if possible, otherwise
+     *   keep it. This compacts the array in a single pass.
+     */
+    for (i = 1, n = 0; i < hl->nranges; i++) {
+        int ndup = hostrange_join (hl->hr[n], hl->hr[i]);
+        if (ndup >= 0) {
+            hostrange_destroy (hl->hr[i]);
+            hl->nhosts -= ndup;
+        }
+        else
+            hl->hr[++n] = hl->hr[i];
     }
+    for (i = n + 1; i < hl->nranges; i++)
+        hl->hr[i] = NULL;
+    hl->nranges = n + 1;
+
+    /* Sorting invalidates the cursor, so reset it to the start */
+    set_current (&hl->current, 0, -1);
 }
 
 /* return true if a bracket is needed for the range at i in hostlist hl */
@@ -1091,7 +1170,7 @@ fail:
 static struct hostrange * hr_current (struct hostlist *hl)
 {
     assert (hl != NULL);
-    assert (hl->current.index <= hl->nhosts);
+    assert (hl->current.index < hl->nranges);
     return hl->hr[hl->current.index];
 }
 
@@ -1105,7 +1184,7 @@ const char *hostlist_current (struct hostlist *hl)
     }
 
     depth = hl->current.depth;
-    if (depth < 0 || hl->current.index > hl->nhosts - 1)
+    if (depth < 0 || hl->current.index >= hl->nranges)
         return NULL;
     if (!hl->current.host)
         hl->current.host = hostrange_host_tostring (hr_current (hl), depth);

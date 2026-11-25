@@ -52,6 +52,27 @@ static int hostname_len (const char *hostname)
     return len;
 }
 
+/* Parse the numeric suffix of a hostname into 'num'. Return 1 on success,
+ * 0 if the suffix is too large to represent, in which case the hostname
+ * is treated as having no suffix, or -1 if the suffix is invalid.
+ * errno is not modified.
+ */
+static int parse_suffix (const char *suffix, unsigned long *num)
+{
+    int saved_errno = errno;
+    char *endptr;
+    int rc = 1;
+
+    errno = 0;
+    *num = strtoul (suffix, &endptr, 10);
+    if (errno == ERANGE)
+        rc = 0;
+    else if (endptr == suffix || *endptr != '\0' || errno != 0)
+        rc = -1;
+    errno = saved_errno;
+    return rc;
+}
+
 struct stack_hostname *hostname_stack_create_from_hostname (
     struct stack_hostname *hn,
     struct hostlist_hostname *src)
@@ -84,17 +105,24 @@ struct stack_hostname *hostname_stack_create_with_suffix (
     hn->len_prefix = idx + 1;
     hn->num = 0;
     hn->suffix = NULL;
-    if (idx == hn->len - 1) {
+    if (idx == hn->len - 1)
         return hn;
+
+    /* If the suffix is too large, move leading digits into the prefix
+     * until the rest can be parsed. A range with digits in its prefix,
+     * e.g. foo9999999999999999999[0-1], may then still match.
+     */
+    while (hn->len_prefix < hn->len) {
+        int rc = parse_suffix (hostname + hn->len_prefix, &hn->num);
+        if (rc < 0) {
+            errno = EINVAL;
+            return NULL;
+        }
+        if (rc > 0)
+            break;
+        hn->len_prefix++;
     }
     hn->suffix = hn->hostname + hn->len_prefix;
-
-    char *p = NULL;
-    hn->num = strtoul (hn->suffix, &p, 10);
-    if (p == hn->suffix && hn->num == 0) {
-        errno = EINVAL;
-        return NULL;
-    }
     hn->width = hn->len - hn->len_prefix;
     return hn;
 }
@@ -116,25 +144,13 @@ struct stack_hostname *hostname_stack_copy_one_less_digit (
     dst->suffix = dst->hostname + dst->len_prefix;
 
     dst->width = dst->len - dst->len_prefix;
-    if (dst->width < 0 || dst->width >= 10) {
+    if (dst->width < 0) {
         errno = EINVAL;
         return NULL;
     }
 
-    // remove the most significant decimal digit without reparsing
-    // lookup table because pow is slow
-    static const int pow10[10] = {
-        1,
-        10,
-        100,
-        1000,
-        10000,
-        100000,
-        1000000,
-        10000000,
-        100000000,
-        1000000000};
-    dst->num = src->num % pow10[dst->width];
+    /* Removing a leading digit cannot overflow, so reparse the suffix */
+    dst->num = strtoul (dst->suffix, NULL, 10);
     return dst;
 }
 
@@ -143,7 +159,7 @@ struct hostlist_hostname *hostname_create_with_suffix (const char *hostname,
 {
     struct hostlist_hostname *hn = NULL;
     int len;
-    char *p = NULL;
+    int rc = 0;
 
     if (!hostname || (len = hostname_len (hostname)) < 0) {
         errno = EINVAL;
@@ -165,29 +181,24 @@ struct hostlist_hostname *hostname_create_with_suffix (const char *hostname,
     hn->prefix = NULL;
     hn->suffix = NULL;
 
-    if (idx == len - 1) {
-        if ((hn->prefix = strdup (hostname)) == NULL) {
-            hostname_destroy (hn);
-            return NULL;
-        }
-        return hn;
-    }
-
-    hn->suffix = hn->hostname + idx + 1;
-    errno = 0;
-    hn->num = strtoul (hn->suffix, &p, 10);
-    if (p == hn->suffix || errno != 0) {
+    /* If the suffix is too large, move leading digits into the prefix
+     * until the rest can be parsed.
+     */
+    while (idx < len - 1
+           && (rc = parse_suffix (hostname + idx + 1, &hn->num)) == 0)
+        idx++;
+    if (rc < 0) {
         hostname_destroy (hn);
         errno = EINVAL;
         return NULL;
     }
-    if (*p == '\0') {
-        if (!(hn->prefix = malloc ((idx + 2) * sizeof (char)))) {
-            hostname_destroy (hn);
-            return NULL;
-        }
-        memcpy (hn->prefix, hostname, idx + 1);
-        hn->prefix[idx + 1] = '\0';
+    hn->len_prefix = idx + 1;
+    hn->width = len - hn->len_prefix;
+    if (idx < len - 1)
+        hn->suffix = hn->hostname + idx + 1;
+    if (!(hn->prefix = strndup (hostname, idx + 1))) {
+        hostname_destroy (hn);
+        return NULL;
     }
     return hn;
 }
