@@ -40,6 +40,7 @@ struct hostlist *hostlist_copy (const struct hostlist *hl);
 /*  Add a string representation of a hostlist onto the tail of the
  *   hostlist 'hl'.
  *  Returns the total number of hosts appended to 'hl', or -1 on failure.
+ *  On failure (ENOMEM), some hosts may already have been appended.
  */
 int hostlist_append (struct hostlist *hl, const char *hosts);
 
@@ -47,6 +48,7 @@ int hostlist_append (struct hostlist *hl, const char *hosts);
  *  Append hostlist 'hl2' onto 'hl1'.
  *
  *  Returns number of hosts appended for success, -1 for failure.
+ *  On failure (ENOMEM), some hosts may already have been appended.
  *
  */
 int hostlist_append_list (struct hostlist *hl1, struct hostlist *hl2);
@@ -104,6 +106,7 @@ int hostlist_find_hostname (struct hostlist *hl, struct hostlist_hostname *hn);
  *  Delete all hosts in the list represented by `hosts'
  *
  *  Returns the number of hosts successfully deleted, -1 on failure.
+ *  On failure (ENOMEM), some hosts may already have been deleted.
  */
 int hostlist_delete (struct hostlist * hl, const char *hosts);
 
@@ -117,11 +120,13 @@ int hostlist_count (struct hostlist * hl);
 
 /*
  *  Sort the hostlist hl.
+ *  Resets the cursor to the start of the list.
  */
 void hostlist_sort (struct hostlist * hl);
 
 /*
  *  Sort the hostlist hl and remove duplicate entries.
+ *  Resets the cursor to the start of the list.
  */
 void hostlist_uniq (struct hostlist *hl);
 

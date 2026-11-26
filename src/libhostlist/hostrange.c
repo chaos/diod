@@ -25,15 +25,6 @@
 #include "util.h"
 #include "hostrange.h"
 
-/* max host range: anything larger will be assumed to be an error */
-#define MAX_RANGE    16384    /* 16K Hosts */
-
-/* max number of ranges that will be processed between brackets */
-#define MAX_RANGES    10240    /* 10K Ranges */
-
-/* max size of internal hostrange buffer */
-#define MAXHOSTRANGELEN 1024
-
 
 /* allocate a new hostrange object
  */
@@ -98,7 +89,6 @@ unsigned long hostrange_count (struct hostrange * hr)
         errno = EINVAL;
         return 0;
     }
-    errno = 0;
     if (hr->singlehost)
         return 1;
     else
@@ -134,36 +124,45 @@ void hostrange_destroy (struct hostrange * hr)
 }
 
 /* hostrange_delete_host() deletes a specific host from the range.
- * If the range is split into two, the greater range is returned,
- * and `hi' of the lesser range is adjusted accordingly. If the
- * highest or lowest host is deleted from a range, NULL is returned
+ * If the range is split into two, the greater range is returned in
+ * 'newp', and `hi' of the lesser range is adjusted accordingly. If the
+ * highest or lowest host is deleted from a range, 'newp' is set to NULL
  * and the hostrange hr is adjusted properly.
+ * Returns 0 on success, -1 on failure with errno set.
  */
-struct hostrange * hostrange_delete_host (struct hostrange * hr,
-                                          unsigned long n)
+int hostrange_delete_host (struct hostrange * hr,
+                           unsigned long n,
+                           struct hostrange **newp)
 {
     struct hostrange * new = NULL;
 
-    if (!hr) {
+    if (!hr || !newp) {
         errno = EINVAL;
-        return NULL;
+        return -1;
     }
 
-    assert (hr != NULL);
     assert (n >= hr->lo && n <= hr->hi);
 
-    if (n == hr->lo)
+    /* Empty a range of one host with lo > hi without wrapping lo or hi
+     */
+    if (hr->lo == hr->hi) {
+        if (hr->lo == 0)
+            hr->lo = 1;
+        else
+            hr->hi--;
+    }
+    else if (n == hr->lo)
         hr->lo++;
     else if (n == hr->hi)
         hr->hi--;
     else {
         if (!(new = hostrange_copy (hr)))
-            return NULL;
+            return -1;
         hr->hi = n - 1;
         new->lo = n + 1;
     }
-
-    return new;
+    *newp = new;
+    return 0;
 }
 
 /* compare the prefixes of two hostrange objects.
@@ -212,9 +211,12 @@ int hostrange_cmp (struct hostrange * h1, struct hostrange * h2)
     assert (h1 != NULL);
     assert (h2 != NULL);
 
-    if ((retval = hostrange_prefix_cmp (h1, h2)) == 0)
-        retval = hostrange_width_combine (h1, h2) ?
-            h1->lo - h2->lo : h1->width - h2->width;
+    if ((retval = hostrange_prefix_cmp (h1, h2)) == 0) {
+        if (hostrange_width_combine (h1, h2))
+            retval = (h1->lo > h2->lo) - (h1->lo < h2->lo);
+        else
+            retval = h1->width - h2->width;
+    }
 
     /*  Only return -1, 0, or 1 */
     if (retval != 0)
@@ -259,7 +261,14 @@ int hostrange_width_combine (struct hostrange * h0, struct hostrange * h1)
 int hostrange_empty (struct hostrange * hr)
 {
     assert (hr != NULL);
-    return ((hr->hi < hr->lo) || (hr->hi == (unsigned long) -1));
+    return hr->hi < hr->lo;
+}
+
+/* Return true if h2 starts immediately after the end of h1.
+ */
+bool hostrange_adjacent (struct hostrange *h1, struct hostrange *h2)
+{
+    return h2->lo > 0 && h1->hi == h2->lo - 1;
 }
 
 /* join two hostrange objects.
@@ -288,7 +297,7 @@ int hostrange_join (struct hostrange * h1, struct hostrange * h2)
 
         if (h1->singlehost && h2->singlehost) {    /* matching singlets  */
             duplicated = 1;
-        } else if (h1->hi == h2->lo - 1) {    /* perfect join       */
+        } else if (hostrange_adjacent (h1, h2)) {    /* perfect join       */
             h1->hi = h2->hi;
             duplicated = 0;
         } else if (h1->hi >= h2->lo) {    /* some duplication   */
@@ -303,36 +312,32 @@ int hostrange_join (struct hostrange * h1, struct hostrange * h2)
     return duplicated;
 }
 
-/* hostrange intersect returns the intersection (common hosts)
- * of hostrange objects h1 and h2. If there is no intersection,
- * NULL is returned.
+/* hostrange_intersect_ids() returns true if hostrange objects h1 and h2
+ * intersect, and stores the common ids in 'lo' and 'hi'.
  *
  * It is assumed that h1 <= h2 (i.e. h1->lo <= h2->lo)
  */
-struct hostrange * hostrange_intersect (struct hostrange * h1,
-                                        struct hostrange * h2)
+bool hostrange_intersect_ids (struct hostrange * h1,
+                              struct hostrange * h2,
+                              unsigned long *lo,
+                              unsigned long *hi)
 {
-    struct hostrange * new = NULL;
-
     assert (h1 != NULL);
     assert (h2 != NULL);
 
     if (h1->singlehost || h2->singlehost)
-        return NULL;
+        return false;
 
     assert (hostrange_cmp (h1, h2) <= 0);
 
     if ((hostrange_prefix_cmp (h1, h2) == 0)
         && (h1->hi > h2->lo)
         && (hostrange_width_combine (h1, h2))) {
-
-        if (!(new = hostrange_copy (h1)))
-            return NULL;
-        new->lo = h2->lo;
-        new->hi = h2->hi < h1->hi ? h2->hi : h1->hi;
+        *lo = h2->lo;
+        *hi = h2->hi < h1->hi ? h2->hi : h1->hi;
+        return true;
     }
-
-    return new;
+    return false;
 }
 
 /* return offset of hn if it is in the hostlist or
@@ -450,28 +455,24 @@ size_t hostrange_numstr (struct hostrange * hr, size_t n, char *buf)
 
 char * hostrange_host_tostring (struct hostrange * hr, int depth)
 {
-    char buf[_POSIX_HOST_NAME_MAX + 16];
-    int len;
+    char *host;
+    int rc;
 
     if (!hr || depth < 0) {
         errno = EINVAL;
         return NULL;
     }
+    if (hr->singlehost)
+        return strdup (hr->prefix);
 
-    len = snprintf (buf, sizeof (buf), "%s", hr->prefix);
-    if (len < 0 || len >= sizeof (buf))
+    if (depth > hr->hi - hr->lo) {
+        errno = ERANGE;
         return NULL;
-
-    if (!hr->singlehost) {
-        unsigned long n = hr->lo + depth;
-        if (n > hr->hi) {
-            errno = ERANGE;
-            return NULL;
-        }
-        snprintf (buf+len, sizeof (buf) - len, "%0*lu",
-                 hr->width, hr->lo + depth);
     }
-    return strdup (buf);
+    rc = asprintf (&host, "%s%0*lu", hr->prefix, hr->width, hr->lo + depth);
+    if (rc < 0)
+        return NULL;
+    return host;
 }
 
 /*
